@@ -18,6 +18,7 @@ import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { GameEndBanner } from "./components/GameEndBanner";
 import { MobileBoardShell } from "./components/MobileBoardShell";
+import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 
 type SidebarTab = "games" | "review" | "moves";
@@ -1132,7 +1133,9 @@ export default function App() {
 
           {/* ── Mobile layout ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-1 pb-2 gap-0.5">
+            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-2 pb-2 gap-1">
+              {moves.length > 0 ? (
+                <>
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.white : playerNames.black}
@@ -1142,7 +1145,6 @@ export default function App() {
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "w" : "b"}
               />
-              {moves.length > 0 ? (
                 <MobileBoardShell
                   evalResult={continuationEval ?? currentEval}
                   position={continuationFen ?? currentFen}
@@ -1178,14 +1180,6 @@ export default function App() {
                     )
                   }
                 />
-              ) : (
-                <div
-                  className="rounded border border-chess-border bg-chess-panel/50 flex items-center justify-center text-chess-muted text-xs"
-                  style={{ width: boardWidth + 28, height: Math.min(boardWidth, 280) }}
-                >
-                  Load a game to review
-                </div>
-              )}
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.black : playerNames.white}
@@ -1209,26 +1203,49 @@ export default function App() {
                 >
                   ⇅
                 </button>
-                {moves.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMobileGraph((v) => !v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                    showMobileGraph
+                      ? "border-move-best text-move-best bg-move-best/10"
+                      : "border-chess-border text-chess-muted"
+                  }`}
+                >
+                  {showMobileGraph ? "Coach" : "Graph"}
+                </button>
+                <span className="text-[10px] text-chess-muted">Tap sides</span>
+              </div>
+                </>
+              ) : (
+                <>
+                <MobileGameHero
+                  boardWidth={boardWidth}
+                  boardOrientation={boardFlipped ? "black" : "white"}
+                  whiteName={playerNames.white}
+                  blackName={playerNames.black}
+                  whiteRating={gameMeta?.whiteRating}
+                  blackRating={gameMeta?.blackRating}
+                  hasGame={!!pgn}
+                  analyzing={analysisState === "analyzing"}
+                  onAnalyze={pgn ? () => startAnalysis(pgn) : undefined}
+                />
+                {pgn && (
                   <button
                     type="button"
-                    onClick={() => setShowMobileGraph((v) => !v)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                      showMobileGraph
-                        ? "border-move-best text-move-best bg-move-best/10"
-                        : "border-chess-border text-chess-muted"
-                    }`}
+                    onClick={() => setBoardFlipped((f) => !f)}
+                    className="text-[10px] text-chess-muted px-2 py-1 border border-chess-border rounded"
                   >
-                    {showMobileGraph ? "Coach" : "Graph"}
+                    ⇅ Flip board
                   </button>
                 )}
-                <span className="text-[10px] text-chess-muted">Tap ◀ ▶ sides</span>
-              </div>
+                </>
+              )}
             </div>
 
+            {moves.length > 0 && (
             <div className="flex-1 overflow-y-auto min-h-0 pb-14 bg-chess-panel">
-              {moves.length > 0 &&
-                (showMobileGraph ? (
+                {showMobileGraph ? (
                   <div className="w-full p-2">
                     <EvalChart
                       moves={moves}
@@ -1248,21 +1265,10 @@ export default function App() {
                       onContinuationArrow={handleContinuationArrow}
                     />
                   </div>
-                ))}
+                )}
             </div>
+            )}
           </div>
-
-          {pgn && !moves.length && analysisState !== "analyzing" && (
-            <div className="h-32 border-t border-chess-border bg-chess-panel flex items-center justify-center gap-3">
-              <button
-                onClick={() => startAnalysis(pgn)}
-                className="flex items-center gap-2 bg-move-best hover:bg-green-600 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg"
-              >
-                <span className="text-lg">🔍</span>
-                Start Game Review
-              </button>
-            </div>
-          )}
         </main>
       </div>
     </div>
