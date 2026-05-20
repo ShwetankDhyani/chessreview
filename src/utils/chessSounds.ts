@@ -32,68 +32,111 @@ let audioCtx: AudioContext | null = null;
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   try {
-    if (!audioCtx) {
-      audioCtx = new AudioContext();
-    }
-    if (audioCtx.state === "suspended") {
-      void audioCtx.resume();
-    }
+    const Ctx =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
     return audioCtx;
   } catch {
     return null;
   }
 }
 
-function tone(
-  freq: number,
-  start: number,
-  duration: number,
-  gain: number,
-  type: OscillatorType = "sine"
-) {
-  const ctx = getCtx();
-  if (!ctx) return;
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-  g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
-  g.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + start + 0.008);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
-  osc.connect(g);
-  g.connect(ctx.destination);
-  osc.start(ctx.currentTime + start);
-  osc.stop(ctx.currentTime + start + duration + 0.02);
+/** Call on first user gesture so mobile browsers allow playback. */
+export function unlockChessAudio(): void {
+  void prepareChessAudio();
 }
 
-export function playMoveSound(kind: MoveSoundKind): void {
-  if (!soundsEnabled()) return;
-  switch (kind) {
-    case "capture":
-      tone(180, 0, 0.07, 0.14, "triangle");
-      tone(120, 0.02, 0.09, 0.1, "sine");
-      break;
-    case "castle":
-      tone(220, 0, 0.05, 0.1);
-      tone(280, 0.04, 0.06, 0.08);
-      break;
-    case "check":
-      tone(440, 0, 0.04, 0.09);
-      tone(330, 0.03, 0.05, 0.07);
-      break;
-    case "promote":
-      tone(260, 0, 0.05, 0.1);
-      tone(390, 0.04, 0.08, 0.09);
-      break;
-    default:
-      tone(240, 0, 0.04, 0.08);
-      tone(190, 0.015, 0.05, 0.06);
+/** Await before playing the first sound in the same tap/click. */
+export async function prepareChessAudio(): Promise<void> {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    if (ctx.state !== "running") return;
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+    src.stop(0);
+  } catch {
+    /* ignore */
   }
+}
+
+async function ensureAudioReady(): Promise<AudioContext | null> {
+  const ctx = getCtx();
+  if (!ctx) return null;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    return ctx.state === "running" ? ctx : null;
+  } catch {
+    return null;
+  }
+}
+
+function playBuffer(ctx: AudioContext, kind: MoveSoundKind): void {
+  const sampleRate = ctx.sampleRate;
+  const duration =
+    kind === "capture" ? 0.1 : kind === "check" ? 0.07 : 0.06;
+  const length = Math.floor(sampleRate * duration);
+  const buffer = ctx.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+
+  const baseFreq =
+    kind === "capture"
+      ? 140
+      : kind === "castle"
+        ? 260
+        : kind === "check"
+          ? 520
+          : kind === "promote"
+            ? 340
+            : 220;
+  const peak =
+    kind === "capture" ? 0.55 : kind === "check" ? 0.45 : 0.38;
+
+  for (let i = 0; i < length; i++) {
+    const t = i / sampleRate;
+    const env = Math.exp(-t * (kind === "capture" ? 28 : 35));
+    let sample = Math.sin(2 * Math.PI * baseFreq * t) * env * peak;
+    if (kind === "capture") {
+      sample += (Math.random() * 2 - 1) * env * 0.12;
+    }
+    if (kind === "castle") {
+      sample += Math.sin(2 * Math.PI * 380 * t) * env * 0.15;
+    }
+    if (kind === "check") {
+      sample += Math.sin(2 * Math.PI * 780 * t) * env * 0.12;
+    }
+    data[i] = sample;
+  }
+
+  const src = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  src.buffer = buffer;
+  gain.gain.value = 1;
+  src.connect(gain);
+  gain.connect(ctx.destination);
+  src.start();
+}
+
+export async function playMoveSound(kind: MoveSoundKind): Promise<void> {
+  if (!soundsEnabled()) return;
+  unlockChessAudio();
+  const ctx = await ensureAudioReady();
+  if (!ctx) return;
+  playBuffer(ctx, kind);
 }
 
 export function playMoveFeedback(san: string): void {
   const kind = soundKindFromSan(san);
-  playMoveSound(kind);
+  unlockChessAudio();
+  void playMoveSound(kind);
+
   if (!hapticsEnabled() || typeof navigator === "undefined" || !navigator.vibrate) {
     return;
   }

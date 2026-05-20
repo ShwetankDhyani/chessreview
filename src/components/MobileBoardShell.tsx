@@ -1,4 +1,5 @@
 import type { EvalResult } from "../types";
+import { prepareChessAudio } from "../utils/chessSounds";
 import { EvalBar } from "./EvalBar";
 import { ReviewChessboard, type ReviewChessboardProps } from "./ReviewChessboard";
 
@@ -54,7 +55,9 @@ export function MobileBoardShell({
             disabled={!canPrev}
             onClick={(e) => {
               e.stopPropagation();
-              if (canPrev) onPrev();
+              void prepareChessAudio().then(() => {
+                if (canPrev) onPrev();
+              });
             }}
             className="absolute left-0 top-0 bottom-0 w-[30%] z-30 touch-manipulation disabled:pointer-events-none"
             style={{ background: "transparent" }}
@@ -65,7 +68,9 @@ export function MobileBoardShell({
             disabled={!canNext}
             onClick={(e) => {
               e.stopPropagation();
-              if (canNext) onNext();
+              void prepareChessAudio().then(() => {
+                if (canNext) onNext();
+              });
             }}
             className="absolute right-0 top-0 bottom-0 w-[30%] z-30 touch-manipulation disabled:pointer-events-none"
             style={{ background: "transparent" }}

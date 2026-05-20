@@ -21,7 +21,7 @@ import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { countPgnPlies } from "./utils/pgnPlies";
-import { playMoveFeedback } from "./utils/chessSounds";
+import { playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -526,6 +526,19 @@ export default function App() {
     } catch {
       alert("Invalid PGN. Please check the format and try again.");
     }
+  }, []);
+
+  // Unlock Web Audio on first touch (required on iOS / Android Chrome)
+  useEffect(() => {
+    const unlock = () => unlockChessAudio();
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("touchstart", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
   }, []);
 
   // Sync profiles when GameList saves a new username (e.g. first-time user)
