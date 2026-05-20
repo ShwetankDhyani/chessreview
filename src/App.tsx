@@ -87,7 +87,6 @@ function useMediaQuery(query: string): boolean {
 export default function App() {
   const [tab, setTab] = useState<SidebarTab>("games");
   const [pgn, setPgn] = useState("");
-  const [pgnInput, setPgnInput] = useState("");
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
   const [gamePlyCount, setGamePlyCount] = useState(0);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
@@ -525,7 +524,6 @@ export default function App() {
       return;
     }
     setPgn(parsed.pgn);
-    setPgnInput(parsed.pgn);
     setGamePlyCount(parsed.moveCount);
     setMoves([]);
     setSummary(null);
