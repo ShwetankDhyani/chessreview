@@ -171,7 +171,10 @@ export async function evaluateFen(
   const cloud = await evalWithLichessCloud(fen);
   if (cloud) return cloud;
 
-  if (cloudOnlyMode) return { cp: 0, depth: 0, source: "local" };
+  // Skip slow WASM when cloud-only or on production (Vercel)
+  if (cloudOnlyMode || import.meta.env.PROD) {
+    return { cp: 0, depth: 0, source: "local" };
+  }
   return evalWithStockfish(fen, localDepth);
 }
 

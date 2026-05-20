@@ -107,6 +107,14 @@ function evalToCp(e: EvalResult): number {
   return e.cp ?? 0;
 }
 
+function isUsableEval(e: EvalResult | undefined): e is EvalResult {
+  return (
+    !!e &&
+    e.depth > 0 &&
+    (e.cp !== undefined || e.mate !== undefined)
+  );
+}
+
 function applyUci(fen: string, uci: string): string | null {
   try {
     const c = new Chess(fen);
@@ -142,7 +150,8 @@ function classifyMove(
     epLoss <= 0.02 &&
     wpBefore > 0.15 &&
     wpBefore < 0.85 &&
-    wpAfter >= 0.4
+    wpAfter >= 0.4 &&
+    wpAfter <= wpBefore + 0.05
   ) {
     return "brilliant";
   }
@@ -213,16 +222,20 @@ export async function analyzePgn(
     onProgress?.(done, uniqueFens.size);
   }
 
-  let lastKnownCp = 0;
-  const resolvedCp = new Map<string, number>();
+  // Strict map: only real engine/cloud evals (no stale carry-forward)
+  const strictCp = new Map<string, number>();
+  for (const fen of [...fensList, ...extraFens]) {
+    const e = evalCache.get(fen);
+    if (isUsableEval(e)) strictCp.set(fen, evalToCp(e));
+  }
+
+  // Chart map: carry forward so the eval graph stays readable when Lichess 404s
+  let lastChartCp = 0;
+  const chartCpWhite = new Map<string, number>();
   for (const fen of fensList) {
     const e = evalCache.get(fen);
-    if (e && e.depth > 0) lastKnownCp = evalToCp(e);
-    resolvedCp.set(fen, lastKnownCp);
-  }
-  for (const fen of extraFens) {
-    const e = evalCache.get(fen);
-    if (e && e.depth > 0) resolvedCp.set(fen, evalToCp(e));
+    if (isUsableEval(e)) lastChartCp = evalToCp(e);
+    chartCpWhite.set(fen, lastChartCp);
   }
 
   const moves: AnalyzedMove[] = [];
@@ -245,8 +258,8 @@ export async function analyzePgn(
     };
 
     const sign = move.color === "w" ? 1 : -1;
-    const cpBefore = sign * (resolvedCp.get(fenBefore) ?? 0);
-    const cpAfter = sign * (resolvedCp.get(fenAfter) ?? 0);
+    const cpBefore = sign * (strictCp.get(fenBefore) ?? 0);
+    const cpAfter = sign * (strictCp.get(fenAfter) ?? 0);
 
     const clamp = (v: number) => Math.max(-1500, Math.min(1500, v));
     const cpBeforeClamped = clamp(cpBefore);
@@ -257,10 +270,11 @@ export async function analyzePgn(
 
     const bestMoveUci = evalBefore?.bestMove;
     let cpAfterBest = cpBeforeClamped;
+    let fenBest: string | null = null;
     if (bestMoveUci) {
-      const fenBest = applyUci(fenBefore, bestMoveUci);
-      if (fenBest && resolvedCp.has(fenBest)) {
-        cpAfterBest = sign * resolvedCp.get(fenBest)!;
+      fenBest = applyUci(fenBefore, bestMoveUci);
+      if (fenBest && strictCp.has(fenBest)) {
+        cpAfterBest = sign * strictCp.get(fenBest)!;
       }
     }
 
@@ -269,9 +283,14 @@ export async function analyzePgn(
     const clampClass = (v: number) => Math.max(-600, Math.min(600, v));
     const deltaCP = clampClass(cpBefore) - clampClass(cpAfter);
 
+    const hasBestLineEval =
+      !bestMoveUci || (fenBest !== null && strictCp.has(fenBest));
     const bothEvaluated =
-      (evalCache.get(fenBefore)?.depth ?? 0) > 0 &&
-      (evalCache.get(fenAfter)?.depth ?? 0) > 0;
+      strictCp.has(fenBefore) &&
+      strictCp.has(fenAfter) &&
+      hasBestLineEval &&
+      isUsableEval(evalBefore) &&
+      isUsableEval(evalAfter);
 
     const couldBeBook =
       !bookEnded && bothEvaluated && i < BOOK_HALF_MOVES && epLoss < 0.01;
@@ -282,12 +301,13 @@ export async function analyzePgn(
       !isRecapture &&
       detectSacrifice(fenBefore, move.from + move.to, move.color);
 
-    const playerUci = move.from + move.to + (move.promotion ?? "");
-    const isPlayerBestMove = !!bestMoveUci && playerUci === bestMoveUci;
+    const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
+    const isPlayerBestMove =
+      !!bestMoveUci && playerUci === bestMoveUci.toLowerCase();
 
     let prevWpForMoverPct = 50;
     if (i >= 2) {
-      const cpWhitePrev = resolvedCp.get(fensList[i - 1]) ?? 0;
+      const cpWhitePrev = chartCpWhite.get(fensList[i - 1]) ?? 0;
       prevWpForMoverPct = winPercent(clamp(sign * cpWhitePrev));
     }
 
@@ -358,7 +378,7 @@ export async function analyzePgn(
     });
   }
 
-  return { moves, summary: buildSummary(moves, resolvedCp) };
+  return { moves, summary: buildSummary(moves, chartCpWhite) };
 }
 
 function emptyCounts(): ClassificationCounts {

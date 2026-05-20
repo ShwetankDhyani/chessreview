@@ -39,9 +39,16 @@ export const EvalChart: React.FC<EvalChartProps> = ({
       { moveIndex: -1, label: "Start", eval: 0, clampedEval: 0 },
     ];
 
+    let lastCp = 0;
     for (let i = 0; i < moves.length; i++) {
       const m = moves[i];
-      const cp = m.evalAfter ? evalToCp(m.evalAfter) : 0;
+      let cp = 0;
+      if (m.evalAfter && m.evalAfter.depth > 0) {
+        cp = evalToCp(m.evalAfter);
+        lastCp = cp;
+      } else {
+        cp = lastCp;
+      }
       const clampedEval = Math.min(CLAMP, Math.max(-CLAMP, cp));
       const meta = getMeta(m.classification);
       const label =

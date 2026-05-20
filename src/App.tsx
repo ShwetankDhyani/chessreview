@@ -90,8 +90,14 @@ export default function App() {
   const [clocks, setClocks] = useState<(number | null)[]>([]);
   const abortRef = useRef(false);
   const [depth, setDepth] = useState<number>(() => {
-    return parseInt(localStorage.getItem("cr_depth") ?? "16", 10);
+    const saved = localStorage.getItem("cr_depth");
+    const fallback = import.meta.env.PROD ? "12" : "16";
+    return parseInt(saved ?? fallback, 10);
   });
+
+  useEffect(() => {
+    setCloudOnlyMode(import.meta.env.PROD || depth <= 12);
+  }, [depth]);
   const [showBestMove, setShowBestMove] = useState(true);
   const [continuationActive, setContinuationActive] = useState(false);
   const [continuationFen, setContinuationFen] = useState<string | null>(null);
@@ -551,8 +557,10 @@ export default function App() {
         {/* Depth — hidden on mobile, shown on md+ */}
         <div className="hidden lg:flex items-center gap-1.5">
           <span className="text-xs text-chess-muted">Depth:</span>
-          {([12, 16, 18, 20, 24] as const).map(d => {
-            const hint = d === 12 ? "Cloud only" : d === 16 ? "Chess.com default" : d === 18 ? "Lichess default" : d === 20 ? "Deep" : "Max";
+          {(import.meta.env.PROD ? ([12] as const) : ([12, 16, 18, 20, 24] as const)).map(d => {
+            const hint = d === 12
+              ? import.meta.env.PROD ? "Fast — Lichess only (Vercel)" : "Cloud only"
+              : d === 16 ? "Chess.com default (local engine)" : d === 18 ? "Lichess default" : d === 20 ? "Deep" : "Max";
             return (
               <button key={d} onClick={() => handleDepthChange(d)} title={hint}
                 className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
@@ -570,7 +578,7 @@ export default function App() {
           </button>
           {showDepth && (
             <div className="absolute right-0 top-full mt-1 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 flex gap-1 p-1.5">
-              {([12,16,18,20,24] as const).map(d => (
+              {(import.meta.env.PROD ? ([12] as const) : ([12,16,18,20,24] as const)).map(d => (
                 <button key={d} onClick={() => { handleDepthChange(d); setShowDepth(false); }}
                   className={`text-xs px-2 py-1 rounded font-mono font-semibold border ${
                     depth === d ? "bg-move-best text-white border-move-best" : "bg-chess-bg text-chess-muted border-chess-border"
