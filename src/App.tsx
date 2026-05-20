@@ -20,6 +20,8 @@ import { GameEndBanner } from "./components/GameEndBanner";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
+import { countPgnPlies } from "./utils/pgnPlies";
+import { playMoveFeedback } from "./utils/chessSounds";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -86,6 +88,7 @@ export default function App() {
   const [pgn, setPgn] = useState("");
   const [pgnInput, setPgnInput] = useState("");
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
+  const [gamePlyCount, setGamePlyCount] = useState(0);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
@@ -430,6 +433,10 @@ export default function App() {
     setCurrentMoveIdx(idx);
     setCurrentEval(m.evalAfter);
 
+    if (animate && m.san) {
+      playMoveFeedback(m.san);
+    }
+
     if (animate && fromSq && toSq && m.fenBefore) {
       const skipSetup = currentFen === m.fenBefore;
       playMoveOnBoard(m.fenBefore, m.fenAfter, fromSq, toSq, skipSetup);
@@ -463,6 +470,7 @@ export default function App() {
     await refreshNativeEngineProbe();
     setEngineBackend(getEvalBackend());
     setAnalysisState("analyzing");
+    setGamePlyCount(countPgnPlies(pgnStr));
     setMoves([]);
     setSummary(null);
     setCurrentMoveIdx(-1);
@@ -489,7 +497,7 @@ export default function App() {
         setSummary(reviewSummary);
         setAnalysisState("done");
         setTab("review");
-        if (analyzedMoves.length > 0) navigateToMove(analyzedMoves.length - 1);
+        if (analyzedMoves.length > 0) navigateToMove(analyzedMoves.length - 1, false);
       }
     } catch (e) {
       console.error(e);
@@ -503,6 +511,7 @@ export default function App() {
       chess.loadPgn(pgnStr);
       setPgn(pgnStr);
       setPgnInput(pgnStr);
+      setGamePlyCount(countPgnPlies(pgnStr));
       setMoves([]);
       setSummary(null);
       setCurrentMoveIdx(-1);
@@ -860,7 +869,7 @@ export default function App() {
                       <div className="px-3 py-2 border-b border-chess-border flex-shrink-0">
                         <div className="flex items-center gap-2 text-xs text-chess-muted mb-1.5">
                           <div className="w-3 h-3 border-2 border-move-best border-t-transparent rounded-full animate-spin" />
-                          Analyzing {progress.done}/{progress.total} moves…
+                          Analyzing {progress.done}/{progress.total} positions…
                         </div>
                         <div className="w-full bg-chess-border rounded-full h-1">
                           <div
@@ -1002,8 +1011,6 @@ export default function App() {
                       currentMove.classification === "blunder")
                   }
                   bestMove={currentMove?.bestMove}
-                  classification={currentMove?.classification ?? undefined}
-                  san={currentMove?.san}
                 />
                 <PlayerTag
                   name={boardFlipped ? playerNames.black : playerNames.white}
@@ -1164,19 +1171,16 @@ export default function App() {
                     )
                   }
                   bestMove={currentMove?.bestMove}
-                  classification={currentMove?.classification ?? undefined}
-                  san={currentMove?.san}
                   moveIndex={currentMoveIdx}
-                  moveCount={moves.length}
+                  moveCount={gamePlyCount || moves.length}
                   canPrev={currentMoveIdx > -1}
                   canNext={currentMoveIdx < moves.length - 1}
                   onPrev={() =>
-                    navigateToMove(Math.max(currentMoveIdx - 1, -1), false)
+                    navigateToMove(Math.max(currentMoveIdx - 1, -1))
                   }
                   onNext={() =>
                     navigateToMove(
-                      Math.min(currentMoveIdx + 1, moves.length - 1),
-                      false
+                      Math.min(currentMoveIdx + 1, moves.length - 1)
                     )
                   }
                 />

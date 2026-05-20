@@ -27,18 +27,40 @@ function winnerFromResult(
   return null;
 }
 
+function nameInText(name: string, text: string): boolean {
+  return text.toLowerCase().includes(name.toLowerCase());
+}
+
+/** Chess.com: "Winner won by resignation" — winner's name appears, not the resigner. */
+function loserFromWonByPhrase(
+  termination: string,
+  white: string,
+  black: string,
+  winner: "w" | "b" | null
+): string | null {
+  if (winner === "w") return black;
+  if (winner === "b") return white;
+  const m = termination.match(/^(.+?)\s+won\s+by\s+/i);
+  if (!m) return null;
+  const winnerName = m[1].trim();
+  if (nameInText(winnerName, white)) return black;
+  if (nameInText(winnerName, black)) return white;
+  return null;
+}
+
 function parseTermination(
   termination: string | null,
   white: string,
-  black: string
+  black: string,
+  winner: "w" | "b" | null
 ): { kind: GameEndKind; detail: string } | null {
   if (!termination) return null;
   const t = termination.toLowerCase();
 
   if (t.includes("checkmate")) {
-    const who = t.includes(white.toLowerCase())
+    const who = nameInText(white, termination)
       ? white
-      : t.includes(black.toLowerCase())
+      : nameInText(black, termination)
         ? black
         : null;
     return {
@@ -47,20 +69,52 @@ function parseTermination(
     };
   }
   if (t.includes("resign")) {
-    const who = t.includes(white.toLowerCase())
+    if (/\bwon\s+by\s+resignation\b/i.test(termination)) {
+      const loser =
+        loserFromWonByPhrase(termination, white, black, winner) ??
+        (winner === "w" ? black : winner === "b" ? white : null);
+      return {
+        kind: "resignation",
+        detail: loser ? `${loser} resigned` : "Win by resignation",
+      };
+    }
+    const explicitResigner = nameInText(white, termination)
       ? white
-      : t.includes(black.toLowerCase())
+      : nameInText(black, termination)
         ? black
         : null;
+    if (explicitResigner && /\bresigned\b/i.test(termination)) {
+      return {
+        kind: "resignation",
+        detail: `${explicitResigner} resigned`,
+      };
+    }
+    const loser =
+      winner === "w" ? black : winner === "b" ? white : null;
     return {
       kind: "resignation",
-      detail: who ? `${who} resigned` : "Resignation",
+      detail: loser ? `${loser} resigned` : "Resignation",
     };
   }
   if (t.includes("timeout") || t.includes("time forfeit") || t.includes("time out")) {
-    const who = t.includes(white.toLowerCase())
+    if (/\bwon\s+on\s+time\b/i.test(termination) || /\bwon\s+by\s+timeout\b/i.test(termination)) {
+      const loser =
+        loserFromWonByPhrase(termination, white, black, winner) ??
+        (winner === "w" ? black : winner === "b" ? white : null);
+      const winnerName =
+        winner === "w" ? white : winner === "b" ? black : null;
+      return {
+        kind: "timeout",
+        detail: winnerName
+          ? `${winnerName} won on time`
+          : loser
+            ? `${loser} ran out of time`
+            : "Win on time",
+      };
+    }
+    const who = nameInText(white, termination)
       ? white
-      : t.includes(black.toLowerCase())
+      : nameInText(black, termination)
         ? black
         : null;
     return {
@@ -126,7 +180,7 @@ export function getGameEndInfo(
   let kind: GameEndKind;
   let detail: string;
 
-  const parsed = parseTermination(termination, white, black);
+  const parsed = parseTermination(termination, white, black, winner);
   if (parsed) {
     kind = parsed.kind;
     detail = parsed.detail;

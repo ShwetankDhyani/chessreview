@@ -197,6 +197,7 @@ export async function analyzePgn(
   const evalCache = new Map<string, EvalResult>();
 
   // Pass 1: evaluate every position in the game (also discovers best-move FENs)
+  const positionTotal = fensList.length;
   let done = 0;
   for (const fen of fensList) {
     const result = await evaluateFen(fen, depth).catch(
@@ -208,18 +209,19 @@ export async function analyzePgn(
       if (fenBest) uniqueFens.add(fenBest);
     }
     done++;
-    onProgress?.(done, uniqueFens.size);
+    onProgress?.(done, positionTotal);
   }
 
   // Pass 2: evaluate FENs after engine best moves (for expected-points loss)
   const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
+  const evalTotal = positionTotal + extraFens.length;
   for (const fen of extraFens) {
     const result = await evaluateFen(fen, depth).catch(
       (): EvalResult => ({ cp: undefined, depth: 0, source: "local" })
     );
     evalCache.set(fen, result);
     done++;
-    onProgress?.(done, uniqueFens.size);
+    onProgress?.(done, evalTotal);
   }
 
   // Strict map: only real engine/cloud evals (no stale carry-forward)

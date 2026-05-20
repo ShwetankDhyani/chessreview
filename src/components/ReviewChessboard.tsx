@@ -1,7 +1,4 @@
 import { Chessboard } from "react-chessboard";
-import type { MoveClassification } from "../types";
-import { ClassificationIcon } from "./ClassificationIcon";
-import { getMeta } from "../utils/classificationMeta";
 
 type Square = `${"a" | "b" | "c" | "d" | "e" | "f" | "g" | "h"}${"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"}`;
 
@@ -16,8 +13,6 @@ export interface ReviewChessboardProps {
   continuationArrow: { from: string; to: string } | null;
   showBestMoveArrow: boolean;
   bestMove?: string;
-  classification?: MoveClassification;
-  san?: string;
 }
 
 export function ReviewChessboard({
@@ -31,8 +26,6 @@ export function ReviewChessboard({
   continuationArrow,
   showBestMoveArrow,
   bestMove,
-  classification,
-  san,
 }: ReviewChessboardProps) {
   const arrows: [Square, Square, string?][] = moveAnim
     ? [[moveAnim.from as Square, moveAnim.to as Square, "#e8c84a"]]
@@ -81,31 +74,6 @@ export function ReviewChessboard({
         }
         customArrows={arrows}
       />
-      {classification && san && (
-        <ClassificationBadge san={san} classification={classification} />
-      )}
-    </div>
-  );
-}
-
-function ClassificationBadge({
-  san,
-  classification,
-}: {
-  san: string;
-  classification: NonNullable<MoveClassification>;
-}) {
-  const meta = getMeta(classification);
-  if (!meta) return null;
-
-  return (
-    <div
-      className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center justify-center gap-1 px-2 py-1 rounded text-white text-[11px] font-bold shadow-lg max-w-[95%] mx-auto"
-      style={{ backgroundColor: `${meta.color}dd` }}
-    >
-      <ClassificationIcon type={classification} size="sm" />
-      <span className="truncate">{san}</span>
-      <span className="font-normal opacity-90 flex-shrink-0">{meta.label}</span>
     </div>
   );
 }

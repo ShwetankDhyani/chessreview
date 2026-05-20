@@ -49,7 +49,7 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
         aria-label={
           indeterminate
             ? "Analyzing game"
-            : `Analyzing move ${progress.done} of ${progress.total}, ${percent} percent complete`
+            : `Analyzing position ${progress.done} of ${progress.total}, ${percent} percent complete`
         }
       >
         <div className="analysis-status-card rounded-2xl border border-move-best/25 shadow-2xl overflow-hidden">
@@ -98,7 +98,7 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
               <p className="text-xs text-chess-muted mt-0.5">
                 {indeterminate
                   ? "Preparing positions…"
-                  : `Move ${progress.done} of ${progress.total}`}
+                  : `Position ${progress.done} of ${progress.total}`}
               </p>
             </div>
 

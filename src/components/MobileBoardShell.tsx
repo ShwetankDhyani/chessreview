@@ -90,7 +90,9 @@ export function MobileBoardShell({
       </div>
       {moveCount > 0 && (
         <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[10px] text-chess-muted font-mono tabular-nums pointer-events-none">
-          {moveIndex < 0 ? "Start" : `${moveIndex + 1} / ${moveCount}`}
+          {moveIndex < 0
+            ? `Start · ${moveCount} plies`
+            : `Ply ${moveIndex + 1} / ${moveCount}`}
         </div>
       )}
     </div>
