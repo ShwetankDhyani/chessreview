@@ -882,7 +882,7 @@ export default function App() {
                       <div className="px-3 py-2 border-b border-chess-border flex-shrink-0">
                         <div className="flex items-center gap-2 text-xs text-chess-muted mb-1.5">
                           <div className="w-3 h-3 border-2 border-move-best border-t-transparent rounded-full animate-spin" />
-                          Analyzing {progress.done}/{progress.total} positions…
+                          Analyzing… {Math.round(progressPercent)}%
                         </div>
                         <div className="w-full bg-chess-border rounded-full h-1">
                           <div

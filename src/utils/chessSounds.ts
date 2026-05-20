@@ -44,12 +44,10 @@ function getCtx(): AudioContext | null {
   }
 }
 
-/** Call on first user gesture so mobile browsers allow playback. */
 export function unlockChessAudio(): void {
   void prepareChessAudio();
 }
 
-/** Await before playing the first sound in the same tap/click. */
 export async function prepareChessAudio(): Promise<void> {
   const ctx = getCtx();
   if (!ctx) return;
@@ -78,48 +76,62 @@ async function ensureAudioReady(): Promise<AudioContext | null> {
   }
 }
 
-function playBuffer(ctx: AudioContext, kind: MoveSoundKind): void {
+/** Soft wooden knock — short, low, no arcade noise. */
+function fillWoodKnock(
+  data: Float32Array,
+  sampleRate: number,
+  opts: { baseHz: number; duration: number; peak: number; thump?: number }
+): void {
+  const { baseHz, duration, peak, thump = 0 } = opts;
+  const len = data.length;
+  for (let i = 0; i < len; i++) {
+    const t = i / sampleRate;
+    const attack = 1 - Math.exp(-t * 1200);
+    const decay = Math.exp(-t * (42 + thump * 12));
+    const env = attack * decay;
+    const bend = 1 - t * (2.8 + thump * 0.6);
+    const f1 = baseHz * Math.max(0.55, bend);
+    const f2 = f1 * 0.5;
+    const body =
+      Math.sin(2 * Math.PI * f1 * t) * 0.72 +
+      Math.sin(2 * Math.PI * f2 * t) * 0.28;
+    data[i] = body * env * peak;
+  }
+}
+
+function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
   const sampleRate = ctx.sampleRate;
-  const duration =
-    kind === "capture" ? 0.1 : kind === "check" ? 0.07 : 0.06;
-  const length = Math.floor(sampleRate * duration);
+  const profile: Record<
+    MoveSoundKind,
+    { duration: number; baseHz: number; peak: number; thump: number }
+  > = {
+    move: { duration: 0.045, baseHz: 168, peak: 0.14, thump: 0 },
+    capture: { duration: 0.065, baseHz: 118, peak: 0.17, thump: 1 },
+    castle: { duration: 0.055, baseHz: 145, peak: 0.15, thump: 0.4 },
+    check: { duration: 0.05, baseHz: 195, peak: 0.13, thump: 0 },
+    promote: { duration: 0.06, baseHz: 155, peak: 0.16, thump: 0.5 },
+  };
+  const p = profile[kind];
+  const length = Math.floor(sampleRate * p.duration);
   const buffer = ctx.createBuffer(1, length, sampleRate);
   const data = buffer.getChannelData(0);
-
-  const baseFreq =
-    kind === "capture"
-      ? 140
-      : kind === "castle"
-        ? 260
-        : kind === "check"
-          ? 520
-          : kind === "promote"
-            ? 340
-            : 220;
-  const peak =
-    kind === "capture" ? 0.55 : kind === "check" ? 0.45 : 0.38;
-
-  for (let i = 0; i < length; i++) {
-    const t = i / sampleRate;
-    const env = Math.exp(-t * (kind === "capture" ? 28 : 35));
-    let sample = Math.sin(2 * Math.PI * baseFreq * t) * env * peak;
-    if (kind === "capture") {
-      sample += (Math.random() * 2 - 1) * env * 0.12;
-    }
-    if (kind === "castle") {
-      sample += Math.sin(2 * Math.PI * 380 * t) * env * 0.15;
-    }
-    if (kind === "check") {
-      sample += Math.sin(2 * Math.PI * 780 * t) * env * 0.12;
-    }
-    data[i] = sample;
-  }
+  fillWoodKnock(data, sampleRate, {
+    baseHz: p.baseHz,
+    duration: p.duration,
+    peak: p.peak,
+    thump: p.thump,
+  });
 
   const src = ctx.createBufferSource();
   const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = kind === "capture" ? 520 : 680;
+  filter.Q.value = 0.6;
+  gain.gain.value = 0.92;
   src.buffer = buffer;
-  gain.gain.value = 1;
-  src.connect(gain);
+  src.connect(filter);
+  filter.connect(gain);
   gain.connect(ctx.destination);
   src.start();
 }
@@ -129,7 +141,7 @@ export async function playMoveSound(kind: MoveSoundKind): Promise<void> {
   unlockChessAudio();
   const ctx = await ensureAudioReady();
   if (!ctx) return;
-  playBuffer(ctx, kind);
+  playWoodSound(ctx, kind);
 }
 
 export function playMoveFeedback(san: string): void {
@@ -143,16 +155,16 @@ export function playMoveFeedback(san: string): void {
   try {
     switch (kind) {
       case "capture":
-        navigator.vibrate([10, 35, 18]);
+        navigator.vibrate([6, 24, 10]);
         break;
       case "check":
-        navigator.vibrate([16, 28, 16]);
+        navigator.vibrate([8, 18, 8]);
         break;
       case "castle":
-        navigator.vibrate([8, 20, 10]);
+        navigator.vibrate([6, 14, 8]);
         break;
       default:
-        navigator.vibrate(10);
+        navigator.vibrate(6);
     }
   } catch {
     /* ignore */
