@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-chess-bg text-chess-text;
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a4a4a;
+  }
+}
+
+@keyframes genieRise {
+  0%   { opacity: 0; transform: translateY(60px) scale(0.7) scaleX(0.6); filter: blur(8px); }
+  40%  { opacity: 0.9; transform: translateY(-8px) scale(1.04) scaleX(1.02); filter: blur(1px); }
+  65%  { transform: translateY(4px) scale(0.98) scaleX(0.99); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1) scaleX(1); filter: blur(0); }
+}
+
+@keyframes genieExit {
+  0%   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translateY(40px) scale(0.6) scaleX(0.5); filter: blur(6px); }
+}
+
+@keyframes geniePulse {
+  0%, 100% { box-shadow: 0 0 12px var(--genie-color, #1baca6); }
+  50%       { box-shadow: 0 0 28px var(--genie-color, #1baca6), 0 0 6px var(--genie-color, #1baca6); }
+}
+
+@keyframes genieFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+@keyframes genieTextIn {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes magnusBounce {
+  0%   { transform: translateY(0); }
+  40%  { transform: translateY(-8px); }
+  70%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes engineGlow {
+  0%, 100% { box-shadow: 0 0 0 4px #6daa6dcc, 0 0 20px 8px #6daa6d77, 0 0 50px 12px #6daa6d33, inset 0 0 30px 4px #6daa6d22; }
+  50%       { box-shadow: 0 0 0 4px #6daa6dff, 0 0 28px 14px #6daa6d99, 0 0 70px 18px #6daa6d55, inset 0 0 40px 6px #6daa6d33; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-5px) rotate(-1deg); }
+  30%       { transform: translateX(5px) rotate(1deg); }
+  45%       { transform: translateX(-4px); }
+  60%       { transform: translateX(4px); }
+  75%       { transform: translateX(-2px); }
+  90%       { transform: translateX(2px); }
+}
+
+@keyframes analysisShimmer {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  30%  { opacity: 0.35; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+
+@keyframes analysisBarSlide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+@keyframes analysisRailPulse {
+  0%, 100% { opacity: 0.55; transform: translateX(0); }
+  50%       { opacity: 1; transform: translateX(220%); }
+}
+
+.analysis-status-card {
+  position: relative;
+  background: rgba(26, 26, 26, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.analysis-status-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(109, 170, 109, 0.12) 50%,
+    transparent 65%
+  );
+  animation: analysisShimmer 2.8s ease-in-out infinite;
+}
+
+.analysis-bar-indeterminate {
+  width: 35%;
+  animation: analysisBarSlide 1.6s ease-in-out infinite;
+}
+
+.analysis-rail-indeterminate {
+  animation: analysisRailPulse 1.8s ease-in-out infinite;
+}
+
+/* Review board: soft crossfade when jumping between distant positions */
+.board-viewport {
+  transition: opacity 0.22s ease-in-out;
+  opacity: 1;
+  will-change: opacity;
+}
+
+.board-viewport--dimmed {
+  opacity: 0.38;
+}
+
+/* Coach insight — inline in analysis panel */
+@keyframes coachInsightIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.coach-insight-card {
+  animation: coachInsightIn 0.28s ease-out forwards;
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-track-chess-bg {
+    scrollbar-color: #3a3a3a #1a1a1a;
+  }
+}
