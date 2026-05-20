@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { Chess } from "chess.js";
 import { ReviewChessboard } from "./components/ReviewChessboard";
 import { MoveList } from "./components/MoveList";
 import { ReviewSummaryPanel } from "./components/ReviewSummary";
@@ -20,6 +19,7 @@ import { GameEndBanner } from "./components/GameEndBanner";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
+import { parseGameText } from "./utils/pgnParse";
 import { countPgnPlies } from "./utils/pgnPlies";
 import { playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 
@@ -518,26 +518,25 @@ export default function App() {
   }, [navigateToMove, depth, recheckEngine]);
 
   const loadPgn = useCallback((pgnStr: string) => {
-    try {
-      const chess = new Chess();
-      chess.loadPgn(pgnStr);
-      setPgn(pgnStr);
-      setPgnInput(pgnStr);
-      setGamePlyCount(countPgnPlies(pgnStr));
-      setMoves([]);
-      setSummary(null);
-      setCurrentMoveIdx(-1);
-      setCurrentFen("start");
-      setCurrentEval(null);
-      setAnalysisState("loading");
-      setTab("moves");
-      const meta = extractGameMeta(pgnStr);
-      setPlayerNames({ white: meta.white, black: meta.black });
-      setGameMeta(meta);
-      setClocks(extractClocks(pgnStr));
-    } catch {
-      alert("Invalid PGN. Please check the format and try again.");
+    const parsed = parseGameText(pgnStr);
+    if (!parsed.ok) {
+      alert(parsed.error);
+      return;
     }
+    setPgn(parsed.pgn);
+    setPgnInput(parsed.pgn);
+    setGamePlyCount(parsed.moveCount);
+    setMoves([]);
+    setSummary(null);
+    setCurrentMoveIdx(-1);
+    setCurrentFen("start");
+    setCurrentEval(null);
+    setAnalysisState("loading");
+    setTab("moves");
+    const meta = extractGameMeta(parsed.pgn);
+    setPlayerNames({ white: meta.white, black: meta.black });
+    setGameMeta(meta);
+    setClocks(extractClocks(parsed.pgn));
   }, []);
 
   // Unlock Web Audio on first touch (required on iOS / Android Chrome)
