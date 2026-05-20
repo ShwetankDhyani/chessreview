@@ -953,8 +953,18 @@ export default function App() {
                     </div>
                   </>
                 ) : (
-                  <div className="p-4 flex flex-col h-full min-h-[280px]">
-                    <PgnPastePanel onLoad={loadPgn} onLinkProfile={openProfilePanel} />
+                  <div className="flex flex-col items-center justify-center flex-1 min-h-[240px] px-6 text-center gap-4">
+                    <span className="text-3xl opacity-40 select-none" aria-hidden>
+                      ♟
+                    </span>
+                    <p className="text-sm text-chess-muted">Load a game first</p>
+                    <button
+                      type="button"
+                      onClick={() => setTab("games")}
+                      className="text-sm font-semibold text-move-best hover:text-green-400 transition-colors"
+                    >
+                      Go to Games →
+                    </button>
                   </div>
                 )}
               </div>
