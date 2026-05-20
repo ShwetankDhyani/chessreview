@@ -144,29 +144,44 @@ export async function playMoveSound(kind: MoveSoundKind): Promise<void> {
   playWoodSound(ctx, kind);
 }
 
+function vibrate(pattern: number | number[]): void {
+  if (!hapticsEnabled() || typeof navigator === "undefined" || !navigator.vibrate) {
+    return;
+  }
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hapticTap(): void {
+  vibrate(22);
+}
+
+export function hapticTapStrong(): void {
+  vibrate([28, 18, 36]);
+}
+
 export function playMoveFeedback(san: string): void {
   const kind = soundKindFromSan(san);
   unlockChessAudio();
   void playMoveSound(kind);
 
-  if (!hapticsEnabled() || typeof navigator === "undefined" || !navigator.vibrate) {
-    return;
-  }
-  try {
-    switch (kind) {
-      case "capture":
-        navigator.vibrate([6, 24, 10]);
-        break;
-      case "check":
-        navigator.vibrate([8, 18, 8]);
-        break;
-      case "castle":
-        navigator.vibrate([6, 14, 8]);
-        break;
-      default:
-        navigator.vibrate(6);
-    }
-  } catch {
-    /* ignore */
+  switch (kind) {
+    case "capture":
+      vibrate([24, 40, 32, 48]);
+      break;
+    case "check":
+      vibrate([28, 52, 36]);
+      break;
+    case "castle":
+      vibrate([22, 32, 28]);
+      break;
+    case "promote":
+      vibrate([20, 36, 32]);
+      break;
+    default:
+      vibrate([18, 14, 32]);
   }
 }

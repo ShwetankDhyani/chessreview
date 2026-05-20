@@ -22,7 +22,7 @@ import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { parseGameText } from "./utils/pgnParse";
 import { countPgnPlies } from "./utils/pgnPlies";
-import { playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
+import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -114,6 +114,11 @@ export default function App() {
   useEffect(() => {
     setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
   }, [depth, hasRemoteEngine]);
+
+  const openProfilePanel = useCallback(() => {
+    hapticTap();
+    setShowAddProfile(true);
+  }, []);
 
   const recheckEngine = useCallback(async () => {
     const ok = await refreshNativeEngineProbe();
@@ -827,7 +832,7 @@ export default function App() {
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-chess-panel border-t border-chess-border flex">
           {(["games","moves","review"] as SidebarTab[]).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+            <button key={t} onClick={() => { hapticTap(); setTab(t); }}
               className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
                 tab === t ? "text-move-best border-t-2 border-move-best -mt-px" : "text-chess-muted"
               }`}>
@@ -839,7 +844,16 @@ export default function App() {
         {/* Mobile content pane (Games / Moves / Review) — shown above bottom bar */}
         {tab !== "moves" && (
           <div className="lg:hidden fixed inset-0 top-[44px] bottom-[48px] z-30 bg-chess-sidebar flex flex-col overflow-hidden pb-safe">
-            {tab === "games" && <GameList username="" onGameSelect={pgnStr => { loadPgn(pgnStr); setTab("moves"); }} />}
+            {tab === "games" && (
+              <GameList
+                username=""
+                onGameSelect={(pgnStr) => {
+                  loadPgn(pgnStr);
+                  setTab("moves");
+                }}
+                onLinkProfile={openProfilePanel}
+              />
+            )}
             {tab === "review" && (
               <div className="flex-1 overflow-y-auto min-h-0">
                 {summary ? (
@@ -878,6 +892,7 @@ export default function App() {
               <GameList
                 username=""
                 onGameSelect={(pgnStr) => loadPgn(pgnStr)}
+                onLinkProfile={openProfilePanel}
               />
             )}
 
@@ -939,7 +954,7 @@ export default function App() {
                   </>
                 ) : (
                   <div className="p-4 flex flex-col h-full min-h-[280px]">
-                    <PgnPastePanel onLoad={loadPgn} />
+                    <PgnPastePanel onLoad={loadPgn} onLinkProfile={openProfilePanel} />
                   </div>
                 )}
               </div>

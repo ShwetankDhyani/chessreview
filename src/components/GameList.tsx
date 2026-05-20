@@ -13,13 +13,18 @@ const STORAGE_KEY_GAMES   = "cr_games";
 interface GameListProps {
   username: string;
   onGameSelect: (pgn: string) => void;
+  onLinkProfile?: () => void;
   selectedGameId?: string;
 }
 
 type ResultFilter = "all" | "win" | "loss" | "draw";
 type RatingSort   = "none" | "high" | "low";
 
-export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId }) => {
+export const GameList: React.FC<GameListProps> = ({
+  onGameSelect,
+  onLinkProfile,
+  selectedGameId,
+}) => {
   const [platform, setPlatform] = useState<Platform>(
     () => (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom"
   );
@@ -272,7 +277,7 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
 
       {!inputVal && (
         <div className="flex-1 min-h-0 flex flex-col px-4 py-5 max-w-md mx-auto w-full">
-          <PgnPastePanel onLoad={onGameSelect} />
+          <PgnPastePanel onLoad={onGameSelect} onLinkProfile={onLinkProfile} />
         </div>
       )}
 
@@ -288,7 +293,7 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
             >
               Fetch games
             </button>
-            <PgnPastePanel onLoad={onGameSelect} />
+            <PgnPastePanel onLoad={onGameSelect} onLinkProfile={onLinkProfile} />
           </div>
         )}
         {loading && (

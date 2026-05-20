@@ -1,17 +1,24 @@
 import React, { useRef, useState } from "react";
+import { hapticTap, hapticTapStrong } from "../utils/chessSounds";
 import { parseGameText } from "../utils/pgnParse";
 
 interface PgnPastePanelProps {
   onLoad: (pgn: string) => void;
+  onLinkProfile?: () => void;
   className?: string;
 }
 
-export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
+export function PgnPastePanel({
+  onLoad,
+  onLinkProfile,
+  className = "",
+}: PgnPastePanelProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleLoad = () => {
+    hapticTapStrong();
     const result = parseGameText(text);
     if (!result.ok) {
       setError(result.error);
@@ -23,6 +30,7 @@ export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
+    hapticTap();
     try {
       const raw = await file.text();
       setText(raw);
@@ -32,6 +40,7 @@ export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
         return;
       }
       setError(null);
+      hapticTapStrong();
       onLoad(result.pgn);
     } catch {
       setError("Invalid file");
@@ -40,11 +49,13 @@ export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
   };
 
   const pasteClip = async () => {
+    hapticTap();
     try {
       const clip = await navigator.clipboard.readText();
       if (clip.trim()) {
         setText(clip);
         setError(null);
+        hapticTapStrong();
       }
     } catch {
       setError("Paste manually");
@@ -91,7 +102,10 @@ export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
         </button>
         <button
           type="button"
-          onClick={() => fileRef.current?.click()}
+          onClick={() => {
+            hapticTap();
+            fileRef.current?.click();
+          }}
           aria-label="Open PGN file"
           className="h-10 w-10 flex-shrink-0 rounded-xl border border-chess-border/80 text-chess-muted hover:text-chess-text hover:border-chess-muted transition-colors"
         >
@@ -100,6 +114,19 @@ export function PgnPastePanel({ onLoad, className = "" }: PgnPastePanelProps) {
           </span>
         </button>
       </div>
+
+      {onLinkProfile && (
+        <button
+          type="button"
+          onClick={() => {
+            hapticTap();
+            onLinkProfile();
+          }}
+          className="text-[11px] text-chess-muted/90 hover:text-move-best transition-colors text-center py-0.5"
+        >
+          or link Chess.com / Lichess profile
+        </button>
+      )}
 
       <input
         ref={fileRef}
