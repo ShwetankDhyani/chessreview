@@ -17,6 +17,7 @@ import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { GameEndBanner } from "./components/GameEndBanner";
+import { MobileBoardShell } from "./components/MobileBoardShell";
 import { getGameEndInfo } from "./utils/gameEnd";
 
 type SidebarTab = "games" | "review" | "moves";
@@ -579,9 +580,10 @@ export default function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-  const boardWidth = winWidth < 1024
-    ? winWidth - 40 // padding + eval bar gap
-    : Math.min(winWidth - 520, window.innerHeight - 260);
+  const boardWidth =
+    winWidth < 1024
+      ? Math.min(Math.floor(winWidth * 0.88), winWidth - 44)
+      : Math.min(winWidth - 520, window.innerHeight - 260);
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
@@ -796,14 +798,6 @@ export default function App() {
             {tab === "games" && <GameList username="" onGameSelect={pgnStr => { loadPgn(pgnStr); setTab("moves"); }} />}
             {tab === "review" && (
               <div className="flex-1 overflow-y-auto min-h-0">
-                {gameEnd && (
-                  <GameEndBanner
-                    end={gameEnd}
-                    whiteName={playerNames.white}
-                    blackName={playerNames.black}
-                    atFinalPosition
-                  />
-                )}
                 {summary ? (
                   <ReviewSummaryPanel summary={summary} whiteName={playerNames.white} blackName={playerNames.black}
                     moves={moves} onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }} />
@@ -1138,101 +1132,112 @@ export default function App() {
 
           {/* ── Mobile layout ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            {gameEnd && (
-              <div className="flex-shrink-0 px-2 pt-1.5">
-                <GameEndBanner
-                  end={gameEnd}
-                  whiteName={playerNames.white}
-                  blackName={playerNames.black}
-                  atFinalPosition={atGameEnd}
-                  compact={!atGameEnd}
-                />
-              </div>
-            )}
-            {/* Board area */}
-            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-1 gap-1">
+            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-1 pb-2 gap-0.5">
               <PlayerTag
+                compact
                 name={boardFlipped ? playerNames.white : playerNames.black}
                 color={boardFlipped ? "white" : "black"}
                 rating={boardFlipped ? gameMeta?.whiteRating : gameMeta?.blackRating}
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
-                clock={(() => { const topIsBlack = !boardFlipped; for (let i = currentMoveIdx; i >= 0; i--) { if ((topIsBlack) === (i % 2 === 1) && clocks[i] != null) return clocks[i]; } return null; })()}
-                clockColor={boardFlipped ? "w" : "b"}
                 side={boardFlipped ? "w" : "b"}
               />
-              <div className="flex items-stretch w-full gap-2 justify-center">
-                <div style={{ width: boardWidth }}>
-                  <ReviewChessboard
-                    position={continuationFen ?? currentFen}
-                    boardWidth={boardWidth}
-                    boardOrientation={boardFlipped ? "black" : "white"}
-                    animationDuration={boardPieceAnimMs}
-                    dimmed={boardDimmed && !continuationFen}
-                    continuationActive={continuationActive}
-                    moveAnim={moveAnim}
-                    continuationArrow={continuationArrow}
-                    showBestMoveArrow={
-                      !continuationActive &&
-                      !!showBestMove &&
-                      !!currentMove?.bestMove &&
-                      ["inaccuracy", "mistake", "blunder"].includes(
-                        currentMove.classification ?? ""
-                      )
-                    }
-                    bestMove={currentMove?.bestMove}
-                    classification={currentMove?.classification ?? undefined}
-                    san={currentMove?.san}
-                  />
+              {moves.length > 0 ? (
+                <MobileBoardShell
+                  evalResult={continuationEval ?? currentEval}
+                  position={continuationFen ?? currentFen}
+                  boardWidth={boardWidth}
+                  boardOrientation={boardFlipped ? "black" : "white"}
+                  animationDuration={boardPieceAnimMs}
+                  dimmed={boardDimmed && !continuationFen}
+                  continuationActive={continuationActive}
+                  moveAnim={moveAnim}
+                  continuationArrow={continuationArrow}
+                  showBestMoveArrow={
+                    !continuationActive &&
+                    !!showBestMove &&
+                    !!currentMove?.bestMove &&
+                    ["inaccuracy", "mistake", "blunder"].includes(
+                      currentMove.classification ?? ""
+                    )
+                  }
+                  bestMove={currentMove?.bestMove}
+                  classification={currentMove?.classification ?? undefined}
+                  san={currentMove?.san}
+                  moveIndex={currentMoveIdx}
+                  moveCount={moves.length}
+                  canPrev={currentMoveIdx > -1}
+                  canNext={currentMoveIdx < moves.length - 1}
+                  onPrev={() =>
+                    navigateToMove(Math.max(currentMoveIdx - 1, -1), false)
+                  }
+                  onNext={() =>
+                    navigateToMove(
+                      Math.min(currentMoveIdx + 1, moves.length - 1),
+                      false
+                    )
+                  }
+                />
+              ) : (
+                <div
+                  className="rounded border border-chess-border bg-chess-panel/50 flex items-center justify-center text-chess-muted text-xs"
+                  style={{ width: boardWidth + 28, height: Math.min(boardWidth, 280) }}
+                >
+                  Load a game to review
                 </div>
-              </div>
+              )}
               <PlayerTag
+                compact
                 name={boardFlipped ? playerNames.black : playerNames.white}
                 color={boardFlipped ? "black" : "white"}
                 rating={boardFlipped ? gameMeta?.blackRating : gameMeta?.whiteRating}
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
-                clock={(() => { const botIsBlack = boardFlipped; for (let i = currentMoveIdx; i >= 0; i--) { if ((botIsBlack) === (i % 2 === 1) && clocks[i] != null) return clocks[i]; } return null; })()}
-                clockColor={boardFlipped ? "b" : "w"}
                 side={boardFlipped ? "b" : "w"}
               />
-              {/* Mobile nav strip */}
-              <div className="flex items-center justify-between w-full px-1 py-1 gap-1">
-                <div className="flex items-center gap-1">
-                  {[{icon:"⏮",fn:()=>navigateToMove(-1,false)},{icon:"◀",fn:()=>navigateToMove(Math.max(currentMoveIdx-1,-1),false)},{icon:"▶",fn:()=>navigateToMove(Math.min(currentMoveIdx+1,moves.length-1),false)},{icon:"⏭",fn:()=>navigateToMove(moves.length-1,false)}].map(({icon,fn},i)=>(
-                    <button key={i} onClick={fn} className="bg-chess-panel border border-chess-border rounded p-2 text-chess-muted text-sm active:bg-chess-hover">{icon}</button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={()=>setBoardFlipped(f=>!f)} className="bg-chess-panel border border-chess-border rounded p-2 text-chess-muted text-sm">⇅</button>
-                  {moves.length > 0 && (
-                    <button onClick={()=>setShowMobileGraph(v=>!v)}
-                      className={`px-3 py-2 rounded text-xs font-semibold border transition-colors ${
-                        showMobileGraph ? "bg-chess-panel text-chess-muted border-chess-border" : "bg-move-best text-white border-move-best"
-                      }`}>
-                      {showMobileGraph ? "Analysis" : "Graph"}
-                    </button>
-                  )}
-                </div>
+              {gameEnd && atGameEnd && (
+                <p className="text-[10px] text-chess-muted text-center w-full truncate px-1">
+                  {gameEnd.icon} {gameEnd.detail}
+                </p>
+              )}
+              <div className="flex items-center justify-center w-full gap-2 py-0.5">
+                <button
+                  type="button"
+                  onClick={() => setBoardFlipped((f) => !f)}
+                  className="p-2 rounded-lg border border-chess-border text-chess-muted text-sm active:bg-chess-hover"
+                  aria-label="Flip board"
+                >
+                  ⇅
+                </button>
+                {moves.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileGraph((v) => !v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                      showMobileGraph
+                        ? "border-move-best text-move-best bg-move-best/10"
+                        : "border-chess-border text-chess-muted"
+                    }`}
+                  >
+                    {showMobileGraph ? "Coach" : "Graph"}
+                  </button>
+                )}
+                <span className="text-[10px] text-chess-muted">Tap ◀ ▶ sides</span>
               </div>
             </div>
 
-            {/* Scrollable content below board */}
             <div className="flex-1 overflow-y-auto min-h-0 pb-14 bg-chess-panel">
-              {moves.length > 0 && (
-                showMobileGraph ? (
-                  <div className="w-full p-2 border-t border-chess-border">
-                    <EvalChart moves={moves} currentMoveIndex={currentMoveIdx} onMoveSelect={navigateToMove} />
+              {moves.length > 0 &&
+                (showMobileGraph ? (
+                  <div className="w-full p-2">
+                    <EvalChart
+                      moves={moves}
+                      currentMoveIndex={currentMoveIdx}
+                      onMoveSelect={navigateToMove}
+                    />
                   </div>
                 ) : (
-                  <div className="border-t border-chess-border flex flex-col min-h-[200px]">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border bg-chess-panel">
-                      <span className="text-xs font-semibold text-chess-subtext">Coach</span>
-                      <EvalBadge
-                        evalResult={continuationEval ?? currentEval}
-                        compact
-                      />
-                    </div>
+                  <div className="border-t border-chess-border flex flex-col">
                     <MoveReviewPanel
                       move={currentMove}
                       moveIdx={currentMoveIdx}
@@ -1243,8 +1248,7 @@ export default function App() {
                       onContinuationArrow={handleContinuationArrow}
                     />
                   </div>
-                )
-              )}
+                ))}
             </div>
           </div>
 
@@ -1266,15 +1270,25 @@ export default function App() {
 }
 
 function PlayerTag({
-  name, color, rating, result, isLastMove, clock, clockColor, side
+  name,
+  color,
+  rating,
+  result,
+  isLastMove,
+  clock,
+  clockColor,
+  side,
+  compact = false,
 }: {
-  name: string; color: "white" | "black";
+  name: string;
+  color: "white" | "black";
   rating?: number | null;
   result?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
   isLastMove?: boolean;
   clock?: number | null;
   clockColor?: "w" | "b";
   side?: "w" | "b";
+  compact?: boolean;
 }) {
   const mySide = side ?? (color === "white" ? "w" : "b");
   const won  = result === "1-0" ? "w" : result === "0-1" ? "b" : result === "1/2-1/2" ? "draw" : null;
@@ -1282,41 +1296,58 @@ function PlayerTag({
   const didLose = won !== null && won !== "draw" && won !== mySide;
   const isDraw  = won === "draw";
 
-  const hasClock = clock !== null && clock !== undefined;
+  const hasClock = !compact && clock !== null && clock !== undefined;
   const clockSecs = hasClock ? clock! : null;
   const clockColor_ = clockSecs !== null
-    ? clockSecs < 30  ? "#ca3c3c"   // red — critical
-    : clockSecs < 60  ? "#e6c84a"   // amber — time trouble
-    : clockSecs < 120 ? "#e07b39"   // orange — low
-    : "#888"                         // normal muted
+    ? clockSecs < 30
+      ? "#ca3c3c"
+      : clockSecs < 60
+        ? "#e6c84a"
+        : clockSecs < 120
+          ? "#e07b39"
+          : "#888"
     : "#888";
 
   return (
     <div
-      className={`flex items-center gap-2 px-1 py-0.5 rounded transition-all ${
-        isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""
-      }`}
+      className={`flex items-center gap-1.5 w-full rounded transition-all ${
+        compact ? "px-1 py-0.5 text-xs" : "px-1 py-0.5 gap-2"
+      } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       style={isLastMove && didLose ? { opacity: 0.7 } : undefined}
     >
       <div
-        className="w-4 h-4 rounded-sm border flex-shrink-0"
+        className={`rounded-sm border flex-shrink-0 ${compact ? "w-3 h-3" : "w-4 h-4"}`}
         style={{
           backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
           borderColor: color === "white" ? "#ccc" : "#666",
         }}
       />
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className="text-sm font-bold text-chess-text truncate">{name}</span>
-        {didWin && <span title="Winner" className="text-sm leading-none drop-shadow-md pb-[1px]">👑</span>}
-        {isDraw && <span title="Draw" className="text-[10px] font-bold text-chess-muted px-1 bg-chess-border rounded">½-½</span>}
-      </div>
-      {rating && <span className="text-xs text-chess-muted flex-shrink-0">({rating})</span>}
       <span
-        className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${clockSecs !== null && clockSecs < 30 ? "animate-pulse" : ""}`}
-        style={{ color: clockColor_ }}
+        className={`font-bold text-chess-text truncate ${compact ? "text-xs" : "text-sm"}`}
       >
-        {clockSecs !== null ? formatClock(clockSecs) : "--:--"}
+        {name}
       </span>
+      {didWin && (
+        <span title="Winner" className={`leading-none ${compact ? "text-xs" : "text-sm"}`}>
+          👑
+        </span>
+      )}
+      {isDraw && (
+        <span className="text-[10px] font-bold text-chess-muted">½-½</span>
+      )}
+      {rating && (
+        <span className="text-[10px] text-chess-muted flex-shrink-0">({rating})</span>
+      )}
+      {hasClock && (
+        <span
+          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${
+            clockSecs !== null && clockSecs < 30 ? "animate-pulse" : ""
+          }`}
+          style={{ color: clockColor_ }}
+        >
+          {clockSecs !== null ? formatClock(clockSecs) : "--:--"}
+        </span>
+      )}
     </div>
   );
 }

@@ -100,12 +100,12 @@ function ClassificationBadge({
 
   return (
     <div
-      className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white text-sm font-bold shadow-xl"
+      className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center justify-center gap-1 px-2 py-1 rounded text-white text-[11px] font-bold shadow-lg max-w-[95%] mx-auto"
       style={{ backgroundColor: `${meta.color}dd` }}
     >
-      <ClassificationIcon type={classification} size="md" />
-      <span>{san}</span>
-      <span className="font-normal text-xs opacity-90">{meta.label}</span>
+      <ClassificationIcon type={classification} size="sm" />
+      <span className="truncate">{san}</span>
+      <span className="font-normal opacity-90 flex-shrink-0">{meta.label}</span>
     </div>
   );
 }
