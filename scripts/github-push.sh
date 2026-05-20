@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REPO_NAME="${1:-chess-review}"
+REPO_NAME="${1:-chessreview}"
 GH_BIN="${GH_BIN:-gh}"
 
 if ! command -v "$GH_BIN" >/dev/null 2>&1; then

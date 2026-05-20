@@ -19,7 +19,7 @@ Copy `.env.example` to `.env` and set `VITE_GEMINI_API_KEY` for AI coach text.
 
 ## Deploy on Vercel (free)
 
-1. Push this repo to GitHub.
+1. Push this repo to GitHub as **`chessreview`** (see `scripts/github-push.sh`).
 2. Import the project in [Vercel](https://vercel.com/new).
 3. Framework preset: **Vite** (auto-detected from `vercel.json`).
 4. Add environment variable (optional): `VITE_GEMINI_API_KEY` — your [Google AI Studio](https://aistudio.google.com/apikey) key.
