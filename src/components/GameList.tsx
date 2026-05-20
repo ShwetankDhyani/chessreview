@@ -170,14 +170,14 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
     });
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* ── Header ── */}
       <div className="p-3 border-b border-chess-border space-y-2.5 flex-shrink-0">
 
         {/* Active Profile Header */}
         {!inputVal ? (
-          <div className="text-sm text-chess-muted text-center py-4">
-            Select or add a profile from the header to view games.
+          <div className="text-xs text-chess-muted text-center py-2 px-1 leading-relaxed">
+            Tap <span className="text-chess-text font-semibold">Select Profile</span> above to add Chess.com or Lichess, then fetch games.
           </div>
         ) : (
           <div className="flex items-start justify-between">
@@ -276,11 +276,21 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
       </div>
 
       {/* ── Game list ── */}
-      <div className="flex-1 overflow-y-auto">
-        {games.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-32 text-chess-muted text-sm gap-2">
-            <span className="text-3xl">♟</span>
-            <span>Enter a username to load games</span>
+      <div
+        className={
+          games.length > 0 ? "flex-1 min-h-0 overflow-y-auto" : "flex-shrink-0 overflow-y-auto"
+        }
+      >
+        {games.length === 0 && !loading && inputVal && (
+          <div className="px-3 py-4 text-center space-y-2">
+            <p className="text-xs text-chess-muted">No games loaded for {inputVal}.</p>
+            <button
+              type="button"
+              onClick={handleGo}
+              className="text-xs font-semibold px-3 py-1.5 rounded bg-move-best text-white hover:bg-green-600 transition-colors"
+            >
+              Fetch Latest
+            </button>
           </div>
         )}
         {loading && (

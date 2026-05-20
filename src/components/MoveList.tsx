@@ -7,12 +7,15 @@ interface MoveListProps {
   moves: AnalyzedMove[];
   currentMoveIndex: number;
   onMoveSelect: (index: number) => void;
+  /** Show "Game end" marker on the last move */
+  markGameEnd?: boolean;
 }
 
 export const MoveList: React.FC<MoveListProps> = ({
   moves,
   currentMoveIndex,
   onMoveSelect,
+  markGameEnd = false,
 }) => {
   const activeRef = useRef<HTMLButtonElement>(null);
 
@@ -47,6 +50,7 @@ export const MoveList: React.FC<MoveListProps> = ({
                 move={whiteMove}
                 index={whiteMoveIdx}
                 isActive={currentMoveIndex === whiteMoveIdx}
+                isGameEnd={markGameEnd && whiteMoveIdx === moves.length - 1}
                 ref={currentMoveIndex === whiteMoveIdx ? activeRef : null}
                 onClick={() => onMoveSelect(whiteMoveIdx)}
               />
@@ -55,6 +59,7 @@ export const MoveList: React.FC<MoveListProps> = ({
                 move={blackMove}
                 index={blackMoveIdx}
                 isActive={currentMoveIndex === blackMoveIdx}
+                isGameEnd={markGameEnd && blackMoveIdx === moves.length - 1}
                 ref={currentMoveIndex === blackMoveIdx ? activeRef : null}
                 onClick={() => onMoveSelect(blackMoveIdx)}
               />
@@ -70,11 +75,12 @@ interface MoveTokenProps {
   move?: AnalyzedMove;
   index: number;
   isActive: boolean;
+  isGameEnd?: boolean;
   onClick: () => void;
 }
 
 const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
-  ({ move, isActive, onClick }, ref) => {
+  ({ move, isActive, isGameEnd, onClick }, ref) => {
     if (!move) {
       return <div className="flex-1" />;
     }
@@ -85,7 +91,6 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
       move.classification === "great" ||
       move.classification === "blunder" ||
       move.classification === "mistake";
-
     return (
       <button
         ref={ref}
@@ -112,6 +117,14 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
         <span className={`truncate ${isActive ? "text-white" : isKeyMove ? "text-chess-text" : ""}`}>
           {move.san}
         </span>
+        {isGameEnd && (
+          <span
+            className="text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded flex-shrink-0 bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            title="Last move — game ended here"
+          >
+            End
+          </span>
+        )}
         {meta && move.classification && (
           <ClassificationIcon
             type={move.classification}

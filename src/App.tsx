@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Chess } from "chess.js";
 import { ReviewChessboard } from "./components/ReviewChessboard";
 import { MoveList } from "./components/MoveList";
@@ -16,6 +16,8 @@ import { MoveReviewPanel } from "./components/MoveReviewPanel";
 import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
+import { GameEndBanner } from "./components/GameEndBanner";
+import { getGameEndInfo } from "./utils/gameEnd";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -549,6 +551,22 @@ export default function App() {
 
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
 
+  const gameEnd = useMemo(() => {
+    if (!gameMeta?.result || gameMeta.result === "*") return null;
+    const finalFen =
+      moves.length > 0 ? moves[moves.length - 1].fenAfter : undefined;
+    return getGameEndInfo(
+      gameMeta.result,
+      gameMeta.termination,
+      playerNames.white,
+      playerNames.black,
+      finalFen
+    );
+  }, [gameMeta, moves, playerNames.white, playerNames.black]);
+
+  const atGameEnd =
+    moves.length > 0 && currentMoveIdx === moves.length - 1;
+
   const progressPercent =
     progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
 
@@ -632,29 +650,37 @@ export default function App() {
         </div>
 
         {/* ── Profile Dropdown ── */}
-        <div className="flex items-center relative ml-3">
+        <div className="flex items-center relative ml-1 sm:ml-3 flex-shrink-0">
           <button
             onClick={() => setShowAddProfile(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-chess-border bg-chess-bg text-sm font-semibold transition-colors hover:bg-chess-hover hover:text-chess-text text-chess-muted"
+            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg border border-chess-border bg-chess-bg text-xs sm:text-sm font-semibold transition-colors hover:bg-chess-hover hover:text-chess-text text-chess-muted max-w-[140px] sm:max-w-none"
           >
             {activeUser ? (
               <>
                 <span className="leading-none">{activeUser.platform === "lichess" ? "🏳" : "♟"}</span>
-                <span className="truncate max-w-[100px] text-chess-text">{activeUser.name}</span>
-                <span className="text-[10px] ml-1">▼</span>
+                <span className="truncate text-chess-text">{activeUser.name}</span>
+                <span className="text-[10px] flex-shrink-0">▼</span>
               </>
             ) : (
               <>
                 <span className="leading-none">👤</span>
-                <span>Select Profile</span>
-                <span className="text-[10px] ml-1">▼</span>
+                <span>Profile</span>
+                <span className="text-[10px] flex-shrink-0">▼</span>
               </>
             )}
           </button>
 
-          {/* Dropdown Menu */}
           {showAddProfile && (
-            <div className="absolute right-0 top-full mt-2 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 overflow-hidden w-64 flex flex-col">
+            <div
+              className="fixed inset-0 z-[60] bg-black/60 lg:hidden"
+              onClick={() => setShowAddProfile(false)}
+              aria-hidden
+            />
+          )}
+
+          {/* Dropdown — full-width sheet on mobile, anchored panel on desktop */}
+          {showAddProfile && (
+            <div className="fixed left-2 right-2 top-12 z-[70] max-h-[min(75dvh,520px)] overflow-y-auto rounded-xl border border-chess-border bg-chess-panel shadow-2xl flex flex-col lg:fixed lg:inset-auto lg:absolute lg:right-0 lg:top-full lg:left-auto lg:mt-2 lg:w-72 lg:max-h-96 lg:rounded-lg">
               {profiles.length > 0 && (
                 <div className="flex flex-col border-b border-chess-border max-h-48 overflow-y-auto">
                   <div className="text-xs font-semibold text-chess-muted px-3 py-2 bg-chess-bg">Your Profiles</div>
@@ -769,28 +795,21 @@ export default function App() {
           <div className="lg:hidden fixed inset-0 top-[44px] bottom-[48px] z-30 bg-chess-sidebar flex flex-col overflow-hidden pb-safe">
             {tab === "games" && <GameList username="" onGameSelect={pgnStr => { loadPgn(pgnStr); setTab("moves"); }} />}
             {tab === "review" && (
-              <div className="flex-1 overflow-y-auto">
-                {gameMeta?.result && gameMeta.result !== "*" && (
-                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-chess-border"
-                    style={{ background: gameMeta.result === "1/2-1/2" ? "#88888818" : gameMeta.result === "1-0" ? "#6daa6d18" : "#ca3c3c18" }}>
-                    <span className="text-lg">{gameMeta.result === "1/2-1/2" ? "🤝" : "🏆"}</span>
-                    <div className="flex-1 min-w-0">
-                      {gameMeta.result === "1/2-1/2" ? (
-                        <div className="text-xs font-bold text-chess-muted">Draw</div>
-                      ) : (
-                        <div className="text-xs font-bold" style={{ color: gameMeta.result === "1-0" ? "#6daa6d" : "#ca3c3c" }}>
-                          {gameMeta.result === "1-0" ? playerNames.white : playerNames.black} wins
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {gameEnd && (
+                  <GameEndBanner
+                    end={gameEnd}
+                    whiteName={playerNames.white}
+                    blackName={playerNames.black}
+                    atFinalPosition
+                  />
                 )}
                 {summary ? (
                   <ReviewSummaryPanel summary={summary} whiteName={playerNames.white} blackName={playerNames.black}
                     moves={moves} onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }} />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-40 text-chess-muted text-sm gap-2 p-4">
-                    <span className="text-3xl">📊</span><span className="text-center">Load and analyze a game first</span>
+                  <div className="px-4 py-8 text-chess-muted text-xs text-center leading-relaxed">
+                    Load and analyze a game to see the review summary.
                   </div>
                 )}
               </div>
@@ -863,6 +882,7 @@ export default function App() {
                           moves={moves}
                           currentMoveIndex={currentMoveIdx}
                           onMoveSelect={navigateToMove}
+                          markGameEnd={!!gameEnd}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2">
@@ -902,35 +922,14 @@ export default function App() {
             )}
 
             {tab === "review" && (
-              <div className="h-full overflow-y-auto">
-                {/* Winner banner */}
-                {gameMeta?.result && gameMeta.result !== "*" && (
-                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-chess-border flex-shrink-0"
-                    style={{
-                      background: gameMeta.result === "1/2-1/2"
-                        ? "#88888818"
-                        : gameMeta.result === "1-0" ? "#6daa6d18" : "#ca3c3c18"
-                    }}
-                  >
-                    <span className="text-lg">
-                      {gameMeta.result === "1/2-1/2" ? "🤝" : "🏆"}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      {gameMeta.result === "1/2-1/2" ? (
-                        <div className="text-xs font-bold text-chess-muted">Draw</div>
-                      ) : (
-                        <>
-                          <div className="text-xs font-bold" style={{ color: gameMeta.result === "1-0" ? "#6daa6d" : "#ca3c3c" }}>
-                            {gameMeta.result === "1-0" ? playerNames.white : playerNames.black} wins
-                          </div>
-                          <div className="text-xs text-chess-muted truncate">
-                            {gameMeta.termination ?? (gameMeta.result === "1-0" ? "White wins" : "Black wins")}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <span className="text-xs font-mono font-bold text-chess-muted">{gameMeta.result}</span>
-                  </div>
+              <div className="h-full overflow-y-auto min-h-0">
+                {gameEnd && (
+                  <GameEndBanner
+                    end={gameEnd}
+                    whiteName={playerNames.white}
+                    blackName={playerNames.black}
+                    atFinalPosition
+                  />
                 )}
                 {summary ? (
                   <ReviewSummaryPanel
@@ -941,11 +940,8 @@ export default function App() {
                     onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-chess-muted text-sm gap-2 p-4">
-                    <span className="text-3xl">📊</span>
-                    <span className="text-center">
-                      Load and analyze a game to see the review summary
-                    </span>
+                  <div className="px-4 py-8 text-chess-muted text-xs text-center leading-relaxed">
+                    Load and analyze a game to see the review summary.
                   </div>
                 )}
               </div>
@@ -955,7 +951,19 @@ export default function App() {
 
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* ── Desktop board area ── */}
-          <div className="hidden lg:flex flex-1 items-center justify-center p-4 gap-4 min-h-0 overflow-hidden">
+          <div className="hidden lg:flex flex-1 flex-col min-h-0 overflow-hidden">
+            {gameEnd && (
+              <div className="flex-shrink-0 px-4 pt-2">
+                <GameEndBanner
+                  end={gameEnd}
+                  whiteName={playerNames.white}
+                  blackName={playerNames.black}
+                  atFinalPosition={atGameEnd}
+                  compact={!atGameEnd}
+                />
+              </div>
+            )}
+          <div className="flex flex-1 items-center justify-center p-4 gap-4 min-h-0 overflow-hidden">
             <div className="flex items-stretch gap-2 h-full max-h-[min(calc(100vw-480px),calc(100vh-180px))]">
               <div className="relative flex flex-col gap-1">
                 <PlayerTag
@@ -1120,6 +1128,7 @@ export default function App() {
               )}
             </div>
           </div>
+          </div>
 
           {moves.length > 0 && (
             <div className="hidden lg:block flex-shrink-0">
@@ -1129,8 +1138,19 @@ export default function App() {
 
           {/* ── Mobile layout ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
+            {gameEnd && (
+              <div className="flex-shrink-0 px-2 pt-1.5">
+                <GameEndBanner
+                  end={gameEnd}
+                  whiteName={playerNames.white}
+                  blackName={playerNames.black}
+                  atFinalPosition={atGameEnd}
+                  compact={!atGameEnd}
+                />
+              </div>
+            )}
             {/* Board area */}
-            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-2 gap-1">
+            <div className="flex-shrink-0 flex flex-col items-center px-2 pt-1 gap-1">
               <PlayerTag
                 name={boardFlipped ? playerNames.white : playerNames.black}
                 color={boardFlipped ? "white" : "black"}

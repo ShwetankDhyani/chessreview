@@ -226,11 +226,20 @@ const server = createServer(async (req, res) => {
   }
 });
 
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use. Stop the old server:`);
+    console.error(`  fuser -k ${PORT}/tcp   # or:  pkill -f stockfish-server.mjs`);
+    process.exit(1);
+  }
+  throw err;
+});
+
 server.listen(PORT, BIND, () => {
   console.log(`Eval server http://${BIND}:${PORT}`);
   console.log(`Health:  http://${BIND === "0.0.0.0" ? "127.0.0.1" : BIND}:${PORT}/health`);
   if (BIND === "127.0.0.1") {
-    console.log("For Vercel/tunnel: STOCKFISH_BIND=0.0.0.0 node stockfish-server.mjs");
+    console.log("For Vercel/tunnel: npm run eval-server:public");
   }
 });
 
