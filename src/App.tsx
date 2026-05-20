@@ -16,7 +16,6 @@ import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { GameEndBanner } from "./components/GameEndBanner";
-import { PgnPastePanel } from "./components/PgnPastePanel";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
