@@ -16,6 +16,7 @@ import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { GameEndBanner } from "./components/GameEndBanner";
+import { PgnPastePanel } from "./components/PgnPastePanel";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
@@ -939,22 +940,8 @@ export default function App() {
                     </div>
                   </>
                 ) : (
-                  <div className="p-3 flex flex-col gap-3 h-full">
-                    <label className="text-xs font-semibold text-chess-muted uppercase tracking-wider">
-                      Paste PGN
-                    </label>
-                    <textarea
-                      value={pgnInput}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPgnInput(e.target.value)}
-                      placeholder="Paste PGN here…"
-                      className="flex-1 bg-chess-bg border border-chess-border rounded p-2 text-xs font-mono text-chess-text placeholder-chess-muted focus:outline-none focus:border-move-best resize-none transition-colors"
-                    />
-                    <button
-                      onClick={() => loadPgn(pgnInput)}
-                      className="bg-move-best hover:bg-green-600 text-white text-sm font-semibold py-2 rounded transition-colors"
-                    >
-                      Load PGN
-                    </button>
+                  <div className="p-4 flex flex-col h-full min-h-[280px]">
+                    <PgnPastePanel onLoad={loadPgn} />
                   </div>
                 )}
               </div>

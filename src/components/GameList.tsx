@@ -172,16 +172,9 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* ── Header ── */}
+      {/* ── Header (profile only) ── */}
+      {inputVal && (
       <div className="p-3 border-b border-chess-border space-y-2.5 flex-shrink-0">
-
-        {/* Active Profile Header */}
-        {!inputVal ? (
-          <p className="text-[11px] text-chess-muted text-center leading-relaxed">
-            Or link <span className="text-chess-text font-semibold">Profile</span> above for
-            Chess.com / Lichess games
-          </p>
-        ) : (
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-bold text-chess-text flex items-center gap-1.5">
@@ -209,7 +202,6 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
               {loading ? <span className="inline-block w-3 h-3 border-2 border-chess-muted border-t-transparent rounded-full animate-spin" /> : "Fetch Latest"}
             </button>
           </div>
-        )}
 
         {error && <p className="text-xs text-move-blunder pt-2">{error}</p>}
 
@@ -276,11 +268,11 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
           </div>
         )}
       </div>
+      )}
 
-      {/* ── Paste PGN (no profile) or empty profile ── */}
       {!inputVal && (
-        <div className="flex-1 min-h-0 flex flex-col px-3 pb-3 pt-1">
-          <PgnPastePanel onLoad={onGameSelect} className="flex-1" />
+        <div className="flex-1 min-h-0 flex flex-col px-4 py-5 max-w-md mx-auto w-full">
+          <PgnPastePanel onLoad={onGameSelect} />
         </div>
       )}
 
@@ -288,18 +280,15 @@ export const GameList: React.FC<GameListProps> = ({ onGameSelect, selectedGameId
       {inputVal && (
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
         {games.length === 0 && !loading && (
-          <div className="px-3 py-3 flex flex-col gap-3 flex-shrink-0 border-b border-chess-border">
-            <p className="text-xs text-chess-muted text-center">
-              No cached games for {inputVal}.
-            </p>
+          <div className="px-4 py-4 flex flex-col gap-3 flex-shrink-0 border-b border-chess-border max-h-[50vh]">
             <button
               type="button"
               onClick={handleGo}
-              className="text-xs font-semibold px-3 py-1.5 rounded bg-move-best text-white hover:bg-green-600 transition-colors mx-auto"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-chess-hover text-chess-text hover:bg-chess-border transition-colors mx-auto"
             >
-              Fetch Latest
+              Fetch games
             </button>
-            <PgnPastePanel onLoad={onGameSelect} compact />
+            <PgnPastePanel onLoad={onGameSelect} />
           </div>
         )}
         {loading && (
