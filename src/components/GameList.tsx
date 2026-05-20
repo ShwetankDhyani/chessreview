@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { GameListItem } from "../types";
 import { fetchRecentGames, getResultLabel, formatDate, timeClassIcon } from "../utils/chesscomApi";
 import { fetchLichessGames } from "../utils/lichessApi";
+import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
 
 type Platform = "chesscom" | "lichess";
@@ -275,9 +276,17 @@ export const GameList: React.FC<GameListProps> = ({
       </div>
       )}
 
-      {!inputVal && (
-        <div className="flex-1 min-h-0 flex flex-col px-4 py-5 max-w-md mx-auto w-full">
-          <PgnPastePanel onLoad={onGameSelect} onLinkProfile={onLinkProfile} />
+      {!inputVal && onLinkProfile && (
+        <div className="flex-1 min-h-0 flex flex-col max-w-md mx-auto w-full">
+          <AccountLinkPromo onConnect={onLinkProfile} />
+          <div className="flex-1 min-h-0 flex flex-col px-4 py-3 pb-4">
+            <PgnPastePanel onLoad={onGameSelect} compact />
+          </div>
+        </div>
+      )}
+      {!inputVal && !onLinkProfile && (
+        <div className="flex-1 min-h-0 flex flex-col px-4 py-4 max-w-md mx-auto w-full">
+          <PgnPastePanel onLoad={onGameSelect} compact />
         </div>
       )}
 
@@ -293,7 +302,7 @@ export const GameList: React.FC<GameListProps> = ({
             >
               Fetch games
             </button>
-            <PgnPastePanel onLoad={onGameSelect} onLinkProfile={onLinkProfile} />
+            <PgnPastePanel onLoad={onGameSelect} compact />
           </div>
         )}
         {loading && (

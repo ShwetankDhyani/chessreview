@@ -6,12 +6,15 @@ interface PgnPastePanelProps {
   onLoad: (pgn: string) => void;
   onLinkProfile?: () => void;
   className?: string;
+  /** Smaller field for use below account promo on Games tab */
+  compact?: boolean;
 }
 
 export function PgnPastePanel({
   onLoad,
   onLinkProfile,
   className = "",
+  compact = false,
 }: PgnPastePanelProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +66,14 @@ export function PgnPastePanel({
   };
 
   return (
-    <div className={`flex flex-col min-h-0 flex-1 gap-3 ${className}`}>
+    <div
+      className={`flex flex-col min-h-0 gap-2.5 ${compact ? "" : "flex-1 gap-3"} ${className}`}
+    >
+      {compact && (
+        <p className="text-[10px] uppercase tracking-wider text-chess-muted/70 text-center">
+          or paste PGN
+        </p>
+      )}
       <textarea
         value={text}
         onChange={(e) => {
@@ -71,7 +81,11 @@ export function PgnPastePanel({
           if (error) setError(null);
         }}
         placeholder="Paste PGN"
-        className="flex-1 min-h-[200px] w-full bg-chess-bg/60 border border-chess-border/70 rounded-xl p-4 font-mono text-sm text-chess-text placeholder:text-chess-muted/50 focus:outline-none focus:border-move-best/60 focus:ring-1 focus:ring-move-best/20 resize-none transition-all"
+        className={`w-full bg-chess-bg/60 border border-chess-border/70 rounded-xl font-mono text-chess-text placeholder:text-chess-muted/50 focus:outline-none focus:border-move-best/60 focus:ring-1 focus:ring-move-best/20 resize-none transition-all ${
+          compact
+            ? "min-h-[96px] max-h-[128px] p-3 text-xs"
+            : "flex-1 min-h-[200px] p-4 text-sm"
+        }`}
         spellCheck={false}
         autoCapitalize="off"
         autoCorrect="off"
@@ -115,7 +129,7 @@ export function PgnPastePanel({
         </button>
       </div>
 
-      {onLinkProfile && (
+      {onLinkProfile && !compact && (
         <button
           type="button"
           onClick={() => {
