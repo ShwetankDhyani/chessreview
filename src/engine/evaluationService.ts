@@ -41,6 +41,7 @@ export async function evalWithLocalServer(fen: string, depth = 18): Promise<Eval
 let workerInstance: Worker | null = null;
 let workerReady = false;
 const pendingCallbacks = new Map<string, (result: EvalResult) => void>();
+const pendingFens = new Map<string, string>();
 
 function getWorker(): Worker {
   if (!workerInstance) {
@@ -49,11 +50,21 @@ function getWorker(): Worker {
       { type: "module" }
     );
     workerInstance.onmessage = (e) => {
-      const { id, cp, mate, depth } = e.data;
+      const { id, cp, mate, depth, bestMove, pv } = e.data;
       const cb = pendingCallbacks.get(id);
-      if (cb) {
-        cb({ cp, mate, depth, source: "local" });
+      const fen = pendingFens.get(id);
+      if (cb && fen) {
+        const norm = normalizeEvalToWhite(fen, cp, mate);
+        cb({
+          cp: norm.cp,
+          mate: norm.mate,
+          depth,
+          source: "local",
+          bestMove,
+          pv,
+        });
         pendingCallbacks.delete(id);
+        pendingFens.delete(id);
       }
     };
     workerReady = true;
@@ -67,10 +78,24 @@ export function terminateWorker() {
     workerInstance = null;
     workerReady = false;
     pendingCallbacks.clear();
+    pendingFens.clear();
   }
 }
 
 let idCounter = 0;
+
+/** Stockfish scores are from side-to-move; normalize to White's perspective (like Lichess). */
+function normalizeEvalToWhite(
+  fen: string,
+  cp?: number,
+  mate?: number
+): { cp?: number; mate?: number } {
+  if (fen.split(" ")[1] !== "b") return { cp, mate };
+  return {
+    cp: cp !== undefined ? -cp : undefined,
+    mate: mate !== undefined ? -mate : undefined,
+  };
+}
 
 export async function evalWithStockfish(
   fen: string,
@@ -82,11 +107,12 @@ export async function evalWithStockfish(
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      // Timed out — return a neutral eval so analysis can continue
       pendingCallbacks.delete(id);
+      pendingFens.delete(id);
       resolve({ cp: 0, depth: 0, source: "local" });
     }, timeoutMs);
 
+    pendingFens.set(id, fen);
     pendingCallbacks.set(id, (result) => {
       clearTimeout(timer);
       resolve(result);
@@ -97,23 +123,12 @@ export async function evalWithStockfish(
 
 const cloudCache = new Map<string, EvalResult>();
 let lastCloudCall = 0;
-const CLOUD_RATE_LIMIT_MS = 50; // ~20 req/sec, within Lichess fair-use limits
+const CLOUD_RATE_LIMIT_MS = import.meta.env.PROD ? 100 : 50;
 
-export async function evalWithLichessCloud(
-  fen: string
-): Promise<EvalResult | null> {
-  const cached = cloudCache.get(fen);
-  if (cached) return cached;
-
-  // Rate-limit: ensure minimum gap between calls
-  const now = Date.now();
-  const wait = CLOUD_RATE_LIMIT_MS - (now - lastCloudCall);
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastCloudCall = Date.now();
-
+async function fetchLichessCloudOnce(fen: string): Promise<EvalResult | null> {
   try {
     const url = `https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=1`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -152,6 +167,30 @@ export async function evalWithLichessCloud(
   }
 }
 
+export async function evalWithLichessCloud(
+  fen: string
+): Promise<EvalResult | null> {
+  const cached = cloudCache.get(fen);
+  if (cached) return cached;
+
+  const now = Date.now();
+  const wait = CLOUD_RATE_LIMIT_MS - (now - lastCloudCall);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCloudCall = Date.now();
+
+  try {
+    let result = await fetchLichessCloudOnce(fen);
+    if (!result) {
+      await new Promise((r) => setTimeout(r, 800));
+      lastCloudCall = Date.now();
+      result = await fetchLichessCloudOnce(fen);
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 // When true: skip local Stockfish entirely (faster, like Chess.com's default review).
 // Unknown positions return a neutral eval instead of waiting for local compute.
 export let cloudOnlyMode = false;
@@ -171,11 +210,17 @@ export async function evaluateFen(
   const cloud = await evalWithLichessCloud(fen);
   if (cloud) return cloud;
 
-  // Skip slow WASM when cloud-only or on production (Vercel)
-  if (cloudOnlyMode || import.meta.env.PROD) {
+  // Local dev depth ≤12: skip WASM entirely
+  if (cloudOnlyMode && !import.meta.env.PROD) {
     return { cp: 0, depth: 0, source: "local" };
   }
-  return evalWithStockfish(fen, localDepth);
+
+  // Production / misses: shallow browser engine so the full game gets classified
+  const wasmDepth = import.meta.env.PROD
+    ? Math.min(8, localDepth)
+    : localDepth;
+  const wasmTimeout = import.meta.env.PROD ? 5000 : 20000;
+  return evalWithStockfish(fen, wasmDepth, wasmTimeout);
 }
 
 export function evalToCp(evalResult: EvalResult): number {

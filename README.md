@@ -25,7 +25,7 @@ Copy `.env.example` to `.env` and set `VITE_GEMINI_API_KEY` for AI coach text.
 4. Add environment variable (optional): `VITE_GEMINI_API_KEY` — your [Google AI Studio](https://aistudio.google.com/apikey) key.
 5. Deploy.
 
-On Vercel, analysis uses **Lichess cloud eval** (when cached) and **Stockfish in the browser** as fallback. No VPS or `stockfish-server.mjs` required.
+On Vercel, analysis uses **Lichess cloud eval** for common positions (fast), then **browser Stockfish at depth 8** for the rest of the game so every move gets classified. A full game may take 1–3 minutes. No VPS required.
 
 ## Scripts
 

@@ -17,6 +17,8 @@ interface EvalResponse {
   cp?: number;
   mate?: number;
   depth: number;
+  bestMove?: string;
+  pv?: string[];
 }
 
 const queue = new Map<
@@ -28,6 +30,7 @@ let currentId: string | null = null;
 let bestCp: number | undefined;
 let bestMate: number | undefined;
 let bestDepth = 0;
+let bestPv: string[] = [];
 let engineReady = false;
 let loaded = false;
 
@@ -43,22 +46,30 @@ function handleOutput(line: string) {
 
   if (!currentId) return;
 
-  if (line.startsWith("info") && line.includes("depth")) {
+  if (line.startsWith("info") && line.includes("depth") && !line.includes("currmove")) {
     const d = line.match(/depth (\d+)/);
     const cp = line.match(/score cp (-?\d+)/);
     const mate = line.match(/score mate (-?\d+)/);
+    const pvMatch = line.match(/ pv (.+)$/);
     const depth = d ? parseInt(d[1]) : 0;
     if (depth >= bestDepth) {
       bestDepth = depth;
       if (cp) { bestCp = parseInt(cp[1]); bestMate = undefined; }
       else if (mate) { bestMate = parseInt(mate[1]); bestCp = undefined; }
+      if (pvMatch) bestPv = pvMatch[1].trim().split(/\s+/).slice(0, 8);
     }
   }
 
   if (line.startsWith("bestmove")) {
     const req = queue.get(currentId);
     if (req) {
-      const res: EvalResponse = { id: currentId, depth: bestDepth };
+      const bm = line.match(/^bestmove (\S+)/);
+      const res: EvalResponse = {
+        id: currentId,
+        depth: bestDepth,
+        bestMove: bm?.[1],
+        pv: bestPv.length ? bestPv : undefined,
+      };
       if (bestMate !== undefined) res.mate = bestMate;
       else res.cp = bestCp ?? 0;
       req.resolve(res);
@@ -68,6 +79,7 @@ function handleOutput(line: string) {
     bestCp = undefined;
     bestMate = undefined;
     bestDepth = 0;
+    bestPv = [];
     flush();
   }
 }
