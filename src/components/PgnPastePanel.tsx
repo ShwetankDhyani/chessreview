@@ -67,13 +67,8 @@ export function PgnPastePanel({
 
   return (
     <div
-      className={`flex flex-col min-h-0 gap-2.5 ${compact ? "" : "flex-1 gap-3"} ${className}`}
+      className={`flex flex-col min-h-0 gap-2.5 ${compact ? "flex-1" : "flex-1 gap-3"} ${className}`}
     >
-      {compact && (
-        <p className="text-[10px] uppercase tracking-wider text-chess-muted/70 text-center">
-          or paste PGN
-        </p>
-      )}
       <textarea
         value={text}
         onChange={(e) => {
@@ -83,7 +78,7 @@ export function PgnPastePanel({
         placeholder="Paste PGN"
         className={`w-full bg-chess-bg/60 border border-chess-border/70 rounded-xl font-mono text-chess-text placeholder:text-chess-muted/50 focus:outline-none focus:border-move-best/60 focus:ring-1 focus:ring-move-best/20 resize-none transition-all ${
           compact
-            ? "min-h-[96px] max-h-[128px] p-3 text-xs"
+            ? "flex-1 min-h-[140px] p-3 text-sm"
             : "flex-1 min-h-[200px] p-4 text-sm"
         }`}
         spellCheck={false}

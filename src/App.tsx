@@ -114,10 +114,15 @@ export default function App() {
     setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
   }, [depth, hasRemoteEngine]);
 
-  const openProfilePanel = useCallback(() => {
-    hapticTap();
-    setShowAddProfile(true);
-  }, []);
+  const openProfilePanel = useCallback(
+    (platform: "chesscom" | "lichess" = "chesscom") => {
+      hapticTap();
+      setAddProfilePlatform(platform);
+      setAddProfileError(null);
+      setShowAddProfile(true);
+    },
+    []
+  );
 
   const recheckEngine = useCallback(async () => {
     const ok = await refreshNativeEngineProbe();

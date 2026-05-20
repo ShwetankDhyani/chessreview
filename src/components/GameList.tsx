@@ -14,7 +14,7 @@ const STORAGE_KEY_GAMES   = "cr_games";
 interface GameListProps {
   username: string;
   onGameSelect: (pgn: string) => void;
-  onLinkProfile?: () => void;
+  onLinkProfile?: (platform: Platform) => void;
   selectedGameId?: string;
 }
 
@@ -279,8 +279,8 @@ export const GameList: React.FC<GameListProps> = ({
       {!inputVal && onLinkProfile && (
         <div className="flex-1 min-h-0 flex flex-col max-w-md mx-auto w-full">
           <AccountLinkPromo onConnect={onLinkProfile} />
-          <div className="flex-1 min-h-0 flex flex-col px-4 py-3 pb-4">
-            <PgnPastePanel onLoad={onGameSelect} compact />
+          <div className="flex-1 min-h-0 flex flex-col px-4 py-3 pb-5">
+            <PgnPastePanel onLoad={onGameSelect} compact className="flex-1 min-h-0" />
           </div>
         </div>
       )}
