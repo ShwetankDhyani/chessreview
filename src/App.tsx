@@ -7,7 +7,11 @@ import { EvalChart } from "./components/EvalChart";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import type { AnalyzedMove, ReviewSummary, EvalResult, AnalysisState } from "./types";
-import { setCloudOnlyMode } from "./engine/evaluationService";
+import {
+  setCloudOnlyMode,
+  getEvalBackend,
+  refreshNativeEngineProbe,
+} from "./engine/evaluationService";
 import { MoveReviewPanel } from "./components/MoveReviewPanel";
 import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
@@ -89,15 +93,31 @@ export default function App() {
   const [gameMeta, setGameMeta] = useState<GameMeta | null>(null);
   const [clocks, setClocks] = useState<(number | null)[]>([]);
   const abortRef = useRef(false);
+  const hasRemoteEngine = !!import.meta.env.VITE_EVAL_SERVER_URL;
+  const [engineBackend, setEngineBackend] = useState<"native" | "cloud" | "browser" | "unavailable">(
+    hasRemoteEngine ? "unavailable" : "cloud"
+  );
+
   const [depth, setDepth] = useState<number>(() => {
     const saved = localStorage.getItem("cr_depth");
-    const fallback = import.meta.env.PROD ? "12" : "16";
+    const fallback = hasRemoteEngine ? "16" : import.meta.env.PROD ? "12" : "16";
     return parseInt(saved ?? fallback, 10);
   });
 
   useEffect(() => {
-    setCloudOnlyMode(import.meta.env.PROD || depth <= 12);
-  }, [depth]);
+    setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
+  }, [depth, hasRemoteEngine]);
+
+  useEffect(() => {
+    refreshNativeEngineProbe().then((ok) => {
+      setEngineBackend(getEvalBackend());
+      if (!ok && hasRemoteEngine) {
+        console.warn(
+          "[ChessReview] VITE_EVAL_SERVER_URL is set but server is unreachable. Start stockfish-server + tunnel on Fedora."
+        );
+      }
+    });
+  }, [hasRemoteEngine]);
   const [showBestMove, setShowBestMove] = useState(true);
   const [continuationActive, setContinuationActive] = useState(false);
   const [continuationFen, setContinuationFen] = useState<string | null>(null);
@@ -436,6 +456,8 @@ export default function App() {
   const startAnalysis = useCallback(async (pgnStr: string) => {
     if (!pgnStr.trim()) return;
     abortRef.current = false;
+    await refreshNativeEngineProbe();
+    setEngineBackend(getEvalBackend());
     setAnalysisState("analyzing");
     setMoves([]);
     setSummary(null);
@@ -554,13 +576,29 @@ export default function App() {
         </div>
         <div className="flex-1" />
 
+        {engineBackend === "native" && (
+          <span className="hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-full bg-move-best/20 text-move-best border border-move-best/40">
+            Native engine
+          </span>
+        )}
+        {hasRemoteEngine && engineBackend === "unavailable" && (
+          <span className="hidden sm:inline text-[10px] text-amber-400" title="Start stockfish-server on Fedora and tunnel">
+            Engine offline
+          </span>
+        )}
+
         {/* Depth — hidden on mobile, shown on md+ */}
         <div className="hidden lg:flex items-center gap-1.5">
           <span className="text-xs text-chess-muted">Depth:</span>
-          {(import.meta.env.PROD ? ([12] as const) : ([12, 16, 18, 20, 24] as const)).map(d => {
+          {(hasRemoteEngine || engineBackend === "native"
+            ? ([12, 16, 18, 20] as const)
+            : import.meta.env.PROD
+              ? ([12] as const)
+              : ([12, 16, 18, 20, 24] as const)
+          ).map(d => {
             const hint = d === 12
-              ? import.meta.env.PROD ? "Fast — Lichess only (Vercel)" : "Cloud only"
-              : d === 16 ? "Chess.com default (local engine)" : d === 18 ? "Lichess default" : d === 20 ? "Deep" : "Max";
+              ? "Fast / cloud-only"
+              : d === 16 ? "Recommended (native Stockfish)" : d === 18 ? "Deep" : d === 20 ? "Very deep" : "Max";
             return (
               <button key={d} onClick={() => handleDepthChange(d)} title={hint}
                 className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
@@ -578,7 +616,12 @@ export default function App() {
           </button>
           {showDepth && (
             <div className="absolute right-0 top-full mt-1 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 flex gap-1 p-1.5">
-              {(import.meta.env.PROD ? ([12] as const) : ([12,16,18,20,24] as const)).map(d => (
+              {(hasRemoteEngine || engineBackend === "native"
+                ? ([12, 16, 18, 20] as const)
+                : import.meta.env.PROD
+                  ? ([12] as const)
+                  : ([12, 16, 18, 20, 24] as const)
+              ).map(d => (
                 <button key={d} onClick={() => { handleDepthChange(d); setShowDepth(false); }}
                   className={`text-xs px-2 py-1 rounded font-mono font-semibold border ${
                     depth === d ? "bg-move-best text-white border-move-best" : "bg-chess-bg text-chess-muted border-chess-border"

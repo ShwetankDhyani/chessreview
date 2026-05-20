@@ -97,7 +97,8 @@ function loadStockfish() {
   loaded = true;
 
   try {
-    importScripts("https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js");
+    const origin = self.location?.origin ?? "";
+    importScripts(`${origin}/stockfish.js`);
   } catch {
     // CDN blocked — resolve all queued requests with fallback zero eval
     for (const [id, req] of queue) {

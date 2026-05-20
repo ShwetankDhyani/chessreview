@@ -1,45 +1,72 @@
 import type { EvalResult } from "../types";
 
-// ─── Local native Stockfish server (fastest) ─────────────────────────────────
-// Dev: node stockfish-server.mjs  |  Prod: set VITE_EVAL_SERVER_URL (optional)
-const LOCAL_SERVER = (
+// Native server: dev → localhost:8765 | production → VITE_EVAL_SERVER_URL (tunnel/VPS)
+export const EVAL_SERVER_URL = (
   import.meta.env.VITE_EVAL_SERVER_URL as string | undefined
 )?.replace(/\/$/, "") ?? (import.meta.env.DEV ? "http://127.0.0.1:8765" : "");
-let localServerAvailable: boolean | null = null; // null = not yet probed (resets each page load)
+
+const LOCAL_SERVER = EVAL_SERVER_URL;
+let localServerAvailable: boolean | null = null;
+/** When native server is up, skip Lichess/WASM for speed and full-game depth */
+let nativeEngineExclusive = false;
+
+export function getEvalBackend(): "native" | "cloud" | "browser" | "unavailable" {
+  if (localServerAvailable === true) return "native";
+  if (EVAL_SERVER_URL && localServerAvailable === false) return "unavailable";
+  return "cloud";
+}
 
 async function probeLocalServer(): Promise<boolean> {
+  if (!LOCAL_SERVER) return false;
   try {
-    const res = await fetch(
-      `${LOCAL_SERVER}/eval?fen=rnbqkbnr%2Fpppppppp%2F8%2F8%2F8%2F8%2FPPPPPPPP%2FRNBQKBNR%20w%20KQkq%20-%200%201&depth=1`,
-      { signal: AbortSignal.timeout(1500) }
-    );
-    return res.ok;
+    const res = await fetch(`${LOCAL_SERVER}/health`, {
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data?.ok === true;
   } catch {
     return false;
   }
 }
 
-export async function evalWithLocalServer(fen: string, depth = 18): Promise<EvalResult | null> {
+export async function evalWithLocalServer(
+  fen: string,
+  depth = 16
+): Promise<EvalResult | null> {
   if (!LOCAL_SERVER) return null;
+
   if (localServerAvailable === null) {
     localServerAvailable = await probeLocalServer();
-    console.log(`[eval] Local Stockfish server: ${localServerAvailable ? "✅ available" : "❌ not running"}`);
+    nativeEngineExclusive = localServerAvailable;
+    console.log(
+      `[eval] Native Stockfish (${LOCAL_SERVER}): ${
+        localServerAvailable ? "✅ connected — full-game analysis" : "❌ not reachable"
+      }`
+    );
   }
   if (!localServerAvailable) return null;
+
   try {
     const url = `${LOCAL_SERVER}/eval?fen=${encodeURIComponent(fen)}&depth=${depth}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
     if (!res.ok) return null;
     const data = await res.json();
-    return { cp: data.cp, mate: data.mate, depth: data.depth, source: "local", bestMove: data.bestMove, pv: data.pv };
+    if (!data?.depth || data.depth <= 0) return null;
+    return {
+      cp: data.cp,
+      mate: data.mate,
+      depth: data.depth,
+      source: "local",
+      bestMove: data.bestMove,
+      pv: data.pv,
+    };
   } catch {
-    localServerAvailable = false; // server went away
     return null;
   }
 }
 
 let workerInstance: Worker | null = null;
-let workerReady = false;
 const pendingCallbacks = new Map<string, (result: EvalResult) => void>();
 const pendingFens = new Map<string, string>();
 
@@ -67,7 +94,6 @@ function getWorker(): Worker {
         pendingFens.delete(id);
       }
     };
-    workerReady = true;
   }
   return workerInstance;
 }
@@ -76,7 +102,6 @@ export function terminateWorker() {
   if (workerInstance) {
     workerInstance.terminate();
     workerInstance = null;
-    workerReady = false;
     pendingCallbacks.clear();
     pendingFens.clear();
   }
@@ -84,7 +109,6 @@ export function terminateWorker() {
 
 let idCounter = 0;
 
-/** Stockfish scores are from side-to-move; normalize to White's perspective (like Lichess). */
 function normalizeEvalToWhite(
   fen: string,
   cp?: number,
@@ -141,13 +165,9 @@ async function fetchLichessCloudOnce(fen: string): Promise<EvalResult | null> {
       knodes: data.knodes,
     };
 
-    if (pv.mate !== undefined) {
-      result.mate = pv.mate;
-    } else if (pv.cp !== undefined) {
-      result.cp = pv.cp;
-    } else {
-      return null;
-    }
+    if (pv.mate !== undefined) result.mate = pv.mate;
+    else if (pv.cp !== undefined) result.cp = pv.cp;
+    else return null;
 
     const moveList: string[] =
       typeof pv.moves === "string"
@@ -167,9 +187,7 @@ async function fetchLichessCloudOnce(fen: string): Promise<EvalResult | null> {
   }
 }
 
-export async function evalWithLichessCloud(
-  fen: string
-): Promise<EvalResult | null> {
+export async function evalWithLichessCloud(fen: string): Promise<EvalResult | null> {
   const cached = cloudCache.get(fen);
   if (cached) return cached;
 
@@ -191,35 +209,45 @@ export async function evalWithLichessCloud(
   }
 }
 
-// When true: skip local Stockfish entirely (faster, like Chess.com's default review).
-// Unknown positions return a neutral eval instead of waiting for local compute.
 export let cloudOnlyMode = false;
 
 export function setCloudOnlyMode(val: boolean) {
   cloudOnlyMode = val;
 }
 
+/** Re-check native server (e.g. after starting stockfish-server.mjs) */
+export async function refreshNativeEngineProbe(): Promise<boolean> {
+  localServerAvailable = null;
+  nativeEngineExclusive = false;
+  localServerAvailable = await probeLocalServer();
+  nativeEngineExclusive = localServerAvailable;
+  if (localServerAvailable) {
+    console.log(`[eval] Native Stockfish (${LOCAL_SERVER}): ✅ connected`);
+  }
+  return localServerAvailable;
+}
+
 export async function evaluateFen(
   fen: string,
   localDepth = 16
 ): Promise<EvalResult> {
-  // Priority: 1) native local server (fastest), 2) Lichess cloud, 3) WASM Stockfish
   const local = await evalWithLocalServer(fen, localDepth);
   if (local) return local;
 
-  const cloud = await evalWithLichessCloud(fen);
-  if (cloud) return cloud;
+  if (nativeEngineExclusive) {
+    console.warn("[eval] Native server missed a position; falling back to cloud/browser");
+    nativeEngineExclusive = false;
+  }
 
-  // Local dev depth ≤12: skip WASM entirely
   if (cloudOnlyMode && !import.meta.env.PROD) {
     return { cp: 0, depth: 0, source: "local" };
   }
 
-  // Production / misses: shallow browser engine so the full game gets classified
-  const wasmDepth = import.meta.env.PROD
-    ? Math.min(8, localDepth)
-    : localDepth;
-  const wasmTimeout = import.meta.env.PROD ? 5000 : 20000;
+  const cloud = await evalWithLichessCloud(fen);
+  if (cloud) return cloud;
+
+  const wasmDepth = import.meta.env.PROD ? Math.min(10, localDepth) : localDepth;
+  const wasmTimeout = import.meta.env.PROD ? 8000 : 20000;
   return evalWithStockfish(fen, wasmDepth, wasmTimeout);
 }
 
