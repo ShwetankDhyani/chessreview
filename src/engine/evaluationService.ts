@@ -6,13 +6,20 @@ export const EVAL_SERVER_URL = (
 )?.replace(/\/$/, "") ?? (import.meta.env.DEV ? "http://127.0.0.1:8765" : "");
 
 const LOCAL_SERVER = EVAL_SERVER_URL;
-let localServerAvailable: boolean | null = null;
+const HEALTH_TIMEOUT_MS = 8000;
+const EVAL_TIMEOUT_MS = 45000;
+const PROBE_UP_TTL_MS = 45_000;
+const PROBE_DOWN_RETRY_MS = 6_000;
+
+type ProbeState = "unknown" | "up" | "down";
+let probeState: ProbeState = "unknown";
+let lastProbeMs = 0;
 /** When native server is up, skip Lichess/WASM for speed and full-game depth */
 let nativeEngineExclusive = false;
 
 export function getEvalBackend(): "native" | "cloud" | "browser" | "unavailable" {
-  if (localServerAvailable === true) return "native";
-  if (EVAL_SERVER_URL && localServerAvailable === false) return "unavailable";
+  if (probeState === "up") return "native";
+  if (EVAL_SERVER_URL && probeState === "down") return "unavailable";
   return "cloud";
 }
 
@@ -20,7 +27,8 @@ async function probeLocalServer(): Promise<boolean> {
   if (!LOCAL_SERVER) return false;
   try {
     const res = await fetch(`${LOCAL_SERVER}/health`, {
-      signal: AbortSignal.timeout(2500),
+      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+      cache: "no-store",
     });
     if (!res.ok) return false;
     const data = await res.json();
@@ -30,27 +38,44 @@ async function probeLocalServer(): Promise<boolean> {
   }
 }
 
+async function ensureLocalServer(force = false): Promise<boolean> {
+  if (!LOCAL_SERVER) return false;
+  const now = Date.now();
+  if (!force) {
+    if (probeState === "up" && now - lastProbeMs < PROBE_UP_TTL_MS) return true;
+    if (probeState === "down" && now - lastProbeMs < PROBE_DOWN_RETRY_MS) {
+      return false;
+    }
+  }
+  lastProbeMs = now;
+  const ok = await probeLocalServer();
+  probeState = ok ? "up" : "down";
+  nativeEngineExclusive = ok;
+  if (ok) {
+    console.log(`[eval] Native Stockfish (${LOCAL_SERVER}): ✅ connected`);
+  }
+  return ok;
+}
+
 export async function evalWithLocalServer(
   fen: string,
   depth = 16
 ): Promise<EvalResult | null> {
   if (!LOCAL_SERVER) return null;
 
-  if (localServerAvailable === null) {
-    localServerAvailable = await probeLocalServer();
-    nativeEngineExclusive = localServerAvailable;
-    console.log(
-      `[eval] Native Stockfish (${LOCAL_SERVER}): ${
-        localServerAvailable ? "✅ connected — full-game analysis" : "❌ not reachable"
-      }`
-    );
-  }
-  if (!localServerAvailable) return null;
+  const up = await ensureLocalServer();
+  if (!up) return null;
 
   try {
     const url = `${LOCAL_SERVER}/eval?fen=${encodeURIComponent(fen)}&depth=${depth}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    if (!res.ok) return null;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(EVAL_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      probeState = "unknown";
+      return null;
+    }
     const data = await res.json();
     if (!data?.depth || data.depth <= 0) return null;
     return {
@@ -62,6 +87,7 @@ export async function evalWithLocalServer(
       pv: data.pv,
     };
   } catch {
+    probeState = "unknown";
     return null;
   }
 }
@@ -147,7 +173,7 @@ export async function evalWithStockfish(
 
 const cloudCache = new Map<string, EvalResult>();
 let lastCloudCall = 0;
-const CLOUD_RATE_LIMIT_MS = import.meta.env.PROD ? 100 : 50;
+const CLOUD_RATE_LIMIT_MS = import.meta.env.PROD ? 80 : 50;
 
 async function fetchLichessCloudOnce(fen: string): Promise<EvalResult | null> {
   try {
@@ -199,7 +225,7 @@ export async function evalWithLichessCloud(fen: string): Promise<EvalResult | nu
   try {
     let result = await fetchLichessCloudOnce(fen);
     if (!result) {
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 600));
       lastCloudCall = Date.now();
       result = await fetchLichessCloudOnce(fen);
     }
@@ -215,16 +241,12 @@ export function setCloudOnlyMode(val: boolean) {
   cloudOnlyMode = val;
 }
 
-/** Re-check native server (e.g. after starting stockfish-server.mjs) */
+/** Re-check native server (e.g. after tunnel reconnect) */
 export async function refreshNativeEngineProbe(): Promise<boolean> {
-  localServerAvailable = null;
+  probeState = "unknown";
+  lastProbeMs = 0;
   nativeEngineExclusive = false;
-  localServerAvailable = await probeLocalServer();
-  nativeEngineExclusive = localServerAvailable;
-  if (localServerAvailable) {
-    console.log(`[eval] Native Stockfish (${LOCAL_SERVER}): ✅ connected`);
-  }
-  return localServerAvailable;
+  return ensureLocalServer(true);
 }
 
 export async function evaluateFen(

@@ -115,16 +115,29 @@ export default function App() {
     setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
   }, [depth, hasRemoteEngine]);
 
+  const recheckEngine = useCallback(async () => {
+    const ok = await refreshNativeEngineProbe();
+    setEngineBackend(getEvalBackend());
+    return ok;
+  }, []);
+
   useEffect(() => {
-    refreshNativeEngineProbe().then((ok) => {
-      setEngineBackend(getEvalBackend());
+    void recheckEngine().then((ok) => {
       if (!ok && hasRemoteEngine) {
         console.warn(
-          "[ChessReview] VITE_EVAL_SERVER_URL is set but server is unreachable. Start stockfish-server + tunnel on Fedora."
+          "[ChessReview] Native engine unreachable — using Lichess (slow). Keep eval-server + tunnel running on Fedora."
         );
       }
     });
-  }, [hasRemoteEngine]);
+  }, [hasRemoteEngine, recheckEngine]);
+
+  useEffect(() => {
+    if (!hasRemoteEngine) return;
+    const id = window.setInterval(() => {
+      void recheckEngine();
+    }, 20_000);
+    return () => window.clearInterval(id);
+  }, [hasRemoteEngine, recheckEngine]);
   const [showBestMove, setShowBestMove] = useState(true);
   const [continuationActive, setContinuationActive] = useState(false);
   const [continuationFen, setContinuationFen] = useState<string | null>(null);
@@ -467,8 +480,7 @@ export default function App() {
   const startAnalysis = useCallback(async (pgnStr: string) => {
     if (!pgnStr.trim()) return;
     abortRef.current = false;
-    await refreshNativeEngineProbe();
-    setEngineBackend(getEvalBackend());
+    await recheckEngine();
     setAnalysisState("analyzing");
     setGamePlyCount(countPgnPlies(pgnStr));
     setMoves([]);
@@ -503,7 +515,7 @@ export default function App() {
       console.error(e);
       setAnalysisState("error");
     }
-  }, [navigateToMove, depth]);
+  }, [navigateToMove, depth, recheckEngine]);
 
   const loadPgn = useCallback((pgnStr: string) => {
     try {
@@ -625,8 +637,19 @@ export default function App() {
           </span>
         )}
         {hasRemoteEngine && engineBackend === "unavailable" && (
-          <span className="hidden sm:inline text-[10px] text-amber-400" title="Start stockfish-server on Fedora and tunnel">
-            Engine offline
+          <button
+            type="button"
+            onClick={() => void recheckEngine()}
+            className="text-[10px] text-amber-400 hover:text-amber-300 max-w-[42vw] truncate sm:max-w-none"
+            title="Fedora: npm run eval-server:public & npm run expose-engine — then tap to retry"
+          >
+            <span className="sm:hidden">Offline · retry</span>
+            <span className="hidden sm:inline">Engine offline · Lichess (slow) — retry</span>
+          </button>
+        )}
+        {hasRemoteEngine && engineBackend === "cloud" && (
+          <span className="hidden sm:inline text-[10px] text-chess-muted" title="No native server configured">
+            Cloud engine
           </span>
         )}
 
