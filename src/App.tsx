@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { ReviewChessboard } from "./components/ReviewChessboard";
+import { AnalyzeBoardStack } from "./components/AnalyzeBoardStack";
 import { MoveList } from "./components/MoveList";
 import { ReviewSummaryPanel } from "./components/ReviewSummary";
 import { EvalChart } from "./components/EvalChart";
@@ -21,6 +21,8 @@ import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { parseGameText } from "./utils/pgnParse";
 import { countPgnPlies } from "./utils/pgnPlies";
+import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
+import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 
 type SidebarTab = "games" | "review" | "moves";
@@ -92,6 +94,7 @@ export default function App() {
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const [currentEval, setCurrentEval] = useState<EvalResult | null>(null);
   const [boardFlipped, setBoardFlipped] = useState(false);
@@ -533,6 +536,7 @@ export default function App() {
       return;
     }
     setPgn(parsed.pgn);
+    setReplayFrames(buildPgnReplayFrames(parsed.pgn));
     setGamePlyCount(parsed.moveCount);
     setMoves([]);
     setSummary(null);
@@ -612,6 +616,26 @@ export default function App() {
 
   const progressPercent =
     progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
+
+  const showAnalyzeOverlay =
+    !!pgn &&
+    moves.length === 0 &&
+    (analysisState === "loading" ||
+      analysisState === "analyzing" ||
+      analysisState === "error");
+
+  const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
+
+  useAnalysisBoardReplay({
+    active: analysisState === "analyzing",
+    replayFrames,
+    progressDone: progress.done,
+    progressTotal: progress.total,
+    playMoveOnBoard,
+    fadeBoardToFen,
+    clearBoardTimers,
+    setMoveAnim,
+  });
 
   const [showDepth, setShowDepth] = useState(false);
   const [showMobileGraph, setShowMobileGraph] = useState(false);
@@ -824,12 +848,14 @@ export default function App() {
         </div>
       </header>
 
-      <MobileAnalysisStatus
-        state={analysisState}
-        progress={progress}
-        whiteName={playerNames.white}
-        blackName={playerNames.black}
-      />
+      {!showAnalyzeOverlay && (
+        <MobileAnalysisStatus
+          state={analysisState}
+          progress={progress}
+          whiteName={playerNames.white}
+          blackName={playerNames.black}
+        />
+      )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Mobile bottom tab bar ── */}
@@ -908,30 +934,12 @@ export default function App() {
                       <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider">
                         {playerNames.white} vs {playerNames.black}
                       </span>
-                      {analysisState === "loading" && (
-                        <button
-                          onClick={() => startAnalysis(pgn)}
-                          className="text-xs bg-move-best hover:bg-green-600 text-white font-semibold px-2.5 py-1 rounded transition-colors"
-                        >
-                          Analyze
-                        </button>
+                      {analysisState === "analyzing" && (
+                        <span className="text-[10px] text-move-best font-semibold tabular-nums">
+                          {Math.round(progressPercent)}%
+                        </span>
                       )}
                     </div>
-
-                    {analysisState === "analyzing" && (
-                      <div className="px-3 py-2 border-b border-chess-border flex-shrink-0">
-                        <div className="flex items-center gap-2 text-xs text-chess-muted mb-1.5">
-                          <div className="w-3 h-3 border-2 border-move-best border-t-transparent rounded-full animate-spin" />
-                          Analyzing… {Math.round(progressPercent)}%
-                        </div>
-                        <div className="w-full bg-chess-border rounded-full h-1">
-                          <div
-                            className="bg-move-best h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
 
                     <div className="p-2">
                       {moves.length > 0 ? (
@@ -942,12 +950,12 @@ export default function App() {
                           markGameEnd={!!gameEnd}
                         />
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2">
+                        <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           {analysisState === "loading" && (
-                            <>
-                              <span className="text-2xl">🔍</span>
-                              <span>Click Analyze to start engine evaluation</span>
-                            </>
+                            <span>Press Analyze on the board to start</span>
+                          )}
+                          {analysisState === "analyzing" && (
+                            <span>Review in progress…</span>
                           )}
                           {analysisState === "idle" && (
                             <span>No game loaded</span>
@@ -1039,7 +1047,7 @@ export default function App() {
                   clockColor={boardFlipped ? "w" : "b"}
                   side={boardFlipped ? "w" : "b"}
                 />
-                <ReviewChessboard
+                <AnalyzeBoardStack
                   position={continuationFen ?? currentFen}
                   boardWidth={Math.min(
                     window.innerWidth - 400,
@@ -1047,12 +1055,16 @@ export default function App() {
                   )}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
-                  dimmed={boardDimmed && !continuationFen}
+                  dimmed={
+                    (boardDimmed && !continuationFen) ||
+                    (showAnalyzeOverlay && analysisState === "analyzing")
+                  }
                   continuationActive={continuationActive}
                   moveAnim={moveAnim}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !continuationActive &&
+                    !showAnalyzeOverlay &&
                     !!showBestMove &&
                     !!currentMove?.bestMove &&
                     (currentMove.classification === "inaccuracy" ||
@@ -1060,6 +1072,11 @@ export default function App() {
                       currentMove.classification === "blunder")
                   }
                   bestMove={currentMove?.bestMove}
+                  analysisState={analysisState}
+                  progressPercent={progressPercent}
+                  showOverlay={showAnalyzeOverlay}
+                  playerLabel={vsLabel}
+                  onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
                 <PlayerTag
                   name={boardFlipped ? playerNames.black : playerNames.white}
@@ -1190,7 +1207,7 @@ export default function App() {
           {/* ── Mobile layout ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-shrink-0 flex flex-col items-center px-2 pt-2 pb-2 gap-1">
-              {moves.length > 0 ? (
+              {moves.length > 0 || (pgn && showAnalyzeOverlay) ? (
                 <>
               <PlayerTag
                 compact
@@ -1207,11 +1224,15 @@ export default function App() {
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
-                  dimmed={boardDimmed && !continuationFen}
+                  dimmed={
+                    (boardDimmed && !continuationFen) ||
+                    (showAnalyzeOverlay && analysisState === "analyzing")
+                  }
                   continuationActive={continuationActive}
                   moveAnim={moveAnim}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
+                    !showAnalyzeOverlay &&
                     !continuationActive &&
                     !!showBestMove &&
                     !!currentMove?.bestMove &&
@@ -1221,9 +1242,11 @@ export default function App() {
                   }
                   bestMove={currentMove?.bestMove}
                   moveIndex={currentMoveIdx}
-                  moveCount={gamePlyCount || moves.length}
-                  canPrev={currentMoveIdx > -1}
-                  canNext={currentMoveIdx < moves.length - 1}
+                  moveCount={gamePlyCount || moves.length || replayFrames.length}
+                  canPrev={!showAnalyzeOverlay && currentMoveIdx > -1}
+                  canNext={
+                    !showAnalyzeOverlay && currentMoveIdx < moves.length - 1
+                  }
                   onPrev={() =>
                     navigateToMove(Math.max(currentMoveIdx - 1, -1))
                   }
@@ -1232,6 +1255,11 @@ export default function App() {
                       Math.min(currentMoveIdx + 1, moves.length - 1)
                     )
                   }
+                  analysisState={analysisState}
+                  progressPercent={progressPercent}
+                  showAnalyzeOverlay={showAnalyzeOverlay}
+                  playerLabel={vsLabel}
+                  onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
               <PlayerTag
                 compact
@@ -1271,7 +1299,6 @@ export default function App() {
               </div>
                 </>
               ) : (
-                <>
                 <MobileGameHero
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
@@ -1279,20 +1306,8 @@ export default function App() {
                   blackName={playerNames.black}
                   whiteRating={gameMeta?.whiteRating}
                   blackRating={gameMeta?.blackRating}
-                  hasGame={!!pgn}
-                  analyzing={analysisState === "analyzing"}
-                  onAnalyze={pgn ? () => startAnalysis(pgn) : undefined}
+                  hasGame={false}
                 />
-                {pgn && (
-                  <button
-                    type="button"
-                    onClick={() => setBoardFlipped((f) => !f)}
-                    className="text-[10px] text-chess-muted px-2 py-1 border border-chess-border rounded"
-                  >
-                    ⇅ Flip board
-                  </button>
-                )}
-                </>
               )}
             </div>
 

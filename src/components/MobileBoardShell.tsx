@@ -1,7 +1,8 @@
-import type { EvalResult } from "../types";
+import type { AnalysisState, EvalResult } from "../types";
 import { prepareChessAudio } from "../utils/chessSounds";
+import { AnalyzeBoardStack } from "./AnalyzeBoardStack";
 import { EvalBar } from "./EvalBar";
-import { ReviewChessboard, type ReviewChessboardProps } from "./ReviewChessboard";
+import type { ReviewChessboardProps } from "./ReviewChessboard";
 
 interface MobileBoardShellProps extends ReviewChessboardProps {
   evalResult: EvalResult | null;
@@ -11,6 +12,11 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   onNext: () => void;
   canPrev: boolean;
   canNext: boolean;
+  analysisState?: AnalysisState;
+  progressPercent?: number;
+  showAnalyzeOverlay?: boolean;
+  playerLabel?: string;
+  onAnalyze?: () => void;
 }
 
 /** Board + slim eval bar + left/right tap zones for move navigation */
@@ -24,6 +30,11 @@ export function MobileBoardShell({
   onNext,
   canPrev,
   canNext,
+  analysisState = "idle",
+  progressPercent = 0,
+  showAnalyzeOverlay = false,
+  playerLabel,
+  onAnalyze,
   ...boardProps
 }: MobileBoardShellProps) {
   const barHeight = boardWidth;
@@ -44,10 +55,15 @@ export function MobileBoardShell({
           className="relative flex-shrink-0"
           style={{ width: boardWidth, height: boardWidth }}
         >
-          <ReviewChessboard
+          <AnalyzeBoardStack
             {...boardProps}
             boardWidth={boardWidth}
             boardOrientation={boardOrientation}
+            analysisState={analysisState}
+            progressPercent={progressPercent}
+            showOverlay={showAnalyzeOverlay}
+            playerLabel={playerLabel}
+            onAnalyze={onAnalyze}
           />
           <button
             type="button"
