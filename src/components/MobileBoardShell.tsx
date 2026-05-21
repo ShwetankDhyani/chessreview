@@ -1,4 +1,5 @@
 import type { AnalysisState, EvalResult } from "../types";
+import type { GameEndInfo } from "../utils/gameEnd";
 import { prepareChessAudio } from "../utils/chessSounds";
 import { AnalyzeBoardStack } from "./AnalyzeBoardStack";
 import { EvalBar } from "./EvalBar";
@@ -15,6 +16,11 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   analysisState?: AnalysisState;
   progressPercent?: number;
   showAnalyzeOverlay?: boolean;
+  showGameEnd?: boolean;
+  gameEnd?: GameEndInfo | null;
+  positionFen: string;
+  whiteName?: string;
+  blackName?: string;
   playerLabel?: string;
   onAnalyze?: () => void;
 }
@@ -33,6 +39,11 @@ export function MobileBoardShell({
   analysisState = "idle",
   progressPercent = 0,
   showAnalyzeOverlay = false,
+  showGameEnd = false,
+  gameEnd,
+  positionFen,
+  whiteName,
+  blackName,
   playerLabel,
   onAnalyze,
   ...boardProps
@@ -59,9 +70,14 @@ export function MobileBoardShell({
             {...boardProps}
             boardWidth={boardWidth}
             boardOrientation={boardOrientation}
+            positionFen={positionFen}
             analysisState={analysisState}
             progressPercent={progressPercent}
             showOverlay={showAnalyzeOverlay}
+            showGameEnd={showGameEnd}
+            gameEnd={gameEnd}
+            whiteName={whiteName}
+            blackName={blackName}
             playerLabel={playerLabel}
             onAnalyze={onAnalyze}
           />

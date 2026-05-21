@@ -16,7 +16,6 @@ import { MoveReviewPanel } from "./components/MoveReviewPanel";
 import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
-import { GameEndBanner } from "./components/GameEndBanner";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
@@ -625,7 +624,11 @@ export default function App() {
       analysisState === "analyzing" ||
       analysisState === "error");
 
+  const showBoardGameEnd =
+    !!gameEnd && atGameEnd && analysisState === "done" && !showAnalyzeOverlay;
+
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
+  const boardPositionFen = continuationFen ?? currentFen;
 
   useAnalysisBoardReplay({
     active: analysisState === "analyzing",
@@ -985,14 +988,6 @@ export default function App() {
 
             {tab === "review" && (
               <div className="h-full overflow-y-auto min-h-0">
-                {gameEnd && (
-                  <GameEndBanner
-                    end={gameEnd}
-                    whiteName={playerNames.white}
-                    blackName={playerNames.black}
-                    atFinalPosition
-                  />
-                )}
                 {summary ? (
                   <ReviewSummaryPanel
                     summary={summary}
@@ -1014,17 +1009,6 @@ export default function App() {
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* ── Desktop board area ── */}
           <div className="hidden lg:flex flex-1 flex-col min-h-0 overflow-hidden">
-            {gameEnd && (
-              <div className="flex-shrink-0 px-4 pt-2">
-                <GameEndBanner
-                  end={gameEnd}
-                  whiteName={playerNames.white}
-                  blackName={playerNames.black}
-                  atFinalPosition={atGameEnd}
-                  compact={!atGameEnd}
-                />
-              </div>
-            )}
           <div className="flex flex-1 items-center justify-center p-4 gap-4 min-h-0 overflow-hidden">
             <div className="flex items-stretch gap-2 h-full max-h-[min(calc(100vw-480px),calc(100vh-180px))]">
               <div className="relative flex flex-col gap-1">
@@ -1049,7 +1033,8 @@ export default function App() {
                   side={boardFlipped ? "w" : "b"}
                 />
                 <AnalyzeBoardStack
-                  position={continuationFen ?? currentFen}
+                  position={boardPositionFen}
+                  positionFen={boardPositionFen}
                   boardWidth={Math.min(
                     window.innerWidth - 400,
                     window.innerHeight - 168
@@ -1066,6 +1051,7 @@ export default function App() {
                   showBestMoveArrow={
                     !continuationActive &&
                     !showAnalyzeOverlay &&
+                    !showBoardGameEnd &&
                     !!showBestMove &&
                     !!currentMove?.bestMove &&
                     (currentMove.classification === "inaccuracy" ||
@@ -1076,6 +1062,10 @@ export default function App() {
                   analysisState={analysisState}
                   progressPercent={progressPercent}
                   showOverlay={showAnalyzeOverlay}
+                  showGameEnd={showBoardGameEnd}
+                  gameEnd={gameEnd}
+                  whiteName={playerNames.white}
+                  blackName={playerNames.black}
                   playerLabel={vsLabel}
                   onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
@@ -1224,7 +1214,8 @@ export default function App() {
               />
                 <MobileBoardShell
                   evalResult={continuationEval ?? currentEval}
-                  position={continuationFen ?? currentFen}
+                  position={boardPositionFen}
+                  positionFen={boardPositionFen}
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
@@ -1262,6 +1253,10 @@ export default function App() {
                   analysisState={analysisState}
                   progressPercent={progressPercent}
                   showAnalyzeOverlay={showAnalyzeOverlay}
+                  showGameEnd={showBoardGameEnd}
+                  gameEnd={gameEnd}
+                  whiteName={playerNames.white}
+                  blackName={playerNames.black}
                   playerLabel={vsLabel}
                   onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
@@ -1274,11 +1269,6 @@ export default function App() {
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
               />
-              {gameEnd && atGameEnd && (
-                <p className="text-[10px] text-chess-muted text-center w-full truncate px-1">
-                  {gameEnd.icon} {gameEnd.detail}
-                </p>
-              )}
               <div className="flex items-center justify-center w-full gap-2 py-0.5">
                 <button
                   type="button"
