@@ -4,6 +4,8 @@
 
 :root {
   --mobile-tab-bar: calc(56px + env(safe-area-inset-bottom, 0px));
+  --site-footer: 32px;
+  --mobile-chrome-bottom: calc(var(--mobile-tab-bar) + var(--site-footer));
   --page-pad-inline: max(1.25rem, env(safe-area-inset-left, 0px));
   --page-pad-inline-end: max(1.25rem, env(safe-area-inset-right, 0px));
   --app-header-h: 3rem;

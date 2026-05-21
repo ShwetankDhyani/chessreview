@@ -6,6 +6,8 @@ import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
+import { SiteFooter } from "./components/SiteFooter";
+import { recordReviewCompleted } from "./utils/stats";
 import type { AnalyzedMove, ReviewSummary, EvalResult, AnalysisState } from "./types";
 import {
   setCloudOnlyMode,
@@ -515,6 +517,7 @@ export default function App() {
     setCurrentFen("start");
     setCurrentEval(null);
     setProgress({ done: 0, total: 0 });
+    const analysisStarted = Date.now();
 
     const meta = extractGameMeta(pgnStr);
     setPlayerNames({ white: meta.white, black: meta.black });
@@ -536,12 +539,20 @@ export default function App() {
         setAnalysisState("done");
         setTab("review");
         if (analyzedMoves.length > 0) navigateToMove(analyzedMoves.length - 1, false);
+        recordReviewCompleted({
+          username: activeUser?.name ?? null,
+          white: meta.white,
+          black: meta.black,
+          plies: analyzedMoves.length,
+          depth,
+          durationMs: Date.now() - analysisStarted,
+        });
       }
     } catch (e) {
       console.error(e);
       setAnalysisState("error");
     }
-  }, [navigateToMove, depth, recheckEngine]);
+  }, [navigateToMove, depth, recheckEngine, activeUser?.name]);
 
   const loadPgn = useCallback((pgnStr: string) => {
     const parsed = parseGameText(pgnStr);
@@ -1310,7 +1321,7 @@ export default function App() {
             {tab === "games" && (
               <div
                 className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
-                style={{ paddingBottom: "var(--mobile-tab-bar)" }}
+                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 <GameList
                   username=""
@@ -1326,7 +1337,7 @@ export default function App() {
             {tab === "review" && (
               <div
                 className="flex-1 overflow-y-auto min-h-0 bg-chess-sidebar page-inline-pad"
-                style={{ paddingBottom: "var(--mobile-tab-bar)" }}
+                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 {summary ? (
                   <ReviewSummaryPanel
@@ -1454,6 +1465,8 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

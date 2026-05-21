@@ -1,7 +1,13 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { CoachIcon } from "./CoachIcon";
 import type { AnalyzedMove, ReviewSummary } from "../types";
-import { getMovComment, getGameReport, isGeminiConfigured, type CoachReport } from "../utils/geminiCoach";
+import {
+  getMovComment,
+  getGameReport,
+  getFallbackMoveComment,
+  isGeminiConfigured,
+  type CoachReport,
+} from "../utils/geminiCoach";
 
 interface CoachPanelProps {
   moves: AnalyzedMove[];
@@ -46,46 +52,6 @@ const MOOD_STYLES: Record<LiveMood, { border: string; bg: string; text: string; 
   inaccuracy: { border: "#e6c84a", bg: "#e6c84a11", text: "#e6c84a", face: "🤔" },
   good:       { border: "#6daa6d", bg: "#6daa6d11", text: "#6daa6d", face: "😊" },
   neutral:    { border: "#3a3a3a", bg: "#1a1a1a",   text: "#888",    face: "🔬" },
-};
-
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
-
-const LIVE_COMMENTS: Record<LiveMood, (m: AnalyzedMove) => string> = {
-  brilliant: m => pick([
-    `${m.san}! Now that's the kind of move that separates good players from great ones.${m.pvLine?.length ? ` Engine line: ${m.pvLine.join(" ")}` : ""}`,
-    `Wow — ${m.san}. A real sacrifice. Most players never even see this.`,
-    `${m.san} is just stunning. The engine loves it — and so do I. ⭐`,
-    `This is the move right here. ${m.san} — pure calculation. Beautiful.`,
-  ]),
-  blunder: m => pick([
-    `${m.san} is where things went wrong.${m.bestMoveSan ? ` ${m.bestMoveSan} was the right call` : " Take a breath and look for forcing moves first"}.`,
-    `Ouch — ${m.san} gives away too much.${m.bestMoveSan ? ` You had ${m.bestMoveSan} available, which keeps the position solid.` : ""}`,
-    `This one hurts. ${m.san}${m.bestMoveSan ? ` when ${m.bestMoveSan} was sitting right there.` : " — always double-check captures and threats."}`,
-    `${m.san} — I've seen this pattern before. Before moving, always ask: can my opponent respond with a tactic?${m.bestMoveSan ? ` Here ${m.bestMoveSan} was the move.` : ""}`,
-  ]),
-  mistake: m => pick([
-    `${m.san} leaks some advantage.${m.bestMoveSan ? ` ${m.bestMoveSan} was tighter — keeps the pressure on.` : " Worth revisiting in a quiet moment."}`,
-    `Not bad, but ${m.san} gives your opponent a bit of breathing room.${m.bestMoveSan ? ` ${m.bestMoveSan} keeps the edge.` : ""}`,
-    `${m.san} — the position is still playable but you let something slip.${m.bestMoveSan ? ` Engine wanted ${m.bestMoveSan}.` : ""}`,
-    `A small stumble with ${m.san}.${m.bestMoveSan ? ` ${m.bestMoveSan} was stronger — think about piece activity here.` : " These are the moves worth drilling on."}`,
-  ]),
-  inaccuracy: m => pick([
-    `${m.san} is fine but leaves something on the table.${m.bestMoveSan ? ` ${m.bestMoveSan} squeezes a bit more out of the position.` : ""}`,
-    `Slight imprecision — ${m.san} doesn't lose but it's not the most precise.${m.bestMoveSan ? ` ${m.bestMoveSan} was more accurate.` : ""}`,
-    `${m.san} — the engine has a slight preference for something else here.${m.bestMoveSan ? ` Specifically ${m.bestMoveSan}.` : ""} Not a big deal.`,
-    `You're still fine after ${m.san}, just not maximally efficient.${m.bestMoveSan ? ` ${m.bestMoveSan} would've been the sharper choice.` : ""}`,
-  ]),
-  good: m => pick([
-    `${m.san} — ${m.classification === "best" ? "exactly what the engine would play. Perfect." : "very well spotted."}`,
-    `Nice — ${m.san}. ${m.classification === "best" ? "Top engine move." : "Strong and clean."}`,
-    `${m.san} is the right idea. ${m.classification === "best" ? "Best move on the board." : "Good positional sense."}`,
-    `Smooth — ${m.san}. ${m.classification === "best" ? "Can't improve on that." : "Excellent judgment."}`,
-  ]),
-  neutral: m => pick([
-    `${m.san} — ${m.classification === "book" ? "solid theory. You're still in known territory." : "reasonable choice. Nothing wrong here."}`,
-    `${m.san}${m.classification === "book" ? " — textbook stuff. Good foundation." : " — keeps the game going."}`,
-    `${m.classification === "book" ? `Theory move — ${m.san}. You know your opening.` : `${m.san} — solid enough.`}`,
-  ]),
 };
 
 function buildTips(moves: AnalyzedMove[], summary: ReviewSummary) {
@@ -230,18 +196,38 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     [moves]
   );
 
-  // Fetch AI comment when move changes
   useEffect(() => {
     if (!currentMove || currentMoveIdx === lastCommentedIdx.current) return;
     lastCommentedIdx.current = currentMoveIdx;
     setAiComment(null);
-    if (!gemini) return;
-    setCommentLoading(true);
-    getMovComment(currentMove).then(c => {
-      setAiComment(c);
+
+    const opening = detectOpening(moves);
+    const openingHint = opening !== "this opening" ? opening : undefined;
+
+    if (!gemini) {
+      staticComment.current =
+        getFallbackMoveComment(currentMove, openingHint) ??
+        `${currentMove.san} — select another move for more detail.`;
       setCommentLoading(false);
-    });
-  }, [currentMoveIdx, currentMove, gemini]);
+      return;
+    }
+
+    setCommentLoading(true);
+    getMovComment(currentMove, { moveIdx: currentMoveIdx, openingHint })
+      .then((c) => {
+        setAiComment(c);
+        staticComment.current =
+          c ??
+          getFallbackMoveComment(currentMove, openingHint) ??
+          staticComment.current;
+        setCommentLoading(false);
+      })
+      .catch(() => {
+        staticComment.current =
+          getFallbackMoveComment(currentMove, openingHint) ?? staticComment.current;
+        setCommentLoading(false);
+      });
+  }, [currentMoveIdx, currentMove, gemini, moves]);
 
   // Fetch AI game report once
   useEffect(() => {
@@ -257,10 +243,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const mood = currentMove ? getLiveMood(currentMove.classification) : "neutral";
   const style = MOOD_STYLES[mood];
 
-  // Compute static comment once per move index — never re-randomise on re-render
   if (currentMove && currentMoveIdx !== staticCommentIdx.current) {
     staticCommentIdx.current = currentMoveIdx;
-    staticComment.current = LIVE_COMMENTS[mood](currentMove);
+    staticComment.current = getFallbackMoveComment(currentMove) ?? "";
   }
 
   const displayComment = aiComment

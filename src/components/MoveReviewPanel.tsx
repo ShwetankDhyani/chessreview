@@ -108,110 +108,18 @@ function detectOpeningProgressive(moves: AnalyzedMove[], upToIdx: number): Openi
   return bestMatch;
 }
 
-// Context-aware commentary that helps learners understand WHY, not just WHAT
-function buildComment(move: AnalyzedMove, moveIdx?: number, moves?: AnalyzedMove[]): string | null {
-  const c = move.classification;
-  if (!c) return null;
-  const { san, bestMoveSan: best, deltaE, isSacrifice, evalBefore, evalAfter } = move;
-  const loss = Math.abs(deltaE);
-  const lossStr = loss >= 0.1 ? `${loss.toFixed(1)} pawns` : null;
-
-  // Eval context
-  const cpAfter = evalAfter?.cp ?? 0;
-  const playerCp = move.color === "w" ? cpAfter : -cpAfter;
-  const mateIn = evalAfter?.mate;
-  const wasWinning = (() => {
-    const cpB = evalBefore?.cp ?? 0;
-    return (move.color === "w" ? cpB : -cpB) > 200;
-  })();
-
-  switch (c) {
-    case "brilliant":
-      return isSacrifice
-        ? `${san}!! A sound sacrifice — you gave up material for a lasting advantage the engine confirms. Study this pattern.`
-        : `${san}!! A creative best move in a critical position — the engine's top choice when it mattered.`;
-
-    case "great":
-      return `${san}! A critical move — ${
-        playerCp < -100
-          ? "this is the best defense under real pressure. Finding this in a losing position shows resilience."
-          : "this capitalizes perfectly on the opponent's error. Recognizing the moment to strike is a key skill."
-      }`;
-
-    case "best":
-      return `${san} is the engine's top choice. ${
-        mateIn !== undefined && mateIn > 0 ? `Mate in ${Math.abs(mateIn)} — the winning path is found.`
-        : wasWinning ? "Converting a winning position cleanly — no unnecessary risks."
-        : playerCp > 100 ? "This builds the advantage precisely."
-        : playerCp < -100 ? "The best try in a difficult position — making the opponent prove their advantage."
-        : "Exact move in an equal position — good understanding of the demands here."
-      }`;
-
-    case "excellent":
-      return `${san} is nearly perfect${lossStr ? ` (only ~${lossStr} from engine best)` : ""}. ${
-        best && best !== san ? `The engine slightly preferred ${best}, but the difference is minimal.`
-        : "Practically indistinguishable from the top engine line."
-      }`;
-
-    case "good":
-      return `${san} is reasonable${lossStr ? ` (~${lossStr} from the best move)` : ""}. ${
-        best ? `${best} was slightly more accurate — ${playerCp > 100 ? "tightening the grip on the advantage" : playerCp < -100 ? "putting up more resistance" : "maintaining more tension"}.`
-        : "Solid, but there was a slightly sharper option."
-      }`;
-
-    case "book": {
-      // Progressive opening commentary
-      if (moves && moveIdx !== undefined) {
-        const opening = detectOpeningProgressive(moves, moveIdx);
-        if (opening) {
-          // Check if this is a NEW opening name vs the previous move
-          const prevOpening = moveIdx > 0 ? detectOpeningProgressive(moves, moveIdx - 1) : null;
-          const nameChanged = !prevOpening || prevOpening.name !== opening.name;
-          const isFirstBook = moveIdx === 0 || moves[moveIdx - 1]?.classification !== "book";
-
-          if (isFirstBook || nameChanged) {
-            // Announce the opening
-            return `📖 ${opening.name}. ${opening.ideas}${opening.threats ? ` ⚠ ${opening.threats}` : ""}`;
-          } else {
-            // Continuing in same opening — just explain the move's role
-            return `${san} — ${opening.name}. ${opening.threats ? `Watch for: ${opening.threats}` : opening.ideas}`;
-          }
-        }
-      }
-      return `${san} — book move. Still in known theory.`;
-    }
-
-    case "inaccuracy":
-      return `${san} lets some advantage slip${lossStr ? ` (~${lossStr})` : ""}. ${
-        best ? `${best} was more precise — `
-          + (playerCp > 0 ? "it keeps the initiative and doesn't give the opponent counterplay."
-            : "it creates more practical problems for the opponent to solve.")
-        : "The position is still playable, but the opponent's task just got easier."
-      } Tip: Look for what your opponent's best response is before committing.`;
-
-    case "mistake":
-      return `${san} is a clear error${lossStr ? ` (costs ~${lossStr})` : ""}. ${
-        best ? `${best} was the right move — `
-          + (mateIn !== undefined ? "it maintains the mating attack."
-            : wasWinning ? "it keeps the conversion straightforward."
-            : playerCp < -200 ? "it was the only way to stay in the game."
-            : `it holds the balance that ${san} throws away.`)
-        : "The evaluation swings significantly here."
-      } Ask yourself: what does my opponent threaten after this move?`;
-
-    case "blunder":
-      return `${san} is a game-changing error${lossStr ? ` (loses ~${lossStr})` : ""}! ${
-        best ? `${best} was essential — `
-          + (mateIn !== undefined && mateIn < 0 ? "now there's a forced mate."
-            : wasWinning ? "a winning position has been thrown away."
-            : playerCp < -300 ? "the position goes from playable to lost."
-            : "this oversight changes the entire game.")
-        : "This is the kind of move to circle and study — understanding why it fails builds pattern recognition."
-      }`;
-
-    default:
-      return null;
+function openingHintForMove(
+  moveIdx: number,
+  moves?: AnalyzedMove[]
+): string | undefined {
+  if (!moves || moveIdx < 0) return undefined;
+  const opening = detectOpeningProgressive(moves, moveIdx);
+  if (!opening) return undefined;
+  const prev = moveIdx > 0 ? detectOpeningProgressive(moves, moveIdx - 1) : null;
+  if (!prev || prev.name !== opening.name) {
+    return `${opening.name}: ${opening.ideas}`;
   }
+  return opening.name;
 }
 
 // ── Continuation step-through ────────────────────────────────────────────────
@@ -410,6 +318,10 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
 // Cache AI comments so we don't re-fetch when clicking back to the same move
 const aiCommentCache = new Map<string, string>();
 
+function recentPhrasesFromCache(): string[] {
+  return Array.from(aiCommentCache.values()).slice(-6);
+}
+
 export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   move,
   moveIdx,
@@ -421,22 +333,32 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 }) => {
   const [aiComment, setAiComment] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [coachFromAi, setCoachFromAi] = useState(false);
 
-  // Fetch AI commentary for interesting moves
   useEffect(() => {
-    if (!move) { setAiComment(null); return; }
+    if (!moves?.length) {
+      import("../utils/geminiCoach").then(({ clearCoachMemory }) => clearCoachMemory());
+      aiCommentCache.clear();
+    }
+  }, [moves?.length]);
 
-    const cacheKey = `${moveIdx}:${move.san}`;
-
-    // Check cache first
-    if (aiCommentCache.has(cacheKey)) {
-      setAiComment(aiCommentCache.get(cacheKey)!);
+  useEffect(() => {
+    if (!move) {
+      setAiComment(null);
       return;
     }
 
-    // Only skip AI for 'best' (routine). Book moves now get AI for richer opening insights.
-    if (move.classification === "best" || !move.classification) {
+    const cacheKey = `${moveIdx}:${move.san}:${move.classification}`;
+
+    if (aiCommentCache.has(cacheKey)) {
+      setAiComment(aiCommentCache.get(cacheKey)!);
+      setAiLoading(false);
+      return;
+    }
+
+    if (!move.classification) {
       setAiComment(null);
+      setAiLoading(false);
       return;
     }
 
@@ -444,20 +366,50 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
     setAiComment(null);
     setAiLoading(true);
 
-    import("../utils/geminiCoach").then(({ getMovComment, isGeminiConfigured }) => {
-      if (!isGeminiConfigured() || cancelled) { setAiLoading(false); return; }
-      getMovComment(move).then(result => {
-        if (cancelled) return;
-        if (result) {
-          aiCommentCache.set(cacheKey, result);
-          setAiComment(result);
-        }
-        setAiLoading(false);
-      }).catch(() => { if (!cancelled) setAiLoading(false); });
-    });
+    const hint = openingHintForMove(moveIdx, moves);
 
-    return () => { cancelled = true; };
-  }, [moveIdx, move]);
+    import("../utils/geminiCoach").then(
+      ({ getMovComment, isGeminiConfigured, getFallbackMoveComment }) => {
+        if (cancelled) return;
+
+        if (!isGeminiConfigured()) {
+          const fallback = getFallbackMoveComment(move, hint);
+          if (fallback) aiCommentCache.set(cacheKey, fallback);
+          setAiComment(fallback);
+          setCoachFromAi(false);
+          setAiLoading(false);
+          return;
+        }
+
+        getMovComment(move, {
+          moveIdx,
+          recentPhrases: recentPhrasesFromCache(),
+          openingHint: hint,
+        })
+          .then((result) => {
+            if (cancelled) return;
+            const fromAi = !!result;
+            const text = result ?? getFallbackMoveComment(move, hint);
+            if (text) aiCommentCache.set(cacheKey, text);
+            setAiComment(text);
+            setCoachFromAi(fromAi);
+            setAiLoading(false);
+          })
+          .catch(() => {
+            if (cancelled) return;
+            const fallback = getFallbackMoveComment(move, hint);
+            if (fallback) aiCommentCache.set(cacheKey, fallback);
+            setAiComment(fallback);
+            setCoachFromAi(false);
+            setAiLoading(false);
+          });
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moveIdx, move, moves]);
 
   if (!move) {
     return (
@@ -470,8 +422,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
   const meta = move.classification ? getMeta(move.classification) : null;
   const accent = meta?.color ?? "#6daa6d";
-  const staticComment = buildComment(move, moveIdx, moves);
-  const displayComment = aiComment ?? staticComment;
+  const displayComment = aiComment;
 
   const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
   const isBrilliant = move.classification === "brilliant";
@@ -539,8 +490,13 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           }}
         >
           <p>{displayComment}</p>
-          {aiComment && (
-            <span className="inline-block mt-1 text-chess-muted opacity-40" style={{ fontSize: "9px" }}>✨ AI insight</span>
+          {coachFromAi && (
+            <span
+              className="mt-1 inline-block text-chess-muted opacity-40"
+              style={{ fontSize: "9px" }}
+            >
+              AI coach
+            </span>
           )}
         </div>
       )}
