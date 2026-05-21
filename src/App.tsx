@@ -24,6 +24,7 @@ import { parseGameText } from "./utils/pgnParse";
 import { countPgnPlies } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
+import { useSmoothAnalysisProgress } from "./hooks/useSmoothAnalysisProgress";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import {
@@ -122,7 +123,7 @@ export default function App() {
 
   const [depth, setDepth] = useState<number>(() => {
     const saved = localStorage.getItem("cr_depth");
-    const fallback = hasRemoteEngine ? "16" : import.meta.env.PROD ? "12" : "16";
+    const fallback = hasRemoteEngine ? "14" : import.meta.env.PROD ? "12" : "16";
     return parseInt(saved ?? fallback, 10);
   });
 
@@ -515,7 +516,7 @@ export default function App() {
     setCurrentMoveIdx(-1);
     setCurrentFen("start");
     setCurrentEval(null);
-    setProgress({ done: 0, total: 0 });
+    setProgress({ done: 2, total: 100 });
     const meta = extractGameMeta(pgnStr);
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
@@ -531,6 +532,7 @@ export default function App() {
         depth
       );
       if (!abortRef.current) {
+        setProgress({ done: 100, total: 100 });
         setMoves(analyzedMoves);
         setSummary(reviewSummary);
         setAnalysisState("done");
@@ -633,12 +635,17 @@ export default function App() {
   const atGameEnd =
     moves.length > 0 && currentMoveIdx === moves.length - 1;
 
-  const progressPercent =
+  const rawProgressPercent =
     progress.total === 100
       ? progress.done
       : progress.total > 0
         ? (progress.done / progress.total) * 100
         : 0;
+
+  const progressPercent = useSmoothAnalysisProgress(
+    analysisState,
+    rawProgressPercent
+  );
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const boardPositionFen = continuationFen ?? currentFen;
@@ -655,8 +662,8 @@ export default function App() {
   useAnalysisBoardReplay({
     active: analysisState === "analyzing",
     replayFrames,
-    progressDone: progress.done,
-    progressTotal: progress.total,
+    progressDone: progressPercent,
+    progressTotal: 100,
     setBoardToFen,
     clearBoardTimers,
     setMoveAnim,

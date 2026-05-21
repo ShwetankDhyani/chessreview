@@ -64,8 +64,8 @@ function applyUci(fen: string, uci: string): string | null {
   }
 }
 
-const PASS1_SHARE = 0.62;
-const PASS2_SHARE = 0.38;
+const PASS1_END = 0.72;
+const PASS2_END = 0.98;
 
 function reportAnalysisProgress(
   onProgress: ((done: number, total: number) => void) | undefined,
@@ -96,6 +96,8 @@ export async function analyzePgn(
   const emptyEval = (): EvalResult => ({ cp: undefined, depth: 0, source: "local" });
   const pass2Depth = Math.max(10, depth - 2);
 
+  onProgress?.(2, 100);
+
   const fillFromBatch = (batch: Map<string, EvalResult>, fens: string[]) => {
     for (const fen of fens) {
       const result = batch.get(fen) ?? emptyEval();
@@ -124,7 +126,7 @@ export async function analyzePgn(
 
   // Native laptop server: batched HTTP + server-side eval cache
   const pass1Batch = await evaluateFensBatch(fensList, depth, (d, t) => {
-    if (t > 0) reportAnalysisProgress(onProgress, (d / t) * PASS1_SHARE);
+    if (t > 0) reportAnalysisProgress(onProgress, 0.04 + (d / t) * (PASS1_END - 0.04));
   });
 
   const evalMissing = async (fens: string[]) => {
@@ -138,22 +140,24 @@ export async function analyzePgn(
   if (pass1Batch.size > 0) {
     fillFromBatch(pass1Batch, fensList);
     await evalMissing(fensList.filter((f) => !isUsableEval(evalCache.get(f))));
-    reportAnalysisProgress(onProgress, PASS1_SHARE);
+    reportAnalysisProgress(onProgress, PASS1_END);
 
     const extraFens = collectBestLineFens();
     if (extraFens.length > 0) {
+      reportAnalysisProgress(onProgress, PASS1_END + 0.02);
       const pass2Batch = await evaluateFensBatch(extraFens, pass2Depth, (d, t) => {
         if (t > 0) {
+          const span = PASS2_END - PASS1_END - 0.02;
           reportAnalysisProgress(
             onProgress,
-            PASS1_SHARE + (d / t) * PASS2_SHARE
+            PASS1_END + 0.02 + (d / t) * span
           );
         }
       });
       fillFromBatch(pass2Batch, extraFens);
       await evalMissing(extraFens.filter((f) => !isUsableEval(evalCache.get(f))));
     }
-    reportAnalysisProgress(onProgress, 1);
+    reportAnalysisProgress(onProgress, PASS2_END);
   } else {
     // Fallback: Lichess / browser worker (one FEN at a time)
     const pass1Total = fensList.length;
@@ -162,7 +166,10 @@ export async function analyzePgn(
       const result = await evaluateFen(fen, depth).catch(emptyEval);
       evalCache.set(fen, result);
       done++;
-      reportAnalysisProgress(onProgress, (done / pass1Total) * PASS1_SHARE);
+      reportAnalysisProgress(
+        onProgress,
+        0.04 + (done / pass1Total) * (PASS1_END - 0.04)
+      );
     }
 
     const extraFens = collectBestLineFens();
@@ -174,10 +181,12 @@ export async function analyzePgn(
       pass2Done++;
       reportAnalysisProgress(
         onProgress,
-        PASS1_SHARE + (pass2Done / Math.max(1, pass2Total)) * PASS2_SHARE
+        PASS1_END +
+          0.02 +
+          (pass2Done / Math.max(1, pass2Total)) * (PASS2_END - PASS1_END - 0.02)
       );
     }
-    reportAnalysisProgress(onProgress, 1);
+    reportAnalysisProgress(onProgress, PASS2_END);
   }
 
   // Strict map: only real engine/cloud evals (no stale carry-forward)
