@@ -38,3 +38,30 @@ export function isAtPositionBeforeMove(
   if (idx === 0 && current === BOARD_START_FEN) return true;
   return false;
 }
+
+/**
+ * Whether playing the move described by `highlight` (from→to squares) on the
+ * board currently showing `prevFen` would yield exactly `targetFen`. If true,
+ * react-chessboard's piece-tracking algorithm can safely animate a single
+ * piece. Anything else (multi-ply jump, mismatched highlight, capture+move
+ * combo with stale board) returns false → caller should snap+remount.
+ */
+export function canAnimateOneStep(
+  prevFen: string,
+  targetFen: string,
+  highlight: { from: string; to: string }
+): boolean {
+  if (sameFen(prevFen, targetFen)) return false;
+  try {
+    const c = new Chess(normalizeFen(prevFen));
+    const result = c.move({
+      from: highlight.from,
+      to: highlight.to,
+      promotion: "q",
+    });
+    if (!result) return false;
+    return sameFen(c.fen(), targetFen);
+  } catch {
+    return false;
+  }
+}

@@ -26,21 +26,24 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
       aria-live="polite"
       aria-label={`Analyzing game, ${pct} percent`}
     >
-      <div className="mx-3 rounded-lg border border-chess-border bg-chess-panel shadow-md px-3 py-2.5">
+      <div className="mx-3 rounded-xl border border-chess-border bg-chess-panel shadow-lg px-3.5 py-2.5">
         <div className="flex items-center justify-between gap-3 mb-2">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-chess-text">Analyzing…</p>
-            <p className="text-[10px] text-chess-muted truncate">
+            <p className="text-xs font-semibold text-chess-text inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
+              Analyzing
+            </p>
+            <p className="text-[10px] text-chess-muted truncate mt-0.5">
               {whiteName} vs {blackName}
             </p>
           </div>
-          <span className="text-sm font-bold text-move-best tabular-nums flex-shrink-0">
+          <span className="text-base font-bold text-chess-accent tabular-nums flex-shrink-0">
             {pct}%
           </span>
         </div>
-        <div className="h-1.5 rounded-full bg-chess-border overflow-hidden">
+        <div className="h-1.5 rounded-full bg-chess-border/70 overflow-hidden">
           <div
-            className="h-full bg-move-best"
+            className="h-full bg-chess-accent transition-all duration-300"
             style={{ width: `${Math.max(pct, 2)}%` }}
           />
         </div>

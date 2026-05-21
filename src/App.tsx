@@ -27,11 +27,13 @@ import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSoun
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
-  isAtPositionBeforeMove,
-  sameFen,
+  canAnimateOneStep,
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
+import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
+import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
+import { progressToReplayPly } from "./utils/pgnReplay";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -168,12 +170,16 @@ export default function App() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(null);
   const [boardDimmed, setBoardDimmed] = useState(false);
-  const [boardPieceAnimMs, setBoardPieceAnimMs] = useState(220);
+  const [boardPieceAnimMs, setBoardPieceAnimMs] = useState(0);
+  const [boardRemountKey, setBoardRemountKey] = useState(0);
   const boardTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const boardAnimGenRef = useRef(0);
+  /** FEN the Chessboard last actually rendered (updated post-paint). */
+  const lastRenderedFenRef = useRef("start");
 
-  const BOARD_STEP_MS = 220;
-  const BOARD_PLAY_MOVE_MS = 420;
+  // Slow enough that the eye can follow the piece travelling between squares.
+  const BOARD_PLAY_MOVE_MS = 380;
+  const HIGHLIGHT_HOLD_MS = 700;
 
   const clearBoardTimers = useCallback(() => {
     boardTimersRef.current.forEach(clearTimeout);
@@ -190,32 +196,56 @@ export default function App() {
     []
   );
 
-  /** Set board to `fen` — never hops through fenBefore (avoids double-move illusion). */
+  /**
+   * Set board to `fen`.
+   *  - `animate=true` is only honoured if the board last *actually rendered*
+   *    the position immediately before `fen` (true one-ply step). Otherwise
+   *    we fall back to a clean remount + snap so react-chessboard can never
+   *    animate a multi-piece diff (which is what causes "both moves at once").
+   */
   const setBoardToFen = useCallback(
     (
       fen: string,
       highlight: { from: string; to: string } | null,
       animate: boolean
     ) => {
-      const gen = ++boardAnimGenRef.current;
       clearBoardTimers();
       setBoardDimmed(false);
-      setBoardPieceAnimMs(animate ? BOARD_PLAY_MOVE_MS : 0);
-      if (highlight) setMoveAnim(highlight);
-      else setMoveAnim(null);
+      // Persist the from/to highlight for as long as the user stays on this
+      // move. The next navigate call overwrites it; clearing it explicitly
+      // happens for start-position / new-game / continuation.
+      setMoveAnim(highlight);
+
+      const safeToAnimate =
+        animate &&
+        !!highlight &&
+        canAnimateOneStep(lastRenderedFenRef.current, fen, highlight);
+
       currentFenRef.current = fen;
-      setCurrentFen(fen);
-      if (animate && highlight) {
-        scheduleBoard(() => {
-          setMoveAnim(null);
-          setBoardPieceAnimMs(BOARD_STEP_MS);
-        }, BOARD_PLAY_MOVE_MS + 40, gen);
+
+      // Set duration first so React batches it with the position change in the
+      // same render → react-chessboard sees the new position with the new
+      // duration and either animates a single piece or snaps cleanly. We avoid
+      // remounting the board on every snap (which caused a visible flash).
+      if (safeToAnimate) {
+        setBoardPieceAnimMs(BOARD_PLAY_MOVE_MS);
       } else {
-        setBoardPieceAnimMs(BOARD_STEP_MS);
+        setBoardPieceAnimMs(0);
       }
+      setCurrentFen(fen);
     },
-    [BOARD_PLAY_MOVE_MS, BOARD_STEP_MS, clearBoardTimers, scheduleBoard]
+    [BOARD_PLAY_MOVE_MS, clearBoardTimers]
   );
+
+  // Track what the Chessboard actually rendered (post-paint) so we can decide
+  // safely whether the next nav can animate. Without this, fast clicks see a
+  // stale ref and the library animates a multi-ply diff.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      lastRenderedFenRef.current = currentFen;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [currentFen]);
   // ── Multi-profile system (up to 5 profiles) ──
   interface ChessProfile {
     name: string;
@@ -410,7 +440,6 @@ export default function App() {
     setContinuationArrow(null);
     clearBoardTimers();
     setMoveAnim(null);
-    const fenNow = currentFenRef.current;
     if (idx < 0) {
       setCurrentMoveIdx(-1);
       currentMoveIdxRef.current = -1;
@@ -433,16 +462,9 @@ export default function App() {
       playMoveFeedback(m.san);
     }
 
-    const targetFen = m.fenAfter;
-    const alreadyThere = sameFen(fenNow, targetFen);
-    const forwardOnePly = Boolean(
-      animate &&
-        !alreadyThere &&
-        highlight &&
-        isAtPositionBeforeMove(fenNow, moves, idx)
-    );
-
-    setBoardToFen(targetFen, highlight, forwardOnePly);
+    // `setBoardToFen` internally checks whether the *rendered* board is one
+    // ply behind and only animates in that case; otherwise it snaps cleanly.
+    setBoardToFen(m.fenAfter, highlight, animate);
   }, [moves, setBoardToFen]);
 
   useEffect(() => {
@@ -537,6 +559,11 @@ export default function App() {
     setCurrentEval(null);
     setAnalysisState("loading");
     setTab("moves");
+    // Remount the board only on game change so any lingering animation state
+    // from the previous game is dropped. Per-move navigation never remounts.
+    setBoardRemountKey((k) => k + 1);
+    setBoardPieceAnimMs(0);
+    lastRenderedFenRef.current = "start";
     const meta = extractGameMeta(parsed.pgn);
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
@@ -662,19 +689,44 @@ export default function App() {
 
   const isAnalyzing = analysisState === "analyzing";
 
+  // Only show the game-end verdict when:
+  //  - PGN actually has a result
+  //  - analysis is complete (so we know the final position is real)
+  //  - the user is sitting on the last analyzed move
+  //  - the board is showing the true final position (no continuation hop)
+  //  - not in an analyze-CTA state
   const showBoardGameEnd =
-    !!gameEnd && atGameEnd && analysisState === "done" && !showBoardAnalyzeButton;
+    !!gameEnd &&
+    atGameEnd &&
+    analysisState === "done" &&
+    !continuationFen &&
+    !showBoardAnalyzeButton;
+
+  const profileInitial = activeUser
+    ? activeUser.name.trim().charAt(0).toUpperCase() || "?"
+    : null;
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
-      <header className="flex items-center gap-2 px-3 py-2 bg-chess-panel border-b border-chess-border shadow-sm flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xl select-none">♟</span>
-          <span className="font-bold text-base tracking-tight text-chess-text">
-            Chess<span className="text-move-best">Review</span><span className="text-chess-muted font-normal text-xs">.org</span>
+      <header className="relative flex items-center gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-2 bg-chess-panel flex-shrink-0 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+        <div className="flex items-baseline gap-2 min-w-0 flex-shrink-0">
+          <span
+            className="self-center flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            aria-hidden
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.5 21h13l-.7-3.4H6.2L5.5 21zM6.5 16h11l-.5-2H7L6.5 16zM7.2 12.6h9.6c-.3-1-1-2.4-2-3.4l1.7-1.7-1.4-1.4-1.7 1.7c-1-1-2.4-1.7-3.4-2L11 4l-1.6.4c-1 .3-2.4 1-3.4 2L4.3 4.7 2.9 6.1l1.7 1.7c-1 1-1.7 2.4-2 3.4l4.6 1.4zM12 3a1 1 0 0 1 1 1v1h-2V4a1 1 0 0 1 1-1z" />
+            </svg>
+          </span>
+          <span className="font-bold text-[15px] sm:text-[17px] tracking-tight leading-none">
+            <span className="text-chess-subtext">Chess</span>
+            <span className="text-chess-accent">Review</span>
+            <span className="ml-0.5 text-chess-muted font-medium text-[11px] sm:text-xs tracking-normal">
+              .org
+            </span>
           </span>
         </div>
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0" />
 
         <EngineDepthControls
           depth={depth}
@@ -688,22 +740,41 @@ export default function App() {
         />
 
         {/* ── Profile Dropdown ── */}
-        <div className="flex items-center relative ml-1 sm:ml-3 flex-shrink-0">
+        <div className="flex items-center relative flex-shrink-0">
           <button
-            onClick={() => setShowAddProfile(v => !v)}
-            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg border border-chess-border bg-chess-bg text-xs sm:text-sm font-semibold transition-colors hover:bg-chess-hover hover:text-chess-text text-chess-muted max-w-[140px] sm:max-w-none"
+            onClick={() => setShowAddProfile((v) => !v)}
+            aria-label={activeUser ? `Profile: ${activeUser.name}` : "Sign in"}
+            className="flex items-center gap-1.5 sm:gap-2 h-9 px-1.5 sm:px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface hover:bg-chess-hover hover:border-chess-accent/40 transition-colors"
           >
             {activeUser ? (
               <>
-                <span className="leading-none">{activeUser.platform === "lichess" ? "🏳" : "♟"}</span>
-                <span className="truncate text-chess-text">{activeUser.name}</span>
-                <span className="text-[10px] flex-shrink-0">▼</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-chess-accent text-white text-[11px] font-bold select-none shadow-sm">
+                  {profileInitial}
+                </span>
+                <span className="hidden sm:inline text-sm font-semibold text-chess-text max-w-[120px] truncate">
+                  {activeUser.name}
+                </span>
+                <span className="text-[9px] text-chess-muted flex-shrink-0">▼</span>
               </>
             ) : (
               <>
-                <span className="leading-none">👤</span>
-                <span>Profile</span>
-                <span className="text-[10px] flex-shrink-0">▼</span>
+                <svg
+                  className="h-4 w-4 text-chess-subtext"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                </svg>
+                <span className="hidden sm:inline text-sm font-semibold text-chess-text">
+                  Sign in
+                </span>
+                <span className="text-[9px] text-chess-muted flex-shrink-0">▼</span>
               </>
             )}
           </button>
@@ -819,15 +890,45 @@ export default function App() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex min-h-[52px] border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_12px_rgba(0,0,0,0.35)]">
-          {(["games","moves","review"] as SidebarTab[]).map(t => (
-            <button key={t} onClick={() => { hapticTap(); setTab(t); }}
-              className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                tab === t ? "text-move-best border-t-2 border-move-best -mt-px" : "text-chess-muted"
-              }`}>
-              {t === "games" ? "🎮 Games" : t === "moves" ? "♟ Moves" : "📊 Review"}
-            </button>
-          ))}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex min-h-[56px] border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_14px_rgba(0,0,0,0.4)]">
+          {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
+            const isActive = tab === t;
+            const label = t === "games" ? "Games" : t === "moves" ? "Moves" : "Review";
+            const icon =
+              t === "games" ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="6" width="18" height="14" rx="2" />
+                  <path d="M3 10h18" />
+                  <path d="M8 6V4M16 6V4" />
+                </svg>
+              ) : t === "moves" ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 3l-1 2-2 .5L13 8l-1 3 3-1.5L18 11l-.5-3 2-2-3-.3L14 3z M11 13l-2 2-3 .5 2 2.5-1 3 3-1.5 3 1.5-1-3 2-2.5-3-.5-2-2z" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 21V10M9 21V4M15 21v-8M21 21V8" />
+                </svg>
+              );
+            return (
+              <button
+                key={t}
+                onClick={() => {
+                  hapticTap();
+                  setTab(t);
+                }}
+                className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 px-2 transition-colors ${
+                  isActive ? "text-chess-accent" : "text-chess-muted"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 inset-x-6 h-0.5 rounded-b bg-chess-accent" />
+                )}
+                {icon}
+                <span className={`text-[10px] uppercase tracking-wider ${isActive ? "font-bold" : "font-semibold"}`}>{label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Mobile content pane (Games / Moves / Review) — shown above bottom bar */}
@@ -863,18 +964,21 @@ export default function App() {
 
         {/* Sidebar — hidden on mobile, visible on md+ */}
         <aside className="hidden lg:flex w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex-col overflow-hidden">
-          <div className="flex border-b border-chess-border">
+          <div className="flex bg-chess-bg/40 border-b border-chess-border">
             {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors ${
                   tab === t
-                    ? "text-move-best border-b-2 border-move-best"
+                    ? "text-chess-accent"
                     : "text-chess-muted hover:text-chess-text"
                 }`}
               >
                 {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
+                {tab === t && (
+                  <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-chess-accent" />
+                )}
               </button>
             ))}
           </div>
@@ -903,7 +1007,8 @@ export default function App() {
                         />
                       )}
                       {analysisState === "analyzing" && (
-                        <span className="flex-shrink-0 text-[10px] text-move-best font-semibold tabular-nums">
+                        <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] text-chess-accent font-semibold tabular-nums">
+                          <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
                           {Math.round(progressPercent)}%
                         </span>
                       )}
@@ -917,13 +1022,19 @@ export default function App() {
                           onMoveSelect={navigateToMove}
                           markGameEnd={!!gameEnd}
                         />
+                      ) : analysisState === "analyzing" ? (
+                        <AnalyzingMoveList
+                          frames={replayFrames}
+                          currentPly={progressToReplayPly(
+                            progress.done,
+                            progress.total,
+                            replayFrames.length
+                          )}
+                        />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           {analysisState === "loading" && (
                             <span>Use Analyze now on the board or sidebar</span>
-                          )}
-                          {analysisState === "analyzing" && (
-                            <span>Review in progress…</span>
                           )}
                           {analysisState === "idle" && (
                             <span>No game loaded</span>
@@ -941,7 +1052,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setTab("games")}
-                      className="text-sm font-semibold text-move-best hover:text-green-400 transition-colors"
+                      className="text-sm font-semibold text-chess-accent hover:text-chess-accent-hover transition-colors"
                     >
                       Go to Games →
                     </button>
@@ -976,26 +1087,56 @@ export default function App() {
           <div className="flex flex-1 items-center justify-center px-4 py-3 gap-4 min-h-0 overflow-hidden">
             <div className="flex items-stretch gap-2 max-h-full">
               <div className="relative flex flex-col gap-1">
-                <PlayerTag
-                  name={boardFlipped ? playerNames.white : playerNames.black}
-                  color={boardFlipped ? "white" : "black"}
-                  rating={boardFlipped ? gameMeta?.whiteRating : gameMeta?.blackRating}
-                  result={gameMeta?.result ?? null}
-                  isLastMove={currentMoveIdx === moves.length - 1}
-                  clock={(() => {
-                    // clocks array is flat: index 0=white move1, 1=black move1, 2=white move2...
-                    // Top player is black (unflipped) or white (flipped)
-                    const topIsBlack = !boardFlipped;
-                    // Find latest clock for this player up to currentMoveIdx
-                    for (let i = currentMoveIdx; i >= 0; i--) {
-                      const isBlackMove = i % 2 === 1;
-                      if (topIsBlack === isBlackMove && clocks[i] !== undefined && clocks[i] !== null) return clocks[i];
-                    }
-                    return null;
-                  })()}
-                  clockColor={boardFlipped ? "w" : "b"}
-                  side={boardFlipped ? "w" : "b"}
-                />
+                {isAnalyzing && replayFrames.length > 0 ? (
+                  <div className="pl-[34px]">
+                    <BoardAnalysisStrip
+                      progressPercent={progressPercent}
+                      currentPly={
+                        progressToReplayPly(
+                          progress.done,
+                          progress.total,
+                          replayFrames.length
+                        ) + 1
+                      }
+                      totalPlies={replayFrames.length}
+                      currentSan={
+                        replayFrames[
+                          Math.min(
+                            replayFrames.length - 1,
+                            Math.max(
+                              0,
+                              progressToReplayPly(
+                                progress.done,
+                                progress.total,
+                                replayFrames.length
+                              )
+                            )
+                          )
+                        ]?.san
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="pl-[34px]">
+                    <PlayerTag
+                      name={boardFlipped ? playerNames.white : playerNames.black}
+                      color={boardFlipped ? "white" : "black"}
+                      rating={boardFlipped ? gameMeta?.whiteRating : gameMeta?.blackRating}
+                      result={gameMeta?.result ?? null}
+                      isLastMove={currentMoveIdx === moves.length - 1}
+                      clock={(() => {
+                        const topIsBlack = !boardFlipped;
+                        for (let i = currentMoveIdx; i >= 0; i--) {
+                          const isBlackMove = i % 2 === 1;
+                          if (topIsBlack === isBlackMove && clocks[i] !== undefined && clocks[i] !== null) return clocks[i];
+                        }
+                        return null;
+                      })()}
+                      clockColor={boardFlipped ? "w" : "b"}
+                      side={boardFlipped ? "w" : "b"}
+                    />
+                  </div>
+                )}
                 <div className="flex items-stretch gap-1.5">
                 <EvalBar
                   evalResult={continuationEval ?? currentEval}
@@ -1008,6 +1149,7 @@ export default function App() {
                   boardWidth={desktopBoardSize}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
+                  remountKey={boardRemountKey}
                   dimmed={
                     (boardDimmed && !continuationFen) || isAnalyzing
                   }
@@ -1034,78 +1176,92 @@ export default function App() {
                   onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
                 </div>
-                <PlayerTag
-                  name={boardFlipped ? playerNames.black : playerNames.white}
-                  color={boardFlipped ? "black" : "white"}
-                  rating={boardFlipped ? gameMeta?.blackRating : gameMeta?.whiteRating}
-                  result={gameMeta?.result ?? null}
-                  isLastMove={currentMoveIdx === moves.length - 1}
-                  clock={(() => {
-                    // Bottom player is white (unflipped) or black (flipped)
-                    const bottomIsBlack = boardFlipped;
-                    for (let i = currentMoveIdx; i >= 0; i--) {
-                      const isBlackMove = i % 2 === 1;
-                      if (bottomIsBlack === isBlackMove && clocks[i] !== undefined && clocks[i] !== null) return clocks[i];
-                    }
-                    return null;
-                  })()}
-                  clockColor={boardFlipped ? "b" : "w"}
-                  side={boardFlipped ? "b" : "w"}
-                />
+                <div className="pl-[34px]">
+                  <PlayerTag
+                    name={boardFlipped ? playerNames.black : playerNames.white}
+                    color={boardFlipped ? "black" : "white"}
+                    rating={boardFlipped ? gameMeta?.blackRating : gameMeta?.whiteRating}
+                    result={gameMeta?.result ?? null}
+                    isLastMove={currentMoveIdx === moves.length - 1}
+                    clock={(() => {
+                      const bottomIsBlack = boardFlipped;
+                      for (let i = currentMoveIdx; i >= 0; i--) {
+                        const isBlackMove = i % 2 === 1;
+                        if (bottomIsBlack === isBlackMove && clocks[i] !== undefined && clocks[i] !== null) return clocks[i];
+                      }
+                      return null;
+                    })()}
+                    clockColor={boardFlipped ? "b" : "w"}
+                    side={boardFlipped ? "b" : "w"}
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 w-10">
+              <div className="flex flex-col items-stretch gap-1 w-11">
                 <button
                   onClick={() => setBoardFlipped((f: boolean) => !f)}
-                  className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-chess-muted hover:text-chess-text transition-colors"
+                  className="board-nav-btn"
                   title="Flip board"
+                  aria-label="Flip board"
                 >
-                  ⇅
-                </button>
-                <button
-                  onClick={() => navigateToMove(-1, false)}
-                  className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-chess-muted hover:text-chess-text transition-colors text-xs"
-                  title="Go to start"
-                >
-                  ⏮
-                </button>
-                <button
-                  onClick={() => navigateToMove(Math.max(currentMoveIdx - 1, -1), false)}
-                  className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-chess-muted hover:text-chess-text transition-colors text-xs"
-                  title="Previous move"
-                >
-                  ◀
-                </button>
-                <button
-                  onClick={() => navigateToMove(Math.min(currentMoveIdx + 1, moves.length - 1), false)}
-                  className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-chess-muted hover:text-chess-text transition-colors text-xs"
-                  title="Next move"
-                >
-                  ▶
-                </button>
-                <button
-                  onClick={() => navigateToMove(moves.length - 1, false)}
-                  className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-chess-muted hover:text-chess-text transition-colors text-xs"
-                  title="Go to end"
-                >
-                  ⏭
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 4l-3 3 3 3" />
+                    <path d="M4 7h12a4 4 0 0 1 4 4" />
+                    <path d="M17 20l3-3-3-3" />
+                    <path d="M20 17H8a4 4 0 0 1-4-4" />
+                  </svg>
                 </button>
                 {moves.length > 0 && (
                   <>
-                    <div className="w-px h-5 bg-chess-border mx-0.5" />
+                    <div className="h-px bg-chess-border my-1" />
+                    <button
+                      onClick={() => navigateToMove(-1, false)}
+                      className="board-nav-btn"
+                      title="Go to start"
+                      aria-label="Go to start"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM10 12l8-7v14z" /></svg>
+                    </button>
+                    <button
+                      onClick={() => navigateToMove(Math.max(currentMoveIdx - 1, -1))}
+                      className="board-nav-btn"
+                      title="Previous move"
+                      aria-label="Previous move"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 5l-9 7 9 7z" /></svg>
+                    </button>
+                    <button
+                      onClick={() => navigateToMove(Math.min(currentMoveIdx + 1, moves.length - 1))}
+                      className="board-nav-btn board-nav-btn--primary"
+                      title="Next move"
+                      aria-label="Next move"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5l9 7-9 7z" /></svg>
+                    </button>
+                    <button
+                      onClick={() => navigateToMove(moves.length - 1, false)}
+                      className="board-nav-btn"
+                      title="Go to end"
+                      aria-label="Go to end"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM6 5l8 7-8 7z" /></svg>
+                    </button>
+                    <div className="h-px bg-chess-border my-1" />
                     <button
                       onClick={() => navigateToKeyMove("prev")}
-                      className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-amber-400 hover:text-amber-300 transition-colors text-xs"
-                      title="Previous key move (blunder/mistake/brilliant)"
+                      className="board-nav-btn board-nav-btn--key"
+                      title="Previous key move"
+                      aria-label="Previous key move"
                     >
-                      ⚠◀
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22z M11 9h2v6h-2z M11 16h2v2h-2z" /></svg>
                     </button>
                     <button
                       onClick={() => navigateToKeyMove("next")}
-                      className="bg-chess-panel border border-chess-border hover:bg-chess-hover rounded p-1.5 text-amber-400 hover:text-amber-300 transition-colors text-xs"
-                      title="Next key move (blunder/mistake/brilliant)"
+                      className="board-nav-btn board-nav-btn--key"
+                      title="Next key move"
+                      aria-label="Next key move"
                     >
-                      ▶⚠
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22z M11 9h2v6h-2z M11 16h2v2h-2z" /></svg>
                     </button>
                   </>
                 )}
@@ -1113,9 +1269,10 @@ export default function App() {
 
               {/* Coach panel — move notes, eval, engine line */}
               {moves.length > 0 && (
-                <div className="w-52 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-border rounded-lg overflow-hidden self-stretch">
-                  <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-chess-border flex-shrink-0">
-                    <span className="text-xs font-semibold text-chess-subtext uppercase tracking-wide">
+                <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-border rounded-lg overflow-hidden self-stretch shadow-md">
+                  <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border bg-chess-bg/40 flex-shrink-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-chess-text uppercase tracking-[0.08em]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-chess-accent" />
                       Coach
                     </span>
                     <EvalBadge
@@ -1123,18 +1280,22 @@ export default function App() {
                       compact
                     />
                   </div>
-                  <div className="flex items-center justify-between px-3 py-1 border-b border-chess-border/60 flex-shrink-0">
-                    <span className="text-[10px] text-chess-muted">Best-move arrow</span>
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border/70 flex-shrink-0">
+                    <span className="text-[11px] text-chess-subtext">Best-move arrow</span>
                     <button
                       type="button"
                       onClick={() => setShowBestMove((b) => !b)}
-                      className={`text-[10px] px-2 py-0.5 rounded font-semibold transition-colors ${
-                        showBestMove
-                          ? "bg-move-best text-white"
-                          : "bg-chess-border text-chess-muted"
+                      role="switch"
+                      aria-checked={showBestMove}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        showBestMove ? "bg-chess-accent" : "bg-chess-border"
                       }`}
                     >
-                      {showBestMove ? "On" : "Off"}
+                      <span
+                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                          showBestMove ? "translate-x-[18px]" : "translate-x-[3px]"
+                        }`}
+                      />
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
@@ -1188,6 +1349,7 @@ export default function App() {
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
+                  remountKey={boardRemountKey}
                   dimmed={
                     (boardDimmed && !continuationFen) || isAnalyzing
                   }
@@ -1229,22 +1391,27 @@ export default function App() {
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
               />
-              <div className="flex items-center justify-center w-full gap-2 py-0.5">
+              <div className="flex items-center justify-center w-full gap-2 py-1">
                 <button
                   type="button"
                   onClick={() => setBoardFlipped((f) => !f)}
-                  className="p-2 rounded-lg border border-chess-border text-chess-muted text-sm active:bg-chess-hover"
+                  className="h-9 w-9 flex items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors"
                   aria-label="Flip board"
                 >
-                  ⇅
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 4l-3 3 3 3" />
+                    <path d="M4 7h12a4 4 0 0 1 4 4" />
+                    <path d="M17 20l3-3-3-3" />
+                    <path d="M20 17H8a4 4 0 0 1-4-4" />
+                  </svg>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowMobileGraph((v) => !v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                  className={`h-9 px-3 rounded-lg text-xs font-semibold border transition-colors ${
                     showMobileGraph
-                      ? "border-move-best text-move-best bg-move-best/10"
-                      : "border-chess-border text-chess-muted"
+                      ? "border-chess-accent text-chess-accent bg-chess-accent/10"
+                      : "border-chess-border text-chess-subtext bg-chess-surface"
                   }`}
                 >
                   {showMobileGraph ? "Coach" : "Graph"}
@@ -1340,33 +1507,36 @@ function PlayerTag({
 
   return (
     <div
-      className={`flex items-center gap-1.5 w-full rounded transition-all ${
-        compact ? "px-1 py-0.5 text-xs" : "px-1 py-0.5 gap-2"
+      className={`flex items-center w-full rounded-md transition-all ${
+        compact ? "px-1.5 py-1 gap-1.5" : "px-2 py-1.5 gap-2.5"
       } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
-      style={isLastMove && didLose ? { opacity: 0.7 } : undefined}
+      style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
       <div
-        className={`rounded-sm border flex-shrink-0 ${compact ? "w-3 h-3" : "w-4 h-4"}`}
+        className={`rounded-sm border flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
         style={{
-          backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
-          borderColor: color === "white" ? "#ccc" : "#666",
+          backgroundColor: color === "white" ? "#f0eee5" : "#1f1d1b",
+          borderColor: color === "white" ? "#cdcbc4" : "#5a5754",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
         }}
       />
       <span
-        className={`font-bold text-chess-text truncate ${compact ? "text-xs" : "text-sm"}`}
+        className={`font-semibold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-sm"}`}
       >
         {name}
       </span>
+      {rating && (
+        <span className={`text-chess-muted flex-shrink-0 tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}>
+          {rating}
+        </span>
+      )}
       {didWin && (
-        <span title="Winner" className={`leading-none ${compact ? "text-xs" : "text-sm"}`}>
+        <span title="Winner" className={`leading-none ml-0.5 ${compact ? "text-xs" : "text-sm"}`}>
           👑
         </span>
       )}
       {isDraw && (
-        <span className="text-[10px] font-bold text-chess-muted">½-½</span>
-      )}
-      {rating && (
-        <span className="text-[10px] text-chess-muted flex-shrink-0">({rating})</span>
+        <span className="text-[10px] font-bold text-chess-muted ml-0.5">½-½</span>
       )}
       {hasClock && (
         <span

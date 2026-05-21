@@ -520,7 +520,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           {move.bestMoveSan && !playedBest && isNegative && (
             <p className="text-[11px] text-chess-muted mt-1">
               Engine suggests{" "}
-              <span className="font-mono font-semibold text-move-best">
+              <span className="font-mono font-semibold text-chess-accent">
                 {move.bestMoveSan}
               </span>
             </p>

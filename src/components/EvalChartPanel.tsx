@@ -30,12 +30,12 @@ export function EvalChartPanel({
 
   return (
     <div
-      className={`flex-shrink-0 border-t border-chess-border bg-chess-panel ${className}`}
+      className={`flex-shrink-0 mt-1.5 border-t border-chess-border bg-chess-panel ${className}`}
     >
       <button
         type="button"
         onClick={toggle}
-        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-chess-hover/50 transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-chess-hover/50 transition-colors"
         aria-expanded={open}
       >
         <span className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">

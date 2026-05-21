@@ -42,39 +42,37 @@ export const EvalBar: React.FC<EvalBarProps> = ({
   return (
     <div
       className={`flex flex-col items-center relative select-none flex-shrink-0 ${
-        compact ? "w-5" : "w-8"
+        compact ? "w-5" : "w-7"
       }`}
       style={h ? { height: h } : compact ? undefined : { minHeight: 400 }}
     >
       <div
-        className={`w-full flex-1 flex flex-col rounded overflow-hidden border border-chess-border ${
-          compact ? "" : "shadow-inner rounded-md"
-        }`}
+        className={`w-full flex-1 flex flex-col overflow-hidden rounded-sm border border-chess-border/80 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.25)]`}
       >
         <div
           className="w-full transition-all duration-500 ease-in-out"
           style={{
             height: `${100 - whiteHeight}%`,
-            backgroundColor: "#1a1a1a",
+            backgroundColor: "#1f1d1b",
           }}
         />
         <div
           className="w-full transition-all duration-500 ease-in-out"
           style={{
             height: `${whiteHeight}%`,
-            backgroundColor: "#e8e6e3",
+            backgroundColor: "#f0eee5",
           }}
         />
       </div>
       <div
-        className={`mt-0.5 font-mono text-chess-subtext text-center leading-tight ${
-          compact ? "text-[9px]" : "text-xs"
+        className={`mt-1 font-mono font-semibold text-chess-subtext text-center leading-tight tabular-nums ${
+          compact ? "text-[9px]" : "text-[10px]"
         }`}
       >
         {evalResult?.mate !== undefined ? (
           <span
             style={{
-              color: evalResult.mate > 0 ? "#6daa6d" : "#ca3c3c",
+              color: evalResult.mate > 0 ? "#81b64c" : "#e84855",
             }}
           >
             {displayText}
