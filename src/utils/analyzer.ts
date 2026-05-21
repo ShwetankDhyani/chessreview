@@ -5,6 +5,16 @@ import {
   expectedPointsLost,
   winPercentFromCp,
 } from "./accuracy";
+import {
+  couldBeBookMove,
+  classifyMove,
+  detectVoluntarySacrifice,
+  exchangeBalanceAfterMove,
+  hasReliableEval,
+  isEngineTopMove,
+  prevMoverWinPercent,
+  qualifiesForBrilliant,
+} from "./moveClassification";
 import type {
   AnalyzedMove,
   EvalResult,
@@ -25,132 +35,6 @@ function winningChances(cp: number): number {
 
 function winPercent(cp: number): number {
   return winPercentFromCp(cp);
-}
-
-const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
-
-function materialCount(chess: Chess, color: "w" | "b"): number {
-  let total = 0;
-  for (const row of chess.board()) {
-    for (const p of row) {
-      if (p && p.color === color) total += PIECE_VALUES[p.type] ?? 0;
-    }
-  }
-  return total;
-}
-
-function cheapestCaptureToSquare(chess: Chess, square: string): ChessMove | null {
-  const caps = chess
-    .moves({ verbose: true })
-    .filter((m) => m.captured && m.to === square);
-  if (caps.length === 0) return null;
-  return caps.reduce((a, b) =>
-    (PIECE_VALUES[a.piece] ?? 9) <= (PIECE_VALUES[b.piece] ?? 9) ? a : b
-  );
-}
-
-/** Net material change for `color` after the move and any recapture chain on `to`. */
-function materialDeltaAfterTrades(
-  fenBefore: string,
-  uci: string,
-  color: "w" | "b"
-): number | null {
-  const from = uci.slice(0, 2) as Parameters<Chess["get"]>[0];
-  const to = uci.slice(2, 4) as Parameters<Chess["get"]>[0];
-  const promotion = uci[4] as "q" | "r" | "b" | "n" | undefined;
-
-  try {
-    const start = new Chess(fenBefore);
-    if (start.turn() !== color) return null;
-    const matBefore = materialCount(start, color);
-
-    const tmp = new Chess(fenBefore);
-    const played = tmp.move({ from, to, promotion });
-    if (!played) return null;
-
-    for (let ply = 0; ply < 10; ply++) {
-      const cap = cheapestCaptureToSquare(tmp, to);
-      if (!cap) break;
-      tmp.move({
-        from: cap.from,
-        to: cap.to,
-        promotion: cap.promotion,
-      });
-    }
-
-    return materialCount(tmp, color) - matBefore;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * True only when the player voluntarily gives up material (engine-approved brilliant).
- * Excludes equal trades, recaptures, profitable captures, and trades that only stop check.
- */
-function detectSacrifice(fenBefore: string, uci: string, color: "w" | "b"): boolean {
-  const from = uci.slice(0, 2) as Parameters<Chess["get"]>[0];
-  const to = uci.slice(2, 4) as Parameters<Chess["get"]>[0];
-  const chess = new Chess(fenBefore);
-  if (chess.turn() !== color) return false;
-
-  const piece = chess.get(from);
-  if (!piece || piece.type === "p" || piece.type === "k") return false;
-
-  const wasInCheck = chess.inCheck();
-  const movingVal = PIECE_VALUES[piece.type] ?? 0;
-  const capturedBefore = chess.get(to);
-
-  if (capturedBefore) {
-    const capturedVal = PIECE_VALUES[capturedBefore.type] ?? 0;
-    if (capturedVal >= movingVal) return false;
-  }
-
-  const delta = materialDeltaAfterTrades(fenBefore, uci, color);
-  if (delta === null) return false;
-
-  // Even exchange (Bxb3 axb3) or small / winning trade
-  if (delta >= -1) return false;
-
-  // Defensive trade while in check (e.g. Bx checking piece, then recaptured)
-  if (wasInCheck && delta >= -2) return false;
-
-  try {
-    const tmp = new Chess(fenBefore);
-    const result = tmp.move({
-      from,
-      to,
-      promotion: uci[4] as "q" | "r" | "b" | "n" | undefined,
-    });
-    if (!result) return false;
-
-    // Non-capture into an attack must lose meaningful material
-    if (!result.captured) {
-      const canBeTaken = tmp.moves({ verbose: true }).some((m) => m.to === to && m.captured);
-      if (!canBeTaken) return false;
-      return delta <= -3;
-    }
-  } catch {
-    return false;
-  }
-
-  return delta <= -2;
-}
-
-function isRecaptureOnSquare(
-  history: ChessMove[],
-  moveIndex: number,
-  square: string
-): boolean {
-  if (moveIndex > 0) {
-    const prev = history[moveIndex - 1];
-    if (prev.captured && prev.to === square) return true;
-  }
-  if (moveIndex > 1) {
-    const prev2 = history[moveIndex - 2];
-    if (prev2.captured && prev2.to === square) return true;
-  }
-  return false;
 }
 
 function evalToCp(e: EvalResult): number {
@@ -179,54 +63,6 @@ function applyUci(fen: string, uci: string): string | null {
     return null;
   }
 }
-
-function classifyMove(
-  epLoss: number,
-  isBook: boolean,
-  isSacrifice: boolean,
-  wpBeforePct: number,
-  wpAfterActualPct: number,
-  isPlayerBestMove: boolean,
-  prevWpForMoverPct: number
-): MoveClassification {
-  if (isBook) return "book";
-
-  const wpBefore = wpBeforePct / 100;
-  const wpAfter = wpAfterActualPct / 100;
-
-  // Brilliant: voluntary material sacrifice + engine top choice (not a forced equal trade)
-  if (
-    isSacrifice &&
-    isPlayerBestMove &&
-    epLoss <= 0.02 &&
-    wpBefore > 0.15 &&
-    wpBefore < 0.85 &&
-    wpAfter >= 0.4 &&
-    wpAfter <= wpBefore + 0.05 &&
-    wpAfter >= wpBefore - 0.08
-  ) {
-    return "brilliant";
-  }
-
-  if (epLoss <= 0.02) {
-    const savedGame = wpBefore < 0.25 && wpAfter >= 0.4;
-    const capitalizesBlunder =
-      prevWpForMoverPct / 100 <= 0.45 &&
-      wpBefore >= 0.7 &&
-      wpAfter >= 0.65 &&
-      isPlayerBestMove;
-    if (savedGame || capitalizesBlunder) return "great";
-  }
-
-  if (isPlayerBestMove || epLoss < 0.005) return "best";
-  if (epLoss <= 0.02) return "excellent";
-  if (epLoss <= 0.05) return "good";
-  if (epLoss <= 0.1) return "inaccuracy";
-  if (epLoss <= 0.2) return "mistake";
-  return "blunder";
-}
-
-const BOOK_HALF_MOVES = 14;
 
 export async function analyzePgn(
   pgn: string,
@@ -383,42 +219,68 @@ export async function analyzePgn(
 
     const hasBestLineEval =
       !bestMoveUci || (fenBest !== null && strictCp.has(fenBest));
-    const bothEvaluated =
-      strictCp.has(fenBefore) &&
-      strictCp.has(fenAfter) &&
-      hasBestLineEval &&
-      isUsableEval(evalBefore) &&
-      isUsableEval(evalAfter);
-
-    const couldBeBook =
-      !bookEnded && bothEvaluated && i < BOOK_HALF_MOVES && epLoss < 0.01;
-
-    const moveUciBase = move.from + move.to;
-    const isRecapture = isRecaptureOnSquare(history, i, move.to);
-    const isSacrifice =
-      !isRecapture &&
-      detectSacrifice(fenBefore, moveUciBase + (move.promotion ?? ""), move.color);
+    const bothEvaluated = hasReliableEval(
+      evalBefore,
+      evalAfter,
+      strictCp.has(fenBefore),
+      strictCp.has(fenAfter),
+      hasBestLineEval
+    );
 
     const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
-    const isPlayerBestMove =
-      !!bestMoveUci && playerUci === bestMoveUci.toLowerCase();
+    const isTop = isEngineTopMove(epLoss, playerUci, bestMoveUci);
 
-    let prevWpForMoverPct = 50;
-    if (i >= 2) {
-      const cpWhitePrev = chartCpWhite.get(fensList[i - 1]) ?? 0;
-      prevWpForMoverPct = winPercent(clamp(sign * cpWhitePrev));
-    }
+    const prevWpForMoverPct = prevMoverWinPercent(
+      fensList,
+      i,
+      move.color,
+      chartCpWhite,
+      clamp,
+      winPercent
+    );
+
+    const couldBeBook = bothEvaluated
+      ? couldBeBookMove(
+          i,
+          bookEnded,
+          epLoss,
+          Math.abs(cpBeforeClamped),
+          isTop
+        )
+      : false;
+
+    const moveUci = playerUci;
+    const exchangeBal = exchangeBalanceAfterMove(fenBefore, moveUci, move.color);
+    const isSacrifice = detectVoluntarySacrifice(
+      fenBefore,
+      moveUci,
+      move.color,
+      history,
+      i
+    );
+    const brilliantSac = qualifiesForBrilliant(
+      fenBefore,
+      moveUci,
+      move.color,
+      history,
+      i,
+      exchangeBal
+    );
+
+    const hasMateScore =
+      evalBefore.mate !== undefined || evalAfter.mate !== undefined;
 
     const classification: MoveClassification = bothEvaluated
-      ? classifyMove(
+      ? classifyMove({
           epLoss,
-          couldBeBook,
-          isSacrifice,
+          isBook: couldBeBook,
+          qualifiesBrilliant: brilliantSac,
           wpBeforePct,
           wpAfterActualPct,
-          isPlayerBestMove,
-          prevWpForMoverPct
-        )
+          isTop,
+          prevWpForMoverPct,
+          hasMateScore,
+        })
       : null;
 
     if (classification !== "book" && classification !== null) bookEnded = true;

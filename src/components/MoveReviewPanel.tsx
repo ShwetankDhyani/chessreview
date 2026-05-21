@@ -127,9 +127,9 @@ function buildComment(move: AnalyzedMove, moveIdx?: number, moves?: AnalyzedMove
 
   switch (c) {
     case "brilliant":
-      return `${san}!! A sacrifice the engine approves — ${
-        isSacrifice ? "giving up material for a deeper advantage" : "a bold move"
-      }. The position wasn't already won, which makes this truly creative. Study this pattern.`;
+      return isSacrifice
+        ? `${san}!! A sound sacrifice — you gave up material for a lasting advantage the engine confirms. Study this pattern.`
+        : `${san}!! A creative best move in a critical position — the engine's top choice when it mattered.`;
 
     case "great":
       return `${san}! A critical move — ${
