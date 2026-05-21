@@ -305,7 +305,15 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     } else if (step === 0) {
       onFenChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
-      onArrowChangeRef.current?.(null);
+      const firstUci = stepUcis[0];
+      if (firstUci) {
+        onArrowChangeRef.current?.({
+          from: firstUci.slice(0, 2),
+          to: firstUci.slice(2, 4),
+        });
+      } else {
+        onArrowChangeRef.current?.(null);
+      }
     }
     setContinuationActive(step > 0);
   }, [step, stepFens, stepUcis]);

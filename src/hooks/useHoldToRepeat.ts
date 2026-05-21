@@ -1,13 +1,20 @@
 import { useCallback, useRef } from "react";
 
-const HOLD_DELAY_MS = 320;
-const REPEAT_MS = 85;
+const HOLD_DELAY_MS = 400;
+const REPEAT_MS = 300;
 
-/** Tap once on release; hold to repeat `onStep` quickly */
-export function useHoldToRepeat(onStep: () => void, enabled: boolean) {
+/**
+ * Short tap → `onTap` (animated step).
+ * Hold → after delay, repeat `onHoldStep` (no animation, for scrubbing).
+ */
+export function useHoldToRepeat(
+  onTap: () => void,
+  onHoldStep: () => void,
+  enabled: boolean
+) {
   const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const repeatingRef = useRef(false);
+  const holdActiveRef = useRef(false);
 
   const clear = useCallback(() => {
     if (holdRef.current) clearTimeout(holdRef.current);
@@ -21,22 +28,23 @@ export function useHoldToRepeat(onStep: () => void, enabled: boolean) {
       if (!enabled) return;
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      repeatingRef.current = false;
+      holdActiveRef.current = false;
       clear();
       holdRef.current = setTimeout(() => {
-        repeatingRef.current = true;
-        onStep();
-        repeatRef.current = setInterval(onStep, REPEAT_MS);
+        holdActiveRef.current = true;
+        onHoldStep();
+        repeatRef.current = setInterval(onHoldStep, REPEAT_MS);
       }, HOLD_DELAY_MS);
     },
-    [enabled, onStep, clear]
+    [enabled, onHoldStep, clear]
   );
 
   const end = useCallback(() => {
-    const wasRepeating = repeatingRef.current;
+    const wasHold = holdActiveRef.current;
     clear();
-    if (!wasRepeating && enabled) onStep();
-  }, [enabled, onStep, clear]);
+    holdActiveRef.current = false;
+    if (!wasHold && enabled) onTap();
+  }, [enabled, onTap, clear]);
 
   return {
     onPointerDown,

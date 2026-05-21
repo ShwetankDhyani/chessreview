@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import type { ReplayFrame } from "../utils/pgnReplay";
 import { progressToReplayPly } from "../utils/pgnReplay";
 
+const PLY_INTERVAL_MS = 500;
+
 interface UseAnalysisBoardReplayOptions {
   active: boolean;
   replayFrames: ReplayFrame[];
@@ -20,7 +22,7 @@ interface UseAnalysisBoardReplayOptions {
 }
 
 /**
- * While analysis runs, replay the loaded PGN on the board in sync with progress %.
+ * While analysis runs, replay the loaded PGN one ply at a time (never burst).
  */
 export function useAnalysisBoardReplay({
   active,
@@ -32,20 +34,31 @@ export function useAnalysisBoardReplay({
   clearBoardTimers,
   setMoveAnim,
 }: UseAnalysisBoardReplayOptions) {
-  const replayPlyRef = useRef(-1);
   const smoothPlyRef = useRef(-1);
+  const targetPlyRef = useRef(-1);
+  const busyRef = useRef(false);
   const framesRef = useRef(replayFrames);
   framesRef.current = replayFrames;
 
   useEffect(() => {
+    targetPlyRef.current = progressToReplayPly(
+      progressDone,
+      progressTotal,
+      replayFrames.length
+    );
+  }, [progressDone, progressTotal, replayFrames.length]);
+
+  useEffect(() => {
     if (!active) {
-      replayPlyRef.current = -1;
       smoothPlyRef.current = -1;
+      targetPlyRef.current = -1;
+      busyRef.current = false;
       return;
     }
 
-    replayPlyRef.current = -1;
     smoothPlyRef.current = -1;
+    targetPlyRef.current = -1;
+    busyRef.current = false;
     clearBoardTimers();
     setMoveAnim(null);
     fadeBoardToFen("start");
@@ -54,34 +67,34 @@ export function useAnalysisBoardReplay({
   useEffect(() => {
     if (!active || replayFrames.length === 0) return;
 
-    const maxPly = progressToReplayPly(
-      progressDone,
-      progressTotal,
-      replayFrames.length
-    );
+    const advanceOnePly = () => {
+      if (busyRef.current) return;
 
-    const tick = () => {
       const frames = framesRef.current;
-      if (frames.length === 0 || smoothPlyRef.current >= maxPly) return;
+      const target = targetPlyRef.current;
+      if (frames.length === 0 || smoothPlyRef.current >= target) return;
 
       const next = smoothPlyRef.current + 1;
-      smoothPlyRef.current = next;
       if (next < 0 || next >= frames.length) return;
 
       const frame = frames[next];
-      const skipSetup = next > 0;
+      busyRef.current = true;
+      smoothPlyRef.current = next;
+
       playMoveOnBoard(
         frame.fenBefore,
         frame.fenAfter,
         frame.from,
         frame.to,
-        skipSetup
+        next > 0
       );
-      replayPlyRef.current = next;
+
+      window.setTimeout(() => {
+        busyRef.current = false;
+      }, PLY_INTERVAL_MS);
     };
 
-    tick();
-    const id = window.setInterval(tick, 340);
+    const id = window.setInterval(advanceOnePly, PLY_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [active, replayFrames.length, progressDone, progressTotal, playMoveOnBoard]);
+  }, [active, replayFrames.length, playMoveOnBoard]);
 }

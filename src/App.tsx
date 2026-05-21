@@ -95,6 +95,7 @@ export default function App() {
   const [gamePlyCount, setGamePlyCount] = useState(0);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
+  const currentMoveIdxRef = useRef(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
@@ -449,6 +450,7 @@ export default function App() {
     setMoveAnim(null);
     if (idx < 0) {
       setCurrentMoveIdx(-1);
+      currentMoveIdxRef.current = -1;
       setCurrentEval(null);
       fadeBoardToFen("start");
       return;
@@ -459,6 +461,7 @@ export default function App() {
     const toSq = m.uci?.slice(2, 4);
 
     setCurrentMoveIdx(idx);
+    currentMoveIdxRef.current = idx;
     setCurrentEval(m.evalAfter);
 
     if (animate && m.san) {
@@ -474,6 +477,21 @@ export default function App() {
       setCurrentFen(m.fenAfter);
     }
   }, [moves, playMoveOnBoard, fadeBoardToFen, currentFen, clearBoardTimers, BOARD_STEP_MS]);
+
+  useEffect(() => {
+    currentMoveIdxRef.current = currentMoveIdx;
+  }, [currentMoveIdx]);
+
+  const stepBoardMove = useCallback(
+    (delta: number, animate = true) => {
+      const next = Math.max(
+        -1,
+        Math.min(moves.length - 1, currentMoveIdxRef.current + delta)
+      );
+      navigateToMove(next, animate);
+    },
+    [moves.length, navigateToMove]
+  );
 
   const KEY_CLASSIFICATIONS = new Set(["brilliant", "great", "mistake", "blunder"]);
 
@@ -1216,14 +1234,8 @@ export default function App() {
                   canNext={
                     !isAnalyzing && currentMoveIdx < moves.length - 1
                   }
-                  onPrev={() =>
-                    navigateToMove(Math.max(currentMoveIdx - 1, -1))
-                  }
-                  onNext={() =>
-                    navigateToMove(
-                      Math.min(currentMoveIdx + 1, moves.length - 1)
-                    )
-                  }
+                  onPrev={(animate = true) => stepBoardMove(-1, animate)}
+                  onNext={(animate = true) => stepBoardMove(1, animate)}
                   analysisState={analysisState}
                   showAnalyzeButton={showBoardAnalyzeButton}
                   showGameEnd={showBoardGameEnd}

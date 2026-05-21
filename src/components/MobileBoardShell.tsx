@@ -10,8 +10,8 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   evalResult: EvalResult | null;
   moveIndex: number;
   moveCount: number;
-  onPrev: () => void;
-  onNext: () => void;
+  onPrev: (animate?: boolean) => void;
+  onNext: (animate?: boolean) => void;
   canPrev: boolean;
   canNext: boolean;
   analysisState?: AnalysisState;
@@ -27,16 +27,21 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
 function MoveTapZone({
   side,
   enabled,
-  onStep,
+  onTap,
+  onHoldStep,
 }: {
   side: "prev" | "next";
   enabled: boolean;
-  onStep: () => void;
+  onTap: () => void;
+  onHoldStep: () => void;
 }) {
-  const step = () => {
-    void prepareChessAudio().then(onStep);
+  const tap = () => {
+    void prepareChessAudio().then(onTap);
   };
-  const handlers = useHoldToRepeat(step, enabled);
+  const holdStep = () => {
+    onHoldStep();
+  };
+  const handlers = useHoldToRepeat(tap, holdStep, enabled);
   const isPrev = side === "prev";
 
   return (
@@ -113,8 +118,18 @@ export function MobileBoardShell({
             blackName={blackName}
             onAnalyze={onAnalyze}
           />
-          <MoveTapZone side="prev" enabled={canPrev} onStep={onPrev} />
-          <MoveTapZone side="next" enabled={canNext} onStep={onNext} />
+          <MoveTapZone
+            side="prev"
+            enabled={canPrev}
+            onTap={() => onPrev(true)}
+            onHoldStep={() => onPrev(false)}
+          />
+          <MoveTapZone
+            side="next"
+            enabled={canNext}
+            onTap={() => onNext(true)}
+            onHoldStep={() => onNext(false)}
+          />
         </div>
       </div>
       {moveCount > 0 && (

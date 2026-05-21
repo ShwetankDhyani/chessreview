@@ -5,7 +5,7 @@ interface AnalyzeNowButtonProps {
   className?: string;
 }
 
-/** Board: chess.com-style white plaque + green CTA (reads on green squares) */
+/** Board: dark plaque matching site theme + green CTA */
 export function AnalyzeNowButton({
   onClick,
   disabled,
@@ -33,10 +33,10 @@ export function AnalyzeNowButton({
       disabled={disabled || !onClick}
       className={`pointer-events-auto disabled:opacity-50 ${className}`}
     >
-      <div className="analyze-now-plaque flex flex-col items-center gap-3 rounded-xl border border-black/10 bg-white px-6 py-5 shadow-[0_10px_40px_rgba(0,0,0,0.45)] min-w-[210px]">
-        <div className="flex items-center gap-2 text-neutral-800">
+      <div className="analyze-now-plaque flex flex-col items-center gap-3 rounded-xl border border-chess-border bg-chess-panel px-6 py-5 shadow-[0_12px_48px_rgba(0,0,0,0.65)] min-w-[210px]">
+        <div className="flex items-center gap-2">
           <span
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-move-best"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-chess-bg border border-chess-border text-move-best"
             aria-hidden
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -45,15 +45,15 @@ export function AnalyzeNowButton({
             </svg>
           </span>
           <span className="text-left leading-tight">
-            <span className="block text-sm font-bold text-neutral-900">
+            <span className="block text-sm font-bold text-chess-text">
               Game Review
             </span>
-            <span className="block text-[10px] font-medium text-neutral-500">
+            <span className="block text-[10px] font-medium text-chess-muted">
               Engine + move ratings
             </span>
           </span>
         </div>
-        <span className="analyze-now-plaque-btn w-full rounded-lg bg-[#5fa032] py-3 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-[#529628] active:scale-[0.98]">
+        <span className="analyze-now-plaque-btn w-full rounded-lg bg-move-best py-3 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-green-600 active:scale-[0.98]">
           Analyze now
         </span>
       </div>
