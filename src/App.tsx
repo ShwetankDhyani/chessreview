@@ -3,6 +3,7 @@ import { AnalyzeBoardStack } from "./components/AnalyzeBoardStack";
 import { MoveList } from "./components/MoveList";
 import { ReviewSummaryPanel } from "./components/ReviewSummary";
 import { EvalChart } from "./components/EvalChart";
+import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import type { AnalyzedMove, ReviewSummary, EvalResult, AnalysisState } from "./types";
@@ -649,7 +650,7 @@ export default function App() {
   const boardWidth =
     winWidth < 1024
       ? Math.min(Math.floor(winWidth * 0.88), winWidth - 44)
-      : Math.min(winWidth - 520, window.innerHeight - 260);
+      : Math.min(winWidth - 520, window.innerHeight - 168);
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
@@ -1051,7 +1052,7 @@ export default function App() {
                   position={continuationFen ?? currentFen}
                   boardWidth={Math.min(
                     window.innerWidth - 400,
-                    window.innerHeight - 260
+                    window.innerHeight - 168
                   )}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
@@ -1199,9 +1200,12 @@ export default function App() {
           </div>
 
           {moves.length > 0 && (
-            <div className="hidden lg:block flex-shrink-0">
-              <EvalChart moves={moves} currentMoveIndex={currentMoveIdx} onMoveSelect={navigateToMove} />
-            </div>
+            <EvalChartPanel
+              className="hidden lg:block"
+              moves={moves}
+              currentMoveIndex={currentMoveIdx}
+              onMoveSelect={navigateToMove}
+            />
           )}
 
           {/* ── Mobile layout ── */}
@@ -1314,13 +1318,11 @@ export default function App() {
             {moves.length > 0 && (
             <div className="flex-1 overflow-y-auto min-h-0 pb-14 bg-chess-panel">
                 {showMobileGraph ? (
-                  <div className="w-full p-2">
-                    <EvalChart
-                      moves={moves}
-                      currentMoveIndex={currentMoveIdx}
-                      onMoveSelect={navigateToMove}
-                    />
-                  </div>
+                  <EvalChartPanel
+                    moves={moves}
+                    currentMoveIndex={currentMoveIdx}
+                    onMoveSelect={navigateToMove}
+                  />
                 ) : (
                   <div className="border-t border-chess-border flex flex-col">
                     <MoveReviewPanel
