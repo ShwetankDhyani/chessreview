@@ -648,7 +648,7 @@ export default function App() {
             type="button"
             onClick={() => void recheckEngine()}
             className="text-[10px] text-amber-400 hover:text-amber-300 max-w-[42vw] truncate sm:max-w-none"
-            title="Fedora: npm run eval-server:public & npm run expose-engine — then tap to retry"
+            title="Laptop: npm run laptop:server — then tap to retry"
           >
             <span className="sm:hidden">Offline · retry</span>
             <span className="hidden sm:inline">Engine offline · Lichess (slow) — retry</span>

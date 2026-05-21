@@ -10,6 +10,8 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+export STOCKFISH_PATH="${STOCKFISH_PATH:-$(command -v stockfish 2>/dev/null || true)}"
+
 cleanup() {
   kill "$SF_PID" 2>/dev/null || true
 }
@@ -21,7 +23,7 @@ SF_PID=$!
 sleep 1
 
 if ! curl -sf "http://127.0.0.1:8765/health" >/dev/null; then
-  echo "ERROR: Stockfish server did not start. Is /usr/bin/stockfish installed?"
+  echo "ERROR: Stockfish server did not start. Install stockfish or set STOCKFISH_PATH in .env"
   exit 1
 fi
 

@@ -8,6 +8,8 @@ export const EVAL_SERVER_URL = (
 const LOCAL_SERVER = EVAL_SERVER_URL;
 const HEALTH_TIMEOUT_MS = 8000;
 const EVAL_TIMEOUT_MS = 45000;
+const BATCH_TIMEOUT_MS = 600_000;
+const BATCH_CHUNK_SIZE = 32;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
 
@@ -57,6 +59,82 @@ async function ensureLocalServer(force = false): Promise<boolean> {
   return ok;
 }
 
+function rawToEvalResult(data: {
+  cp?: number;
+  mate?: number;
+  depth?: number;
+  bestMove?: string;
+  pv?: string[];
+}): EvalResult | null {
+  if (!data?.depth || data.depth <= 0) return null;
+  return {
+    cp: data.cp,
+    mate: data.mate,
+    depth: data.depth,
+    source: "local",
+    bestMove: data.bestMove,
+    pv: data.pv,
+  };
+}
+
+/** Batch eval via laptop server — one HTTP round-trip per chunk (fast over tunnel). */
+export async function evaluateFensBatch(
+  fens: string[],
+  depth = 16,
+  onProgress?: (done: number, total: number) => void
+): Promise<Map<string, EvalResult>> {
+  const out = new Map<string, EvalResult>();
+  if (!LOCAL_SERVER || fens.length === 0) return out;
+
+  const up = await ensureLocalServer();
+  if (!up) return out;
+
+  const unique = [...new Set(fens)];
+  let done = 0;
+
+  for (let i = 0; i < unique.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = unique.slice(i, i + BATCH_CHUNK_SIZE);
+    try {
+      const res = await fetch(`${LOCAL_SERVER}/eval/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fens: chunk, depth }),
+        signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        probeState = "unknown";
+        break;
+      }
+      const data = await res.json();
+      const results: Array<{
+        fen?: string;
+        cp?: number;
+        mate?: number;
+        depth?: number;
+        bestMove?: string;
+        pv?: string[];
+        error?: string;
+      }> = data?.results ?? [];
+      for (let j = 0; j < chunk.length; j++) {
+        const fen = chunk[j];
+        const row = results[j];
+        if (!row || row.error) continue;
+        const ev = rawToEvalResult(row);
+        if (ev) out.set(fen, ev);
+      }
+      done += chunk.length;
+      onProgress?.(done, unique.length);
+    } catch {
+      probeState = "unknown";
+      break;
+    }
+  }
+
+  nativeEngineExclusive = out.size > 0;
+  return out;
+}
+
 export async function evalWithLocalServer(
   fen: string,
   depth = 16
@@ -77,15 +155,7 @@ export async function evalWithLocalServer(
       return null;
     }
     const data = await res.json();
-    if (!data?.depth || data.depth <= 0) return null;
-    return {
-      cp: data.cp,
-      mate: data.mate,
-      depth: data.depth,
-      source: "local",
-      bestMove: data.bestMove,
-      pv: data.pv,
-    };
+    return rawToEvalResult(data);
   } catch {
     probeState = "unknown";
     return null;

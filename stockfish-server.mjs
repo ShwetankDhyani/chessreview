@@ -1,26 +1,38 @@
 /**
- * Native Stockfish HTTP eval server (Fedora: /usr/bin/stockfish).
+ * Native Stockfish HTTP eval server (laptop / Fedora).
  *
  *   node stockfish-server.mjs
- *   STOCKFISH_BIND=0.0.0.0 node stockfish-server.mjs   # allow tunnel/LAN
+ *   STOCKFISH_BIND=0.0.0.0 node stockfish-server.mjs   # tunnel / Vercel
  *
- * GET /health  → { ok, engine, port }
- * GET /eval?fen=<FEN>&depth=<N>
+ * GET  /health
+ * GET  /eval?fen=<FEN>&depth=<N>
+ * POST /eval/batch  { "fens": ["..."], "depth": 16 }
  */
 
 import { createServer } from "http";
 import { spawn } from "child_process";
 import { accessSync, constants } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 import { URL } from "url";
+import os from "os";
 
 const PORT = parseInt(process.env.STOCKFISH_PORT ?? "8765", 10);
 const BIND = process.env.STOCKFISH_BIND ?? "127.0.0.1";
-const THREADS = parseInt(process.env.STOCKFISH_THREADS ?? "4", 10);
-const HASH_MB = parseInt(process.env.STOCKFISH_HASH_MB ?? "256", 10);
-const EVAL_TIMEOUT_MS = parseInt(process.env.STOCKFISH_EVAL_TIMEOUT_MS ?? "25000", 10);
+const CPU_COUNT = os.cpus().length;
+const DEFAULT_THREADS = Math.max(1, Math.min(CPU_COUNT - 1, 12));
+const RAM_GB = Math.floor(os.totalmem() / (1024 ** 3));
+const DEFAULT_HASH_MB = Math.min(1024, Math.max(256, RAM_GB * 128));
+
+const THREADS = parseInt(process.env.STOCKFISH_THREADS ?? String(DEFAULT_THREADS), 10);
+const HASH_MB = parseInt(process.env.STOCKFISH_HASH_MB ?? String(DEFAULT_HASH_MB), 10);
+const EVAL_TIMEOUT_MS = parseInt(process.env.STOCKFISH_EVAL_TIMEOUT_MS ?? "30000", 10);
+const MAX_BATCH = parseInt(process.env.STOCKFISH_MAX_BATCH ?? "64", 10);
+const CACHE_MAX = parseInt(process.env.STOCKFISH_CACHE_SIZE ?? "2048", 10);
 
 const CANDIDATE_PATHS = [
   process.env.STOCKFISH_PATH,
+  join(homedir(), ".local/bin/stockfish"),
   "/usr/bin/stockfish",
   "/usr/local/bin/stockfish",
 ].filter(Boolean);
@@ -85,19 +97,58 @@ async function init() {
   await waitForLine((l) => l === "uciok");
   send(`setoption name Threads value ${THREADS}`);
   send(`setoption name Hash value ${HASH_MB}`);
+  send("setoption name MultiPV value 1");
   send("ucinewgame");
   send("isready");
   await waitForLine((l) => l === "readyok");
   ready = true;
   console.log(`Stockfish: ${STOCKFISH_PATH}`);
-  console.log(`Threads: ${THREADS}, Hash: ${HASH_MB}MB`);
+  console.log(`Threads: ${THREADS}, Hash: ${HASH_MB}MB, eval timeout: ${EVAL_TIMEOUT_MS}ms`);
+}
+
+/** LRU-ish: delete oldest entry when full */
+const evalCache = new Map();
+let cacheHits = 0;
+let cacheMisses = 0;
+
+function cacheKey(fen, depth) {
+  return `${depth}:${fen}`;
+}
+
+function getCached(fen, depth) {
+  const k = cacheKey(fen, depth);
+  if (!evalCache.has(k)) return null;
+  const v = evalCache.get(k);
+  evalCache.delete(k);
+  evalCache.set(k, v);
+  cacheHits++;
+  return v;
+}
+
+function setCached(fen, depth, result) {
+  const k = cacheKey(fen, depth);
+  if (evalCache.size >= CACHE_MAX) {
+    const first = evalCache.keys().next().value;
+    evalCache.delete(first);
+  }
+  evalCache.set(k, result);
 }
 
 let evalQueue = Promise.resolve();
 
 function evaluate(fen, depth = 16) {
+  const cached = getCached(fen, depth);
+  if (cached) return Promise.resolve(cached);
+
   return (evalQueue = evalQueue
-    .then(() => _evaluate(fen, depth))
+    .then(async () => {
+      const hit = getCached(fen, depth);
+      if (hit) return hit;
+      cacheMisses++;
+      const result = await _evaluate(fen, depth);
+      setCached(fen, depth, result);
+      return result;
+    })
     .catch((e) => {
       console.error("Eval error:", e.message);
       return { cp: 0, mate: undefined, depth: 0 };
@@ -166,9 +217,34 @@ function isBlackToMove(fen) {
   return fen.split(" ")[1] === "b";
 }
 
+function flipForWhite(fen, result) {
+  let cp = result.cp;
+  let mate = result.mate;
+  if (isBlackToMove(fen)) {
+    if (cp !== undefined) cp = -cp;
+    if (mate !== undefined) mate = -mate;
+  }
+  return {
+    cp,
+    mate,
+    depth: result.depth,
+    bestMove: result.bestMove,
+    pv: result.pv,
+    source: "local-native",
+  };
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (!raw) return {};
+  return JSON.parse(raw);
+}
+
 const server = createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Content-Type", "application/json");
 
@@ -182,7 +258,50 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === "/health") {
     res.writeHead(200);
-    res.end(JSON.stringify({ ok: ready, engine: STOCKFISH_PATH, port: PORT }));
+    res.end(
+      JSON.stringify({
+        ok: ready,
+        engine: STOCKFISH_PATH,
+        port: PORT,
+        threads: THREADS,
+        hashMb: HASH_MB,
+        cacheHits,
+        cacheMisses,
+      })
+    );
+    return;
+  }
+
+  if (url.pathname === "/eval/batch" && req.method === "POST") {
+    try {
+      const body = await readJsonBody(req);
+      const fens = Array.isArray(body.fens) ? body.fens : [];
+      const depth = Math.min(parseInt(body.depth ?? "16", 10), 25);
+      if (fens.length === 0) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "fens array required" }));
+        return;
+      }
+      if (fens.length > MAX_BATCH) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: `max ${MAX_BATCH} fens per batch` }));
+        return;
+      }
+      const results = [];
+      for (const fen of fens) {
+        if (typeof fen !== "string" || !fen) {
+          results.push({ error: "invalid fen" });
+          continue;
+        }
+        const raw = await evaluate(fen, depth);
+        results.push({ fen, ...flipForWhite(fen, raw) });
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ depth, results, source: "local-native" }));
+    } catch (e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 
@@ -203,23 +322,8 @@ const server = createServer(async (req, res) => {
 
   try {
     const result = await evaluate(fen, depth);
-    let cp = result.cp;
-    let mate = result.mate;
-    if (isBlackToMove(fen)) {
-      if (cp !== undefined) cp = -cp;
-      if (mate !== undefined) mate = -mate;
-    }
     res.writeHead(200);
-    res.end(
-      JSON.stringify({
-        cp,
-        mate,
-        depth: result.depth,
-        bestMove: result.bestMove,
-        pv: result.pv,
-        source: "local-native",
-      })
-    );
+    res.end(JSON.stringify(flipForWhite(fen, result)));
   } catch (e) {
     res.writeHead(500);
     res.end(JSON.stringify({ error: e.message }));
@@ -239,7 +343,7 @@ server.listen(PORT, BIND, () => {
   console.log(`Eval server http://${BIND}:${PORT}`);
   console.log(`Health:  http://${BIND === "0.0.0.0" ? "127.0.0.1" : BIND}:${PORT}/health`);
   if (BIND === "127.0.0.1") {
-    console.log("For Vercel/tunnel: npm run eval-server:public");
+    console.log("For Vercel/tunnel: npm run laptop:server");
   }
 });
 

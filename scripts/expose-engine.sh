@@ -7,6 +7,7 @@ PORT="${STOCKFISH_PORT:-8765}"
 
 if ! curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
   echo "Starting Stockfish server (bind 0.0.0.0) ..."
+  export STOCKFISH_PATH="${STOCKFISH_PATH:-$(command -v stockfish 2>/dev/null || true)}"
   STOCKFISH_BIND=0.0.0.0 STOCKFISH_PORT="$PORT" node stockfish-server.mjs &
   SF_PID=$!
   sleep 2

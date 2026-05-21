@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { evaluateFen } from "../engine/evaluationService";
+import { evaluateFen, evaluateFensBatch } from "../engine/evaluationService";
 import {
   computePlayerAccuracy,
   expectedPointsLost,
@@ -195,38 +195,82 @@ export async function analyzePgn(
 
   const uniqueFens = new Set<string>(fensList);
   const evalCache = new Map<string, EvalResult>();
+  const emptyEval = (): EvalResult => ({ cp: undefined, depth: 0, source: "local" });
 
-  // Pass 1: evaluate every position in the game (also discovers best-move FENs)
   const positionTotal = fensList.length;
   let done = 0;
-  for (const fen of fensList) {
-    const result = await evaluateFen(fen, depth).catch(
-      (): EvalResult => ({ cp: undefined, depth: 0, source: "local" })
-    );
-    evalCache.set(fen, result);
-    if (result.bestMove) {
-      const fenBest = applyUci(fen, result.bestMove);
-      if (fenBest) uniqueFens.add(fenBest);
-    }
-    done++;
-    onProgress?.(done, positionTotal);
-  }
 
-  // Pass 2: evaluate FENs after engine best moves (for expected-points loss)
-  const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
-  const evalTotal = positionTotal + extraFens.length;
-  for (const fen of extraFens) {
-    const result = await evaluateFen(fen, depth).catch(
-      (): EvalResult => ({ cp: undefined, depth: 0, source: "local" })
-    );
-    evalCache.set(fen, result);
-    done++;
-    onProgress?.(done, evalTotal);
+  const fillFromBatch = (
+    batch: Map<string, EvalResult>,
+    fens: string[],
+    discoverBest = false
+  ) => {
+    for (const fen of fens) {
+      const result = batch.get(fen) ?? emptyEval();
+      evalCache.set(fen, result);
+      if (discoverBest && result.bestMove) {
+        const fenBest = applyUci(fen, result.bestMove);
+        if (fenBest) uniqueFens.add(fenBest);
+      }
+    }
+  };
+
+  // Native laptop server: batch HTTP (few round-trips, depth 16, server-side cache)
+  const pass1Batch = await evaluateFensBatch(fensList, depth, (d, t) => {
+    onProgress?.(d, t);
+  });
+
+  const evalMissing = async (fens: string[]) => {
+    for (const fen of fens) {
+      if (isUsableEval(evalCache.get(fen))) continue;
+      const result = await evaluateFen(fen, depth).catch(emptyEval);
+      evalCache.set(fen, result);
+    }
+  };
+
+  if (pass1Batch.size > 0) {
+    fillFromBatch(pass1Batch, fensList, true);
+    await evalMissing(fensList.filter((f) => !isUsableEval(evalCache.get(f))));
+    done = fensList.length;
+    onProgress?.(done, positionTotal);
+
+    const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
+    const evalTotal = positionTotal + extraFens.length;
+    if (extraFens.length > 0) {
+      const pass2Batch = await evaluateFensBatch(extraFens, depth, (d) => {
+        onProgress?.(positionTotal + d, evalTotal);
+      });
+      fillFromBatch(pass2Batch, extraFens);
+      await evalMissing(extraFens.filter((f) => !isUsableEval(evalCache.get(f))));
+      done = evalTotal;
+      onProgress?.(done, evalTotal);
+    }
+  } else {
+    // Fallback: Lichess / browser worker (one FEN at a time)
+    for (const fen of fensList) {
+      const result = await evaluateFen(fen, depth).catch(emptyEval);
+      evalCache.set(fen, result);
+      if (result.bestMove) {
+        const fenBest = applyUci(fen, result.bestMove);
+        if (fenBest) uniqueFens.add(fenBest);
+      }
+      done++;
+      onProgress?.(done, positionTotal);
+    }
+
+    const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
+    const evalTotal = positionTotal + extraFens.length;
+    for (const fen of extraFens) {
+      const result = await evaluateFen(fen, depth).catch(emptyEval);
+      evalCache.set(fen, result);
+      done++;
+      onProgress?.(done, evalTotal);
+    }
   }
 
   // Strict map: only real engine/cloud evals (no stale carry-forward)
   const strictCp = new Map<string, number>();
-  for (const fen of [...fensList, ...extraFens]) {
+  for (const fen of [...uniqueFens]) {
     const e = evalCache.get(fen);
     if (isUsableEval(e)) strictCp.set(fen, evalToCp(e));
   }
