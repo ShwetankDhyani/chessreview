@@ -17,7 +17,11 @@ fi
 export STOCKFISH_PATH="${STOCKFISH_PATH:-$(command -v stockfish 2>/dev/null || true)}"
 export STOCKFISH_BIND=0.0.0.0
 export STOCKFISH_PORT="${STOCKFISH_PORT:-8765}"
-export STOCKFISH_LAPTOP_MODE="${STOCKFISH_LAPTOP_MODE:-1}"
+if [[ "${STOCKFISH_DEDICATED:-}" == "1" || "${STOCKFISH_DEDICATED:-}" == "true" ]]; then
+  export STOCKFISH_LAPTOP_MODE=0
+else
+  export STOCKFISH_LAPTOP_MODE="${STOCKFISH_LAPTOP_MODE:-1}"
+fi
 
 if [[ -z "${STOCKFISH_PATH}" || ! -x "${STOCKFISH_PATH}" ]]; then
   echo "ERROR: stockfish not found. Install it or set STOCKFISH_PATH in .env"

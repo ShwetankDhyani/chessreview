@@ -122,7 +122,7 @@ export default function App() {
 
   const [depth, setDepth] = useState<number>(() => {
     const saved = localStorage.getItem("cr_depth");
-    const fallback = hasRemoteEngine ? "14" : import.meta.env.PROD ? "12" : "16";
+    const fallback = hasRemoteEngine ? "16" : import.meta.env.PROD ? "12" : "16";
     return parseInt(saved ?? fallback, 10);
   });
 

@@ -21,9 +21,16 @@ const PORT = parseInt(process.env.STOCKFISH_PORT ?? "8765", 10);
 const BIND = process.env.STOCKFISH_BIND ?? "127.0.0.1";
 const CPU_COUNT = os.cpus().length;
 const RAM_GB = os.totalmem() / 1024 ** 3;
-const LAPTOP_MODE = process.env.STOCKFISH_LAPTOP_MODE !== "0";
+const DEDICATED =
+  process.env.STOCKFISH_DEDICATED === "1" ||
+  process.env.STOCKFISH_DEDICATED === "true";
+const LAPTOP_MODE = !DEDICATED && process.env.STOCKFISH_LAPTOP_MODE !== "0";
 
 function autoThreads() {
+  // i5 8th gen class: 4 cores — leave headroom for Node + cloudflared + GNOME
+  if (DEDICATED) {
+    return Math.max(2, Math.min(3, CPU_COUNT - 2));
+  }
   if (LAPTOP_MODE || RAM_GB < 8) {
     return Math.max(1, Math.min(2, Math.floor(CPU_COUNT / 2)));
   }
@@ -31,6 +38,7 @@ function autoThreads() {
 }
 
 function autoHashMb() {
+  if (DEDICATED && RAM_GB >= 6) return 384;
   if (RAM_GB < 4) return 64;
   if (RAM_GB < 8) return 128;
   if (LAPTOP_MODE) return 256;
@@ -119,7 +127,7 @@ async function init() {
   console.log(`Stockfish: ${STOCKFISH_PATH}`);
   console.log(
     `Threads: ${THREADS}, Hash: ${HASH_MB}MB, timeout: ${EVAL_TIMEOUT_MS}ms` +
-      (LAPTOP_MODE ? " (laptop mode)" : "") +
+      (DEDICATED ? " (dedicated server)" : LAPTOP_MODE ? " (laptop mode)" : "") +
       (MOVETIME_MS > 0 ? `, movetime: ${MOVETIME_MS}ms` : "")
   );
   console.log(`RAM: ~${Math.floor(RAM_GB)}GB, CPUs: ${CPU_COUNT}, cache entries: ${CACHE_MAX}`);
@@ -293,6 +301,7 @@ const server = createServer(async (req, res) => {
         hashMb: HASH_MB,
         cacheHits,
         cacheMisses,
+        dedicated: DEDICATED,
         laptopMode: LAPTOP_MODE,
         ramGb: Math.floor(RAM_GB),
         maxBatch: MAX_BATCH,
