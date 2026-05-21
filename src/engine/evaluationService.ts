@@ -9,7 +9,8 @@ const LOCAL_SERVER = EVAL_SERVER_URL;
 const HEALTH_TIMEOUT_MS = 8000;
 const EVAL_TIMEOUT_MS = 45000;
 const BATCH_TIMEOUT_MS = 600_000;
-const BATCH_CHUNK_SIZE = 32;
+/** Larger chunks = fewer tunnel round-trips per game on laptop server */
+const BATCH_CHUNK_SIZE = 96;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
 
@@ -18,6 +19,10 @@ let probeState: ProbeState = "unknown";
 let lastProbeMs = 0;
 /** When native server is up, skip Lichess/WASM for speed and full-game depth */
 let nativeEngineExclusive = false;
+
+export function isNativeEngineActive(): boolean {
+  return nativeEngineExclusive;
+}
 
 export function getEvalBackend(): "native" | "cloud" | "browser" | "unavailable" {
   if (probeState === "up") return "native";

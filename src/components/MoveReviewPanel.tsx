@@ -4,7 +4,7 @@ import type { AnalyzedMove, EvalResult } from "../types";
 import { getMeta } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { CoachIcon } from "./CoachIcon";
-import { evaluateFen } from "../engine/evaluationService";
+import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
 
 export interface MoveReviewPanelProps {
   move: AnalyzedMove | null;
@@ -205,7 +205,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       if (cached) {
         onEvalChangeRef.current?.(cached);
       } else {
-        evaluateFen(fen, 12).then(ev => {
+        evaluateFen(fen, isNativeEngineActive() ? 10 : 12).then((ev) => {
           evalCache.current.set(fen, ev);
           onEvalChangeRef.current?.(ev);
         }).catch(() => {});

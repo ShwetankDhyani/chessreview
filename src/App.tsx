@@ -122,7 +122,7 @@ export default function App() {
 
   const [depth, setDepth] = useState<number>(() => {
     const saved = localStorage.getItem("cr_depth");
-    const fallback = hasRemoteEngine ? "16" : import.meta.env.PROD ? "12" : "16";
+    const fallback = hasRemoteEngine ? "14" : import.meta.env.PROD ? "12" : "16";
     return parseInt(saved ?? fallback, 10);
   });
 
@@ -535,7 +535,7 @@ export default function App() {
         setSummary(reviewSummary);
         setAnalysisState("done");
         setTab("review");
-        if (analyzedMoves.length > 0) navigateToMove(analyzedMoves.length - 1, false);
+        navigateToMove(-1, false);
       }
     } catch (e) {
       console.error(e);

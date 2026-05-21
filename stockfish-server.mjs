@@ -20,15 +20,29 @@ import os from "os";
 const PORT = parseInt(process.env.STOCKFISH_PORT ?? "8765", 10);
 const BIND = process.env.STOCKFISH_BIND ?? "127.0.0.1";
 const CPU_COUNT = os.cpus().length;
-const DEFAULT_THREADS = Math.max(1, Math.min(CPU_COUNT - 1, 12));
-const RAM_GB = Math.floor(os.totalmem() / (1024 ** 3));
-const DEFAULT_HASH_MB = Math.min(1024, Math.max(256, RAM_GB * 128));
+const RAM_GB = os.totalmem() / 1024 ** 3;
+const LAPTOP_MODE = process.env.STOCKFISH_LAPTOP_MODE !== "0";
 
-const THREADS = parseInt(process.env.STOCKFISH_THREADS ?? String(DEFAULT_THREADS), 10);
-const HASH_MB = parseInt(process.env.STOCKFISH_HASH_MB ?? String(DEFAULT_HASH_MB), 10);
-const EVAL_TIMEOUT_MS = parseInt(process.env.STOCKFISH_EVAL_TIMEOUT_MS ?? "30000", 10);
-const MAX_BATCH = parseInt(process.env.STOCKFISH_MAX_BATCH ?? "64", 10);
-const CACHE_MAX = parseInt(process.env.STOCKFISH_CACHE_SIZE ?? "2048", 10);
+function autoThreads() {
+  if (LAPTOP_MODE || RAM_GB < 8) {
+    return Math.max(1, Math.min(2, Math.floor(CPU_COUNT / 2)));
+  }
+  return Math.max(1, Math.min(CPU_COUNT - 1, 12));
+}
+
+function autoHashMb() {
+  if (RAM_GB < 4) return 64;
+  if (RAM_GB < 8) return 128;
+  if (LAPTOP_MODE) return 256;
+  return Math.min(1024, Math.max(256, Math.floor(RAM_GB * 128)));
+}
+
+const THREADS = parseInt(process.env.STOCKFISH_THREADS ?? String(autoThreads()), 10);
+const HASH_MB = parseInt(process.env.STOCKFISH_HASH_MB ?? String(autoHashMb()), 10);
+const EVAL_TIMEOUT_MS = parseInt(process.env.STOCKFISH_EVAL_TIMEOUT_MS ?? "45000", 10);
+const MAX_BATCH = parseInt(process.env.STOCKFISH_MAX_BATCH ?? "128", 10);
+const CACHE_MAX = parseInt(process.env.STOCKFISH_CACHE_SIZE ?? "8192", 10);
+const MOVETIME_MS = parseInt(process.env.STOCKFISH_MOVETIME_MS ?? "0", 10);
 
 const CANDIDATE_PATHS = [
   process.env.STOCKFISH_PATH,
@@ -103,7 +117,12 @@ async function init() {
   await waitForLine((l) => l === "readyok");
   ready = true;
   console.log(`Stockfish: ${STOCKFISH_PATH}`);
-  console.log(`Threads: ${THREADS}, Hash: ${HASH_MB}MB, eval timeout: ${EVAL_TIMEOUT_MS}ms`);
+  console.log(
+    `Threads: ${THREADS}, Hash: ${HASH_MB}MB, timeout: ${EVAL_TIMEOUT_MS}ms` +
+      (LAPTOP_MODE ? " (laptop mode)" : "") +
+      (MOVETIME_MS > 0 ? `, movetime: ${MOVETIME_MS}ms` : "")
+  );
+  console.log(`RAM: ~${Math.floor(RAM_GB)}GB, CPUs: ${CPU_COUNT}, cache entries: ${CACHE_MAX}`);
 }
 
 /** LRU-ish: delete oldest entry when full */
@@ -161,7 +180,11 @@ async function _evaluate(fen, depth) {
   let bestCp, bestMate, bestDepth = 0, bestPv = [];
 
   send(`position fen ${fen}`);
-  send(`go depth ${depth}`);
+  if (MOVETIME_MS > 0) {
+    send(`go movetime ${MOVETIME_MS}`);
+  } else {
+    send(`go depth ${depth}`);
+  }
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -270,6 +293,10 @@ const server = createServer(async (req, res) => {
         hashMb: HASH_MB,
         cacheHits,
         cacheMisses,
+        laptopMode: LAPTOP_MODE,
+        ramGb: Math.floor(RAM_GB),
+        maxBatch: MAX_BATCH,
+        movetimeMs: MOVETIME_MS > 0 ? MOVETIME_MS : null,
       })
     );
     return;

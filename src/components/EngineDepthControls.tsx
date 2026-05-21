@@ -20,16 +20,16 @@ function depthOptions(
   engineBackend: EngineBackend
 ): readonly number[] {
   if (hasRemoteEngine || engineBackend === "native") {
-    return [12, 16, 18, 20] as const;
+    return [12, 14, 16, 18] as const;
   }
   return import.meta.env.PROD ? ([12] as const) : ([12, 16, 18, 20, 24] as const);
 }
 
 function depthHint(d: number): string {
-  if (d === 12) return "Fast / cloud-only";
-  if (d === 16) return "Recommended (native Stockfish)";
-  if (d === 18) return "Deep";
-  if (d === 20) return "Very deep";
+  if (d === 12) return "Fastest (best for old laptop server)";
+  if (d === 14) return "Recommended (native / laptop)";
+  if (d === 16) return "Stronger, slower";
+  if (d === 18) return "Deep (long waits)";
   return "Max";
 }
 

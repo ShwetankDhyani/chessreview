@@ -92,29 +92,37 @@ export async function analyzePgn(
     fensList.push(tmp.fen());
   }
 
-  const uniqueFens = new Set<string>(fensList);
   const evalCache = new Map<string, EvalResult>();
   const emptyEval = (): EvalResult => ({ cp: undefined, depth: 0, source: "local" });
+  const pass2Depth = Math.max(10, depth - 2);
 
-  const positionTotal = fensList.length;
-  let done = 0;
-
-  const fillFromBatch = (
-    batch: Map<string, EvalResult>,
-    fens: string[],
-    discoverBest = false
-  ) => {
+  const fillFromBatch = (batch: Map<string, EvalResult>, fens: string[]) => {
     for (const fen of fens) {
       const result = batch.get(fen) ?? emptyEval();
       evalCache.set(fen, result);
-      if (discoverBest && result.bestMove) {
-        const fenBest = applyUci(fen, result.bestMove);
-        if (fenBest) uniqueFens.add(fenBest);
-      }
     }
   };
 
-  // Native laptop server: batch HTTP (few round-trips, depth 16, server-side cache)
+  function playedUci(m: (typeof history)[0]): string {
+    return m.from + m.to + (m.promotion ?? "");
+  }
+
+  function collectBestLineFens(): string[] {
+    const extra: string[] = [];
+    for (let i = 0; i < history.length; i++) {
+      const fenBefore = fensList[i];
+      const ev = evalCache.get(fenBefore);
+      if (!ev?.bestMove) continue;
+      const bm = ev.bestMove.replace(/[^a-h0-9]/gi, "").slice(0, 4);
+      const played = playedUci(history[i]).slice(0, 4);
+      if (bm === played) continue;
+      const fenBest = applyUci(fenBefore, ev.bestMove);
+      if (fenBest && !evalCache.has(fenBest)) extra.push(fenBest);
+    }
+    return [...new Set(extra)];
+  }
+
+  // Native laptop server: batched HTTP + server-side eval cache
   const pass1Batch = await evaluateFensBatch(fensList, depth, (d, t) => {
     if (t > 0) reportAnalysisProgress(onProgress, (d / t) * PASS1_SHARE);
   });
@@ -128,13 +136,13 @@ export async function analyzePgn(
   };
 
   if (pass1Batch.size > 0) {
-    fillFromBatch(pass1Batch, fensList, true);
+    fillFromBatch(pass1Batch, fensList);
     await evalMissing(fensList.filter((f) => !isUsableEval(evalCache.get(f))));
     reportAnalysisProgress(onProgress, PASS1_SHARE);
 
-    const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
+    const extraFens = collectBestLineFens();
     if (extraFens.length > 0) {
-      const pass2Batch = await evaluateFensBatch(extraFens, depth, (d, t) => {
+      const pass2Batch = await evaluateFensBatch(extraFens, pass2Depth, (d, t) => {
         if (t > 0) {
           reportAnalysisProgress(
             onProgress,
@@ -149,22 +157,19 @@ export async function analyzePgn(
   } else {
     // Fallback: Lichess / browser worker (one FEN at a time)
     const pass1Total = fensList.length;
+    let done = 0;
     for (const fen of fensList) {
       const result = await evaluateFen(fen, depth).catch(emptyEval);
       evalCache.set(fen, result);
-      if (result.bestMove) {
-        const fenBest = applyUci(fen, result.bestMove);
-        if (fenBest) uniqueFens.add(fenBest);
-      }
       done++;
       reportAnalysisProgress(onProgress, (done / pass1Total) * PASS1_SHARE);
     }
 
-    const extraFens = [...uniqueFens].filter((f) => !evalCache.has(f));
+    const extraFens = collectBestLineFens();
     const pass2Total = extraFens.length;
     let pass2Done = 0;
     for (const fen of extraFens) {
-      const result = await evaluateFen(fen, depth).catch(emptyEval);
+      const result = await evaluateFen(fen, pass2Depth).catch(emptyEval);
       evalCache.set(fen, result);
       pass2Done++;
       reportAnalysisProgress(
@@ -177,8 +182,7 @@ export async function analyzePgn(
 
   // Strict map: only real engine/cloud evals (no stale carry-forward)
   const strictCp = new Map<string, number>();
-  for (const fen of [...uniqueFens]) {
-    const e = evalCache.get(fen);
+  for (const [fen, e] of evalCache) {
     if (isUsableEval(e)) strictCp.set(fen, evalToCp(e));
   }
 
