@@ -4,8 +4,9 @@
 
 :root {
   --mobile-tab-bar: calc(56px + env(safe-area-inset-bottom, 0px));
-  --page-pad-inline: max(1rem, env(safe-area-inset-left, 0px));
-  --page-pad-inline-end: max(1rem, env(safe-area-inset-right, 0px));
+  --page-pad-inline: max(1.25rem, env(safe-area-inset-left, 0px));
+  --page-pad-inline-end: max(1.25rem, env(safe-area-inset-right, 0px));
+  --app-header-h: 3rem;
 }
 
 .page-inline-pad {
