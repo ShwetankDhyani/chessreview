@@ -25,7 +25,11 @@ import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
-import { isAtPositionBeforeMove } from "./utils/boardPosition";
+import {
+  BOARD_START_FEN,
+  isAtPositionBeforeMove,
+  sameFen,
+} from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 
@@ -170,8 +174,6 @@ export default function App() {
 
   const BOARD_STEP_MS = 220;
   const BOARD_PLAY_MOVE_MS = 420;
-  const BOARD_FADE_MS = 180;
-  const BOARD_SETUP_MS = 300;
 
   const clearBoardTimers = useCallback(() => {
     boardTimersRef.current.forEach(clearTimeout);
@@ -188,73 +190,31 @@ export default function App() {
     []
   );
 
-  const playMoveOnBoard = useCallback(
+  /** Set board to `fen` — never hops through fenBefore (avoids double-move illusion). */
+  const setBoardToFen = useCallback(
     (
-      fenBefore: string,
-      fenAfter: string,
-      fromSq: string,
-      toSq: string,
-      skipSetup: boolean
+      fen: string,
+      highlight: { from: string; to: string } | null,
+      animate: boolean
     ) => {
       const gen = ++boardAnimGenRef.current;
       clearBoardTimers();
-      setMoveAnim({ from: fromSq, to: toSq });
-
-      const playTheMove = () => {
-        setBoardPieceAnimMs(BOARD_PLAY_MOVE_MS);
-        setCurrentFen(fenAfter);
+      setBoardDimmed(false);
+      setBoardPieceAnimMs(animate ? BOARD_PLAY_MOVE_MS : 0);
+      if (highlight) setMoveAnim(highlight);
+      else setMoveAnim(null);
+      currentFenRef.current = fen;
+      setCurrentFen(fen);
+      if (animate && highlight) {
         scheduleBoard(() => {
           setMoveAnim(null);
           setBoardPieceAnimMs(BOARD_STEP_MS);
-          setBoardDimmed(false);
         }, BOARD_PLAY_MOVE_MS + 40, gen);
-      };
-
-      if (skipSetup) {
-        setBoardDimmed(false);
+      } else {
         setBoardPieceAnimMs(BOARD_STEP_MS);
-        setCurrentFen(fenBefore);
-        scheduleBoard(playTheMove, 24, gen);
-        return;
       }
-
-      // Far jump: fade out → glide pieces to pre-move position → fade in → play move
-      setBoardDimmed(true);
-      scheduleBoard(() => {
-        setBoardPieceAnimMs(BOARD_SETUP_MS);
-        setCurrentFen(fenBefore);
-        scheduleBoard(() => {
-          setBoardDimmed(false);
-          scheduleBoard(playTheMove, BOARD_FADE_MS, gen);
-        }, BOARD_SETUP_MS, gen);
-      }, BOARD_FADE_MS, gen);
     },
-    [
-      BOARD_FADE_MS,
-      BOARD_PLAY_MOVE_MS,
-      BOARD_SETUP_MS,
-      BOARD_STEP_MS,
-      clearBoardTimers,
-      scheduleBoard,
-    ]
-  );
-
-  const fadeBoardToFen = useCallback(
-    (fen: string) => {
-      const gen = ++boardAnimGenRef.current;
-      clearBoardTimers();
-      setMoveAnim(null);
-      setBoardDimmed(true);
-      scheduleBoard(() => {
-        setBoardPieceAnimMs(BOARD_SETUP_MS);
-        setCurrentFen(fen);
-        scheduleBoard(() => {
-          setBoardDimmed(false);
-          setBoardPieceAnimMs(BOARD_STEP_MS);
-        }, BOARD_SETUP_MS + BOARD_FADE_MS, gen);
-      }, BOARD_FADE_MS, gen);
-    },
-    [BOARD_FADE_MS, BOARD_SETUP_MS, BOARD_STEP_MS, clearBoardTimers, scheduleBoard]
+    [BOARD_PLAY_MOVE_MS, BOARD_STEP_MS, clearBoardTimers, scheduleBoard]
   );
   // ── Multi-profile system (up to 5 profiles) ──
   interface ChessProfile {
@@ -455,14 +415,15 @@ export default function App() {
       setCurrentMoveIdx(-1);
       currentMoveIdxRef.current = -1;
       setCurrentEval(null);
-      currentFenRef.current = "start";
-      fadeBoardToFen("start");
+      setBoardToFen(BOARD_START_FEN, null, false);
       return;
     }
     if (idx >= moves.length) return;
     const m = moves[idx];
     const fromSq = m.uci?.slice(0, 2);
     const toSq = m.uci?.slice(2, 4);
+    const highlight =
+      fromSq && toSq ? { from: fromSq, to: toSq } : null;
 
     setCurrentMoveIdx(idx);
     currentMoveIdxRef.current = idx;
@@ -472,28 +433,17 @@ export default function App() {
       playMoveFeedback(m.san);
     }
 
-    const alreadyThere = fenNow === m.fenAfter;
-    const canPlayOnePlyForward =
+    const targetFen = m.fenAfter;
+    const alreadyThere = sameFen(fenNow, targetFen);
+    const forwardOnePly = Boolean(
       animate &&
-      !alreadyThere &&
-      fromSq &&
-      toSq &&
-      m.fenBefore &&
-      isAtPositionBeforeMove(fenNow, moves, idx);
+        !alreadyThere &&
+        highlight &&
+        isAtPositionBeforeMove(fenNow, moves, idx)
+    );
 
-    if (canPlayOnePlyForward) {
-      const skipSetup =
-        fenNow === m.fenBefore || (idx === 0 && fenNow === "start");
-      playMoveOnBoard(m.fenBefore, m.fenAfter, fromSq, toSq, skipSetup);
-    } else if (animate) {
-      fadeBoardToFen(m.fenAfter);
-    } else {
-      setBoardDimmed(false);
-      setBoardPieceAnimMs(BOARD_STEP_MS);
-      currentFenRef.current = m.fenAfter;
-      setCurrentFen(m.fenAfter);
-    }
-  }, [moves, playMoveOnBoard, fadeBoardToFen, clearBoardTimers, BOARD_STEP_MS]);
+    setBoardToFen(targetFen, highlight, forwardOnePly);
+  }, [moves, setBoardToFen]);
 
   useEffect(() => {
     currentFenRef.current = currentFen;
@@ -671,10 +621,10 @@ export default function App() {
     replayFrames,
     progressDone: progress.done,
     progressTotal: progress.total,
-    playMoveOnBoard,
-    fadeBoardToFen,
+    setBoardToFen,
     clearBoardTimers,
     setMoveAnim,
+    getCurrentFen: () => currentFenRef.current,
   });
 
   const [showDepth, setShowDepth] = useState(false);

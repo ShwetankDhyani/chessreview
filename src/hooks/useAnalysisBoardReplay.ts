@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReplayFrame } from "../utils/pgnReplay";
 import { progressToReplayPly } from "../utils/pgnReplay";
+import { BOARD_START_FEN, sameFen } from "../utils/boardPosition";
 
 const PLY_INTERVAL_MS = 500;
 
@@ -9,14 +10,12 @@ interface UseAnalysisBoardReplayOptions {
   replayFrames: ReplayFrame[];
   progressDone: number;
   progressTotal: number;
-  playMoveOnBoard: (
-    fenBefore: string,
-    fenAfter: string,
-    fromSq: string,
-    toSq: string,
-    skipSetup: boolean
+  setBoardToFen: (
+    fen: string,
+    highlight: { from: string; to: string } | null,
+    animate: boolean
   ) => void;
-  fadeBoardToFen: (fen: string) => void;
+  getCurrentFen: () => string;
   clearBoardTimers: () => void;
   setMoveAnim: (anim: { from: string; to: string } | null) => void;
 }
@@ -29,8 +28,8 @@ export function useAnalysisBoardReplay({
   replayFrames,
   progressDone,
   progressTotal,
-  playMoveOnBoard,
-  fadeBoardToFen,
+  setBoardToFen,
+  getCurrentFen,
   clearBoardTimers,
   setMoveAnim,
 }: UseAnalysisBoardReplayOptions) {
@@ -61,8 +60,8 @@ export function useAnalysisBoardReplay({
     busyRef.current = false;
     clearBoardTimers();
     setMoveAnim(null);
-    fadeBoardToFen("start");
-  }, [active, replayFrames, clearBoardTimers, fadeBoardToFen, setMoveAnim]);
+    setBoardToFen(BOARD_START_FEN, null, false);
+  }, [active, replayFrames, clearBoardTimers, setMoveAnim, setBoardToFen]);
 
   useEffect(() => {
     if (!active || replayFrames.length === 0) return;
@@ -78,15 +77,17 @@ export function useAnalysisBoardReplay({
       if (next < 0 || next >= frames.length) return;
 
       const frame = frames[next];
+      const prior =
+        next === 0 ? BOARD_START_FEN : frames[next - 1].fenAfter;
+      const canAnimate = sameFen(getCurrentFen(), prior);
+
       busyRef.current = true;
       smoothPlyRef.current = next;
 
-      playMoveOnBoard(
-        frame.fenBefore,
+      setBoardToFen(
         frame.fenAfter,
-        frame.from,
-        frame.to,
-        next > 0
+        { from: frame.from, to: frame.to },
+        canAnimate
       );
 
       window.setTimeout(() => {
@@ -96,5 +97,5 @@ export function useAnalysisBoardReplay({
 
     const id = window.setInterval(advanceOnePly, PLY_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [active, replayFrames.length, playMoveOnBoard]);
+  }, [active, replayFrames.length, setBoardToFen, getCurrentFen]);
 }
