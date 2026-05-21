@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type Move as ChessMove } from "chess.js";
 import { evaluateFen, evaluateFensBatch } from "../engine/evaluationService";
 import {
   computePlayerAccuracy,
@@ -39,26 +39,83 @@ function materialCount(chess: Chess, color: "w" | "b"): number {
   return total;
 }
 
+function cheapestCaptureToSquare(chess: Chess, square: string): ChessMove | null {
+  const caps = chess
+    .moves({ verbose: true })
+    .filter((m) => m.captured && m.to === square);
+  if (caps.length === 0) return null;
+  return caps.reduce((a, b) =>
+    (PIECE_VALUES[a.piece] ?? 9) <= (PIECE_VALUES[b.piece] ?? 9) ? a : b
+  );
+}
+
+/** Net material change for `color` after the move and any recapture chain on `to`. */
+function materialDeltaAfterTrades(
+  fenBefore: string,
+  uci: string,
+  color: "w" | "b"
+): number | null {
+  const from = uci.slice(0, 2) as Parameters<Chess["get"]>[0];
+  const to = uci.slice(2, 4) as Parameters<Chess["get"]>[0];
+  const promotion = uci[4] as "q" | "r" | "b" | "n" | undefined;
+
+  try {
+    const start = new Chess(fenBefore);
+    if (start.turn() !== color) return null;
+    const matBefore = materialCount(start, color);
+
+    const tmp = new Chess(fenBefore);
+    const played = tmp.move({ from, to, promotion });
+    if (!played) return null;
+
+    for (let ply = 0; ply < 10; ply++) {
+      const cap = cheapestCaptureToSquare(tmp, to);
+      if (!cap) break;
+      tmp.move({
+        from: cap.from,
+        to: cap.to,
+        promotion: cap.promotion,
+      });
+    }
+
+    return materialCount(tmp, color) - matBefore;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * True only when the player gives up material on purpose (engine-approved brilliant).
- * Ignores equal trades (Bxb3 axb3), profitable captures, and "hanging" after a fair exchange.
+ * True only when the player voluntarily gives up material (engine-approved brilliant).
+ * Excludes equal trades, recaptures, profitable captures, and trades that only stop check.
  */
 function detectSacrifice(fenBefore: string, uci: string, color: "w" | "b"): boolean {
   const from = uci.slice(0, 2) as Parameters<Chess["get"]>[0];
   const to = uci.slice(2, 4) as Parameters<Chess["get"]>[0];
   const chess = new Chess(fenBefore);
+  if (chess.turn() !== color) return false;
+
   const piece = chess.get(from);
   if (!piece || piece.type === "p" || piece.type === "k") return false;
 
+  const wasInCheck = chess.inCheck();
   const movingVal = PIECE_VALUES[piece.type] ?? 0;
   const capturedBefore = chess.get(to);
-  const capturedVal = capturedBefore ? PIECE_VALUES[capturedBefore.type] ?? 0 : 0;
 
-  // Winning or equal capture (e.g. Bxb3 taking a bishop) is never a sacrifice
-  if (capturedBefore && capturedVal >= movingVal) return false;
+  if (capturedBefore) {
+    const capturedVal = PIECE_VALUES[capturedBefore.type] ?? 0;
+    if (capturedVal >= movingVal) return false;
+  }
+
+  const delta = materialDeltaAfterTrades(fenBefore, uci, color);
+  if (delta === null) return false;
+
+  // Even exchange (Bxb3 axb3) or small / winning trade
+  if (delta >= -1) return false;
+
+  // Defensive trade while in check (e.g. Bx checking piece, then recaptured)
+  if (wasInCheck && delta >= -2) return false;
 
   try {
-    const matBefore = materialCount(chess, color);
     const tmp = new Chess(fenBefore);
     const result = tmp.move({
       from,
@@ -67,39 +124,33 @@ function detectSacrifice(fenBefore: string, uci: string, color: "w" | "b"): bool
     });
     if (!result) return false;
 
-    // If opponent can recapture on the square, assume the cheapest recapture
-    const recaptures = tmp
-      .moves({ verbose: true })
-      .filter((m) => m.to === to && m.captured);
-    if (recaptures.length > 0) {
-      const recapture = recaptures.reduce((a, b) =>
-        (PIECE_VALUES[a.piece] ?? 9) <= (PIECE_VALUES[b.piece] ?? 9) ? a : b
-      );
-      tmp.move({
-        from: recapture.from,
-        to: recapture.to,
-        promotion: recapture.promotion,
-      });
-      const matAfterLine = materialCount(tmp, color);
-      // Need at least a pawn of net material lost (filters B-for-B, N-for-N trades)
-      return matAfterLine <= matBefore - 2;
-    }
-
-    // Non-capture: piece left en prise with no immediate recapture
+    // Non-capture into an attack must lose meaningful material
     if (!result.captured) {
-      const attackers = tmp.moves({ verbose: true }).filter((m) => m.to === to);
-      if (attackers.length === 0) return false;
-      const matAfter = materialCount(tmp, color);
-      return matAfter <= matBefore - 2;
+      const canBeTaken = tmp.moves({ verbose: true }).some((m) => m.to === to && m.captured);
+      if (!canBeTaken) return false;
+      return delta <= -3;
     }
-
-    // Capture with no recapture — only sacrifice if we didn't profit
-    const matAfter = materialCount(tmp, color);
-    const gained = result.captured ? PIECE_VALUES[result.captured] ?? 0 : 0;
-    return gained < movingVal && matAfter <= matBefore - 2;
   } catch {
     return false;
   }
+
+  return delta <= -2;
+}
+
+function isRecaptureOnSquare(
+  history: ChessMove[],
+  moveIndex: number,
+  square: string
+): boolean {
+  if (moveIndex > 0) {
+    const prev = history[moveIndex - 1];
+    if (prev.captured && prev.to === square) return true;
+  }
+  if (moveIndex > 1) {
+    const prev2 = history[moveIndex - 2];
+    if (prev2.captured && prev2.to === square) return true;
+  }
+  return false;
 }
 
 function evalToCp(e: EvalResult): number {
@@ -143,7 +194,7 @@ function classifyMove(
   const wpBefore = wpBeforePct / 100;
   const wpAfter = wpAfterActualPct / 100;
 
-  // Brilliant: real material sacrifice + engine top choice (Chess.com-style)
+  // Brilliant: voluntary material sacrifice + engine top choice (not a forced equal trade)
   if (
     isSacrifice &&
     isPlayerBestMove &&
@@ -151,7 +202,8 @@ function classifyMove(
     wpBefore > 0.15 &&
     wpBefore < 0.85 &&
     wpAfter >= 0.4 &&
-    wpAfter <= wpBefore + 0.05
+    wpAfter <= wpBefore + 0.05 &&
+    wpAfter >= wpBefore - 0.08
   ) {
     return "brilliant";
   }
@@ -341,11 +393,11 @@ export async function analyzePgn(
     const couldBeBook =
       !bookEnded && bothEvaluated && i < BOOK_HALF_MOVES && epLoss < 0.01;
 
-    const isRecapture =
-      i > 0 && history[i - 1].captured && history[i - 1].to === move.to;
+    const moveUciBase = move.from + move.to;
+    const isRecapture = isRecaptureOnSquare(history, i, move.to);
     const isSacrifice =
       !isRecapture &&
-      detectSacrifice(fenBefore, move.from + move.to, move.color);
+      detectSacrifice(fenBefore, moveUciBase + (move.promotion ?? ""), move.color);
 
     const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
     const isPlayerBestMove =
