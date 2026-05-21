@@ -1,10 +1,17 @@
-import { useState } from "react";
-import { DonateModal } from "./DonateModal";
-import { PublicStatsModal } from "./PublicStatsModal";
+import { useEffect, useState } from "react";
+import { HelpModal } from "./HelpModal";
 
 export function SiteFooter() {
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [donateOpen, setDonateOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHelpOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [helpOpen]);
 
   return (
     <>
@@ -13,29 +20,18 @@ export function SiteFooter() {
           fixed left-0 right-0 bottom-0 lg:static
           pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="page-inline-pad flex items-center justify-center gap-3 min-h-[var(--site-footer)] text-[11px] text-chess-muted">
+        <div className="page-inline-pad flex items-center justify-center min-h-[var(--site-footer)]">
           <button
             type="button"
-            onClick={() => setStatsOpen(true)}
-            className="hover:text-chess-accent transition-colors font-medium tracking-wide"
+            onClick={() => setHelpOpen(true)}
+            className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
           >
-            Stats
-          </button>
-          <span className="text-chess-border select-none" aria-hidden>
-            ·
-          </span>
-          <button
-            type="button"
-            onClick={() => setDonateOpen(true)}
-            className="hover:text-chess-accent transition-colors font-medium tracking-wide"
-          >
-            Donate
+            Help ChessReview.org
           </button>
         </div>
       </footer>
 
-      <PublicStatsModal open={statsOpen} onClose={() => setStatsOpen(false)} />
-      <DonateModal open={donateOpen} onClose={() => setDonateOpen(false)} />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 }

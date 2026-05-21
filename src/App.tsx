@@ -7,7 +7,6 @@ import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
-import { recordReviewCompleted } from "./utils/stats";
 import type { AnalyzedMove, ReviewSummary, EvalResult, AnalysisState } from "./types";
 import {
   setCloudOnlyMode,
@@ -517,8 +516,6 @@ export default function App() {
     setCurrentFen("start");
     setCurrentEval(null);
     setProgress({ done: 0, total: 0 });
-    const analysisStarted = Date.now();
-
     const meta = extractGameMeta(pgnStr);
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
@@ -539,14 +536,6 @@ export default function App() {
         setAnalysisState("done");
         setTab("review");
         if (analyzedMoves.length > 0) navigateToMove(analyzedMoves.length - 1, false);
-        recordReviewCompleted({
-          username: activeUser?.name ?? null,
-          white: meta.white,
-          black: meta.black,
-          plies: analyzedMoves.length,
-          depth,
-          durationMs: Date.now() - analysisStarted,
-        });
       }
     } catch (e) {
       console.error(e);
