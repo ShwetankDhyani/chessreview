@@ -3,16 +3,24 @@ export interface SupportLink {
   href: string;
 }
 
+const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
+  {
+    label: "Support via PayPal",
+    href: "https://paypal.me/shwetankdhyani",
+  },
+];
+
 function parseSupportLinks(): SupportLink[] {
   const raw = import.meta.env.VITE_SUPPORT_LINKS as string | undefined;
-  if (!raw?.trim()) return [];
+  if (!raw?.trim()) return DEFAULT_SUPPORT_LINKS;
   try {
     const parsed = JSON.parse(raw) as SupportLink[];
-    return Array.isArray(parsed)
+    const links = Array.isArray(parsed)
       ? parsed.filter((l) => l?.label && l?.href)
       : [];
+    return links.length > 0 ? links : DEFAULT_SUPPORT_LINKS;
   } catch {
-    return [];
+    return DEFAULT_SUPPORT_LINKS;
   }
 }
 
