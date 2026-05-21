@@ -31,8 +31,8 @@ export function AnalyzeBoardStack({
 }: AnalyzeBoardStackProps) {
   return (
     <div
-      className="relative flex-shrink-0"
-      style={{ width: boardWidth, height: boardWidth }}
+      className="relative flex-shrink-0 overflow-visible"
+      style={{ width: boardWidth, height: boardWidth + 2 }}
     >
       <ReviewChessboard
         boardWidth={boardWidth}

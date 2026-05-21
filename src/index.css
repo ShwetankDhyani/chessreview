@@ -151,6 +151,10 @@
   }
 }
 
+.analyze-now-cta {
+  animation: boardAnalyzePulse 2.8s ease-in-out infinite;
+}
+
 .board-analyze-pulse {
   animation: boardAnalyzePulse 2.2s ease-in-out infinite;
 }

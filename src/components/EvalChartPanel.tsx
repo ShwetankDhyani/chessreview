@@ -7,6 +7,8 @@ interface EvalChartPanelProps {
   currentMoveIndex: number;
   onMoveSelect: (index: number) => void;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** Collapsible eval graph — collapsed by default so the board keeps space */
@@ -15,8 +17,16 @@ export function EvalChartPanel({
   currentMoveIndex,
   onMoveSelect,
   className = "",
+  open: openProp,
+  onOpenChange,
 }: EvalChartPanelProps) {
-  const [open, setOpen] = useState(false);
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp ?? openInternal;
+  const toggle = () => {
+    const next = !open;
+    if (openProp === undefined) setOpenInternal(next);
+    onOpenChange?.(next);
+  };
 
   return (
     <div
@@ -24,7 +34,7 @@ export function EvalChartPanel({
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-chess-hover/50 transition-colors"
         aria-expanded={open}
       >
@@ -36,8 +46,8 @@ export function EvalChartPanel({
         </span>
       </button>
       <div
-        className={`overflow-hidden transition-[height] duration-300 ease-out ${
-          open ? "h-28" : "h-0"
+        className={`overflow-hidden transition-[height] duration-200 ease-out ${
+          open ? "h-14" : "h-0"
         }`}
       >
         <EvalChart

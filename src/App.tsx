@@ -24,6 +24,8 @@ import { countPgnPlies } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
+import { computeDesktopBoardSize } from "./utils/boardLayout";
+import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -637,17 +639,28 @@ export default function App() {
 
   const [showDepth, setShowDepth] = useState(false);
   const [showMobileGraph, setShowMobileGraph] = useState(false);
+  const [desktopEvalGraphOpen, setDesktopEvalGraphOpen] = useState(false);
 
-  const [winWidth, setWinWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 480);
+  const [viewport, setViewport] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 480,
+    h: typeof window !== "undefined" ? window.innerHeight : 800,
+  }));
   useEffect(() => {
-    const onResize = () => setWinWidth(window.innerWidth);
+    const onResize = () =>
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const winWidth = viewport.w;
+  const desktopBoardSize = computeDesktopBoardSize(viewport.w, viewport.h, {
+    evalGraphOpen: desktopEvalGraphOpen,
+    hasAnalyzedMoves: moves.length > 0,
+  });
   const boardWidth =
     winWidth < 1024
       ? Math.min(Math.floor(winWidth * 0.88), winWidth - 44)
-      : Math.min(winWidth - 520, window.innerHeight - 168);
+      : desktopBoardSize;
 
   const isMobileLayout = winWidth < 1024;
 
@@ -946,13 +959,10 @@ export default function App() {
                         {playerNames.white} vs {playerNames.black}
                       </span>
                       {analysisState === "loading" && (
-                        <button
-                          type="button"
+                        <AnalyzeNowButton
+                          variant="compact"
                           onClick={() => void startAnalysis(pgn)}
-                          className="flex-shrink-0 text-xs bg-move-best hover:bg-green-600 text-white font-semibold px-2.5 py-1 rounded transition-colors"
-                        >
-                          Analyze now
-                        </button>
+                        />
                       )}
                       {analysisState === "analyzing" && (
                         <span className="flex-shrink-0 text-[10px] text-move-best font-semibold tabular-nums">
@@ -1025,8 +1035,8 @@ export default function App() {
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* ── Desktop board area ── */}
           <div className="hidden lg:flex flex-1 flex-col min-h-0 overflow-hidden">
-          <div className="flex flex-1 items-center justify-center p-4 gap-4 min-h-0 overflow-hidden">
-            <div className="flex items-stretch gap-2 h-full max-h-[min(calc(100vw-480px),calc(100vh-180px))]">
+          <div className="flex flex-1 items-center justify-center px-4 py-3 gap-4 min-h-0 overflow-hidden">
+            <div className="flex items-stretch gap-2 max-h-full">
               <div className="relative flex flex-col gap-1">
                 <PlayerTag
                   name={boardFlipped ? playerNames.white : playerNames.black}
@@ -1052,18 +1062,12 @@ export default function App() {
                 <EvalBar
                   evalResult={continuationEval ?? currentEval}
                   boardFlipped={boardFlipped}
-                  barHeight={Math.min(
-                    window.innerWidth - 400,
-                    window.innerHeight - 168
-                  )}
+                  barHeight={desktopBoardSize}
                 />
                 <AnalyzeBoardStack
                   position={boardPositionFen}
                   positionFen={boardPositionFen}
-                  boardWidth={Math.min(
-                    window.innerWidth - 420,
-                    window.innerHeight - 168
-                  )}
+                  boardWidth={desktopBoardSize}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
                   dimmed={
@@ -1218,6 +1222,8 @@ export default function App() {
               moves={moves}
               currentMoveIndex={currentMoveIdx}
               onMoveSelect={navigateToMove}
+              open={desktopEvalGraphOpen}
+              onOpenChange={setDesktopEvalGraphOpen}
             />
           )}
 
@@ -1309,7 +1315,6 @@ export default function App() {
                 >
                   {showMobileGraph ? "Coach" : "Graph"}
                 </button>
-                <span className="text-[10px] text-chess-muted">Tap sides</span>
               </div>
                 </>
               ) : (

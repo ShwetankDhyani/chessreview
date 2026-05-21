@@ -1,5 +1,6 @@
 import type { AnalysisState, EvalResult } from "../types";
 import type { GameEndInfo } from "../utils/gameEnd";
+import { useHoldToRepeat } from "../hooks/useHoldToRepeat";
 import { prepareChessAudio } from "../utils/chessSounds";
 import { AnalyzeBoardStack } from "./AnalyzeBoardStack";
 import { EvalBar } from "./EvalBar";
@@ -23,7 +24,56 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   onAnalyze?: () => void;
 }
 
-/** Board + slim eval bar + left/right tap zones for move navigation */
+function MoveTapZone({
+  side,
+  enabled,
+  onStep,
+}: {
+  side: "prev" | "next";
+  enabled: boolean;
+  onStep: () => void;
+}) {
+  const step = () => {
+    void prepareChessAudio().then(onStep);
+  };
+  const handlers = useHoldToRepeat(step, enabled);
+  const isPrev = side === "prev";
+
+  return (
+    <>
+      {enabled && (
+        <div
+          className={`absolute ${isPrev ? "left-0" : "right-0"} top-0 bottom-0 w-[32%] z-20 pointer-events-none ${
+            isPrev
+              ? "bg-gradient-to-r from-black/55 via-black/25 to-transparent"
+              : "bg-gradient-to-l from-black/55 via-black/25 to-transparent"
+          }`}
+          aria-hidden
+        />
+      )}
+      {enabled && (
+        <div
+          className={`absolute ${isPrev ? "left-2" : "right-2"} top-1/2 -translate-y-1/2 z-20 pointer-events-none flex items-center justify-center w-10 h-[4.5rem] rounded-lg bg-black/60 border border-white/15 shadow-lg`}
+          aria-hidden
+        >
+          <span className="text-white/90 text-3xl font-bold leading-none select-none">
+            {isPrev ? "‹" : "›"}
+          </span>
+        </div>
+      )}
+      <button
+        type="button"
+        aria-label={isPrev ? "Previous move" : "Next move"}
+        disabled={!enabled}
+        className={`absolute ${isPrev ? "left-0" : "right-0"} top-0 bottom-0 w-[32%] z-30 touch-manipulation disabled:pointer-events-none`}
+        style={{ background: "transparent" }}
+        {...handlers}
+      />
+    </>
+  );
+}
+
+/** Board + slim eval bar + visible left/right tap zones (hold to scrub moves) */
 export function MobileBoardShell({
   evalResult,
   boardWidth,
@@ -59,7 +109,7 @@ export function MobileBoardShell({
           compact
         />
         <div
-          className="relative flex-shrink-0"
+          className="relative flex-shrink-0 overflow-visible"
           style={{ width: boardWidth, height: boardWidth }}
         >
           <AnalyzeBoardStack
@@ -75,48 +125,8 @@ export function MobileBoardShell({
             blackName={blackName}
             onAnalyze={onAnalyze}
           />
-          <button
-            type="button"
-            aria-label="Previous move"
-            disabled={!canPrev}
-            onClick={(e) => {
-              e.stopPropagation();
-              void prepareChessAudio().then(() => {
-                if (canPrev) onPrev();
-              });
-            }}
-            className="absolute left-0 top-0 bottom-0 w-[30%] z-30 touch-manipulation disabled:pointer-events-none"
-            style={{ background: "transparent" }}
-          />
-          <button
-            type="button"
-            aria-label="Next move"
-            disabled={!canNext}
-            onClick={(e) => {
-              e.stopPropagation();
-              void prepareChessAudio().then(() => {
-                if (canNext) onNext();
-              });
-            }}
-            className="absolute right-0 top-0 bottom-0 w-[30%] z-30 touch-manipulation disabled:pointer-events-none"
-            style={{ background: "transparent" }}
-          />
-          {canPrev && (
-            <div
-              className="absolute left-1 top-1/2 -translate-y-1/2 z-20 pointer-events-none text-white/25 text-2xl font-bold select-none"
-              aria-hidden
-            >
-              ‹
-            </div>
-          )}
-          {canNext && (
-            <div
-              className="absolute right-1 top-1/2 -translate-y-1/2 z-20 pointer-events-none text-white/25 text-2xl font-bold select-none"
-              aria-hidden
-            >
-              ›
-            </div>
-          )}
+          <MoveTapZone side="prev" enabled={canPrev} onStep={onPrev} />
+          <MoveTapZone side="next" enabled={canNext} onStep={onNext} />
         </div>
       </div>
       {moveCount > 0 && (

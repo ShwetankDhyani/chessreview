@@ -107,7 +107,7 @@ export const EvalChart: React.FC<EvalChartProps> = ({
   };
 
   return (
-    <div className="w-full h-full min-h-[7rem] bg-chess-panel flex-shrink-0">
+    <div className="w-full h-full min-h-0 bg-chess-panel flex-shrink-0">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
