@@ -32,6 +32,7 @@ import {
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
+import { Analytics } from "@vercel/analytics/react";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -1295,6 +1296,7 @@ export default function App() {
           </div>
         </main>
       </div>
+      <Analytics />
     </div>
   );
 }
@@ -1381,4 +1383,3 @@ function PlayerTag({
     </div>
   );
 }
-
