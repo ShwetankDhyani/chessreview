@@ -1385,9 +1385,6 @@ export default function App() {
                     )
                   }
                   bestMove={currentMove?.bestMove}
-                  onFlip={() => setBoardFlipped((f) => !f)}
-                  moveIndex={currentMoveIdx}
-                  moveCount={gamePlyCount || moves.length || replayFrames.length}
                   canPrev={!isAnalyzing && currentMoveIdx > -1}
                   canNext={
                     !isAnalyzing && currentMoveIdx < moves.length - 1
@@ -1410,6 +1407,15 @@ export default function App() {
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
+                trailing={
+                  <MobileBoardControls
+                    moveIndex={currentMoveIdx}
+                    moveCount={
+                      gamePlyCount || moves.length || replayFrames.length
+                    }
+                    onFlip={() => setBoardFlipped((f) => !f)}
+                  />
+                }
               />
                 </>
               ) : (
@@ -1452,6 +1458,69 @@ export default function App() {
   );
 }
 
+function MobileBoardControls({
+  moveIndex,
+  moveCount,
+  onFlip,
+}: {
+  moveIndex: number;
+  moveCount: number;
+  onFlip: () => void;
+}) {
+  if (moveCount <= 0) {
+    return (
+      <button
+        type="button"
+        onClick={onFlip}
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+        aria-label="Flip board"
+      >
+        <FlipBoardIcon />
+      </button>
+    );
+  }
+
+  const label =
+    moveIndex < 0 ? `0/${moveCount}` : `${moveIndex + 1}/${moveCount}`;
+
+  return (
+    <div className="ml-auto flex flex-shrink-0 items-center gap-2">
+      <span className="text-[11px] text-chess-muted font-mono tabular-nums">
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={onFlip}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+        aria-label="Flip board"
+      >
+        <FlipBoardIcon />
+      </button>
+    </div>
+  );
+}
+
+function FlipBoardIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7 4l-3 3 3 3" />
+      <path d="M4 7h12a4 4 0 0 1 4 4" />
+      <path d="M17 20l3-3-3-3" />
+      <path d="M20 17H8a4 4 0 0 1-4-4" />
+    </svg>
+  );
+}
+
 function PlayerTag({
   name,
   color,
@@ -1462,6 +1531,7 @@ function PlayerTag({
   clockColor,
   side,
   compact = false,
+  trailing,
 }: {
   name: string;
   color: "white" | "black";
@@ -1472,6 +1542,7 @@ function PlayerTag({
   clockColor?: "w" | "b";
   side?: "w" | "b";
   compact?: boolean;
+  trailing?: React.ReactNode;
 }) {
   const mySide = side ?? (color === "white" ? "w" : "b");
   const won  = result === "1-0" ? "w" : result === "0-1" ? "b" : result === "1/2-1/2" ? "draw" : null;
@@ -1498,32 +1569,40 @@ function PlayerTag({
       } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
-      <div
-        className={`rounded-sm border flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
-        style={{
-          backgroundColor: color === "white" ? "#f0eee5" : "#1f1d1b",
-          borderColor: color === "white" ? "#cdcbc4" : "#5a5754",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-        }}
-      />
-      <span
-        className={`font-semibold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-sm"}`}
-      >
-        {name}
-      </span>
-      {rating && (
-        <span className={`text-chess-muted flex-shrink-0 tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}>
-          {rating}
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div
+          className={`rounded-sm border flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
+          style={{
+            backgroundColor: color === "white" ? "#f0eee5" : "#1f1d1b",
+            borderColor: color === "white" ? "#cdcbc4" : "#5a5754",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+          }}
+        />
+        <span
+          className={`font-semibold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-sm"}`}
+        >
+          {name}
         </span>
-      )}
-      {didWin && (
-        <span title="Winner" className={`leading-none ml-0.5 ${compact ? "text-xs" : "text-sm"}`}>
-          👑
-        </span>
-      )}
-      {isDraw && (
-        <span className="text-[10px] font-bold text-chess-muted ml-0.5">½-½</span>
-      )}
+        {rating && (
+          <span
+            className={`text-chess-muted flex-shrink-0 tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}
+          >
+            {rating}
+          </span>
+        )}
+        {didWin && (
+          <span
+            title="Winner"
+            className={`leading-none ml-0.5 ${compact ? "text-xs" : "text-sm"}`}
+          >
+            👑
+          </span>
+        )}
+        {isDraw && (
+          <span className="text-[10px] font-bold text-chess-muted ml-0.5">½-½</span>
+        )}
+      </div>
+      {trailing}
       {hasClock && (
         <span
           className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${
