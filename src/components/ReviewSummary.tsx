@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { ReviewSummary as ReviewSummaryType, AnalyzedMove } from "../types";
-import { AccuracyStat } from "./AccuracyStat";
+import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 
@@ -45,13 +45,14 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   return (
     <div className="flex flex-col gap-4 p-4 animate-fade-in">
-      <div className="flex gap-2">
-        <AccuracyStat
+      <div className="flex justify-around gap-2 py-1">
+        <AccuracyWheel
           accuracy={summary.accuracy.white}
           color="white"
           username={whiteName}
         />
-        <AccuracyStat
+        <div className="w-px bg-chess-border self-stretch" />
+        <AccuracyWheel
           accuracy={summary.accuracy.black}
           color="black"
           username={blackName}

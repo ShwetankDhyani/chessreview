@@ -13,7 +13,6 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   positionFen: string;
   whiteName?: string;
   blackName?: string;
-  playerLabel?: string;
   onAnalyze?: () => void;
 }
 
@@ -27,7 +26,6 @@ export function AnalyzeBoardStack({
   positionFen,
   whiteName = "White",
   blackName = "Black",
-  playerLabel,
   onAnalyze,
   boardWidth,
   boardOrientation,
@@ -56,7 +54,6 @@ export function AnalyzeBoardStack({
         <BoardAnalyzeOverlay
           state={analysisState}
           progressPercent={progressPercent}
-          playerLabel={playerLabel}
           onAnalyze={onAnalyze}
           disabled={analysisState === "analyzing"}
         />

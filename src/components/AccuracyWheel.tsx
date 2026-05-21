@@ -28,8 +28,8 @@ export const AccuracyWheel: React.FC<AccuracyWheelProps> = ({
       : "#ca3c3c";
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative w-24 h-24">
+    <div className="flex flex-col items-center gap-1.5 min-w-0 flex-1">
+      <div className="relative w-[4.5rem] h-[4.5rem] flex-shrink-0">
         <svg
           className="w-full h-full -rotate-90"
           viewBox="0 0 88 88"
@@ -56,7 +56,7 @@ export const AccuracyWheel: React.FC<AccuracyWheelProps> = ({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className="text-xl font-bold"
+            className="text-base font-bold tabular-nums"
             style={{ color: hasValue ? strokeColor : "#666" }}
           >
             {hasValue ? safeAccuracy.toFixed(1) : "--"}
@@ -72,10 +72,10 @@ export const AccuracyWheel: React.FC<AccuracyWheelProps> = ({
             border: color === "black" ? "1px solid #888" : "none",
           }}
         />
-        <span className="text-sm font-medium text-chess-text">
+        <span className="text-xs font-medium text-chess-text truncate max-w-[7rem]">
           {username ?? (color === "white" ? "White" : "Black")}
         </span>
-        <div className="text-xs text-chess-muted mt-0.5">Accuracy</div>
+        <div className="text-[10px] text-chess-muted">Accuracy</div>
       </div>
     </div>
   );

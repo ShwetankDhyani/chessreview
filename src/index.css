@@ -534,26 +534,26 @@
 
 .board-game-end-caption {
   position: absolute;
+  top: 8px;
   left: 0;
   right: 0;
-  bottom: 10%;
   display: flex;
   justify-content: center;
-  padding: 0 8px;
   z-index: 3;
+  pointer-events: none;
 }
 
 .board-game-end-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-radius: 10px;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: 8px;
   border: 1px solid;
-  background: rgba(12, 12, 12, 0.82);
-  backdrop-filter: blur(8px);
-  max-width: 100%;
-  animation: gameEndCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+  background: rgba(12, 12, 12, 0.78);
+  backdrop-filter: blur(6px);
+  animation: gameEndCardIn 0.45s ease-out 0.2s both;
 }
 
 @keyframes gameEndCardIn {

@@ -76,26 +76,22 @@ export function BoardGameEndOverlay({
         <div
           className="board-game-end-card"
           style={{
-            borderColor: `${accent}55`,
-            boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 0 24px ${accent}22`,
+            borderColor: `${accent}44`,
+            boxShadow: `0 4px 16px rgba(0,0,0,0.35)`,
           }}
         >
           <span className="board-game-end-icon">{end.icon}</span>
-          <div className="min-w-0">
-            <p
-              className="text-sm font-bold leading-tight truncate"
-              style={{ color: accent }}
-            >
-              {end.detail}
+          <p
+            className="text-[11px] font-semibold leading-tight truncate max-w-[180px]"
+            style={{ color: accent }}
+          >
+            {end.detail}
+          </p>
+          {winnerName && end.winner ? (
+            <p className="text-[9px] text-white/60 truncate max-w-[180px]">
+              {winnerName} wins
             </p>
-            {winnerName && end.winner ? (
-              <p className="text-[10px] text-white/70 mt-0.5 truncate">
-                {winnerName} wins
-              </p>
-            ) : (
-              <p className="text-[10px] text-white/60 mt-0.5">{end.headline}</p>
-            )}
-          </div>
+          ) : null}
         </div>
       </div>
     </div>

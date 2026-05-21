@@ -21,7 +21,6 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   positionFen: string;
   whiteName?: string;
   blackName?: string;
-  playerLabel?: string;
   onAnalyze?: () => void;
 }
 
@@ -44,7 +43,6 @@ export function MobileBoardShell({
   positionFen,
   whiteName,
   blackName,
-  playerLabel,
   onAnalyze,
   ...boardProps
 }: MobileBoardShellProps) {
@@ -78,7 +76,6 @@ export function MobileBoardShell({
             gameEnd={gameEnd}
             whiteName={whiteName}
             blackName={blackName}
-            playerLabel={playerLabel}
             onAnalyze={onAnalyze}
           />
           <button

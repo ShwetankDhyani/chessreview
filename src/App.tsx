@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { AnalyzeBoardStack } from "./components/AnalyzeBoardStack";
 import { MoveList } from "./components/MoveList";
 import { ReviewSummaryPanel } from "./components/ReviewSummary";
-import { EvalChart } from "./components/EvalChart";
+import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
@@ -615,7 +615,11 @@ export default function App() {
     moves.length > 0 && currentMoveIdx === moves.length - 1;
 
   const progressPercent =
-    progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
+    progress.total === 100
+      ? progress.done
+      : progress.total > 0
+        ? (progress.done / progress.total) * 100
+        : 0;
 
   const showAnalyzeOverlay =
     !!pgn &&
@@ -934,12 +938,21 @@ export default function App() {
               <div className="flex flex-col h-full">
                 {pgn ? (
                   <>
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border flex-shrink-0">
-                      <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border flex-shrink-0 gap-2">
+                      <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider truncate min-w-0">
                         {playerNames.white} vs {playerNames.black}
                       </span>
+                      {analysisState === "loading" && (
+                        <button
+                          type="button"
+                          onClick={() => void startAnalysis(pgn)}
+                          className="flex-shrink-0 text-xs bg-move-best hover:bg-green-600 text-white font-semibold px-2.5 py-1 rounded transition-colors"
+                        >
+                          Analyze now
+                        </button>
+                      )}
                       {analysisState === "analyzing" && (
-                        <span className="text-[10px] text-move-best font-semibold tabular-nums">
+                        <span className="flex-shrink-0 text-[10px] text-move-best font-semibold tabular-nums">
                           {Math.round(progressPercent)}%
                         </span>
                       )}
@@ -956,7 +969,7 @@ export default function App() {
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           {analysisState === "loading" && (
-                            <span>Press Analyze on the board to start</span>
+                            <span>Use Analyze now on the board or sidebar</span>
                           )}
                           {analysisState === "analyzing" && (
                             <span>Review in progress…</span>
@@ -1032,11 +1045,20 @@ export default function App() {
                   clockColor={boardFlipped ? "w" : "b"}
                   side={boardFlipped ? "w" : "b"}
                 />
+                <div className="flex items-stretch gap-1.5">
+                <EvalBar
+                  evalResult={continuationEval ?? currentEval}
+                  boardFlipped={boardFlipped}
+                  barHeight={Math.min(
+                    window.innerWidth - 400,
+                    window.innerHeight - 168
+                  )}
+                />
                 <AnalyzeBoardStack
                   position={boardPositionFen}
                   positionFen={boardPositionFen}
                   boardWidth={Math.min(
-                    window.innerWidth - 400,
+                    window.innerWidth - 420,
                     window.innerHeight - 168
                   )}
                   boardOrientation={boardFlipped ? "black" : "white"}
@@ -1066,9 +1088,9 @@ export default function App() {
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
-                  playerLabel={vsLabel}
                   onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
+                </div>
                 <PlayerTag
                   name={boardFlipped ? playerNames.black : playerNames.white}
                   color={boardFlipped ? "black" : "white"}
@@ -1257,7 +1279,6 @@ export default function App() {
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
-                  playerLabel={vsLabel}
                   onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
                 />
               <PlayerTag
