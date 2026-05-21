@@ -8,7 +8,7 @@ interface BoardArrowOverlayProps {
   color?: string;
 }
 
-/** Directional arrow with a clear head (library arrows clip inside overflow-hidden boards). */
+/** Directional best-move / engine arrow with a drawn head (works on mobile + desktop). */
 export function BoardArrowOverlay({
   from,
   to,
@@ -24,50 +24,42 @@ export function BoardArrowOverlay({
   if (len < 1) return null;
 
   const sq = boardWidth / 8;
-  const tailInset = sq * 0.22;
-  const headInset = sq * 0.38;
-  const x1 = fromPt.x + (dx / len) * tailInset;
-  const y1 = fromPt.y + (dy / len) * tailInset;
-  const x2 = toPt.x - (dx / len) * headInset;
-  const y2 = toPt.y - (dy / len) * headInset;
-  const strokeW = Math.max(3, boardWidth / 36);
-  const markerId = `cr-arrow-${from}-${to}`;
+  const ux = dx / len;
+  const uy = dy / len;
+  const tailInset = sq * 0.2;
+  const headLen = sq * 0.42;
+  const headWidth = sq * 0.34;
+  const strokeW = Math.max(2.5, boardWidth / 40);
+
+  const x1 = fromPt.x + ux * tailInset;
+  const y1 = fromPt.y + uy * tailInset;
+  const tipX = toPt.x - ux * (sq * 0.12);
+  const tipY = toPt.y - uy * (sq * 0.12);
+  const baseX = tipX - ux * headLen;
+  const baseY = tipY - uy * headLen;
+  const perpX = -uy * (headWidth / 2);
+  const perpY = ux * (headWidth / 2);
+  const headPoints = `${tipX},${tipY} ${baseX + perpX},${baseY + perpY} ${baseX - perpX},${baseY - perpY}`;
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none z-20"
+      className="absolute left-0 top-0 pointer-events-none z-20"
       width={boardWidth}
       height={boardWidth}
       viewBox={`0 0 ${boardWidth} ${boardWidth}`}
       aria-hidden
     >
-      <defs>
-        <marker
-          id={markerId}
-          markerUnits="userSpaceOnUse"
-          markerWidth={strokeW * 2.2}
-          markerHeight={strokeW * 2.2}
-          refX={strokeW * 1.85}
-          refY={strokeW * 1.1}
-          orient="auto"
-        >
-          <path
-            d={`M0,0 L${strokeW * 2.2},${strokeW * 1.1} L0,${strokeW * 2.2} Z`}
-            fill={color}
-          />
-        </marker>
-      </defs>
       <line
         x1={x1}
         y1={y1}
-        x2={x2}
-        y2={y2}
+        x2={baseX}
+        y2={baseY}
         stroke={color}
         strokeWidth={strokeW}
-        strokeLinecap="round"
-        strokeOpacity={0.88}
-        markerEnd={`url(#${markerId})`}
+        strokeLinecap="butt"
+        strokeOpacity={0.9}
       />
+      <polygon points={headPoints} fill={color} fillOpacity={0.95} />
     </svg>
   );
 }

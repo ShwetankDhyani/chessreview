@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { BoardArrowOverlay } from "./BoardArrowOverlay";
 
@@ -43,9 +44,27 @@ export function ReviewChessboard({
   showBestMoveArrow,
   bestMove,
 }: ReviewChessboardProps) {
+  const boardHostRef = useRef<HTMLDivElement>(null);
+  const [renderedWidth, setRenderedWidth] = useState(boardWidth);
+
+  useLayoutEffect(() => {
+    const node = boardHostRef.current;
+    if (!node) return;
+
+    const sync = () => {
+      const w = Math.round(node.getBoundingClientRect().width);
+      if (w > 0) setRenderedWidth(w);
+    };
+
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [boardWidth]);
+
   const arrow =
     continuationArrow ??
-    (showBestMoveArrow && bestMove
+    (showBestMoveArrow && bestMove && bestMove.length >= 4
       ? { from: bestMove.slice(0, 2), to: bestMove.slice(2, 4) }
       : null);
 
@@ -59,6 +78,7 @@ export function ReviewChessboard({
   return (
     <div
       className={`relative board-viewport${dimmed ? " board-viewport--dimmed" : ""}`}
+      style={{ width: boardWidth, maxWidth: "100%" }}
     >
       <div
         className="absolute inset-0 pointer-events-none z-10"
@@ -72,16 +92,18 @@ export function ReviewChessboard({
         }}
       />
       <div
-        className="relative overflow-hidden rounded-[2px]"
-        style={{ width: boardWidth, height: boardWidth }}
+        ref={boardHostRef}
+        className="relative w-full aspect-square overflow-visible"
+        style={{ maxWidth: boardWidth }}
       >
         <Chessboard
           key={remountKey}
           position={position}
           animationDuration={animationDuration}
-          boardWidth={boardWidth}
+          boardWidth={renderedWidth}
           boardOrientation={boardOrientation}
           arePiecesDraggable={false}
+          showBoardNotation={false}
           customDarkSquareStyle={{ backgroundColor: "#769656" }}
           customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
           customSquareStyles={squareStyles}
@@ -90,7 +112,7 @@ export function ReviewChessboard({
           <BoardArrowOverlay
             from={arrow.from}
             to={arrow.to}
-            boardWidth={boardWidth}
+            boardWidth={renderedWidth}
             boardOrientation={boardOrientation}
           />
         ) : null}
