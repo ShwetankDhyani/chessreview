@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --mobile-tab-bar: calc(56px + env(safe-area-inset-bottom, 0px));
   --site-footer: 32px;
-  --mobile-chrome-bottom: calc(var(--mobile-tab-bar) + var(--site-footer));
+  /* Mobile stack (bottom → top): footer, then Games/Moves/Review tabs */
+  --mobile-footer-stack: calc(var(--site-footer) + env(safe-area-inset-bottom, 0px));
+  --mobile-tab-bar-h: 56px;
+  --mobile-tab-bar: calc(var(--mobile-tab-bar-h) + var(--mobile-footer-stack));
+  --mobile-chrome-bottom: var(--mobile-tab-bar);
   --page-pad-inline: max(1.25rem, env(safe-area-inset-left, 0px));
   --page-pad-inline-end: max(1.25rem, env(safe-area-inset-right, 0px));
   --app-header-h: 3rem;

@@ -9,10 +9,9 @@ export function SiteFooter() {
   return (
     <>
       <footer
-        className="flex-shrink-0 z-40 border-t border-chess-border/80 bg-chess-panel/90 backdrop-blur-sm
-          fixed left-0 right-0 lg:static
-          bottom-[var(--mobile-tab-bar)] lg:bottom-auto
-          pb-0 lg:pb-[env(safe-area-inset-bottom,0px)]"
+        className="flex-shrink-0 z-40 border-t border-chess-border/80 bg-chess-panel/95 backdrop-blur-sm
+          fixed left-0 right-0 bottom-0 lg:static
+          pb-[env(safe-area-inset-bottom,0px)]"
       >
         <div className="page-inline-pad flex items-center justify-center gap-3 min-h-[var(--site-footer)] text-[11px] text-chess-muted">
           <button

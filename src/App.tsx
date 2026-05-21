@@ -909,7 +909,10 @@ export default function App() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_14px_rgba(0,0,0,0.4)]">
+        <div
+          className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-border bg-chess-panel shadow-[0_-4px_14px_rgba(0,0,0,0.4)]"
+          style={{ bottom: "var(--mobile-footer-stack)" }}
+        >
           <div className="page-inline-pad flex min-h-[56px]">
           {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
             const isActive = tab === t;
@@ -1445,7 +1448,7 @@ export default function App() {
             {moves.length > 0 && (
             <div
               className="flex-1 overflow-y-auto min-h-0 bg-chess-panel"
-              style={{ paddingBottom: "var(--mobile-tab-bar)" }}
+              style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
             >
                 <div className="border-t border-chess-border flex flex-col">
                   <MoveReviewPanel
