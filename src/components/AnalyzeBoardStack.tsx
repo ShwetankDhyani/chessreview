@@ -6,8 +6,7 @@ import { ReviewChessboard, type ReviewChessboardProps } from "./ReviewChessboard
 
 interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   analysisState: AnalysisState;
-  progressPercent: number;
-  showOverlay: boolean;
+  showAnalyzeButton: boolean;
   showGameEnd?: boolean;
   gameEnd?: GameEndInfo | null;
   positionFen: string;
@@ -19,8 +18,7 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
 /** Chessboard + centered analyze / progress overlay */
 export function AnalyzeBoardStack({
   analysisState,
-  progressPercent,
-  showOverlay,
+  showAnalyzeButton,
   showGameEnd = false,
   gameEnd,
   positionFen,
@@ -50,12 +48,10 @@ export function AnalyzeBoardStack({
           blackName={blackName}
         />
       ) : null}
-      {showOverlay ? (
+      {showAnalyzeButton ? (
         <BoardAnalyzeOverlay
           state={analysisState}
-          progressPercent={progressPercent}
           onAnalyze={onAnalyze}
-          disabled={analysisState === "analyzing"}
         />
       ) : null}
     </div>

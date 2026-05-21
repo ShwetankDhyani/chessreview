@@ -621,16 +621,6 @@ export default function App() {
         ? (progress.done / progress.total) * 100
         : 0;
 
-  const showAnalyzeOverlay =
-    !!pgn &&
-    moves.length === 0 &&
-    (analysisState === "loading" ||
-      analysisState === "analyzing" ||
-      analysisState === "error");
-
-  const showBoardGameEnd =
-    !!gameEnd && atGameEnd && analysisState === "done" && !showAnalyzeOverlay;
-
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const boardPositionFen = continuationFen ?? currentFen;
 
@@ -658,6 +648,19 @@ export default function App() {
     winWidth < 1024
       ? Math.min(Math.floor(winWidth * 0.88), winWidth - 44)
       : Math.min(winWidth - 520, window.innerHeight - 168);
+
+  const isMobileLayout = winWidth < 1024;
+
+  const showBoardAnalyzeButton =
+    !!pgn &&
+    moves.length === 0 &&
+    (analysisState === "loading" || analysisState === "error") &&
+    (!isMobileLayout || tab === "moves");
+
+  const isAnalyzing = analysisState === "analyzing";
+
+  const showBoardGameEnd =
+    !!gameEnd && atGameEnd && analysisState === "done" && !showBoardAnalyzeButton;
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
@@ -856,10 +859,10 @@ export default function App() {
         </div>
       </header>
 
-      {!showAnalyzeOverlay && (
+      {isMobileLayout && isAnalyzing && (
         <MobileAnalysisStatus
           state={analysisState}
-          progress={progress}
+          progressPercent={progressPercent}
           whiteName={playerNames.white}
           blackName={playerNames.black}
         />
@@ -1064,15 +1067,14 @@ export default function App() {
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
                   dimmed={
-                    (boardDimmed && !continuationFen) ||
-                    (showAnalyzeOverlay && analysisState === "analyzing")
+                    (boardDimmed && !continuationFen) || isAnalyzing
                   }
                   continuationActive={continuationActive}
                   moveAnim={moveAnim}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !continuationActive &&
-                    !showAnalyzeOverlay &&
+                    !isAnalyzing &&
                     !showBoardGameEnd &&
                     !!showBestMove &&
                     !!currentMove?.bestMove &&
@@ -1082,8 +1084,7 @@ export default function App() {
                   }
                   bestMove={currentMove?.bestMove}
                   analysisState={analysisState}
-                  progressPercent={progressPercent}
-                  showOverlay={showAnalyzeOverlay}
+                  showAnalyzeButton={showBoardAnalyzeButton}
                   showGameEnd={showBoardGameEnd}
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
@@ -1223,7 +1224,7 @@ export default function App() {
           {/* ── Mobile layout ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="flex-shrink-0 flex flex-col items-center px-2 pt-2 pb-2 gap-1">
-              {moves.length > 0 || (pgn && showAnalyzeOverlay) ? (
+              {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <>
               <PlayerTag
                 compact
@@ -1242,14 +1243,13 @@ export default function App() {
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
                   dimmed={
-                    (boardDimmed && !continuationFen) ||
-                    (showAnalyzeOverlay && analysisState === "analyzing")
+                    (boardDimmed && !continuationFen) || isAnalyzing
                   }
                   continuationActive={continuationActive}
                   moveAnim={moveAnim}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
-                    !showAnalyzeOverlay &&
+                    !isAnalyzing &&
                     !continuationActive &&
                     !!showBestMove &&
                     !!currentMove?.bestMove &&
@@ -1260,9 +1260,9 @@ export default function App() {
                   bestMove={currentMove?.bestMove}
                   moveIndex={currentMoveIdx}
                   moveCount={gamePlyCount || moves.length || replayFrames.length}
-                  canPrev={!showAnalyzeOverlay && currentMoveIdx > -1}
+                  canPrev={!isAnalyzing && currentMoveIdx > -1}
                   canNext={
-                    !showAnalyzeOverlay && currentMoveIdx < moves.length - 1
+                    !isAnalyzing && currentMoveIdx < moves.length - 1
                   }
                   onPrev={() =>
                     navigateToMove(Math.max(currentMoveIdx - 1, -1))
@@ -1273,8 +1273,7 @@ export default function App() {
                     )
                   }
                   analysisState={analysisState}
-                  progressPercent={progressPercent}
-                  showAnalyzeOverlay={showAnalyzeOverlay}
+                  showAnalyzeButton={showBoardAnalyzeButton}
                   showGameEnd={showBoardGameEnd}
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
