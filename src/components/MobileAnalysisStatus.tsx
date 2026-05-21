@@ -21,7 +21,7 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
   return (
     <div
       className="lg:hidden fixed left-0 right-0 z-30 pointer-events-none"
-      style={{ bottom: "calc(52px + env(safe-area-inset-bottom, 0px))" }}
+      style={{ bottom: "var(--mobile-tab-bar)" }}
       role="status"
       aria-live="polite"
       aria-label={`Analyzing game, ${pct} percent`}

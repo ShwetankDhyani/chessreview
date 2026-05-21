@@ -25,6 +25,7 @@ import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
+import { isAtPositionBeforeMove } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 
@@ -100,6 +101,7 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
+  const currentFenRef = useRef("start");
   const [currentEval, setCurrentEval] = useState<EvalResult | null>(null);
   const [boardFlipped, setBoardFlipped] = useState(false);
   const [playerNames, setPlayerNames] = useState({ white: "White", black: "Black" });
@@ -448,10 +450,12 @@ export default function App() {
     setContinuationArrow(null);
     clearBoardTimers();
     setMoveAnim(null);
+    const fenNow = currentFenRef.current;
     if (idx < 0) {
       setCurrentMoveIdx(-1);
       currentMoveIdxRef.current = -1;
       setCurrentEval(null);
+      currentFenRef.current = "start";
       fadeBoardToFen("start");
       return;
     }
@@ -468,15 +472,32 @@ export default function App() {
       playMoveFeedback(m.san);
     }
 
-    if (animate && fromSq && toSq && m.fenBefore) {
-      const skipSetup = currentFen === m.fenBefore;
+    const alreadyThere = fenNow === m.fenAfter;
+    const canPlayOnePlyForward =
+      animate &&
+      !alreadyThere &&
+      fromSq &&
+      toSq &&
+      m.fenBefore &&
+      isAtPositionBeforeMove(fenNow, moves, idx);
+
+    if (canPlayOnePlyForward) {
+      const skipSetup =
+        fenNow === m.fenBefore || (idx === 0 && fenNow === "start");
       playMoveOnBoard(m.fenBefore, m.fenAfter, fromSq, toSq, skipSetup);
+    } else if (animate) {
+      fadeBoardToFen(m.fenAfter);
     } else {
       setBoardDimmed(false);
       setBoardPieceAnimMs(BOARD_STEP_MS);
+      currentFenRef.current = m.fenAfter;
       setCurrentFen(m.fenAfter);
     }
-  }, [moves, playMoveOnBoard, fadeBoardToFen, currentFen, clearBoardTimers, BOARD_STEP_MS]);
+  }, [moves, playMoveOnBoard, fadeBoardToFen, clearBoardTimers, BOARD_STEP_MS]);
+
+  useEffect(() => {
+    currentFenRef.current = currentFen;
+  }, [currentFen]);
 
   useEffect(() => {
     currentMoveIdxRef.current = currentMoveIdx;
@@ -848,7 +869,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-chess-panel border-t border-chess-border flex">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex min-h-[52px] border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_12px_rgba(0,0,0,0.35)]">
           {(["games","moves","review"] as SidebarTab[]).map(t => (
             <button key={t} onClick={() => { hapticTap(); setTab(t); }}
               className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
@@ -861,7 +882,10 @@ export default function App() {
 
         {/* Mobile content pane (Games / Moves / Review) — shown above bottom bar */}
         {tab !== "moves" && (
-          <div className="lg:hidden fixed inset-0 top-[44px] bottom-[48px] z-30 bg-chess-sidebar flex flex-col overflow-hidden pb-safe">
+          <div
+            className="lg:hidden fixed inset-x-0 top-[44px] z-40 flex flex-col overflow-hidden bg-chess-sidebar"
+            style={{ bottom: "var(--mobile-tab-bar)" }}
+          >
             {tab === "games" && (
               <GameList
                 username=""
@@ -1191,8 +1215,10 @@ export default function App() {
             />
           )}
 
-          {/* ── Mobile layout ── */}
+          {/* ── Mobile layout (Moves tab only — avoids leaking over Games/Review) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
+            {tab === "moves" && (
+            <>
             <div className="flex-shrink-0 flex flex-col items-center px-2 pt-2 pb-2 gap-1">
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <>
@@ -1289,7 +1315,10 @@ export default function App() {
             </div>
 
             {moves.length > 0 && (
-            <div className="flex-1 overflow-y-auto min-h-0 pb-14 bg-chess-panel">
+            <div
+              className="flex-1 overflow-y-auto min-h-0 bg-chess-panel"
+              style={{ paddingBottom: "var(--mobile-tab-bar)" }}
+            >
                 {showMobileGraph ? (
                   <EvalChartPanel
                     moves={moves}
@@ -1310,6 +1339,8 @@ export default function App() {
                   </div>
                 )}
             </div>
+            )}
+            </>
             )}
           </div>
         </main>

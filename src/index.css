@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --mobile-tab-bar: calc(52px + env(safe-area-inset-bottom, 0px));
+}
+
 @layer base {
   * {
     box-sizing: border-box;
