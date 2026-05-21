@@ -26,6 +26,7 @@ import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
+import { EngineDepthControls } from "./components/EngineDepthControls";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -686,71 +687,16 @@ export default function App() {
         </div>
         <div className="flex-1" />
 
-        {engineBackend === "native" && (
-          <span className="hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-full bg-move-best/20 text-move-best border border-move-best/40">
-            Native engine
-          </span>
-        )}
-        {hasRemoteEngine && engineBackend === "unavailable" && (
-          <button
-            type="button"
-            onClick={() => void recheckEngine()}
-            className="text-[10px] text-amber-400 hover:text-amber-300 max-w-[42vw] truncate sm:max-w-none"
-            title="Laptop: npm run laptop:server — then tap to retry"
-          >
-            <span className="sm:hidden">Offline · retry</span>
-            <span className="hidden sm:inline">Engine offline · Lichess (slow) — retry</span>
-          </button>
-        )}
-        {hasRemoteEngine && engineBackend === "cloud" && (
-          <span className="hidden sm:inline text-[10px] text-chess-muted" title="No native server configured">
-            Cloud engine
-          </span>
-        )}
-
-        {/* Depth — hidden on mobile, shown on md+ */}
-        <div className="hidden lg:flex items-center gap-1.5">
-          <span className="text-xs text-chess-muted">Depth:</span>
-          {(hasRemoteEngine || engineBackend === "native"
-            ? ([12, 16, 18, 20] as const)
-            : import.meta.env.PROD
-              ? ([12] as const)
-              : ([12, 16, 18, 20, 24] as const)
-          ).map(d => {
-            const hint = d === 12
-              ? "Fast / cloud-only"
-              : d === 16 ? "Recommended (native Stockfish)" : d === 18 ? "Deep" : d === 20 ? "Very deep" : "Max";
-            return (
-              <button key={d} onClick={() => handleDepthChange(d)} title={hint}
-                className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
-                  depth === d ? "bg-move-best text-white border-move-best" : "bg-chess-panel text-chess-muted border-chess-border hover:text-chess-text"
-                }`}>{d}</button>
-            );
-          })}
-        </div>
-
-        {/* Depth toggle on mobile */}
-        <div className="lg:hidden relative">
-          <button onClick={() => setShowDepth(v => !v)}
-            className="text-xs px-2 py-1 rounded border border-chess-border text-chess-muted bg-chess-panel">
-            D:{depth}
-          </button>
-          {showDepth && (
-            <div className="absolute right-0 top-full mt-1 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 flex gap-1 p-1.5">
-              {(hasRemoteEngine || engineBackend === "native"
-                ? ([12, 16, 18, 20] as const)
-                : import.meta.env.PROD
-                  ? ([12] as const)
-                  : ([12, 16, 18, 20, 24] as const)
-              ).map(d => (
-                <button key={d} onClick={() => { handleDepthChange(d); setShowDepth(false); }}
-                  className={`text-xs px-2 py-1 rounded font-mono font-semibold border ${
-                    depth === d ? "bg-move-best text-white border-move-best" : "bg-chess-bg text-chess-muted border-chess-border"
-                  }`}>{d}</button>
-              ))}
-            </div>
-          )}
-        </div>
+        <EngineDepthControls
+          depth={depth}
+          engineBackend={engineBackend}
+          hasRemoteEngine={hasRemoteEngine}
+          onDepthChange={handleDepthChange}
+          onRetry={hasRemoteEngine ? () => void recheckEngine() : undefined}
+          showDepthMenu={showDepth}
+          onToggleDepthMenu={() => setShowDepth((v) => !v)}
+          onCloseDepthMenu={() => setShowDepth(false)}
+        />
 
         {/* ── Profile Dropdown ── */}
         <div className="flex items-center relative ml-1 sm:ml-3 flex-shrink-0">

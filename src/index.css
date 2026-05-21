@@ -151,8 +151,8 @@
   }
 }
 
-.analyze-now-cta {
-  animation: boardAnalyzePulse 2.8s ease-in-out infinite;
+.analyze-now-plaque-btn {
+  animation: boardAnalyzePulse 3s ease-in-out infinite;
 }
 
 .board-analyze-pulse {

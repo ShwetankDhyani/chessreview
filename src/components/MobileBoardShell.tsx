@@ -42,24 +42,12 @@ function MoveTapZone({
   return (
     <>
       {enabled && (
-        <div
-          className={`absolute ${isPrev ? "left-0" : "right-0"} top-0 bottom-0 w-[32%] z-20 pointer-events-none ${
-            isPrev
-              ? "bg-gradient-to-r from-black/55 via-black/25 to-transparent"
-              : "bg-gradient-to-l from-black/55 via-black/25 to-transparent"
-          }`}
-          aria-hidden
-        />
-      )}
-      {enabled && (
-        <div
-          className={`absolute ${isPrev ? "left-2" : "right-2"} top-1/2 -translate-y-1/2 z-20 pointer-events-none flex items-center justify-center w-10 h-[4.5rem] rounded-lg bg-black/60 border border-white/15 shadow-lg`}
+        <span
+          className={`absolute ${isPrev ? "left-1" : "right-1"} top-1/2 -translate-y-1/2 z-20 pointer-events-none text-white/35 text-3xl font-bold leading-none select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]`}
           aria-hidden
         >
-          <span className="text-white/90 text-3xl font-bold leading-none select-none">
-            {isPrev ? "‹" : "›"}
-          </span>
-        </div>
+          {isPrev ? "‹" : "›"}
+        </span>
       )}
       <button
         type="button"

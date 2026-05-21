@@ -1,0 +1,136 @@
+import {
+  ENGINE_TONE_STYLES,
+  resolveEngineUi,
+  type EngineBackend,
+} from "../utils/engineUiStatus";
+
+interface EngineDepthControlsProps {
+  depth: number;
+  engineBackend: EngineBackend;
+  hasRemoteEngine: boolean;
+  onDepthChange: (d: number) => void;
+  onRetry?: () => void;
+  showDepthMenu: boolean;
+  onToggleDepthMenu: () => void;
+  onCloseDepthMenu: () => void;
+}
+
+function depthOptions(
+  hasRemoteEngine: boolean,
+  engineBackend: EngineBackend
+): readonly number[] {
+  if (hasRemoteEngine || engineBackend === "native") {
+    return [12, 16, 18, 20] as const;
+  }
+  return import.meta.env.PROD ? ([12] as const) : ([12, 16, 18, 20, 24] as const);
+}
+
+function depthHint(d: number): string {
+  if (d === 12) return "Fast / cloud-only";
+  if (d === 16) return "Recommended (native Stockfish)";
+  if (d === 18) return "Deep";
+  if (d === 20) return "Very deep";
+  return "Max";
+}
+
+export function EngineDepthControls({
+  depth,
+  engineBackend,
+  hasRemoteEngine,
+  onDepthChange,
+  onRetry,
+  showDepthMenu,
+  onToggleDepthMenu,
+  onCloseDepthMenu,
+}: EngineDepthControlsProps) {
+  const ui = resolveEngineUi(engineBackend, hasRemoteEngine);
+  const styles = ENGINE_TONE_STYLES[ui.tone];
+  const depths = depthOptions(hasRemoteEngine, engineBackend);
+  const depthLabelRetry = ui.tone === "offline" && onRetry;
+
+  const depthLabelInner = (
+    <>
+      Depth
+      {hasRemoteEngine ? (
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${styles.dot} ${
+            ui.tone === "offline" ? "animate-pulse" : ""
+          }`}
+          aria-hidden
+        />
+      ) : null}
+      {hasRemoteEngine ? (
+        <span className="sr-only">{ui.shortLabel}</span>
+      ) : null}
+    </>
+  );
+
+  const depthLabel = depthLabelRetry ? (
+    <button
+      type="button"
+      onClick={onRetry}
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold ${styles.label} hover:underline`}
+      title={ui.title}
+    >
+      {depthLabelInner}
+    </button>
+  ) : (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold ${styles.label}`}
+      title={ui.title}
+    >
+      {depthLabelInner}
+    </span>
+  );
+
+  return (
+    <>
+      <div className="hidden lg:flex items-center gap-1.5">
+        {depthLabel}
+        {depths.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => onDepthChange(d)}
+            title={`${depthHint(d)} · ${ui.title}`}
+            className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
+              depth === d ? styles.depthActive : styles.depthIdle
+            }`}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
+
+      <div className="lg:hidden relative">
+        <button
+          type="button"
+          onClick={ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu}
+          className={`text-xs px-2 py-1 rounded border font-mono font-semibold transition-colors ${styles.mobileBtn}`}
+          title={ui.title}
+        >
+          D:{depth}
+        </button>
+        {showDepthMenu && (
+          <div className="absolute right-0 top-full mt-1 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 flex gap-1 p-1.5">
+            {depths.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => {
+                  onDepthChange(d);
+                  onCloseDepthMenu();
+                }}
+                className={`text-xs px-2 py-1 rounded font-mono font-semibold border ${
+                  depth === d ? styles.depthActive : styles.depthIdle
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
