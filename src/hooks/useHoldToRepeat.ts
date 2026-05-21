@@ -15,6 +15,10 @@ export function useHoldToRepeat(
   const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdActiveRef = useRef(false);
+  // Tracks whether the current pointer interaction has already been
+  // finalised. Without this, onPointerUp and onPointerLeave both fire on a
+  // single tap and onTap runs twice → the board advances two plies.
+  const finishedRef = useRef(true);
 
   const clear = useCallback(() => {
     if (holdRef.current) clearTimeout(holdRef.current);
@@ -29,6 +33,7 @@ export function useHoldToRepeat(
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       holdActiveRef.current = false;
+      finishedRef.current = false;
       clear();
       holdRef.current = setTimeout(() => {
         holdActiveRef.current = true;
@@ -40,6 +45,8 @@ export function useHoldToRepeat(
   );
 
   const end = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     const wasHold = holdActiveRef.current;
     clear();
     holdActiveRef.current = false;
