@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { GameListItem } from "../types";
-import { fetchRecentGames, getResultLabel, formatDate, timeClassIcon } from "../utils/chesscomApi";
+import { fetchRecentGames, getResultLabel, formatDate } from "../utils/chesscomApi";
+import { RatingStat, TimeClassIcon } from "./TimeClassIcon";
 import { fetchLichessGames } from "../utils/lichessApi";
 import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
@@ -180,22 +181,24 @@ export const GameList: React.FC<GameListProps> = ({
     <div className="flex flex-col h-full min-h-0">
       {/* ── Header (profile only) ── */}
       {inputVal && (
-      <div className="page-inline-pad py-3 sm:py-3.5 border-b border-chess-border space-y-2.5 flex-shrink-0">
+      <div className="page-inline-pad flex-shrink-0 border-b border-chess-border py-3 space-y-2.5">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-              <span className="text-sm font-bold text-chess-text flex items-center gap-1.5 truncate">
-                <span className="leading-none">{platform === "lichess" ? "🏳" : "♟"}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="flex items-center gap-1.5 truncate text-sm font-bold text-chess-text">
+                <span className="leading-none text-chess-muted">
+                  {platform === "lichess" ? "♞" : "♟"}
+                </span>
                 <span className="truncate">{inputVal}</span>
               </span>
               {stats && (
-                <div className="flex items-center gap-2 text-[10px] font-semibold text-chess-muted mt-0.5">
-                  {stats.bullet && <span title="Bullet" className="flex items-center gap-0.5"><span className="text-sm">🚅</span> {stats.bullet}</span>}
-                  {stats.blitz && <span title="Blitz" className="flex items-center gap-0.5"><span className="text-sm">⚡</span> {stats.blitz}</span>}
-                  {stats.rapid && <span title="Rapid" className="flex items-center gap-0.5"><span className="text-sm">⏱</span> {stats.rapid}</span>}
+                <div className="mt-0.5 flex items-center gap-2.5 text-chess-muted">
+                  <RatingStat type="bullet" value={stats.bullet} />
+                  <RatingStat type="blitz" value={stats.blitz} />
+                  <RatingStat type="rapid" value={stats.rapid} />
                 </div>
               )}
               {games.length > 0 && !loading && (
-                <span className="text-[10px] text-chess-muted italic mt-0.5">
+                <span className="mt-0.5 text-[10px] italic text-chess-muted">
                   Showing {filteredGames.length} of {games.length} cached games
                 </span>
               )}
@@ -203,38 +206,43 @@ export const GameList: React.FC<GameListProps> = ({
             <button
               onClick={handleGo}
               disabled={loading}
-              className="flex-shrink-0 bg-chess-hover hover:bg-chess-border disabled:opacity-50 text-chess-text text-xs font-semibold px-3 py-1.5 rounded transition-colors"
+              className="flex-shrink-0 rounded bg-chess-hover px-3 py-1.5 text-xs font-semibold text-chess-text transition-colors hover:bg-chess-border disabled:opacity-50"
             >
-              {loading ? <span className="inline-block w-3 h-3 border-2 border-chess-muted border-t-transparent rounded-full animate-spin" /> : "Fetch Latest"}
+              {loading ? (
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-chess-muted border-t-transparent" />
+              ) : (
+                "Fetch Latest"
+              )}
             </button>
           </div>
 
-        {error && <p className="text-xs text-move-blunder pt-2">{error}</p>}
+        {error && <p className="text-xs text-move-blunder">{error}</p>}
 
-        {/* Filters — only show when games are loaded */}
         {games.length > 0 && !loading && (
-          <div className="space-y-1.5 pt-1">
-            {/* Opponent search */}
+          <div className="space-y-2 border-t border-chess-border/60 pt-2.5">
             <input
               type="text"
               value={opponentSearch}
-              onChange={e => setOpponentSearch(e.target.value)}
+              onChange={(e) => setOpponentSearch(e.target.value)}
               placeholder="Search opponent…"
-              className="w-full bg-chess-bg border border-chess-border rounded px-2.5 py-1 text-xs text-chess-text placeholder-chess-muted focus:outline-none focus:border-move-best transition-colors"
+              className="w-full rounded border border-chess-border bg-chess-bg px-2.5 py-1.5 text-xs text-chess-text placeholder-chess-muted transition-colors focus:border-move-best focus:outline-none"
             />
             <div className="flex gap-1.5">
-              {/* Result filter */}
-              <div className="flex rounded overflow-hidden border border-chess-border text-xs flex-1">
-                {(["all","win","loss","draw"] as ResultFilter[]).map(r => (
+              <div className="flex flex-1 overflow-hidden rounded border border-chess-border text-xs">
+                {(["all", "win", "loss", "draw"] as ResultFilter[]).map((r) => (
                   <button
                     key={r}
+                    type="button"
                     onClick={() => setResultFilter(r)}
                     className={`flex-1 py-1 font-semibold transition-colors ${
                       resultFilter === r
-                        ? r === "win" ? "bg-move-best text-white"
-                          : r === "loss" ? "bg-move-blunder text-white"
-                          : r === "draw" ? "bg-chess-muted text-white"
-                          : "bg-chess-hover text-chess-text"
+                        ? r === "win"
+                          ? "bg-move-best text-white"
+                          : r === "loss"
+                            ? "bg-move-blunder text-white"
+                            : r === "draw"
+                              ? "bg-chess-muted text-white"
+                              : "bg-chess-hover text-chess-text"
                         : "bg-chess-bg text-chess-muted hover:text-chess-text"
                     }`}
                   >
@@ -242,28 +250,27 @@ export const GameList: React.FC<GameListProps> = ({
                   </button>
                 ))}
               </div>
-              {/* Rating sort */}
               <select
                 value={ratingSort}
-                onChange={e => setRatingSort(e.target.value as RatingSort)}
-                className="bg-chess-bg border border-chess-border rounded px-1.5 py-1 text-xs text-chess-text focus:outline-none focus:border-move-best"
+                onChange={(e) => setRatingSort(e.target.value as RatingSort)}
+                className="rounded border border-chess-border bg-chess-bg px-1.5 py-1 text-xs text-chess-text focus:border-move-best focus:outline-none"
               >
                 <option value="none">Rating ↕</option>
                 <option value="high">Rating ↓</option>
                 <option value="low">Rating ↑</option>
               </select>
             </div>
-            {/* Format filter */}
             {availableFormats.length > 1 && (
-              <div className="flex gap-1 flex-wrap">
-                {["all", ...availableFormats].map(f => (
+              <div className="flex flex-wrap gap-1">
+                {["all", ...availableFormats].map((f) => (
                   <button
                     key={f}
+                    type="button"
                     onClick={() => setFormatFilter(f)}
-                    className={`text-xs px-2 py-0.5 rounded border transition-colors capitalize ${
+                    className={`rounded border px-2 py-0.5 text-xs capitalize transition-colors ${
                       formatFilter === f
-                        ? "bg-move-best border-move-best text-white"
-                        : "bg-chess-bg border-chess-border text-chess-muted hover:text-chess-text"
+                        ? "border-chess-accent/60 bg-chess-accent/10 text-chess-accent"
+                        : "border-chess-border bg-chess-bg text-chess-muted hover:text-chess-text"
                     }`}
                   >
                     {f === "all" ? "All formats" : f}
@@ -334,22 +341,26 @@ export const GameList: React.FC<GameListProps> = ({
                   : "hover:bg-chess-hover"
               }`}
             >
-              <div className="flex-shrink-0 w-8 h-8 bg-chess-border rounded-full flex items-center justify-center text-lg">
-                {timeClassIcon(game.timeClass)}
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-chess-border/80">
+                <TimeClassIcon timeClass={game.timeClass} size={14} />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <div
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
                     style={{
                       backgroundColor: color === "white" ? "#e8e6e3" : "#3a3a3a",
                       border: color === "black" ? "1px solid #888" : "1px solid #ccc",
                     }}
                   />
-                  <span className="text-sm font-medium text-chess-text truncate">{opponent}</span>
-                  <span className="text-xs text-chess-muted flex-shrink-0">({oppRating})</span>
+                  <span className="truncate text-sm font-medium text-chess-text">
+                    {opponent}
+                  </span>
+                  <span className="flex-shrink-0 text-xs text-chess-muted">
+                    ({oppRating})
+                  </span>
                 </div>
-                <div className="text-xs text-chess-muted mt-0.5 capitalize">
+                <div className="mt-0.5 text-xs capitalize text-chess-muted">
                   {game.timeClass} · {formatDate(game.endTime)}
                 </div>
               </div>
