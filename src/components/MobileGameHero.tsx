@@ -64,7 +64,7 @@ export function MobileGameHero({
               animationDuration={0}
               dimmed={false}
               continuationActive={false}
-              moveAnim={null}
+              lastMoveHighlight={null}
               continuationArrow={null}
               showBestMoveArrow={false}
             />

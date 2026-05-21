@@ -643,6 +643,15 @@ export default function App() {
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const boardPositionFen = continuationFen ?? currentFen;
 
+  const boardLastMoveHighlight = useMemo(() => {
+    if (continuationFen || continuationActive) return null;
+    if (moveAnim) return moveAnim;
+    if (currentMoveIdx < 0) return null;
+    const m = moves[currentMoveIdx];
+    if (!m?.uci || m.uci.length < 4) return null;
+    return { from: m.uci.slice(0, 2), to: m.uci.slice(2, 4) };
+  }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
+
   useAnalysisBoardReplay({
     active: analysisState === "analyzing",
     replayFrames,
@@ -655,7 +664,6 @@ export default function App() {
   });
 
   const [showDepth, setShowDepth] = useState(false);
-  const [showMobileGraph, setShowMobileGraph] = useState(false);
   const [desktopEvalGraphOpen, setDesktopEvalGraphOpen] = useState(false);
 
   const [viewport, setViewport] = useState(() => ({
@@ -1125,7 +1133,7 @@ export default function App() {
                     (boardDimmed && !continuationFen) || isAnalyzing
                   }
                   continuationActive={continuationActive}
-                  moveAnim={moveAnim}
+                  lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !continuationActive &&
@@ -1365,7 +1373,7 @@ export default function App() {
                     (boardDimmed && !continuationFen) || isAnalyzing
                   }
                   continuationActive={continuationActive}
-                  moveAnim={moveAnim}
+                  lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !isAnalyzing &&
@@ -1377,6 +1385,7 @@ export default function App() {
                     )
                   }
                   bestMove={currentMove?.bestMove}
+                  onFlip={() => setBoardFlipped((f) => !f)}
                   moveIndex={currentMoveIdx}
                   moveCount={gamePlyCount || moves.length || replayFrames.length}
                   canPrev={!isAnalyzing && currentMoveIdx > -1}
@@ -1402,32 +1411,6 @@ export default function App() {
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
               />
-              <div className="flex items-center justify-center w-full gap-2 py-1">
-                <button
-                  type="button"
-                  onClick={() => setBoardFlipped((f) => !f)}
-                  className="h-9 w-9 flex items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors"
-                  aria-label="Flip board"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 4l-3 3 3 3" />
-                    <path d="M4 7h12a4 4 0 0 1 4 4" />
-                    <path d="M17 20l3-3-3-3" />
-                    <path d="M20 17H8a4 4 0 0 1-4-4" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMobileGraph((v) => !v)}
-                  className={`h-9 px-3 rounded-lg text-xs font-semibold border transition-colors ${
-                    showMobileGraph
-                      ? "border-chess-accent text-chess-accent bg-chess-accent/10"
-                      : "border-chess-border text-chess-subtext bg-chess-surface"
-                  }`}
-                >
-                  {showMobileGraph ? "Coach" : "Graph"}
-                </button>
-              </div>
                 </>
               ) : (
                 <MobileGameHero
@@ -1447,25 +1430,17 @@ export default function App() {
               className="flex-1 overflow-y-auto min-h-0 bg-chess-panel"
               style={{ paddingBottom: "var(--mobile-tab-bar)" }}
             >
-                {showMobileGraph ? (
-                  <EvalChartPanel
+                <div className="border-t border-chess-border flex flex-col">
+                  <MoveReviewPanel
+                    move={currentMove}
+                    moveIdx={currentMoveIdx}
                     moves={moves}
-                    currentMoveIndex={currentMoveIdx}
-                    onMoveSelect={navigateToMove}
+                    onContinuationFen={handleContinuationFen}
+                    onContinuationEval={handleContinuationEval}
+                    onContinuationActive={handleContinuationActive}
+                    onContinuationArrow={handleContinuationArrow}
                   />
-                ) : (
-                  <div className="border-t border-chess-border flex flex-col">
-                    <MoveReviewPanel
-                      move={currentMove}
-                      moveIdx={currentMoveIdx}
-                      moves={moves}
-                      onContinuationFen={handleContinuationFen}
-                      onContinuationEval={handleContinuationEval}
-                      onContinuationActive={handleContinuationActive}
-                      onContinuationArrow={handleContinuationArrow}
-                    />
-                  </div>
-                )}
+                </div>
             </div>
             )}
             </>
