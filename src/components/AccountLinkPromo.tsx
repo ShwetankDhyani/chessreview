@@ -42,7 +42,7 @@ export function AccountLinkPromo({ onConnect }: AccountLinkPromoProps) {
 
   return (
     <section
-      className="flex-shrink-0 px-5 py-5 border-b border-chess-border/50"
+      className="page-inline-pad flex-shrink-0 py-5 border-b border-chess-border/50"
       aria-label="Connect with Chess.com or Lichess"
     >
       <p className="text-[10px] font-semibold tracking-[0.22em] uppercase text-chess-muted text-center mb-3">

@@ -180,12 +180,12 @@ export const GameList: React.FC<GameListProps> = ({
     <div className="flex flex-col h-full min-h-0">
       {/* ── Header (profile only) ── */}
       {inputVal && (
-      <div className="p-3 border-b border-chess-border space-y-2.5 flex-shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-bold text-chess-text flex items-center gap-1.5">
+      <div className="page-inline-pad py-3 sm:py-3.5 border-b border-chess-border space-y-2.5 flex-shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-sm font-bold text-chess-text flex items-center gap-1.5 truncate">
                 <span className="leading-none">{platform === "lichess" ? "🏳" : "♟"}</span>
-                {inputVal}
+                <span className="truncate">{inputVal}</span>
               </span>
               {stats && (
                 <div className="flex items-center gap-2 text-[10px] font-semibold text-chess-muted mt-0.5">
@@ -279,13 +279,13 @@ export const GameList: React.FC<GameListProps> = ({
       {!inputVal && onLinkProfile && (
         <div className="flex-1 min-h-0 flex flex-col max-w-md mx-auto w-full">
           <AccountLinkPromo onConnect={onLinkProfile} />
-          <div className="flex-1 min-h-0 flex flex-col px-4 py-3 pb-5">
+          <div className="page-inline-pad flex-1 min-h-0 flex flex-col py-3 pb-5">
             <PgnPastePanel onLoad={onGameSelect} compact className="flex-1 min-h-0" />
           </div>
         </div>
       )}
       {!inputVal && !onLinkProfile && (
-        <div className="flex-1 min-h-0 flex flex-col px-4 py-4 max-w-md mx-auto w-full">
+        <div className="page-inline-pad flex-1 min-h-0 flex flex-col py-4 max-w-md mx-auto w-full">
           <PgnPastePanel onLoad={onGameSelect} compact />
         </div>
       )}
@@ -294,7 +294,7 @@ export const GameList: React.FC<GameListProps> = ({
       {inputVal && (
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
         {games.length === 0 && !loading && (
-          <div className="px-4 py-4 flex flex-col gap-3 flex-shrink-0 border-b border-chess-border max-h-[50vh]">
+          <div className="page-inline-pad py-4 flex flex-col gap-3 flex-shrink-0 border-b border-chess-border max-h-[50vh]">
             <button
               type="button"
               onClick={handleGo}
@@ -328,7 +328,7 @@ export const GameList: React.FC<GameListProps> = ({
             <button
               key={game.id}
               onClick={() => onGameSelect(game.pgn)}
-              className={`w-full text-left px-3 py-2.5 border-b border-chess-border transition-colors duration-100 flex items-center gap-3 ${
+              className={`page-inline-pad w-full text-left py-2.5 border-b border-chess-border transition-colors duration-100 flex items-center gap-3 ${
                 selectedGameId === game.id
                   ? "bg-chess-hover border-l-2 border-l-move-best"
                   : "hover:bg-chess-hover"

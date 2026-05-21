@@ -708,7 +708,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
-      <header className="relative flex items-center gap-1.5 sm:gap-3 pl-3 pr-3 sm:px-4 py-2 bg-chess-panel flex-shrink-0 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+      <header className="page-inline-pad relative flex items-center gap-2 sm:gap-3 py-2.5 sm:py-2 bg-chess-panel flex-shrink-0 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-end gap-2 min-w-0 flex-shrink-0">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
@@ -890,7 +890,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex min-h-[56px] border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_14px_rgba(0,0,0,0.4)]">
+        <div className="page-inline-pad lg:hidden fixed bottom-0 left-0 right-0 z-50 flex min-h-[56px] border-t border-chess-border bg-chess-panel pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_14px_rgba(0,0,0,0.4)]">
           {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
             const isActive = tab === t;
             const label = t === "games" ? "Games" : t === "moves" ? "Moves" : "Review";

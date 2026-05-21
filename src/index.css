@@ -4,6 +4,13 @@
 
 :root {
   --mobile-tab-bar: calc(56px + env(safe-area-inset-bottom, 0px));
+  --page-pad-inline: max(1rem, env(safe-area-inset-left, 0px));
+  --page-pad-inline-end: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+.page-inline-pad {
+  padding-left: var(--page-pad-inline);
+  padding-right: var(--page-pad-inline-end);
 }
 
 @layer base {
