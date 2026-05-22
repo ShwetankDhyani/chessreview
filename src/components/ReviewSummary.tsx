@@ -3,13 +3,11 @@ import type { ReviewSummary as ReviewSummaryType, AnalyzedMove } from "../types"
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
-import { ReviewStoryCard } from "./ReviewStoryCard";
 
 interface ReviewSummaryProps {
   summary: ReviewSummaryType;
   whiteName?: string;
   blackName?: string;
-  gameResult?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
   moves?: AnalyzedMove[];
   onMoveClick?: (idx: number) => void;
 }
@@ -30,7 +28,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   summary,
   whiteName,
   blackName,
-  gameResult,
   moves = [],
   onMoveClick,
 }) => {
@@ -48,16 +45,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   return (
     <div className="flex flex-col gap-4 p-4 animate-fade-in">
-      {onMoveClick && moves.length > 0 && (
-        <ReviewStoryCard
-          summary={summary}
-          moves={moves}
-          whiteName={whiteName ?? "White"}
-          blackName={blackName ?? "Black"}
-          gameResult={gameResult}
-          onJumpToMove={onMoveClick}
-        />
-      )}
       <div className="flex justify-around gap-2 py-1">
         <AccuracyWheel
           accuracy={summary.accuracy.white}

@@ -1118,7 +1118,6 @@ export default function App() {
                     summary={summary}
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
-                    gameResult={gameMeta?.result ?? null}
                     moves={moves}
                     onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
                   />
@@ -1400,7 +1399,6 @@ export default function App() {
                     summary={summary}
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
-                    gameResult={gameMeta?.result ?? null}
                     moves={moves}
                     onMoveClick={(idx) => {
                       navigateToMove(idx);
