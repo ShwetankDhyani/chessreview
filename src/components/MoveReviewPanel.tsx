@@ -5,6 +5,7 @@ import { getMeta } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { CoachIcon } from "./CoachIcon";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
+import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
 
 export interface MoveReviewPanelProps {
   move: AnalyzedMove | null;
@@ -425,19 +426,12 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const displayComment = aiComment;
 
   const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
-  const isBrilliant = move.classification === "brilliant";
-  const isGreat = move.classification === "great";
   const lossText = Math.abs(move.deltaE) >= 0.1
     ? `${move.deltaE > 0 ? "-" : "+"}${Math.abs(move.deltaE).toFixed(2)} pawns`
     : null;
 
-  const showContinuation = move.bestMoveSan && (
-    isNegative || isBrilliant || isGreat || move.classification === "excellent"
-  );
-
-  const playedBest =
-    move.bestMove &&
-    move.uci === move.bestMove;
+  const suggestBest = shouldSuggestBestMove(move);
+  const showContinuation = suggestBest && !!move.bestMoveSan;
 
   return (
     <div className="flex flex-col gap-3 p-3 text-sm flex-1">
@@ -468,7 +462,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
               </span>
             )}
           </div>
-          {move.bestMoveSan && !playedBest && isNegative && (
+          {move.bestMoveSan && suggestBest && (
             <p className="text-[11px] text-chess-muted mt-1">
               Engine suggests{" "}
               <span className="font-mono font-semibold text-chess-accent">
@@ -524,11 +518,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           startFen={move.fenBefore}
           accentColor={isNegative ? "#6daa6d" : meta?.color ?? "#6daa6d"}
           label={
-            isNegative
-              ? "Better line from here"
-              : playedBest
-                ? "Engine line after your move"
-                : "Engine's top line from here"
+            isNegative ? "Better line from here" : "Engine's top line from here"
           }
           onFenChange={onContinuationFen}
           onEvalChange={onContinuationEval}

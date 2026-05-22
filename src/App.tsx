@@ -37,6 +37,7 @@ import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
+import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -1209,10 +1210,7 @@ export default function App() {
                     !isAnalyzing &&
                     !showBoardGameEnd &&
                     !!showBestMove &&
-                    !!currentMove?.bestMove &&
-                    (currentMove.classification === "inaccuracy" ||
-                      currentMove.classification === "mistake" ||
-                      currentMove.classification === "blunder")
+                    shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
                   analysisState={analysisState}
@@ -1443,10 +1441,7 @@ export default function App() {
                     !isAnalyzing &&
                     !continuationActive &&
                     !!showBestMove &&
-                    !!currentMove?.bestMove &&
-                    ["inaccuracy", "mistake", "blunder"].includes(
-                      currentMove.classification ?? ""
-                    )
+                    shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
                   canPrev={!isAnalyzing && currentMoveIdx > -1}
