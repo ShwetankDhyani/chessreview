@@ -1,4 +1,5 @@
-import type { AnalyzedMove, ReviewSummary } from "../types";
+import type { AnalyzedMove, KeyMoment, ReviewSummary } from "../types";
+import { CLASSIFICATION_META } from "./classificationMeta";
 
 export type StorySide = "white" | "black";
 
@@ -150,22 +151,20 @@ function buildSteadyDominanceStory(
   return pick(seed, 6, [
     [
       playerSeg(leaderName, leader),
-      textSeg(" were the steadier side from start to finish — "),
+      textSeg(" were on a different level from start to finish — a one-sided affair on accuracy."),
+    ],
+    [
+      textSeg("A mismatch: "),
+      playerSeg(leaderName, leader),
+      textSeg(" played in a different league; "),
       playerSeg(otherName, otherSide),
-      textSeg(" never quite matched their accuracy."),
+      textSeg(" never got into the game on precision."),
     ],
     [
       playerSeg(leaderName, leader),
-      textSeg(" held the edge across the whole game; "),
+      textSeg(" dominated every phase — "),
       playerSeg(otherName, otherSide),
-      textSeg(" couldn't close the gap."),
-    ],
-    [
-      textSeg("A one-sided story on accuracy: "),
-      playerSeg(leaderName, leader),
-      textSeg(" outplayed "),
-      playerSeg(otherName, otherSide),
-      textSeg(" in every phase that mattered."),
+      textSeg(" were outclassed, not just edged out."),
     ],
   ]);
 }
@@ -219,11 +218,35 @@ function buildOverallAccuracyStory(
   leader: StorySide,
   whiteName: string,
   blackName: string,
-  seed: number
+  seed: number,
+  accGap: number
 ): StorySegment[] {
   const leaderName = leader === "white" ? whiteName : blackName;
   const otherName = leader === "white" ? blackName : whiteName;
   const otherSide: StorySide = leader === "white" ? "black" : "white";
+
+  if (accGap >= 15) {
+    return pick(seed, 12, [
+      [
+        playerSeg(leaderName, leader),
+        textSeg(" were in a different league on accuracy — a one-sided affair."),
+      ],
+      [
+        textSeg("Not close on precision: "),
+        playerSeg(leaderName, leader),
+        textSeg(" outclassed "),
+        playerSeg(otherName, otherSide),
+        textSeg(" from start to finish."),
+      ],
+      [
+        playerSeg(otherName, otherSide),
+        textSeg(" were outmatched — "),
+        playerSeg(leaderName, leader),
+        textSeg(" played on another level."),
+      ],
+    ]);
+  }
+
   return pick(seed, 12, [
     [
       playerSeg(leaderName, leader),
@@ -246,6 +269,210 @@ function buildCleanStory(seed: number): StorySegment[] {
     [textSeg("A clean game — very few serious mistakes from either side.")],
     [textSeg("Solid chess throughout; neither side gave much away.")],
   ]);
+}
+
+type GameMargin = "close" | "modest" | "wide";
+
+function gameMargin(accGap: number): GameMargin {
+  if (accGap < 8) return "close";
+  if (accGap < 15) return "modest";
+  return "wide";
+}
+
+function moveNotation(km: KeyMoment): string {
+  return `${km.moveNumber}${km.color === "w" ? "." : "…"}${km.san}`;
+}
+
+function slipLabel(classification: KeyMoment["classification"]): string {
+  if (!classification) return "critical slip";
+  const meta = CLASSIFICATION_META[classification as keyof typeof CLASSIFICATION_META];
+  return meta?.label.toLowerCase() ?? "mistake";
+}
+
+function swingPhrase(pawns: number): string {
+  const n = Math.round(pawns);
+  if (n >= 10) return `about ${n} pawns of eval`;
+  if (n >= 5) return `roughly ${n} pawns of eval`;
+  if (n >= 2) return `a ${n}-pawn swing`;
+  return "a small eval shift";
+}
+
+function buildKeyPoint(
+  summary: ReviewSummary,
+  whiteName: string,
+  blackName: string,
+  seed: number
+): StorySegment[] {
+  const wAcc = summary.accuracy.white;
+  const bAcc = summary.accuracy.black;
+  const accGap = Math.abs(wAcc - bAcc);
+  const margin = gameMargin(accGap);
+  const accLeader: StorySide = wAcc >= bAcc ? "white" : "black";
+  const leaderName = accLeader === "white" ? whiteName : blackName;
+  const trailerName = accLeader === "white" ? blackName : whiteName;
+  const trailerSide: StorySide = accLeader === "white" ? "black" : "white";
+
+  const moments = [...(summary.keyMoments ?? [])].sort((a, b) => b.swing - a.swing);
+  const top = moments[0];
+  const wSlips = countMistakes(summary, "white");
+  const bSlips = countMistakes(summary, "black");
+
+  if (top && top.swing >= 2.5) {
+    const culprit: StorySide = top.color === "w" ? "white" : "black";
+    const culpritName = culprit === "white" ? whiteName : blackName;
+    const move = moveNotation(top);
+    const slip = slipLabel(top.classification);
+    const swing = swingPhrase(top.swing);
+
+    if (margin === "close") {
+      return pick(seed, 20, [
+        [
+          textSeg("What decided it was "),
+          textSeg(move),
+          textSeg(" — "),
+          playerSeg(culpritName, culprit),
+          textSeg(`'s ${slip} (${swing}) in an otherwise close game.`),
+        ],
+        [
+          textSeg("The turning point: "),
+          textSeg(move),
+          textSeg(", a "),
+          textSeg(slip),
+          textSeg(" from "),
+          playerSeg(culpritName, culprit),
+          textSeg(` worth ${swing} — small margins until then.`),
+        ],
+      ]);
+    }
+
+    if (margin === "wide") {
+      return pick(seed, 22, [
+        [
+          textSeg("On top of a one-sided accuracy gap, "),
+          textSeg(move),
+          textSeg(" was the headline — "),
+          playerSeg(culpritName, culprit),
+          textSeg(`'s ${slip} (${swing}) in a game `),
+          playerSeg(leaderName, accLeader),
+          textSeg(" were already winning on precision."),
+        ],
+        [
+          playerSeg(leaderName, accLeader),
+          textSeg(" were in a different league; "),
+          textSeg(move),
+          textSeg(" just made it louder — a "),
+          textSeg(slip),
+          textSeg(` worth ${swing}.`),
+        ],
+        [
+          textSeg("Not a close contest: "),
+          playerSeg(leaderName, accLeader),
+          textSeg(" dominated accuracy, and "),
+          textSeg(move),
+          textSeg(" was the biggest swing anyway."),
+        ],
+      ]);
+    }
+
+    return pick(seed, 24, [
+      [
+        textSeg("The difference showed clearest on "),
+        textSeg(move),
+        textSeg(" — "),
+        playerSeg(culpritName, culprit),
+        textSeg(`'s ${slip} (${swing}).`),
+      ],
+      [
+        textSeg("That swung it: "),
+        textSeg(move),
+        textSeg(", a "),
+        textSeg(slip),
+        textSeg(" from "),
+        playerSeg(culpritName, culprit),
+        textSeg(` worth ${swing}.`),
+      ],
+    ]);
+  }
+
+  if (margin === "close") {
+    if (wSlips !== bSlips) {
+      const moreSide: StorySide = wSlips > bSlips ? "white" : "black";
+      const moreName = moreSide === "white" ? whiteName : blackName;
+      const fewerName = moreSide === "white" ? blackName : whiteName;
+      const fewerSide: StorySide = moreSide === "white" ? "black" : "white";
+      return pick(seed, 26, [
+        [
+          textSeg("No single meltdown — "),
+          playerSeg(moreName, moreSide),
+          textSeg(" had a few more slips than "),
+          playerSeg(fewerName, fewerSide),
+          textSeg(", and that was enough in a tight game."),
+        ],
+        [
+          textSeg("It stayed close on accuracy; "),
+          playerSeg(moreName, moreSide),
+          textSeg("'s extra inaccuracies edged "),
+          playerSeg(fewerName, fewerSide),
+          textSeg(" out."),
+        ],
+      ]);
+    }
+    return pick(seed, 28, [
+      [
+        textSeg("Hard to split them on accuracy — the result likely came down to one or two moments below."),
+      ],
+      [
+        textSeg("Neck-and-neck on precision; check key moments for where the eval actually moved."),
+      ],
+    ]);
+  }
+
+  if (margin === "wide") {
+    return pick(seed, 30, [
+      [
+        textSeg("Bottom line: "),
+        playerSeg(leaderName, accLeader),
+        textSeg(` at ${wAcc.toFixed(0)}% vs `),
+        playerSeg(trailerName, trailerSide),
+        textSeg(`${bAcc.toFixed(0)}% — `),
+        playerSeg(leaderName, accLeader),
+        textSeg(" were on a different level; a one-sided affair."),
+      ],
+      [
+        playerSeg(trailerName, trailerSide),
+        textSeg(" were outclassed on accuracy ("),
+        textSeg(`${accGap.toFixed(0)} points`),
+        textSeg(") — not really a fair fight on precision."),
+      ],
+      [
+        textSeg("This wasn't close: "),
+        playerSeg(leaderName, accLeader),
+        textSeg(" played in a different league, and "),
+        playerSeg(trailerName, trailerSide),
+        textSeg(" never matched it."),
+      ],
+    ]);
+  }
+
+  return pick(seed, 32, [
+    [
+      textSeg("Overall, "),
+      playerSeg(leaderName, accLeader),
+      textSeg(" were sharper ("),
+      textSeg(`${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%`),
+      textSeg(") — the margin was real but not a blowout."),
+    ],
+    [
+      playerSeg(leaderName, accLeader),
+      textSeg(" had the edge on accuracy; "),
+      playerSeg(trailerName, trailerSide),
+      textSeg(" needed cleaner play in the critical spots."),
+    ],
+  ]);
+}
+
+function joinParagraph(arc: StorySegment[], keyPoint: StorySegment[]): StorySegment[] {
+  return [...arc, textSeg(" "), ...keyPoint];
 }
 
 function buildNarrativeBody(
@@ -324,7 +551,7 @@ function buildNarrativeBody(
   const accGap = Math.abs(wAcc - bAcc);
   if (accGap >= 12) {
     const leader: StorySide = wAcc > bAcc ? "white" : "black";
-    return buildOverallAccuracyStory(leader, whiteName, blackName, seed);
+    return buildOverallAccuracyStory(leader, whiteName, blackName, seed, accGap);
   }
 
   return buildEvenStory(whiteName, blackName, seed);
@@ -337,7 +564,9 @@ export function buildReviewStory(
   blackName: string
 ): ReviewStory {
   const seed = storySeed(summary, moves);
+  const arc = buildNarrativeBody(summary, whiteName, blackName, seed);
+  const keyPoint = buildKeyPoint(summary, whiteName, blackName, seed);
   return {
-    body: buildNarrativeBody(summary, whiteName, blackName, seed),
+    body: joinParagraph(arc, keyPoint),
   };
 }
