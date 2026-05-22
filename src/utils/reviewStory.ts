@@ -618,7 +618,11 @@ function structuralToKeyMoment(turn: StructuralTurn, moves: AnalyzedMove[]): Key
   };
 }
 
-/** Skip mate delivery, terminal moves, and wins masquerading as "decisive slips". */
+function isMajorSlip(classification: KeyMoment["classification"]): boolean {
+  return classification === "blunder" || classification === "mistake";
+}
+
+/** Skip checkmate delivery and terminal moves — not the blunder that allows forced mate. */
 function isStoryWorthyMoment(km: KeyMoment, moves: AnalyzedMove[]): boolean {
   if (/#|\+\+?\s*$/.test(km.san)) return false;
 
@@ -626,17 +630,25 @@ function isStoryWorthyMoment(km: KeyMoment, moves: AnalyzedMove[]): boolean {
   if (!m) return false;
   if (km.moveIdx >= moves.length - 1) return false;
 
-  if (m.evalAfter?.mate !== undefined && Math.abs(m.evalAfter.mate) <= 1) {
+  const majorSlip = isMajorSlip(km.classification);
+
+  if (
+    m.evalAfter?.mate !== undefined &&
+    Math.abs(m.evalAfter.mate) <= 1 &&
+    !majorSlip
+  ) {
     return false;
   }
-  if (m.evalBefore?.mate !== undefined && Math.abs(m.evalBefore.mate) <= 1) {
+  if (
+    m.evalBefore?.mate !== undefined &&
+    Math.abs(m.evalBefore.mate) <= 1 &&
+    !majorSlip
+  ) {
     return false;
   }
 
   const isSlip =
-    km.classification === "blunder" ||
-    km.classification === "mistake" ||
-    km.classification === "inaccuracy";
+    majorSlip || km.classification === "inaccuracy";
 
   if (km.classification === "brilliant" || km.classification === "great") {
     return false;
@@ -645,6 +657,43 @@ function isStoryWorthyMoment(km: KeyMoment, moves: AnalyzedMove[]): boolean {
   if (!isSlip && m.deltaE < 0.8) return false;
 
   return m.deltaE >= 0.5;
+}
+
+/** True maximum eval swing in the game (for labels and ranking). */
+function pickMaxSwingMoment(
+  moments: KeyMoment[],
+  moves: AnalyzedMove[]
+): KeyMoment | null {
+  const eligible = moments.filter((km) => {
+    if (/#|\+\+?\s*$/.test(km.san)) return false;
+    const m = moves[km.moveIdx];
+    return !!m && m.deltaE >= 0.5;
+  });
+  if (eligible.length === 0) return null;
+  return [...eligible].sort(
+    (a, b) => momentImpact(b, moves) - momentImpact(a, moves)
+  )[0]!;
+}
+
+function resolveWinnerColor(
+  moves: AnalyzedMove[],
+  gameResult?: "1-0" | "0-1" | "1/2-1/2" | "*" | null
+): "w" | "b" | null {
+  if (gameResult === "1-0") return "w";
+  if (gameResult === "0-1") return "b";
+  if (gameResult && gameResult !== "*") return null;
+
+  for (let i = moves.length - 1; i >= 0; i--) {
+    const m = moves[i];
+    const mate = m.evalAfter?.mate;
+    if (mate !== undefined && mate !== 0) {
+      return mate > 0 ? "w" : "b";
+    }
+    const cp = evalCpWhite(m, "after");
+    if (cp !== null && cp >= 4) return "w";
+    if (cp !== null && cp <= -4) return "b";
+  }
+  return null;
 }
 
 function pickDecisiveMoment(
@@ -758,8 +807,11 @@ function composeStory(
     return [buildCleanStory(seed)];
   }
 
-  const winnerColor =
-    gameResult === "1-0" ? "w" : gameResult === "0-1" ? "b" : null;
+  const winnerColor = resolveWinnerColor(moves, gameResult);
+  const maxSwingMoment = pickMaxSwingMoment(
+    [...(summary.keyMoments ?? [])],
+    moves
+  );
 
   const moments = [...(summary.keyMoments ?? [])];
   const turnWrap = pickTurningPoint(moments, moves, winnerColor);
@@ -916,10 +968,12 @@ function composeStory(
   }
 
   if (sit.kind === "earned_wide") {
-    if (sit.moment) {
-      const km = sit.moment;
+    const km = maxSwingMoment ?? sit.moment;
+    if (km) {
       const slip = slipLabel(km.classification);
-      const swing = swingPhraseShort(km.swing);
+      const m = moves[km.moveIdx];
+      const swingPawns = Math.max(km.swing, m?.deltaE ?? 0);
+      const swing = swingPhraseShort(swingPawns);
       return [
         [
           playerSeg(leaderName, accLeader),
