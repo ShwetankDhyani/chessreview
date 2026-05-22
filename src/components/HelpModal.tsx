@@ -85,6 +85,41 @@ export function HelpModal({
           </p>
         </div>
 
+        <div className="mt-5 pt-4 border-t border-chess-border/80">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5">
+            Questions & suggestions
+          </p>
+          <p className="text-xs text-chess-muted mb-3 leading-relaxed">
+            Need help or want to share feedback? We read every note.
+          </p>
+          <a
+            href="mailto:admin@chessreview.org"
+            className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
+          >
+            <span
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
+              aria-hidden
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 6h16v12H4z" />
+                <path d="M4 7l8 6 8-6" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1 truncate font-medium">
+              admin@chessreview.org
+            </span>
+          </a>
+        </div>
+
         {links.length > 0 && (
           <div className="mt-5 pt-4 border-t border-chess-border">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-2">
