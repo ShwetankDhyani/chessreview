@@ -515,7 +515,7 @@
   }
 }
 
-/* Game-end overlay — tasteful halo + verdict card */
+/* Game-end overlay — verdict card */
 .board-game-end-layer {
   animation: gameEndLayerIn 0.6s ease-out forwards;
 }
@@ -526,64 +526,6 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-.board-king-halo {
-  position: absolute;
-  width: 12.5%;
-  height: 12.5%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  border-radius: 50%;
-  z-index: 1;
-}
-
-.board-king-halo--winner {
-  background: radial-gradient(
-    circle,
-    rgba(240, 192, 80, 0.45) 0%,
-    rgba(240, 192, 80, 0.18) 45%,
-    transparent 75%
-  );
-  box-shadow:
-    inset 0 0 0 2px rgba(240, 192, 80, 0.6),
-    0 0 22px 4px rgba(240, 192, 80, 0.35);
-  animation: kingHaloPulse 2.4s ease-in-out 0.3s infinite;
-}
-
-.board-king-halo--loser {
-  background: radial-gradient(
-    circle,
-    rgba(20, 20, 20, 0.55) 0%,
-    rgba(20, 20, 20, 0.22) 55%,
-    transparent 80%
-  );
-  animation: kingHaloFadeIn 0.7s ease-out 0.15s both;
-}
-
-@keyframes kingHaloPulse {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 2px rgba(240, 192, 80, 0.55),
-      0 0 18px 3px rgba(240, 192, 80, 0.28);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 2px rgba(240, 192, 80, 0.75),
-      0 0 28px 6px rgba(240, 192, 80, 0.45);
-  }
-}
-
-@keyframes kingHaloFadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.4);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
   }
 }
 

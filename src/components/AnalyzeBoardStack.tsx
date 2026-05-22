@@ -9,7 +9,6 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   showAnalyzeButton: boolean;
   showGameEnd?: boolean;
   gameEnd?: GameEndInfo | null;
-  positionFen: string;
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
@@ -21,7 +20,6 @@ export function AnalyzeBoardStack({
   showAnalyzeButton,
   showGameEnd = false,
   gameEnd,
-  positionFen,
   whiteName = "White",
   blackName = "Black",
   onAnalyze,
@@ -42,8 +40,6 @@ export function AnalyzeBoardStack({
       {showGameEnd && gameEnd ? (
         <BoardGameEndOverlay
           end={gameEnd}
-          fen={positionFen}
-          boardOrientation={boardOrientation}
           whiteName={whiteName}
           blackName={blackName}
         />

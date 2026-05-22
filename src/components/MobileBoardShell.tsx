@@ -16,7 +16,6 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   showAnalyzeButton?: boolean;
   showGameEnd?: boolean;
   gameEnd?: GameEndInfo | null;
-  positionFen: string;
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
@@ -77,7 +76,6 @@ export function MobileBoardShell({
   showAnalyzeButton = false,
   showGameEnd = false,
   gameEnd,
-  positionFen,
   whiteName,
   blackName,
   onAnalyze,
@@ -105,7 +103,6 @@ export function MobileBoardShell({
             {...boardProps}
             boardWidth={boardWidth}
             boardOrientation={boardOrientation}
-            positionFen={positionFen}
             analysisState={analysisState}
             showAnalyzeButton={showAnalyzeButton}
             showGameEnd={showGameEnd}

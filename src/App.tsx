@@ -1194,7 +1194,6 @@ export default function App() {
                 />
                 <AnalyzeBoardStack
                   position={boardPositionFen}
-                  positionFen={boardPositionFen}
                   boardWidth={desktopBoardSize}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
@@ -1426,7 +1425,6 @@ export default function App() {
                 <MobileBoardShell
                   evalResult={continuationEval ?? currentEval}
                   position={boardPositionFen}
-                  positionFen={boardPositionFen}
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}

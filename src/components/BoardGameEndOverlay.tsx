@@ -1,11 +1,7 @@
-import { useMemo } from "react";
 import type { GameEndInfo } from "../utils/gameEnd";
-import { findKingSquare, squareToPercent } from "../utils/boardSquareLayout";
 
 interface BoardGameEndOverlayProps {
   end: GameEndInfo;
-  fen: string;
-  boardOrientation: "white" | "black";
   whiteName: string;
   blackName: string;
 }
@@ -24,26 +20,10 @@ const KIND_LABEL: Record<string, string> = {
 
 export function BoardGameEndOverlay({
   end,
-  fen,
-  boardOrientation,
   whiteName,
   blackName,
 }: BoardGameEndOverlayProps) {
   const winnerColor = end.winner;
-  const loserColor =
-    winnerColor === "w" ? "b" : winnerColor === "b" ? "w" : null;
-
-  const winnerKing = useMemo(() => {
-    if (!winnerColor) return null;
-    const sq = findKingSquare(fen, winnerColor);
-    return sq ? squareToPercent(sq, boardOrientation) : null;
-  }, [fen, boardOrientation, winnerColor]);
-
-  const loserKing = useMemo(() => {
-    if (!loserColor) return null;
-    const sq = findKingSquare(fen, loserColor);
-    return sq ? squareToPercent(sq, boardOrientation) : null;
-  }, [fen, boardOrientation, loserColor]);
 
   const winnerName =
     winnerColor === "w" ? whiteName : winnerColor === "b" ? blackName : null;
@@ -58,24 +38,7 @@ export function BoardGameEndOverlay({
       role="status"
       aria-live="polite"
     >
-      {/* Subtle dim over the whole board */}
-      <div className="absolute inset-0 bg-black/25" aria-hidden />
-
-      {/* Halo on the winner's king square (or both kings if draw) */}
-      {winnerKing && (
-        <div
-          className="board-king-halo board-king-halo--winner"
-          style={{ left: `${winnerKing.left}%`, top: `${winnerKing.top}%` }}
-          aria-hidden
-        />
-      )}
-      {loserKing && !isDraw && (
-        <div
-          className="board-king-halo board-king-halo--loser"
-          style={{ left: `${loserKing.left}%`, top: `${loserKing.top}%` }}
-          aria-hidden
-        />
-      )}
+      <div className="absolute inset-0 bg-black/20" aria-hidden />
 
       {/* Verdict card, centred on the board */}
       <div className="absolute inset-0 flex items-center justify-center">
