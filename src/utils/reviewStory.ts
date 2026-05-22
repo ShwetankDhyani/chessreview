@@ -234,10 +234,174 @@ interface StructuralTurn {
   score: number;
 }
 
+type SituationKind = "gift" | "structural" | "earned_wide" | "close_fight" | "even";
+
+interface GameSituation {
+  kind: SituationKind;
+  moment: KeyMoment | null;
+  beneficiary: StorySide;
+  contestableBefore: boolean;
+  winnerSlipsNear: boolean;
+  maxSwing: number;
+}
+
+function maxSwingInGame(moments: KeyMoment[], moves: AnalyzedMove[]): number {
+  let max = 1;
+  for (const km of moments) max = Math.max(max, km.swing);
+  for (const m of moves) max = Math.max(max, Math.abs(m.deltaE));
+  return max;
+}
+
+function beneficiaryOf(moment: KeyMoment): StorySide {
+  return moment.color === "w" ? "black" : "white";
+}
+
+function hadRecentSlipBy(
+  moves: AnalyzedMove[],
+  beforeIdx: number,
+  color: "w" | "b"
+): boolean {
+  const start = Math.max(0, beforeIdx - 4);
+  for (let i = start; i < beforeIdx; i++) {
+    const m = moves[i];
+    if (m.color !== color) continue;
+    if (
+      m.classification === "mistake" ||
+      m.classification === "inaccuracy" ||
+      m.classification === "blunder"
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isGiftDecisive(
+  moment: KeyMoment,
+  moves: AnalyzedMove[],
+  maxSwing: number
+): boolean {
+  const m = moves[moment.moveIdx];
+  if (!m) return false;
+  const cpBefore = evalCpWhite(m, "before");
+  if (cpBefore === null) return false;
+
+  const contestable = Math.abs(cpBefore) <= 2.2;
+  const bigSwing = moment.swing >= Math.max(3.5, maxSwing * 0.55);
+  const isSlip =
+    moment.classification === "blunder" ||
+    moment.classification === "mistake";
+
+  return contestable && bigSwing && isSlip;
+}
+
+function analyzeGameSituation(
+  summary: ReviewSummary,
+  moves: AnalyzedMove[],
+  turnWrap: { moment: KeyMoment; structural: boolean } | null,
+  structural: StructuralTurn | null
+): GameSituation {
+  const moments = summary.keyMoments ?? [];
+  const maxSwing = maxSwingInGame(moments, moves);
+  const wAcc = summary.accuracy.white;
+  const bAcc = summary.accuracy.black;
+  const accGap = Math.abs(wAcc - bAcc);
+  const accLeader: StorySide = wAcc >= bAcc ? "white" : "black";
+
+  if (!turnWrap) {
+    if (accGap >= 15) {
+      return {
+        kind: "earned_wide",
+        moment: null,
+        beneficiary: accLeader,
+        contestableBefore: false,
+        winnerSlipsNear: false,
+        maxSwing,
+      };
+    }
+    if (accGap < 8) {
+      return {
+        kind: "even",
+        moment: null,
+        beneficiary: accLeader,
+        contestableBefore: true,
+        winnerSlipsNear: false,
+        maxSwing,
+      };
+    }
+    return {
+      kind: "close_fight",
+      moment: null,
+      beneficiary: accLeader,
+      contestableBefore: true,
+      winnerSlipsNear: false,
+      maxSwing,
+    };
+  }
+
+  const moment = turnWrap.moment;
+  const m = moves[moment.moveIdx];
+  const cpBefore = m ? evalCpWhite(m, "before") : null;
+  const contestableBefore = cpBefore !== null && Math.abs(cpBefore) <= 2.2;
+  const beneficiary = beneficiaryOf(moment);
+  const winnerColor = beneficiary === "white" ? "w" : "b";
+  const winnerSlipsNear = hadRecentSlipBy(moves, moment.moveIdx, winnerColor);
+
+  if (isGiftDecisive(moment, moves, maxSwing)) {
+    return {
+      kind: "gift",
+      moment,
+      beneficiary,
+      contestableBefore,
+      winnerSlipsNear,
+      maxSwing,
+    };
+  }
+
+  if (
+    turnWrap.structural &&
+    structural &&
+    structural.heldRatio >= 0.72 &&
+    moment.swing < maxSwing * 0.55
+  ) {
+    return {
+      kind: "structural",
+      moment,
+      beneficiary: structural.sideGained,
+      contestableBefore,
+      winnerSlipsNear,
+      maxSwing,
+    };
+  }
+
+  if (accGap >= 15 && !contestableBefore) {
+    return {
+      kind: "earned_wide",
+      moment,
+      beneficiary: accLeader,
+      contestableBefore,
+      winnerSlipsNear,
+      maxSwing,
+    };
+  }
+
+  return {
+    kind: "close_fight",
+    moment,
+    beneficiary,
+    contestableBefore,
+    winnerSlipsNear,
+    maxSwing,
+  };
+}
+
 /**
- * Find when the eval crossed and stayed on one side — earlier than a late blunder.
+ * Find when the eval crossed and stayed on one side — not a single hanging blunder.
  */
-function pickStructuralTurningPoint(moves: AnalyzedMove[]): StructuralTurn | null {
+function pickStructuralTurningPoint(
+  moves: AnalyzedMove[],
+  maxSwing: number
+): StructuralTurn | null {
   const OPENING_SKIP = 6;
   const CONTESTABLE = 2.0;
   const HELD_CP = 1.0;
@@ -277,7 +441,16 @@ function pickStructuralTurningPoint(moves: AnalyzedMove[]): StructuralTurn | nul
     const heldRatio = held / total;
     if (heldRatio < MIN_HELD) continue;
 
-    let score = heldRatio * 60 + Math.abs(swing) * 8 + Math.abs(cpAfter) * 3;
+    const plySwing = Math.abs(swing);
+    if (
+      m.classification === "blunder" &&
+      plySwing >= maxSwing * 0.55 &&
+      m.deltaE >= maxSwing * 0.5
+    ) {
+      continue;
+    }
+
+    let score = heldRatio * 60 + plySwing * 8 + Math.abs(cpAfter) * 3;
     score -= i * 0.15;
     if (
       m.classification === "blunder" ||
@@ -369,7 +542,8 @@ function pickTurningPoint(
   moments: KeyMoment[],
   moves: AnalyzedMove[]
 ): { moment: KeyMoment; structural: boolean } | null {
-  const structural = pickStructuralTurningPoint(moves);
+  const maxSwing = maxSwingInGame(moments, moves);
+  const structural = pickStructuralTurningPoint(moves, maxSwing);
   const slip = pickDecisiveMoment(moments, moves);
 
   if (structural) {
@@ -411,8 +585,6 @@ function composeStory(
 ): StorySegment[][] {
   const wAcc = summary.accuracy.white;
   const bAcc = summary.accuracy.black;
-  const accGap = Math.abs(wAcc - bAcc);
-  const margin = gameMargin(accGap);
   const accLeader: StorySide = wAcc >= bAcc ? "white" : "black";
   const leaderName = accLeader === "white" ? whiteName : blackName;
   const wErr = countMistakes(summary, "white");
@@ -423,125 +595,155 @@ function composeStory(
 
   const moments = [...(summary.keyMoments ?? [])];
   const turnWrap = pickTurningPoint(moments, moves);
-  const structural = pickStructuralTurningPoint(moves);
+  const structural = pickStructuralTurningPoint(
+    moves,
+    maxSwingInGame(moments, moves)
+  );
+  const sit = analyzeGameSituation(summary, moves, turnWrap, structural);
 
-  if (turnWrap && turnWrap.moment.swing >= 1) {
-    const km = turnWrap.moment;
+  if (sit.kind === "gift" && sit.moment) {
+    const km = sit.moment;
     const slip = slipLabel(km.classification);
     const swing = swingPhraseShort(km.swing);
 
-    if (margin === "wide" && turnWrap.structural && structural) {
+    if (sit.winnerSlipsNear) {
       return pick(seed, 0, [
         [
           [
-            playerSeg(leaderName, accLeader),
-            textSeg(" took over on "),
+            textSeg("Chances on both sides until "),
             moveSeg(km),
-            textSeg(` — a ${slip} (${swing}) — and held the advantage for good.`),
-          ],
-          accuracyLine(wAcc, bAcc),
-        ],
-        [
-          [
-            textSeg("The game broke early on "),
-            moveSeg(km),
-            textSeg(` (${slip}, ${swing}). `),
-            playerSeg(leaderName, accLeader),
-            textSeg(" ran away with it from there."),
-          ],
-          accuracyLine(wAcc, bAcc),
-        ],
-      ]);
-    }
-
-    if (margin === "wide") {
-      return pick(seed, 2, [
-        [
-          [
-            playerSeg(leaderName, accLeader),
-            textSeg(" were on another level — not a close match on accuracy."),
+            textSeg(` — a ${slip} (${swing}) that decided the game.`),
           ],
           [
-            textSeg("The clearest mistake was "),
-            moveSeg(km),
-            textSeg(` (${slip}, ${swing}).`),
+            textSeg(
+              `Accuracy (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%) looks lopsided, but one move did most of the damage.`
+            ),
           ],
         ],
         [
           [
-            playerSeg(leaderName, accLeader),
-            textSeg(" outclassed their opponent on precision."),
+            textSeg("Still a fight before "),
+            moveSeg(km),
+            textSeg(`; that ${slip} (${swing}) is what separated the players.`),
           ],
           [
-            textSeg("Worst slip: "),
-            moveSeg(km),
-            textSeg(` — ${slip}, ${swing}.`),
+            textSeg(
+              `The numbers favor the winner — mostly because of that swing, not a full-game crush.`
+            ),
           ],
         ],
       ]);
     }
 
-    if (margin === "close" && turnWrap.structural && structural) {
-      const gained = sideLabel(structural.sideGained);
-      return pick(seed, 4, [
-        [
-          [textSeg("A tight game on accuracy.")],
-          [
-            textSeg("It turned on "),
-            moveSeg(km),
-            textSeg(` — after that ${gained} kept the edge.`),
-          ],
-        ],
-        [
-          [
-            textSeg("The eval swung on "),
-            moveSeg(km),
-            textSeg(" and never came back."),
-          ],
-        ],
-      ]);
-    }
-
-    if (margin === "close") {
-      return pick(seed, 6, [
-        [
-          [textSeg("A close game — small margins throughout.")],
-          [
-            textSeg("The turning point was "),
-            moveSeg(km),
-            textSeg(` (${slip}, ${swing}).`),
-          ],
-        ],
-      ]);
-    }
-
-    return [
+    return pick(seed, 2, [
       [
-        textSeg("The main swing was "),
-        moveSeg(km),
-        textSeg(` — ${slip} (${swing}).`),
+        [
+          textSeg("The game was still contestable, then "),
+          moveSeg(km),
+          textSeg(` — a ${slip} (${swing}) that decided it.`),
+        ],
+        [
+          textSeg(
+            `Accuracy reads ${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%; the gap is mostly that one disaster, not sustained dominance.`
+          ),
+        ],
       ],
-      accuracyLine(wAcc, bAcc),
-    ];
+      [
+        [
+          textSeg("Not one-sided until "),
+          moveSeg(km),
+          textSeg(` — opponent's ${slip} (${swing}) handed over the game.`),
+        ],
+        [
+          textSeg(
+            `After that the eval never came back; the rest was conversion, not a different league.`
+          ),
+        ],
+      ],
+    ]);
   }
 
-  if (margin === "wide") {
+  if (sit.kind === "structural" && sit.moment) {
+    const km = sit.moment;
+    const slip = slipLabel(km.classification);
+    const swing = swingPhraseShort(km.swing);
+    const gained = sideLabel(sit.beneficiary);
+    const benefName =
+      sit.beneficiary === "white" ? whiteName : blackName;
+
+    return pick(seed, 4, [
+      [
+        [
+          playerSeg(benefName, sit.beneficiary),
+          textSeg(" took over on "),
+          moveSeg(km),
+          textSeg(` — ${slip} (${swing}) — and ${gained} held the edge after.`),
+        ],
+        accuracyLine(wAcc, bAcc),
+      ],
+      [
+        [
+          textSeg("The position shifted on "),
+          moveSeg(km),
+          textSeg(` and stayed there — a real sustained advantage, not one slip.`),
+        ],
+        accuracyLine(wAcc, bAcc),
+      ],
+    ]);
+  }
+
+  if (sit.kind === "earned_wide") {
+    if (sit.moment) {
+      const km = sit.moment;
+      const slip = slipLabel(km.classification);
+      const swing = swingPhraseShort(km.swing);
+      return [
+        [
+          playerSeg(leaderName, accLeader),
+          textSeg(` were sharper overall (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%).`),
+        ],
+        [
+          textSeg("Biggest swing: "),
+          moveSeg(km),
+          textSeg(` (${slip}, ${swing}).`),
+        ],
+      ];
+    }
     return [
       [
         playerSeg(leaderName, accLeader),
-        textSeg(` were on another level (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}% accuracy) — a one-sided affair.`),
+        textSeg(
+          ` were clearly sharper (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%) — outplayed across the game.`
+        ),
       ],
     ];
   }
 
-  if (margin === "close") {
-    const wSlips = countMistakes(summary, "white");
-    const bSlips = countMistakes(summary, "black");
-    if (wSlips !== bSlips) {
-      const moreLabel = sideLabel(wSlips > bSlips ? "white" : "black");
-      return [[textSeg(`Close on accuracy — ${moreLabel} had a few more slips, and that was enough.`)]];
-    }
-    return [[textSeg("Very tight on accuracy — the key moments below show where it moved.")]];
+  if (sit.kind === "close_fight" && sit.moment) {
+    const km = sit.moment;
+    const slip = slipLabel(km.classification);
+    const swing = swingPhraseShort(km.swing);
+    return pick(seed, 6, [
+      [
+        [textSeg("A close game on accuracy.")],
+        [
+          textSeg("It turned on "),
+          moveSeg(km),
+          textSeg(` (${slip}, ${swing}).`),
+        ],
+      ],
+      [
+        [
+          textSeg("Tight throughout — the key swing was "),
+          moveSeg(km),
+          textSeg("."),
+        ],
+      ],
+    ]);
+  }
+
+  if (sit.kind === "even") {
+    return [[textSeg("Very tight on accuracy — small details decided it.")]];
   }
 
   const arc = buildNarrativeBody(summary, whiteName, blackName, seed);
