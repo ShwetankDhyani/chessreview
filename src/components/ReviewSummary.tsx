@@ -303,18 +303,18 @@ const ReviewPlayerStrip: React.FC<{
   whiteName: string;
   blackName: string;
 }> = ({ whiteName, blackName }) => (
-  <div className="flex items-center justify-between gap-3 pb-3 mb-1 border-b border-chess-border/50">
+  <div className="flex items-center justify-between gap-3 pb-2.5 mb-0.5 border-b border-chess-border/35">
     <div className="flex items-center gap-2 min-w-0 flex-1">
-      <PieceIndicator side="white" />
-      <span className="text-sm font-semibold text-chess-text truncate">
+      <PieceIndicator side="white" className="h-3 w-3 opacity-80" />
+      <span className="text-xs font-medium text-chess-muted truncate tracking-wide">
         {whiteName}
       </span>
     </div>
     <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-      <span className="text-sm font-semibold text-chess-text truncate text-right">
+      <span className="text-xs font-medium text-chess-muted truncate text-right tracking-wide">
         {blackName}
       </span>
-      <PieceIndicator side="black" />
+      <PieceIndicator side="black" className="h-3 w-3 opacity-80" />
     </div>
   </div>
 );
