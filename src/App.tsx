@@ -106,6 +106,10 @@ export default function App() {
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const currentMoveIdxRef = useRef(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
+  const [analysisRunning, setAnalysisRunning] = useState(false);
+  const [showAnalysisProgress, setShowAnalysisProgress] = useState(false);
+  const showAnalysisProgressRef = useRef(false);
+  const analysisGenerationRef = useRef(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
@@ -505,45 +509,89 @@ export default function App() {
     }
   }, [moves, currentMoveIdx, navigateToMove]);
 
-  const startAnalysis = useCallback(async (pgnStr: string) => {
-    if (!pgnStr.trim()) return;
-    abortRef.current = false;
-    await recheckEngine();
-    setAnalysisState("analyzing");
-    setGamePlyCount(countPgnPlies(pgnStr));
-    setMoves([]);
-    setSummary(null);
-    setCurrentMoveIdx(-1);
-    setCurrentFen("start");
-    setCurrentEval(null);
-    setProgress({ done: 2, total: 100 });
-    const meta = extractGameMeta(pgnStr);
-    setPlayerNames({ white: meta.white, black: meta.black });
-    setGameMeta(meta);
-    setClocks(extractClocks(pgnStr));
+  useEffect(() => {
+    showAnalysisProgressRef.current = showAnalysisProgress;
+  }, [showAnalysisProgress]);
 
-    try {
-      const { moves: analyzedMoves, summary: reviewSummary } = await analyzePgn(
-        pgnStr,
-        (done, total) => {
-          if (abortRef.current) return;
-          setProgress({ done, total });
-        },
-        depth
-      );
-      if (!abortRef.current) {
+  const runAnalysis = useCallback(
+    async (pgnStr: string, options: { visible: boolean }) => {
+      if (!pgnStr.trim()) return;
+      const gen = ++analysisGenerationRef.current;
+      abortRef.current = false;
+      await recheckEngine();
+
+      const visible = options.visible;
+      if (visible) {
+        showAnalysisProgressRef.current = true;
+        setShowAnalysisProgress(true);
+        setAnalysisState("analyzing");
+        setMoves([]);
+        setSummary(null);
+        setCurrentMoveIdx(-1);
+        setCurrentFen("start");
+        setCurrentEval(null);
+        setProgress({ done: 2, total: 100 });
+        const meta = extractGameMeta(pgnStr);
+        setPlayerNames({ white: meta.white, black: meta.black });
+        setGameMeta(meta);
+        setClocks(extractClocks(pgnStr));
+      } else {
+        setProgress((p) => (p.total > 0 ? p : { done: 2, total: 100 }));
+      }
+
+      setAnalysisRunning(true);
+
+      try {
+        const { moves: analyzedMoves, summary: reviewSummary } = await analyzePgn(
+          pgnStr,
+          (done, total) => {
+            if (abortRef.current || gen !== analysisGenerationRef.current) return;
+            setProgress({ done, total });
+          },
+          depth
+        );
+        if (abortRef.current || gen !== analysisGenerationRef.current) return;
+
         setProgress({ done: 100, total: 100 });
         setMoves(analyzedMoves);
         setSummary(reviewSummary);
+        const openReview = showAnalysisProgressRef.current;
+        setAnalysisRunning(false);
+        setShowAnalysisProgress(false);
+        showAnalysisProgressRef.current = false;
         setAnalysisState("done");
-        setTab("review");
-        navigateToMove(-1, false);
+
+        if (openReview) {
+          setTab("review");
+          navigateToMove(-1, false);
+        }
+      } catch (e) {
+        if (gen !== analysisGenerationRef.current) return;
+        console.error(e);
+        setAnalysisRunning(false);
+        setShowAnalysisProgress(false);
+        showAnalysisProgressRef.current = false;
+        setAnalysisState("error");
       }
-    } catch (e) {
-      console.error(e);
-      setAnalysisState("error");
+    },
+    [navigateToMove, depth, recheckEngine]
+  );
+
+  /** User pressed Analyze — reveal progress UI or open review if already finished. */
+  const requestAnalysisUi = useCallback(() => {
+    if (!pgn.trim()) return;
+    if (analysisState === "done" && moves.length > 0) {
+      setTab("review");
+      return;
     }
-  }, [navigateToMove, depth, recheckEngine, activeUser?.name]);
+    if (analysisRunning) {
+      showAnalysisProgressRef.current = true;
+      setShowAnalysisProgress(true);
+      setAnalysisState("analyzing");
+      return;
+    }
+    void runAnalysis(pgn, { visible: true });
+  }, [pgn, analysisState, moves.length, analysisRunning, runAnalysis]);
 
   const loadPgn = useCallback((pgnStr: string) => {
     const parsed = parseGameText(pgnStr);
@@ -551,6 +599,11 @@ export default function App() {
       alert(parsed.error);
       return;
     }
+    abortRef.current = true;
+    analysisGenerationRef.current += 1;
+    setAnalysisRunning(false);
+    setShowAnalysisProgress(false);
+    showAnalysisProgressRef.current = false;
     setPgn(parsed.pgn);
     setReplayFrames(buildPgnReplayFrames(parsed.pgn));
     setGamePlyCount(parsed.moveCount);
@@ -572,12 +625,12 @@ export default function App() {
     setClocks(extractClocks(parsed.pgn));
   }, []);
 
-  const selectGameAndAnalyze = useCallback(
+  const selectGame = useCallback(
     (pgnStr: string) => {
       loadPgn(pgnStr);
-      void startAnalysis(pgnStr);
+      void runAnalysis(pgnStr, { visible: false });
     },
-    [loadPgn, startAnalysis]
+    [loadPgn, runAnalysis]
   );
 
   // Unlock Web Audio on first touch (required on iOS / Android Chrome)
@@ -650,8 +703,10 @@ export default function App() {
         ? (progress.done / progress.total) * 100
         : 0;
 
+  const isAnalyzing = showAnalysisProgress && analysisRunning;
+
   const progressPercent = useSmoothAnalysisProgress(
-    analysisState,
+    isAnalyzing ? "analyzing" : analysisState,
     rawProgressPercent
   );
 
@@ -668,7 +723,7 @@ export default function App() {
   }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
 
   useAnalysisBoardReplay({
-    active: analysisState === "analyzing",
+    active: isAnalyzing,
     replayFrames,
     progressDone: progressPercent,
     progressTotal: 100,
@@ -709,8 +764,6 @@ export default function App() {
     moves.length === 0 &&
     (analysisState === "loading" || analysisState === "error") &&
     (!isMobileLayout || tab === "moves");
-
-  const isAnalyzing = analysisState === "analyzing";
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -984,7 +1037,7 @@ export default function App() {
             {tab === "games" && (
               <GameList
                 username=""
-                onGameSelect={selectGameAndAnalyze}
+                onGameSelect={selectGame}
                 onLinkProfile={openProfilePanel}
               />
             )}
@@ -1000,10 +1053,10 @@ export default function App() {
                       {analysisState === "loading" && (
                         <AnalyzeNowButton
                           variant="compact"
-                          onClick={() => void startAnalysis(pgn)}
+                          onClick={() => requestAnalysisUi()}
                         />
                       )}
-                      {analysisState === "analyzing" && (
+                      {isAnalyzing && (
                         <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] text-chess-accent font-semibold tabular-nums">
                           <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
                           {Math.round(progressPercent)}%
@@ -1019,7 +1072,7 @@ export default function App() {
                           onMoveSelect={navigateToMove}
                           markGameEnd={!!gameEnd}
                         />
-                      ) : analysisState === "analyzing" ? (
+                      ) : isAnalyzing ? (
                         <AnalyzingMoveList
                           frames={replayFrames}
                           currentPly={progressToReplayPly(
@@ -1170,7 +1223,7 @@ export default function App() {
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
-                  onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
+                  onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1332,7 +1385,7 @@ export default function App() {
               >
                 <GameList
                   username=""
-                  onGameSelect={selectGameAndAnalyze}
+                  onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
                 />
               </div>
@@ -1412,7 +1465,7 @@ export default function App() {
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
-                  onAnalyze={pgn ? () => void startAnalysis(pgn) : undefined}
+                  onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                 />
               <PlayerTag
                 compact

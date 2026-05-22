@@ -22,8 +22,9 @@ export function useSmoothAnalysisProgress(
 
   useEffect(() => {
     if (state === "analyzing" && prevStateRef.current !== "analyzing") {
-      displayRef.current = 0;
-      targetRef.current = 0;
+      const seed = Math.max(4, Math.min(99, rawPercent));
+      displayRef.current = seed;
+      targetRef.current = seed;
       lastRealRef.current = Date.now();
     }
     prevStateRef.current = state;
