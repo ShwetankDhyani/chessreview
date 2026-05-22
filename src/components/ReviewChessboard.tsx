@@ -114,6 +114,7 @@ export function ReviewChessboard({
             to={arrow.to}
             boardWidth={renderedWidth}
             boardOrientation={boardOrientation}
+            variant={continuationArrow ? "continuation" : "hint"}
           />
         ) : null}
       </div>

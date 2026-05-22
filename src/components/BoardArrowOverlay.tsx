@@ -5,8 +5,25 @@ interface BoardArrowOverlayProps {
   to: string;
   boardWidth: number;
   boardOrientation: "white" | "black";
+  /** Best-move hint on the board; continuation line stays a bit stronger. */
+  variant?: "hint" | "continuation";
   color?: string;
 }
+
+const ARROW_STYLES = {
+  hint: {
+    color: "#c8e0a8",
+    strokeOpacity: 0.52,
+    fillOpacity: 0.58,
+    strokeScale: 52,
+  },
+  continuation: {
+    color: "#9bc96a",
+    strokeOpacity: 0.78,
+    fillOpacity: 0.82,
+    strokeScale: 40,
+  },
+} as const;
 
 /** Directional best-move / engine arrow with a drawn head (works on mobile + desktop). */
 export function BoardArrowOverlay({
@@ -14,8 +31,11 @@ export function BoardArrowOverlay({
   to,
   boardWidth,
   boardOrientation,
-  color = "#81b64c",
+  variant = "hint",
+  color,
 }: BoardArrowOverlayProps) {
+  const style = ARROW_STYLES[variant];
+  const strokeColor = color ?? style.color;
   const fromPt = getSquareCenter(from, boardOrientation, boardWidth);
   const toPt = getSquareCenter(to, boardOrientation, boardWidth);
   const dx = toPt.x - fromPt.x;
@@ -29,7 +49,7 @@ export function BoardArrowOverlay({
   const tailInset = sq * 0.2;
   const headLen = sq * 0.42;
   const headWidth = sq * 0.34;
-  const strokeW = Math.max(2.5, boardWidth / 40);
+  const strokeW = Math.max(2, boardWidth / style.strokeScale);
 
   const x1 = fromPt.x + ux * tailInset;
   const y1 = fromPt.y + uy * tailInset;
@@ -54,12 +74,16 @@ export function BoardArrowOverlay({
         y1={y1}
         x2={baseX}
         y2={baseY}
-        stroke={color}
+        stroke={strokeColor}
         strokeWidth={strokeW}
-        strokeLinecap="butt"
-        strokeOpacity={0.9}
+        strokeLinecap="round"
+        strokeOpacity={style.strokeOpacity}
       />
-      <polygon points={headPoints} fill={color} fillOpacity={0.95} />
+      <polygon
+        points={headPoints}
+        fill={strokeColor}
+        fillOpacity={style.fillOpacity}
+      />
     </svg>
   );
 }
