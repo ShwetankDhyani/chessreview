@@ -20,17 +20,14 @@ function StoryText({
   onJumpToMove: (idx: number) => void;
 }) {
   return (
-    <span className="inline leading-relaxed">
+    <>
       {segments.map((seg, i) => {
         if (seg.kind === "text") {
           return <span key={i}>{seg.value}</span>;
         }
         if (seg.kind === "player") {
           return (
-            <span
-              key={i}
-              className="text-chess-text/85 font-medium"
-            >
+            <span key={i} className="text-chess-text font-medium">
               {seg.name}
             </span>
           );
@@ -48,16 +45,16 @@ function StoryText({
               hapticTap();
               onJumpToMove(seg.moveIdx);
             }}
-            className={`inline font-mono text-[0.92em] font-medium align-baseline cursor-pointer border-0 bg-transparent p-0 underline underline-offset-[3px] transition-opacity hover:opacity-80 ${
+            className={`inline font-mono text-[0.95em] font-medium align-baseline cursor-pointer border-0 bg-transparent p-0 mx-0.5 underline underline-offset-[3px] transition-opacity hover:opacity-80 ${
               meta
                 ? ""
-                : "text-chess-accent/90 decoration-chess-accent/30 hover:decoration-chess-accent/55"
+                : "text-chess-accent decoration-chess-accent/35 hover:decoration-chess-accent/60"
             }`}
             style={
               meta
                 ? {
-                    color: `${meta.color}cc`,
-                    textDecorationColor: `${meta.color}40`,
+                    color: meta.color,
+                    textDecorationColor: `${meta.color}50`,
                   }
                 : undefined
             }
@@ -67,7 +64,7 @@ function StoryText({
           </button>
         );
       })}
-    </span>
+    </>
   );
 }
 
@@ -81,13 +78,24 @@ export function ReviewStoryCard({
   const story = buildReviewStory(summary, moves, whiteName, blackName);
 
   return (
-    <div className="rounded-xl border border-chess-accent/20 bg-gradient-to-br from-chess-accent/10 via-chess-bg/40 to-transparent p-3.5 mb-3 shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-accent/90 mb-2">
+    <div className="rounded-xl border border-chess-border/60 bg-chess-bg/30 p-3.5 mb-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-muted mb-2.5">
         Game story
       </p>
-      <p className="text-sm text-chess-subtext leading-relaxed">
-        <StoryText segments={story.body} onJumpToMove={onJumpToMove} />
-      </p>
+      <div className="space-y-2">
+        {story.lines.map((line, i) => (
+          <p
+            key={i}
+            className={
+              i === 0
+                ? "text-[13px] text-chess-text leading-[1.55]"
+                : "text-xs text-chess-subtext leading-[1.5] pl-2.5 border-l border-chess-border/50"
+            }
+          >
+            <StoryText segments={line} onJumpToMove={onJumpToMove} />
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

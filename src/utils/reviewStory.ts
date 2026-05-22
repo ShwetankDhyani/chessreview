@@ -14,7 +14,8 @@ export type StorySegment =
     };
 
 export interface ReviewStory {
-  body: StorySegment[];
+  /** One or two short lines — each renders as its own paragraph. */
+  lines: StorySegment[][];
 }
 
 function storySeed(summary: ReviewSummary, moves: AnalyzedMove[]): number {
@@ -391,166 +392,160 @@ function slipLabel(classification: KeyMoment["classification"]): string {
   return meta?.label.toLowerCase() ?? "mistake";
 }
 
-function swingPhrase(pawns: number): string {
-  const n = Math.round(pawns);
-  if (n >= 10) return `about ${n} pawns of eval`;
-  if (n >= 5) return `roughly ${n} pawns of eval`;
-  if (n >= 2) return `a ${n}-pawn swing`;
-  return "a small eval shift";
+function swingPhraseShort(pawns: number): string {
+  const n = Math.max(1, Math.round(pawns));
+  if (n === 1) return "about one pawn of eval";
+  return `about ${n} pawns of eval`;
 }
 
-function buildKeyPoint(
+function accuracyLine(wAcc: number, bAcc: number): StorySegment[] {
+  return [textSeg(`Accuracy: ${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%.`)];
+}
+
+function composeStory(
   summary: ReviewSummary,
   moves: AnalyzedMove[],
   whiteName: string,
   blackName: string,
   seed: number
-): StorySegment[] {
+): StorySegment[][] {
   const wAcc = summary.accuracy.white;
   const bAcc = summary.accuracy.black;
   const accGap = Math.abs(wAcc - bAcc);
   const margin = gameMargin(accGap);
   const accLeader: StorySide = wAcc >= bAcc ? "white" : "black";
+  const leaderName = accLeader === "white" ? whiteName : blackName;
+  const wErr = countMistakes(summary, "white");
+  const bErr = countMistakes(summary, "black");
+  if (wErr + bErr === 0) {
+    return [buildCleanStory(seed)];
+  }
 
   const moments = [...(summary.keyMoments ?? [])];
-  const turn = pickTurningPoint(moments, moves);
-  const wSlips = countMistakes(summary, "white");
-  const bSlips = countMistakes(summary, "black");
+  const turnWrap = pickTurningPoint(moments, moves);
+  const structural = pickStructuralTurningPoint(moves);
 
-  if (turn && turn.moment.swing >= 1) {
-    const top = turn.moment;
+  if (turnWrap && turnWrap.moment.swing >= 1) {
+    const km = turnWrap.moment;
+    const slip = slipLabel(km.classification);
+    const swing = swingPhraseShort(km.swing);
 
-    if (turn.structural) {
-      const structural = pickStructuralTurningPoint(moves)!;
-      const gained = sideLabel(structural.sideGained);
-
-      if (margin === "close") {
-        return pick(seed, 20, [
-          [
-            textSeg("The game tipped on "),
-            moveSeg(top),
-            textSeg(` — after that ${gained} kept a firm grip; the rest was holding on.`),
-          ],
-          [
-            textSeg("From "),
-            moveSeg(top),
-            textSeg(` onward the eval never really came back — decided well before the late noise.`),
-          ],
-        ]);
-      }
-
-      if (margin === "wide") {
-        return pick(seed, 22, [
-          [
-            textSeg("It was already lopsided, but "),
-            moveSeg(top),
-            textSeg(` is where the door closed — ${gained} never gave it back.`),
-          ],
-          [
-            textSeg("The line broke on "),
-            moveSeg(top),
-            textSeg(`; from there ${gained} stayed in control.`),
-          ],
-        ]);
-      }
-
-      return pick(seed, 24, [
+    if (margin === "wide" && turnWrap.structural && structural) {
+      return pick(seed, 0, [
         [
-          textSeg("The decisive shift was "),
-          moveSeg(top),
-          textSeg(` — ${gained} took over and the position never equalized.`),
+          [
+            playerSeg(leaderName, accLeader),
+            textSeg(" took over on "),
+            moveSeg(km),
+            textSeg(` — a ${slip} (${swing}) — and held the advantage for good.`),
+          ],
+          accuracyLine(wAcc, bAcc),
         ],
         [
-          textSeg("After "),
-          moveSeg(top),
-          textSeg(`, the game stayed in one camp; later slips only piled on.`),
-        ],
-      ]);
-    }
-
-    const slip = slipLabel(top.classification);
-    const swing = swingPhrase(top.swing);
-
-    if (margin === "close") {
-      return pick(seed, 26, [
-        [
-          textSeg("The turning point was "),
-          moveSeg(top),
-          textSeg(` — a ${slip} (${swing}) in an otherwise close game.`),
-        ],
-        [
-          textSeg("What hurt most: "),
-          moveSeg(top),
-          textSeg(`, a ${slip} worth ${swing}.`),
+          [
+            textSeg("The game broke early on "),
+            moveSeg(km),
+            textSeg(` (${slip}, ${swing}). `),
+            playerSeg(leaderName, accLeader),
+            textSeg(" ran away with it from there."),
+          ],
+          accuracyLine(wAcc, bAcc),
         ],
       ]);
     }
 
     if (margin === "wide") {
-      return pick(seed, 28, [
+      return pick(seed, 2, [
         [
-          textSeg("Already one-sided — "),
-          moveSeg(top),
-          textSeg(` stands out as a ${slip} (${swing}).`),
+          [
+            playerSeg(leaderName, accLeader),
+            textSeg(" were on another level — not a close match on accuracy."),
+          ],
+          [
+            textSeg("The clearest mistake was "),
+            moveSeg(km),
+            textSeg(` (${slip}, ${swing}).`),
+          ],
         ],
         [
-          textSeg("The clearest slip was "),
-          moveSeg(top),
-          textSeg(` (${swing}), on top of a wide accuracy gap.`),
+          [
+            playerSeg(leaderName, accLeader),
+            textSeg(" outclassed their opponent on precision."),
+          ],
+          [
+            textSeg("Worst slip: "),
+            moveSeg(km),
+            textSeg(` — ${slip}, ${swing}.`),
+          ],
         ],
       ]);
     }
 
-    return pick(seed, 30, [
-      [
-        textSeg("The difference showed on "),
-        moveSeg(top),
-        textSeg(` — a ${slip} (${swing}).`),
-      ],
-    ]);
-  }
-
-  if (margin === "close") {
-    if (wSlips !== bSlips) {
-      const moreSide: StorySide = wSlips > bSlips ? "white" : "black";
-      const moreLabel = sideLabel(moreSide);
-      return pick(seed, 32, [
+    if (margin === "close" && turnWrap.structural && structural) {
+      const gained = sideLabel(structural.sideGained);
+      return pick(seed, 4, [
         [
-          textSeg(`No single meltdown — ${moreLabel} had a few more slips, enough in a tight game.`),
+          [textSeg("A tight game on accuracy.")],
+          [
+            textSeg("It turned on "),
+            moveSeg(km),
+            textSeg(` — after that ${gained} kept the edge.`),
+          ],
         ],
         [
-          textSeg("Close on accuracy; the extra inaccuracies were the difference."),
+          [
+            textSeg("The eval swung on "),
+            moveSeg(km),
+            textSeg(" and never came back."),
+          ],
         ],
       ]);
     }
-    return pick(seed, 34, [
+
+    if (margin === "close") {
+      return pick(seed, 6, [
+        [
+          [textSeg("A close game — small margins throughout.")],
+          [
+            textSeg("The turning point was "),
+            moveSeg(km),
+            textSeg(` (${slip}, ${swing}).`),
+          ],
+        ],
+      ]);
+    }
+
+    return [
       [
-        textSeg("Hard to split on accuracy — see key moments for where the eval moved."),
+        textSeg("The main swing was "),
+        moveSeg(km),
+        textSeg(` — ${slip} (${swing}).`),
       ],
-    ]);
+      accuracyLine(wAcc, bAcc),
+    ];
   }
 
   if (margin === "wide") {
-    const leaderLabel = sideLabel(accLeader);
-    return pick(seed, 36, [
+    return [
       [
-        textSeg(`Bottom line: ${leaderLabel} at ${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}% — a different level, one-sided on precision.`),
+        playerSeg(leaderName, accLeader),
+        textSeg(` were on another level (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}% accuracy) — a one-sided affair.`),
       ],
-      [
-        textSeg(`Not a fair fight on accuracy (${accGap.toFixed(0)} points) — ${leaderLabel} outclassed their opponent.`),
-      ],
-    ]);
+    ];
   }
 
-  return pick(seed, 38, [
-    [
-      textSeg(`Sharper overall (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%) — real edge, not a blowout.`),
-    ],
-  ]);
-}
+  if (margin === "close") {
+    const wSlips = countMistakes(summary, "white");
+    const bSlips = countMistakes(summary, "black");
+    if (wSlips !== bSlips) {
+      const moreLabel = sideLabel(wSlips > bSlips ? "white" : "black");
+      return [[textSeg(`Close on accuracy — ${moreLabel} had a few more slips, and that was enough.`)]];
+    }
+    return [[textSeg("Very tight on accuracy — the key moments below show where it moved.")]];
+  }
 
-function joinParagraph(arc: StorySegment[], keyPoint: StorySegment[]): StorySegment[] {
-  return [...arc, textSeg(" "), ...keyPoint];
+  const arc = buildNarrativeBody(summary, whiteName, blackName, seed);
+  return [arc];
 }
 
 function buildNarrativeBody(
@@ -642,9 +637,7 @@ export function buildReviewStory(
   blackName: string
 ): ReviewStory {
   const seed = storySeed(summary, moves);
-  const arc = buildNarrativeBody(summary, whiteName, blackName, seed);
-  const keyPoint = buildKeyPoint(summary, moves, whiteName, blackName, seed);
   return {
-    body: joinParagraph(arc, keyPoint),
+    lines: composeStory(summary, moves, whiteName, blackName, seed),
   };
 }
