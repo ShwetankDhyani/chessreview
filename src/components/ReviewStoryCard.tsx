@@ -29,7 +29,7 @@ function StoryText({
           return (
             <span
               key={i}
-              className="font-medium text-chess-text/95 bg-chess-border/25 px-1 rounded-sm box-decoration-clone"
+              className="text-chess-text/85 font-medium"
             >
               {seg.name}
             </span>
@@ -48,14 +48,16 @@ function StoryText({
               hapticTap();
               onJumpToMove(seg.moveIdx);
             }}
-            className={`inline font-mono text-[0.92em] font-semibold align-baseline cursor-pointer border-0 bg-transparent p-0 mx-0.5 underline underline-offset-[3px] transition-colors hover:opacity-90 ${
-              meta ? "" : "text-chess-accent decoration-chess-accent/40 hover:decoration-chess-accent/70"
+            className={`inline font-mono text-[0.92em] font-medium align-baseline cursor-pointer border-0 bg-transparent p-0 underline underline-offset-[3px] transition-opacity hover:opacity-80 ${
+              meta
+                ? ""
+                : "text-chess-accent/90 decoration-chess-accent/30 hover:decoration-chess-accent/55"
             }`}
             style={
               meta
                 ? {
-                    color: meta.color,
-                    textDecorationColor: `${meta.color}55`,
+                    color: `${meta.color}cc`,
+                    textDecorationColor: `${meta.color}40`,
                   }
                 : undefined
             }

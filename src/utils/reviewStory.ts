@@ -56,27 +56,13 @@ function buildCollapseEarlyStory(
   seed: number
 ): StorySegment[] {
   const leaderName = leader === "white" ? whiteName : blackName;
-  const otherName = leader === "white" ? blackName : whiteName;
-  const otherSide: StorySide = leader === "white" ? "black" : "white";
   return pick(seed, 0, [
     [
       playerSeg(leaderName, leader),
-      textSeg(" had the better of the opening and middlegame, but "),
-      playerSeg(otherName, otherSide),
-      textSeg(" took over in the endgame — that's where it unraveled."),
+      textSeg(" led through the opening and middlegame, then lost the endgame — a late collapse."),
     ],
     [
-      playerSeg(leaderName, leader),
-      textSeg(" were on top through the opening and middle game until "),
-      playerSeg(otherName, otherSide),
-      textSeg(" flipped the script in the endgame."),
-    ],
-    [
-      textSeg("After a strong opening and middlegame from "),
-      playerSeg(leaderName, leader),
-      textSeg(", "),
-      playerSeg(otherName, otherSide),
-      textSeg(" stole the point late — the endgame cost them."),
+      textSeg("Strong opening and middle game, then the endgame flipped — that's where it unraveled."),
     ],
   ]);
 }
@@ -88,23 +74,13 @@ function buildLateComebackStory(
   seed: number
 ): StorySegment[] {
   const heroName = hero === "white" ? whiteName : blackName;
-  const foeName = hero === "white" ? blackName : whiteName;
-  const foeSide: StorySide = hero === "white" ? "black" : "white";
   return pick(seed, 2, [
     [
       playerSeg(heroName, hero),
-      textSeg(" were behind earlier, then found their footing in the endgame and turned the game around."),
+      textSeg(" were behind earlier, then owned the endgame and turned it around."),
     ],
     [
-      textSeg("It looked rough for "),
-      playerSeg(heroName, hero),
-      textSeg(" in the early phases — they rallied in the endgame and made it count."),
-    ],
-    [
-      playerSeg(foeName, foeSide),
-      textSeg(" had the edge for much of the game, but "),
-      playerSeg(heroName, hero),
-      textSeg(" owned the endgame when it mattered."),
+      textSeg("Rough early phases, but the endgame rescue decided it."),
     ],
   ]);
 }
@@ -116,26 +92,14 @@ function buildEndgameDeciderStory(
   seed: number
 ): StorySegment[] {
   const leaderName = endLeader === "white" ? whiteName : blackName;
-  const otherName = endLeader === "white" ? blackName : whiteName;
-  const otherSide: StorySide = endLeader === "white" ? "black" : "white";
   return pick(seed, 4, [
     [
-      textSeg("The opening and middlegame stayed level — "),
+      textSeg("Opening and middlegame were level — "),
       playerSeg(leaderName, endLeader),
-      textSeg(" made the difference in the endgame."),
+      textSeg(" took over in the endgame."),
     ],
     [
-      textSeg("Neither side pulled away early; "),
-      playerSeg(leaderName, endLeader),
-      textSeg(" were sharper when the endgame arrived."),
-    ],
-    [
-      playerSeg(otherName, otherSide),
-      textSeg(" and "),
-      playerSeg(leaderName, endLeader),
-      textSeg(" traded blows until the endgame, where "),
-      playerSeg(leaderName, endLeader),
-      textSeg(" took control."),
+      textSeg("Even through the middle game; the endgame is where it broke."),
     ],
   ]);
 }
@@ -147,25 +111,13 @@ function buildSteadyDominanceStory(
   seed: number
 ): StorySegment[] {
   const leaderName = leader === "white" ? whiteName : blackName;
-  const otherName = leader === "white" ? blackName : whiteName;
-  const otherSide: StorySide = leader === "white" ? "black" : "white";
   return pick(seed, 6, [
     [
       playerSeg(leaderName, leader),
-      textSeg(" were on a different level from start to finish — a one-sided affair on accuracy."),
+      textSeg(" were on a different level from start to finish — a one-sided affair."),
     ],
     [
-      textSeg("A mismatch: "),
-      playerSeg(leaderName, leader),
-      textSeg(" played in a different league; "),
-      playerSeg(otherName, otherSide),
-      textSeg(" never got into the game on precision."),
-    ],
-    [
-      playerSeg(leaderName, leader),
-      textSeg(" dominated every phase — "),
-      playerSeg(otherName, otherSide),
-      textSeg(" were outclassed, not just edged out."),
+      textSeg("A mismatch on accuracy — one side in another league, start to finish."),
     ],
   ]);
 }
@@ -191,27 +143,14 @@ function buildMiddlegameSwingStory(
 }
 
 function buildEvenStory(
-  whiteName: string,
-  blackName: string,
+  _whiteName: string,
+  _blackName: string,
   seed: number
 ): StorySegment[] {
   return pick(seed, 10, [
-    [
-      textSeg("A tight game — "),
-      playerSeg(whiteName, "white"),
-      textSeg(" and "),
-      playerSeg(blackName, "black"),
-      textSeg(" stayed close on accuracy with no clear phase winner."),
-    ],
-    [
-      playerSeg(whiteName, "white"),
-      textSeg(" and "),
-      playerSeg(blackName, "black"),
-      textSeg(" matched each other; small details rather than one phase decided it."),
-    ],
-    [
-      textSeg("Neither player ran away with a phase — a balanced fight from start to finish."),
-    ],
+    [textSeg("A tight game on accuracy — no clear phase edge.")],
+    [textSeg("Matched each other on precision; small details decided it.")],
+    [textSeg("Balanced fight from start to finish — neither side ran away with a phase.")],
   ]);
 }
 
@@ -223,8 +162,6 @@ function buildOverallAccuracyStory(
   accGap: number
 ): StorySegment[] {
   const leaderName = leader === "white" ? whiteName : blackName;
-  const otherName = leader === "white" ? blackName : whiteName;
-  const otherSide: StorySide = leader === "white" ? "black" : "white";
 
   if (accGap >= 15) {
     return pick(seed, 12, [
@@ -232,36 +169,16 @@ function buildOverallAccuracyStory(
         playerSeg(leaderName, leader),
         textSeg(" were in a different league on accuracy — a one-sided affair."),
       ],
-      [
-        textSeg("Not close on precision: "),
-        playerSeg(leaderName, leader),
-        textSeg(" outclassed "),
-        playerSeg(otherName, otherSide),
-        textSeg(" from start to finish."),
-      ],
-      [
-        playerSeg(otherName, otherSide),
-        textSeg(" were outmatched — "),
-        playerSeg(leaderName, leader),
-        textSeg(" played on another level."),
-      ],
+      [textSeg("Not close on precision — one side outclassed the other throughout.")],
     ]);
   }
 
   return pick(seed, 12, [
     [
       playerSeg(leaderName, leader),
-      textSeg(" were more accurate overall, while "),
-      playerSeg(otherName, otherSide),
-      textSeg(" had the bigger slips."),
+      textSeg(" were sharper overall; the bigger slips came from the other side."),
     ],
-    [
-      textSeg("On pure precision, "),
-      playerSeg(leaderName, leader),
-      textSeg(" had the upper hand over "),
-      playerSeg(otherName, otherSide),
-      textSeg("."),
-    ],
+    [textSeg("A real edge on precision, if not a blowout.")],
   ]);
 }
 
@@ -290,6 +207,109 @@ function moveSeg(km: KeyMoment): StorySegment {
     moveIdx: km.moveIdx,
     label: moveNotation(km),
     classification: km.classification ?? undefined,
+  };
+}
+
+function sideLabel(side: StorySide): string {
+  return side === "white" ? "White" : "Black";
+}
+
+function evalCpWhite(m: AnalyzedMove, when: "before" | "after"): number | null {
+  const ev = when === "before" ? m.evalBefore : m.evalAfter;
+  if (!ev) return null;
+  if (ev.mate !== undefined) {
+    if (ev.mate > 0) return 12;
+    if (ev.mate < 0) return -12;
+    return 0;
+  }
+  return (ev.cp ?? 0) / 100;
+}
+
+interface StructuralTurn {
+  moveIdx: number;
+  sideGained: StorySide;
+  shiftPawns: number;
+  heldRatio: number;
+  score: number;
+}
+
+/**
+ * Find when the eval crossed and stayed on one side — earlier than a late blunder.
+ */
+function pickStructuralTurningPoint(moves: AnalyzedMove[]): StructuralTurn | null {
+  const OPENING_SKIP = 6;
+  const CONTESTABLE = 2.0;
+  const HELD_CP = 1.0;
+  const MIN_SWING = 1.2;
+  const MIN_HELD = 0.68;
+  const MIN_TAIL = 5;
+
+  let best: StructuralTurn | null = null;
+
+  for (let i = OPENING_SKIP; i < moves.length - MIN_TAIL; i++) {
+    const m = moves[i];
+    if (/#|\+\+?\s*$/.test(m.san)) continue;
+
+    const cpBefore = evalCpWhite(m, "before");
+    const cpAfter = evalCpWhite(m, "after");
+    if (cpBefore === null || cpAfter === null) continue;
+    if (Math.abs(cpBefore) > CONTESTABLE) continue;
+
+    const swing = cpAfter - cpBefore;
+    if (Math.abs(swing) < MIN_SWING && Math.abs(cpAfter) < HELD_CP + 0.5) {
+      continue;
+    }
+
+    const leaderSign = cpAfter >= 0 ? 1 : -1;
+    const sideGained: StorySide = cpAfter >= 0 ? "white" : "black";
+
+    let held = 0;
+    let total = 0;
+    for (let j = i + 1; j < moves.length; j++) {
+      const cp = evalCpWhite(moves[j], "after");
+      if (cp === null) continue;
+      total++;
+      if (leaderSign * cp >= HELD_CP) held++;
+    }
+    if (total < MIN_TAIL) continue;
+
+    const heldRatio = held / total;
+    if (heldRatio < MIN_HELD) continue;
+
+    let score = heldRatio * 60 + Math.abs(swing) * 8 + Math.abs(cpAfter) * 3;
+    score -= i * 0.15;
+    if (
+      m.classification === "blunder" ||
+      m.classification === "mistake" ||
+      m.classification === "inaccuracy"
+    ) {
+      score += 6;
+    }
+    if (m.deltaE >= 0.8) score += 4;
+
+    if (!best || score > best.score) {
+      best = {
+        moveIdx: i,
+        sideGained,
+        shiftPawns: Math.abs(swing),
+        heldRatio,
+        score,
+      };
+    }
+  }
+
+  return best;
+}
+
+function structuralToKeyMoment(turn: StructuralTurn, moves: AnalyzedMove[]): KeyMoment {
+  const m = moves[turn.moveIdx];
+  return {
+    moveIdx: turn.moveIdx,
+    san: m.san,
+    moveNumber: m.moveNumber,
+    color: m.color,
+    classification: m.classification,
+    swing: turn.shiftPawns,
   };
 }
 
@@ -344,6 +364,27 @@ function pickDecisiveMoment(
   return [...eligible].sort((a, b) => priority(b) - priority(a))[0]!;
 }
 
+function pickTurningPoint(
+  moments: KeyMoment[],
+  moves: AnalyzedMove[]
+): { moment: KeyMoment; structural: boolean } | null {
+  const structural = pickStructuralTurningPoint(moves);
+  const slip = pickDecisiveMoment(moments, moves);
+
+  if (structural) {
+    const km = structuralToKeyMoment(structural, moves);
+    if (!slip || structural.moveIdx <= slip.moveIdx) {
+      return { moment: km, structural: true };
+    }
+    if (structural.heldRatio >= 0.74 && slip.moveIdx - structural.moveIdx >= 4) {
+      return { moment: km, structural: true };
+    }
+  }
+
+  if (slip) return { moment: slip, structural: false };
+  return null;
+}
+
 function slipLabel(classification: KeyMoment["classification"]): string {
   if (!classification) return "critical slip";
   const meta = CLASSIFICATION_META[classification as keyof typeof CLASSIFICATION_META];
@@ -370,87 +411,101 @@ function buildKeyPoint(
   const accGap = Math.abs(wAcc - bAcc);
   const margin = gameMargin(accGap);
   const accLeader: StorySide = wAcc >= bAcc ? "white" : "black";
-  const leaderName = accLeader === "white" ? whiteName : blackName;
-  const trailerName = accLeader === "white" ? blackName : whiteName;
-  const trailerSide: StorySide = accLeader === "white" ? "black" : "white";
 
   const moments = [...(summary.keyMoments ?? [])];
-  const top = pickDecisiveMoment(moments, moves);
+  const turn = pickTurningPoint(moments, moves);
   const wSlips = countMistakes(summary, "white");
   const bSlips = countMistakes(summary, "black");
 
-  if (top && top.swing >= 1.5) {
-    const culprit: StorySide = top.color === "w" ? "white" : "black";
-    const culpritName = culprit === "white" ? whiteName : blackName;
+  if (turn && turn.moment.swing >= 1) {
+    const top = turn.moment;
+
+    if (turn.structural) {
+      const structural = pickStructuralTurningPoint(moves)!;
+      const gained = sideLabel(structural.sideGained);
+
+      if (margin === "close") {
+        return pick(seed, 20, [
+          [
+            textSeg("The game tipped on "),
+            moveSeg(top),
+            textSeg(` — after that ${gained} kept a firm grip; the rest was holding on.`),
+          ],
+          [
+            textSeg("From "),
+            moveSeg(top),
+            textSeg(` onward the eval never really came back — decided well before the late noise.`),
+          ],
+        ]);
+      }
+
+      if (margin === "wide") {
+        return pick(seed, 22, [
+          [
+            textSeg("It was already lopsided, but "),
+            moveSeg(top),
+            textSeg(` is where the door closed — ${gained} never gave it back.`),
+          ],
+          [
+            textSeg("The line broke on "),
+            moveSeg(top),
+            textSeg(`; from there ${gained} stayed in control.`),
+          ],
+        ]);
+      }
+
+      return pick(seed, 24, [
+        [
+          textSeg("The decisive shift was "),
+          moveSeg(top),
+          textSeg(` — ${gained} took over and the position never equalized.`),
+        ],
+        [
+          textSeg("After "),
+          moveSeg(top),
+          textSeg(`, the game stayed in one camp; later slips only piled on.`),
+        ],
+      ]);
+    }
+
     const slip = slipLabel(top.classification);
     const swing = swingPhrase(top.swing);
 
     if (margin === "close") {
-      return pick(seed, 20, [
+      return pick(seed, 26, [
         [
-          textSeg("What decided it was "),
+          textSeg("The turning point was "),
           moveSeg(top),
-          textSeg(" — "),
-          playerSeg(culpritName, culprit),
-          textSeg(`'s ${slip} (${swing}) in an otherwise close game.`),
+          textSeg(` — a ${slip} (${swing}) in an otherwise close game.`),
         ],
         [
-          textSeg("The turning point: "),
+          textSeg("What hurt most: "),
           moveSeg(top),
-          textSeg(", a "),
-          textSeg(slip),
-          textSeg(" from "),
-          playerSeg(culpritName, culprit),
-          textSeg(` worth ${swing} — small margins until then.`),
+          textSeg(`, a ${slip} worth ${swing}.`),
         ],
       ]);
     }
 
     if (margin === "wide") {
-      return pick(seed, 22, [
+      return pick(seed, 28, [
         [
-          textSeg("On top of a one-sided accuracy gap, "),
+          textSeg("Already one-sided — "),
           moveSeg(top),
-          textSeg(" was the headline — "),
-          playerSeg(culpritName, culprit),
-          textSeg(`'s ${slip} (${swing}) in a game `),
-          playerSeg(leaderName, accLeader),
-          textSeg(" were already winning on precision."),
+          textSeg(` stands out as a ${slip} (${swing}).`),
         ],
         [
-          playerSeg(leaderName, accLeader),
-          textSeg(" were in a different league; "),
+          textSeg("The clearest slip was "),
           moveSeg(top),
-          textSeg(" just made it louder — a "),
-          textSeg(slip),
-          textSeg(` worth ${swing}.`),
-        ],
-        [
-          textSeg("Not a close contest: "),
-          playerSeg(leaderName, accLeader),
-          textSeg(" dominated accuracy, and "),
-          moveSeg(top),
-          textSeg(" was the biggest real swing."),
+          textSeg(` (${swing}), on top of a wide accuracy gap.`),
         ],
       ]);
     }
 
-    return pick(seed, 24, [
+    return pick(seed, 30, [
       [
-        textSeg("The difference showed clearest on "),
+        textSeg("The difference showed on "),
         moveSeg(top),
-        textSeg(" — "),
-        playerSeg(culpritName, culprit),
-        textSeg(`'s ${slip} (${swing}).`),
-      ],
-      [
-        textSeg("That swung it: "),
-        moveSeg(top),
-        textSeg(", a "),
-        textSeg(slip),
-        textSeg(" from "),
-        playerSeg(culpritName, culprit),
-        textSeg(` worth ${swing}.`),
+        textSeg(` — a ${slip} (${swing}).`),
       ],
     ]);
   }
@@ -458,76 +513,38 @@ function buildKeyPoint(
   if (margin === "close") {
     if (wSlips !== bSlips) {
       const moreSide: StorySide = wSlips > bSlips ? "white" : "black";
-      const moreName = moreSide === "white" ? whiteName : blackName;
-      const fewerName = moreSide === "white" ? blackName : whiteName;
-      const fewerSide: StorySide = moreSide === "white" ? "black" : "white";
-      return pick(seed, 26, [
+      const moreLabel = sideLabel(moreSide);
+      return pick(seed, 32, [
         [
-          textSeg("No single meltdown — "),
-          playerSeg(moreName, moreSide),
-          textSeg(" had a few more slips than "),
-          playerSeg(fewerName, fewerSide),
-          textSeg(", and that was enough in a tight game."),
+          textSeg(`No single meltdown — ${moreLabel} had a few more slips, enough in a tight game.`),
         ],
         [
-          textSeg("It stayed close on accuracy; "),
-          playerSeg(moreName, moreSide),
-          textSeg("'s extra inaccuracies edged "),
-          playerSeg(fewerName, fewerSide),
-          textSeg(" out."),
+          textSeg("Close on accuracy; the extra inaccuracies were the difference."),
         ],
       ]);
     }
-    return pick(seed, 28, [
+    return pick(seed, 34, [
       [
-        textSeg("Hard to split them on accuracy — the result likely came down to one or two moments below."),
-      ],
-      [
-        textSeg("Neck-and-neck on precision; check key moments for where the eval actually moved."),
+        textSeg("Hard to split on accuracy — see key moments for where the eval moved."),
       ],
     ]);
   }
 
   if (margin === "wide") {
-    return pick(seed, 30, [
+    const leaderLabel = sideLabel(accLeader);
+    return pick(seed, 36, [
       [
-        textSeg("Bottom line: "),
-        playerSeg(leaderName, accLeader),
-        textSeg(` at ${wAcc.toFixed(0)}% vs `),
-        playerSeg(trailerName, trailerSide),
-        textSeg(`${bAcc.toFixed(0)}% — `),
-        playerSeg(leaderName, accLeader),
-        textSeg(" were on a different level; a one-sided affair."),
+        textSeg(`Bottom line: ${leaderLabel} at ${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}% — a different level, one-sided on precision.`),
       ],
       [
-        playerSeg(trailerName, trailerSide),
-        textSeg(" were outclassed on accuracy ("),
-        textSeg(`${accGap.toFixed(0)} points`),
-        textSeg(") — not really a fair fight on precision."),
-      ],
-      [
-        textSeg("This wasn't close: "),
-        playerSeg(leaderName, accLeader),
-        textSeg(" played in a different league, and "),
-        playerSeg(trailerName, trailerSide),
-        textSeg(" never matched it."),
+        textSeg(`Not a fair fight on accuracy (${accGap.toFixed(0)} points) — ${leaderLabel} outclassed their opponent.`),
       ],
     ]);
   }
 
-  return pick(seed, 32, [
+  return pick(seed, 38, [
     [
-      textSeg("Overall, "),
-      playerSeg(leaderName, accLeader),
-      textSeg(" were sharper ("),
-      textSeg(`${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%`),
-      textSeg(") — the margin was real but not a blowout."),
-    ],
-    [
-      playerSeg(leaderName, accLeader),
-      textSeg(" had the edge on accuracy; "),
-      playerSeg(trailerName, trailerSide),
-      textSeg(" needed cleaner play in the critical spots."),
+      textSeg(`Sharper overall (${wAcc.toFixed(0)}% vs ${bAcc.toFixed(0)}%) — real edge, not a blowout.`),
     ],
   ]);
 }
