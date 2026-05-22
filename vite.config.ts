@@ -1,8 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { createGameImportMiddleware } from "./server/gameUrlImport.mjs";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "game-import-api",
+      configureServer(server) {
+        server.middlewares.use(createGameImportMiddleware());
+      },
+    },
+  ],
   worker: {
     format: "es",
   },
