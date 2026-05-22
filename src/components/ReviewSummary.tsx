@@ -51,9 +51,7 @@ function ReviewSection({
 }) {
   return (
     <section
-      className={
-        first ? "" : "pt-4 mt-4 border-t border-chess-border/50"
-      }
+      className={first ? "" : "pt-4 mt-4 border-t border-chess-border/50"}
     >
       <h3 className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider mb-3">
         {title}
@@ -93,9 +91,15 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   return (
     <div className="flex flex-col p-3 sm:p-4 animate-fade-in">
+      <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />
+
       <ReviewSection title="Overall accuracy" first>
         <div className="flex items-stretch gap-1">
-          <AccuracyWheel accuracy={wAcc} color="white" username={wLabel} />
+          <AccuracyWheel
+            accuracy={wAcc}
+            color="white"
+            showName={false}
+          />
           <div className="flex flex-col items-center justify-center px-1.5 min-w-[2.75rem]">
             <span className="text-[9px] text-chess-muted uppercase tracking-wider">
               Gap
@@ -108,20 +112,32 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
               {accGap.toFixed(0)}%
             </span>
             {accLeader && (
-              <span className="text-[9px] text-chess-muted mt-0.5 text-center leading-tight max-w-[3rem] truncate">
-                {accLeader === "white" ? wLabel : bLabel}
-              </span>
+              <PieceIndicator side={accLeader} className="mt-1 h-3 w-3" />
             )}
           </div>
-          <AccuracyWheel accuracy={bAcc} color="black" username={bLabel} />
+          <AccuracyWheel
+            accuracy={bAcc}
+            color="black"
+            showName={false}
+          />
         </div>
       </ReviewSection>
 
       <ReviewSection title="Move breakdown">
-        <PlayerCompareHeader whiteName={wLabel} blackName={bLabel} />
-        <p className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center mb-2">
-          Type
-        </p>
+        <div
+          className="grid gap-x-2 mb-2 min-w-0"
+          style={{ gridTemplateColumns: MOVE_GRID }}
+        >
+          <div className="flex justify-end pr-1">
+            <PieceIndicator side="white" />
+          </div>
+          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center self-center">
+            Type
+          </span>
+          <div className="flex justify-start pl-1">
+            <PieceIndicator side="black" />
+          </div>
+        </div>
 
         <div className="space-y-px min-w-0">
           {ROWS.map((key) => {
@@ -139,7 +155,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                   className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-chess-hover/25 rounded-md transition-colors"
                   style={{ gridTemplateColumns: MOVE_GRID }}
                 >
-                  <div className="flex justify-end min-w-0 pr-1">
+                  <div className="flex justify-end min-w-0 pr-1 border-r border-chess-border/25">
                     <CountBadge
                       count={whiteCount}
                       color={meta.color}
@@ -160,7 +176,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                       {meta.label}
                     </span>
                   </div>
-                  <div className="flex justify-start min-w-0 pl-1">
+                  <div className="flex justify-start min-w-0 pl-1 border-l border-chess-border/25">
                     <CountBadge
                       count={blackCount}
                       color={meta.color}
@@ -201,7 +217,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
       {summary.phaseAccuracy && (
         <ReviewSection title="Phase accuracy">
-          <PlayerCompareHeader whiteName={wLabel} blackName={bLabel} />
           <div className="space-y-4">
             {(["opening", "middlegame", "endgame"] as const).map((phase) => {
               const pa = summary.phaseAccuracy![phase];
@@ -211,8 +226,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                   label={PHASE_LABELS[phase]}
                   white={pa.white}
                   black={pa.black}
-                  whiteName={wLabel}
-                  blackName={bLabel}
                 />
               );
             })}
@@ -262,9 +275,12 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   );
 };
 
-const PieceIndicator: React.FC<{ side: "white" | "black" }> = ({ side }) => (
+const PieceIndicator: React.FC<{
+  side: "white" | "black";
+  className?: string;
+}> = ({ side, className = "h-3.5 w-3.5" }) => (
   <span
-    className="h-3.5 w-3.5 rounded-full flex-shrink-0"
+    className={`rounded-full flex-shrink-0 inline-block ${className}`}
     style={{
       background:
         side === "white"
@@ -283,34 +299,23 @@ const PieceIndicator: React.FC<{ side: "white" | "black" }> = ({ side }) => (
   />
 );
 
-const PlayerName: React.FC<{
-  side: "white" | "black";
-  name: string;
-  align?: "start" | "end";
-}> = ({ side, name, align = "start" }) => (
-  <div
-    className={`flex items-center gap-2 min-w-0 flex-1 ${
-      align === "end" ? "flex-row-reverse justify-end" : ""
-    }`}
-  >
-    <PieceIndicator side={side} />
-    <span
-      className={`text-sm font-semibold text-chess-text truncate leading-snug ${
-        align === "end" ? "text-right" : "text-left"
-      }`}
-    >
-      {name}
-    </span>
-  </div>
-);
-
-const PlayerCompareHeader: React.FC<{
+const ReviewPlayerStrip: React.FC<{
   whiteName: string;
   blackName: string;
 }> = ({ whiteName, blackName }) => (
-  <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-chess-border/45">
-    <PlayerName side="white" name={whiteName} />
-    <PlayerName side="black" name={blackName} align="end" />
+  <div className="flex items-center justify-between gap-3 pb-3 mb-1 border-b border-chess-border/50">
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      <PieceIndicator side="white" />
+      <span className="text-sm font-semibold text-chess-text truncate">
+        {whiteName}
+      </span>
+    </div>
+    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+      <span className="text-sm font-semibold text-chess-text truncate text-right">
+        {blackName}
+      </span>
+      <PieceIndicator side="black" />
+    </div>
   </div>
 );
 
@@ -318,9 +323,7 @@ const PhaseCompareRow: React.FC<{
   label: string;
   white: number;
   black: number;
-  whiteName: string;
-  blackName: string;
-}> = ({ label, white, black, whiteName, blackName }) => {
+}> = ({ label, white, black }) => {
   const gap = Math.abs(white - black);
   const leader: "white" | "black" | null =
     gap < 1 ? null : white >= black ? "white" : "black";
@@ -332,17 +335,15 @@ const PhaseCompareRow: React.FC<{
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-xs text-chess-subtext font-medium">{label}</span>
         {leader ? (
-          <span className="text-[10px] text-chess-muted tabular-nums">
-            +{gap.toFixed(0)}%{" "}
-            <span className="text-chess-accent/90">
-              {leader === "white" ? whiteName : blackName}
-            </span>
+          <span className="inline-flex items-center gap-1 text-[10px] text-chess-muted tabular-nums">
+            +{gap.toFixed(0)}%
+            <PieceIndicator side={leader} className="h-2.5 w-2.5" />
           </span>
         ) : (
           <span className="text-[10px] text-chess-muted">Even</span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-0">
         <PhaseSide
           value={white}
           color={wColor}
@@ -365,11 +366,13 @@ const PhaseSide: React.FC<{
   highlight?: boolean;
   align?: "left" | "right";
 }> = ({ value, color, highlight, align = "left" }) => (
-  <div className={align === "right" ? "text-right" : "text-left"}>
+  <div
+    className={`px-2 py-1 ${
+      align === "right" ? "text-right border-l" : "text-left border-r"
+    } border-chess-border/25`}
+  >
     <span
-      className={`text-sm font-bold tabular-nums block mb-1 ${
-        highlight ? "text-chess-text" : ""
-      }`}
+      className="text-sm font-bold tabular-nums block mb-1"
       style={{ color: value > 0 ? color : "#555" }}
     >
       {value > 0 ? `${value.toFixed(0)}%` : "—"}

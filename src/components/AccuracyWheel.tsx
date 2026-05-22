@@ -4,12 +4,15 @@ interface AccuracyWheelProps {
   accuracy: number;
   color: "white" | "black";
   username?: string;
+  /** When false, only a piece-color dot is shown (name lives in parent header). */
+  showName?: boolean;
 }
 
 export const AccuracyWheel: React.FC<AccuracyWheelProps> = ({
   accuracy,
   color,
   username,
+  showName = true,
 }) => {
   const safeAccuracy = (typeof accuracy === "number" && isFinite(accuracy)) ? accuracy : 0;
   const hasValue = typeof accuracy === "number" && isFinite(accuracy) && accuracy > 0;
@@ -64,18 +67,31 @@ export const AccuracyWheel: React.FC<AccuracyWheelProps> = ({
           <span className="text-xs text-chess-muted">%</span>
         </div>
       </div>
-      <div className="text-center">
-        <div
-          className="w-3 h-3 rounded-full inline-block mr-1.5"
-          style={{
-            backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
-            border: color === "black" ? "1px solid #888" : "none",
-          }}
-        />
-        <span className="text-xs font-medium text-chess-text truncate max-w-[7rem]">
-          {username ?? (color === "white" ? "White" : "Black")}
-        </span>
-        <div className="text-[10px] text-chess-muted">Accuracy</div>
+      <div className="text-center min-h-[2rem] flex flex-col items-center justify-center">
+        {showName ? (
+          <>
+            <div
+              className="w-3 h-3 rounded-full inline-block mr-1.5"
+              style={{
+                backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
+                border: color === "black" ? "1px solid #888" : "none",
+              }}
+            />
+            <span className="text-xs font-medium text-chess-text truncate max-w-[7rem]">
+              {username ?? (color === "white" ? "White" : "Black")}
+            </span>
+            <div className="text-[10px] text-chess-muted">Accuracy</div>
+          </>
+        ) : (
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{
+              backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
+              border: color === "black" ? "1px solid #888" : "none",
+            }}
+            aria-hidden
+          />
+        )}
       </div>
     </div>
   );
