@@ -15,20 +15,23 @@ interface LichessGame {
   winner?: "white" | "black";
 }
 
-export async function fetchLichessGames(username: string): Promise<GameListItem[]> {
+async function fetchLichessGamesOnce(username: string): Promise<Response> {
   const url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=100&pgnInJson=true&clocks=false&evals=false&opening=false&perfType=bullet,blitz,rapid,classical`;
+  return fetch(url, { headers: { Accept: "application/x-ndjson" } });
+}
 
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/x-ndjson",
-    },
-  });
+export async function fetchLichessGames(username: string): Promise<GameListItem[]> {
+  let res = await fetchLichessGamesOnce(username);
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 2000));
+    res = await fetchLichessGamesOnce(username);
+  }
 
   if (res.status === 404 || res.status === 400) {
     throw new Error(`Player "${username}" not found on Lichess`);
   }
   if (!res.ok) {
-    throw new Error(`Lichess API error: ${res.status}`);
+    throw new Error("lichess_fetch_failed");
   }
 
   const text = await res.text();

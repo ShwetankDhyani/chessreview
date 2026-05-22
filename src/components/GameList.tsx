@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { GameListItem } from "../types";
 import { fetchRecentGames, getResultLabel, formatDate } from "../utils/chesscomApi";
 import { RatingStat, TimeClassIcon } from "./TimeClassIcon";
@@ -41,7 +41,31 @@ export const GameList: React.FC<GameListProps> = ({
     } catch { return []; }
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showSlowRetry, setShowSlowRetry] = useState(false);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadSucceededRef = useRef(false);
+  const gamesRef = useRef(games);
+  gamesRef.current = games;
+
+  const clearSlowTimer = useCallback(() => {
+    if (slowTimerRef.current) {
+      clearTimeout(slowTimerRef.current);
+      slowTimerRef.current = null;
+    }
+  }, []);
+
+  const startSlowTimer = useCallback(() => {
+    clearSlowTimer();
+    setShowSlowRetry(false);
+    loadSucceededRef.current = false;
+    slowTimerRef.current = setTimeout(() => {
+      if (!loadSucceededRef.current && gamesRef.current.length === 0) {
+        setShowSlowRetry(true);
+      }
+    }, 5000);
+  }, [clearSlowTimer]);
+
+  useEffect(() => () => clearSlowTimer(), [clearSlowTimer]);
 
   const [stats, setStats] = useState<{ bullet?: number, blitz?: number, rapid?: number } | null>(() => {
     try {
@@ -77,6 +101,7 @@ export const GameList: React.FC<GameListProps> = ({
         setInputVal(detail.name);
         setPlatform(detail.platform);
         setGames([]);
+        gamesRef.current = [];
         setStats(null);
         loadGames(detail.name, detail.platform);
       } else {
@@ -92,15 +117,19 @@ export const GameList: React.FC<GameListProps> = ({
 
   const loadGames = async (uname: string, plat: Platform) => {
     if (!uname.trim()) return;
+    const hadCachedGames = gamesRef.current.length > 0;
     setLoading(true);
-    setError(null);
+    startSlowTimer();
     try {
       const list = plat === "chesscom"
         ? await fetchRecentGames(uname.trim())
         : await fetchLichessGames(uname.trim());
       setGames(list);
+      loadSucceededRef.current = true;
+      clearSlowTimer();
+      setShowSlowRetry(false);
 
-      // Fetch stats
+      // Fetch stats (failures are silent)
       let newStats = null;
       try {
         if (plat === "chesscom") {
@@ -125,15 +154,18 @@ export const GameList: React.FC<GameListProps> = ({
           }
         }
       } catch { /* ignore stats error */ }
-      
+
       setStats(newStats);
       if (newStats) localStorage.setItem("cr_stats", JSON.stringify(newStats));
       else localStorage.removeItem("cr_stats");
 
       localStorage.setItem(STORAGE_KEY_USER, uname.trim());
       localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch games");
+    } catch {
+      if (hadCachedGames) {
+        clearSlowTimer();
+        setShowSlowRetry(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -220,7 +252,22 @@ export const GameList: React.FC<GameListProps> = ({
             </button>
           </div>
 
-        {error && <p className="text-xs text-move-blunder">{error}</p>}
+        {showSlowRetry && (
+          <div className="flex items-center gap-2 rounded-lg border border-chess-border/80 bg-chess-bg/50 px-2.5 py-2 text-xs text-chess-subtext">
+            <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
+            <span className="flex-1 min-w-0">
+              {loading ? "Still loading games…" : "Couldn’t refresh right now."}
+            </span>
+            <button
+              type="button"
+              onClick={handleGo}
+              disabled={loading}
+              className="flex-shrink-0 font-semibold text-chess-accent hover:text-chess-accent-hover disabled:opacity-50"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {games.length > 0 && !loading && (
           <div className="space-y-2 border-t border-chess-border/60 pt-2.5">
@@ -319,10 +366,17 @@ export const GameList: React.FC<GameListProps> = ({
             <PgnPastePanel onLoad={onGameSelect} compact />
           </div>
         )}
-        {loading && (
-          <div className="flex items-center justify-center h-32 text-chess-muted text-sm gap-2">
-            <div className="w-4 h-4 border-2 border-move-best border-t-transparent rounded-full animate-spin" />
-            Loading games…
+        {loading && showSlowRetry && games.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-32 text-chess-subtext text-xs gap-2 px-4 text-center">
+            <div className="w-4 h-4 border-2 border-chess-accent/40 border-t-chess-accent rounded-full animate-spin" />
+            <span>Still loading games…</span>
+            <button
+              type="button"
+              onClick={handleGo}
+              className="font-semibold text-chess-accent hover:text-chess-accent-hover"
+            >
+              Retry
+            </button>
           </div>
         )}
         {!loading && games.length > 0 && filteredGames.length === 0 && (
