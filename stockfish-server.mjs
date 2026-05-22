@@ -11,11 +11,27 @@
 
 import { createServer } from "http";
 import { spawn } from "child_process";
-import { accessSync, constants } from "fs";
+import { accessSync, constants, existsSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { URL } from "url";
 import os from "os";
+
+/** Load .env from cwd (npm run does not source it automatically). */
+function loadEnvFile() {
+  const path = join(process.cwd(), ".env");
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim();
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+}
+loadEnvFile();
 
 const PORT = parseInt(process.env.STOCKFISH_PORT ?? "8765", 10);
 const BIND = process.env.STOCKFISH_BIND ?? "127.0.0.1";
