@@ -216,7 +216,6 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     getMovComment(currentMove, {
       moveIdx: currentMoveIdx,
       openingHint,
-      recentPhrases: [],
     })
       .then((c) => {
         setAiComment(c);

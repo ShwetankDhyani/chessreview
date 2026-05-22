@@ -320,7 +320,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
 const aiCommentCache = new Map<string, string>();
 
 function recentPhrasesFromCache(): string[] {
-  return Array.from(aiCommentCache.values()).slice(-6);
+  return Array.from(aiCommentCache.values());
 }
 
 export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
@@ -390,7 +390,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           .then((result) => {
             if (cancelled) return;
             const fromAi = !!result;
-            const text = result ?? getFallbackMoveComment(move, hint);
+            const text = result ?? getFallbackMoveComment(move, hint, moveIdx);
             if (text) aiCommentCache.set(cacheKey, text);
             setAiComment(text);
             setCoachFromAi(fromAi);

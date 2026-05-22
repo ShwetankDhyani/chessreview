@@ -1,30 +1,23 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalyzedMove, ReviewSummary } from "../types";
+import { COACH_BANNED_SUBSTRINGS } from "./coachPhraseBank";
 import {
   describePositionForCoach,
   getPositionAwareMoveComment,
   playerCp,
 } from "./coachPositionContext";
+import {
+  clearCoachPhraseMemory,
+  getUsedCoachPhraseTemplates,
+  isRoboticRepetition,
+  rememberCoachPhrase,
+} from "./coachVariety";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
-const BANNED_PHRASES = [
-  "lets some advantage slip",
-  "lets advantage slip",
-  "engine wanted",
-  "engine suggests",
-  "worth revisiting",
-  "the right move",
-  "this move",
-  "the move",
-  "not bad but",
-  "slight imprecision",
-  "still playable",
-];
-
 let genAI: GoogleGenerativeAI | null = null;
 const recentLines: string[] = [];
-const MAX_RECENT = 8;
+const MAX_RECENT = 30;
 
 function getClient() {
   if (!API_KEY || API_KEY === "your_api_key_here") return null;
@@ -37,10 +30,12 @@ export function rememberCoachLine(line: string) {
   if (!t) return;
   recentLines.push(t);
   if (recentLines.length > MAX_RECENT) recentLines.shift();
+  rememberCoachPhrase(t);
 }
 
 export function clearCoachMemory() {
   recentLines.length = 0;
+  clearCoachPhraseMemory();
 }
 
 export function getRecentCoachLines(): string[] {
@@ -57,17 +52,12 @@ function playerEvalCp(move: AnalyzedMove, when: "before" | "after"): string {
   return (playerCp(move, when) / 100).toFixed(1);
 }
 
-function looksRepetitive(text: string, recent: string[]): boolean {
-  const lower = text.toLowerCase();
-  if (BANNED_PHRASES.some((p) => lower.includes(p))) return true;
-  for (const prev of recent) {
-    const a = lower.split(/\s+/).filter(Boolean);
-    const b = prev.toLowerCase().split(/\s+/).filter(Boolean);
-    if (a.length < 6 || b.length < 6) continue;
-    const overlap = a.filter((w) => b.includes(w)).length;
-    if (overlap / Math.min(a.length, b.length) > 0.55) return true;
-  }
-  return false;
+function allRecentForDedup(ctx: MoveCommentContext): string[] {
+  return [
+    ...(ctx.recentPhrases ?? []),
+    ...recentLines,
+    ...getUsedCoachPhraseTemplates(),
+  ];
 }
 
 // ─── Live move comment ────────────────────────────────────────────────────────
@@ -81,10 +71,10 @@ export async function getMovComment(
   const loss = Math.abs(move.deltaE);
   const lossText = loss >= 0.05 ? `${loss.toFixed(2)} pawns` : null;
   const moveNum = `${move.moveNumber}${move.color === "w" ? "." : "..."}`;
-  const recent = [...(ctx.recentPhrases ?? []), ...recentLines].slice(-MAX_RECENT);
+  const recent = allRecentForDedup(ctx).slice(-MAX_RECENT);
   const recentBlock =
     recent.length > 0
-      ? `Comments you already gave earlier in this review (write something DIFFERENT):\n${recent.map((l) => `- ${l}`).join("\n")}\n`
+      ? `Comments you already gave earlier in this review (do NOT reuse words, rhythm, or opener):\n${recent.map((l) => `- ${l}`).join("\n")}\n`
       : "";
 
   const prompt = `You are a warm, sharp chess coach speaking directly to your student during a live review.
@@ -106,29 +96,30 @@ Write ONE coaching note (2 short sentences, max 200 characters).
 Style:
 - Sound human and conversational — like a coach beside the board, not a report.
 - Explain the chess idea (tactics, space, king safety, piece activity, pawn breaks, tempo).
-- Vary openings: question, observation, wry honesty, relief, or concrete advice — not the same rhythm every move.
+- Vary sentence openers every move: never start two comments the same way in one game.
 - If brilliant while still losing: admire the idea but note it may be too late; do not pretend the game is fine.
 - If blunder while already losing badly: matter-of-fact, no false hope or generic pep talk.
 - If already winning and accurate: calm satisfaction, not over-the-top praise.
 - Do NOT repeat phrasing from the list above.
 - Do NOT say "this move", "the move", "engine wanted/suggests", "lets advantage slip", or restate the classification label.
+- Never use these clichés: clean and precise, accurate and well timed, timely and precise, solid technique, exactly what the position demanded, engine's top choice.
 - No markdown, bullets, emojis, or quotes.`;
 
   const model = client.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
-      temperature: 0.92,
+      temperature: 0.95,
       maxOutputTokens: 110,
-      topP: 0.95,
+      topP: 0.92,
     },
   });
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const result = await model.generateContent(
         attempt === 0
           ? prompt
-          : `${prompt}\n\nYour last draft was too generic or repetitive. Be more specific to THIS position.`
+          : `${prompt}\n\nYour last draft was too generic or repetitive. Use a fresh opener and a concrete chess idea unique to THIS ply.`
       );
       const text = result.response
         .text()
@@ -137,7 +128,7 @@ Style:
         .replace(/^["']|["']$/g, "")
         .slice(0, 220);
 
-      if (text && !looksRepetitive(text, recent)) {
+      if (text && !isRoboticRepetition(text, recent, COACH_BANNED_SUBSTRINGS)) {
         rememberCoachLine(text);
         return text;
       }

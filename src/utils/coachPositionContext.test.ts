@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
+import { clearCoachPhraseMemory } from "./coachVariety";
 import {
   getPositionAwareMoveComment,
   getPositionOutlook,
   playerCp,
 } from "./coachPositionContext";
+import { beforeEach } from "vitest";
 
 function move(partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "san" | "classification">): AnalyzedMove {
   return {
@@ -31,6 +33,8 @@ describe("playerCp", () => {
 });
 
 describe("getPositionAwareMoveComment", () => {
+  beforeEach(() => clearCoachPhraseMemory());
+
   it("praises brilliance but notes lateness when still losing", () => {
     const m = move({
       san: "Qh7+",
@@ -56,7 +60,7 @@ describe("getPositionAwareMoveComment", () => {
       bestMoveSan: "Kd1",
     });
     const text = getPositionAwareMoveComment(m, 5);
-    expect(text).toMatch(/already|grim|seals|little left|sugarcoat/i);
+    expect(text).toMatch(/already|grim|seals|little left|sugarcoat|buried|shovel/i);
     expect(text).not.toMatch(/great job|keep fighting|you got this/i);
   });
 
