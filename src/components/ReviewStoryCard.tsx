@@ -78,8 +78,8 @@ export function ReviewStoryCard({
   const story = buildReviewStory(summary, moves, whiteName, blackName);
 
   return (
-    <div className="rounded-xl border border-chess-border/60 bg-chess-bg/30 p-3.5 mb-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-muted mb-2.5">
+    <div className="rounded-xl border border-chess-accent/20 bg-gradient-to-br from-chess-accent/[0.08] via-chess-bg/50 to-transparent p-3.5 mb-3 shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-accent/80 mb-2.5">
         Game story
       </p>
       <div className="space-y-2">
