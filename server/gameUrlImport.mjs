@@ -5,6 +5,20 @@
 
 const USER_AGENT = "ChessReviewApp/1.0";
 
+function parseLichessGameId(pathname) {
+  const patterns = [
+    /^\/(?:embed\/)?(?:game\/)?([a-zA-Z0-9]{8})(?:\/|$)/,
+    /\/(?:embed\/)?game\/([a-zA-Z0-9]{8})(?:\/|$)/i,
+    /^\/([a-zA-Z0-9]{8})(?:\/(?:white|black|black#?\d*))?\/?$/i,
+    /\/broadcast\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/([a-zA-Z0-9]{8})\/?$/i,
+  ];
+  for (const re of patterns) {
+    const m = pathname.match(re);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+}
+
 export function parseGameUrl(input) {
   const raw = input.trim();
   let url;
@@ -17,10 +31,8 @@ export function parseGameUrl(input) {
   const host = url.hostname.replace(/^www\./, "");
 
   if (host === "lichess.org") {
-    const m = url.pathname.match(
-      /^(?:\/embed)?\/(?:game\/)?([a-zA-Z0-9]{8})(?:\/.*)?$/
-    );
-    if (m) return { platform: "lichess", gameId: m[1] };
+    const id = parseLichessGameId(url.pathname);
+    if (id) return { platform: "lichess", gameId: id };
     return null;
   }
 
@@ -87,11 +99,17 @@ async function fetchLichessPgn(gameId) {
     if (line.startsWith("{")) {
       const row = JSON.parse(line);
       if (row.pgn?.trim()) return row.pgn.trim();
+      const ongoing = ["started", "created", "aborted", "noStart"];
+      if (row.status && ongoing.includes(row.status)) {
+        throw new Error(
+          "This Lichess game is still in progress. Import works after the game is finished."
+        );
+      }
     }
   }
 
   throw new Error(
-    "Lichess game not found — use a finished game link (8-character ID)."
+    "Lichess game not found. Use a link to a finished game (8-character ID in the URL)."
   );
 }
 
@@ -174,8 +192,23 @@ async function fetchChessComPgn(gameId, gameType) {
 export async function fetchPgnFromGameUrl(input) {
   const parsed = parseGameUrl(input);
   if (!parsed) {
+    const host = (() => {
+      try {
+        const u = new URL(
+          input.trim().includes("://") ? input.trim() : `https://${input.trim()}`
+        );
+        return u.hostname.replace(/^www\./, "").toLowerCase();
+      } catch {
+        return null;
+      }
+    })();
+    if (host && host !== "chess.com" && host !== "lichess.org") {
+      throw new Error(
+        "Only chess.com and lichess.org game links are supported."
+      );
+    }
     throw new Error(
-      "Paste a Chess.com or Lichess game link (e.g. chess.com/game/live/… or lichess.org/abcdefgh)."
+      "Could not read that game link. Use a finished chess.com or lichess.org game URL."
     );
   }
 
