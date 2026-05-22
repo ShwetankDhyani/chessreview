@@ -5,16 +5,17 @@ export type StorySide = "white" | "black";
 
 export type StorySegment =
   | { kind: "text"; value: string }
-  | { kind: "player"; name: string; side: StorySide };
+  | { kind: "player"; name: string; side: StorySide }
+  | {
+      kind: "move";
+      moveIdx: number;
+      label: string;
+      classification?: KeyMoment["classification"];
+    };
 
 export interface ReviewStory {
   body: StorySegment[];
 }
-
-export const PLAYER_NAME_STYLE: Record<StorySide, { color: string; fontWeight: number }> = {
-  white: { color: "#f2ede4", fontWeight: 600 },
-  black: { color: "#c9a86c", fontWeight: 600 },
-};
 
 function storySeed(summary: ReviewSummary, moves: AnalyzedMove[]): number {
   let s = moves.length * 7;
@@ -283,6 +284,66 @@ function moveNotation(km: KeyMoment): string {
   return `${km.moveNumber}${km.color === "w" ? "." : "…"}${km.san}`;
 }
 
+function moveSeg(km: KeyMoment): StorySegment {
+  return {
+    kind: "move",
+    moveIdx: km.moveIdx,
+    label: moveNotation(km),
+    classification: km.classification ?? undefined,
+  };
+}
+
+/** Skip mate delivery, terminal moves, and wins masquerading as "decisive slips". */
+function isStoryWorthyMoment(km: KeyMoment, moves: AnalyzedMove[]): boolean {
+  if (/#|\+\+?\s*$/.test(km.san)) return false;
+
+  const m = moves[km.moveIdx];
+  if (!m) return false;
+  if (km.moveIdx >= moves.length - 1) return false;
+
+  if (m.evalAfter?.mate !== undefined && Math.abs(m.evalAfter.mate) <= 1) {
+    return false;
+  }
+  if (m.evalBefore?.mate !== undefined && Math.abs(m.evalBefore.mate) <= 1) {
+    return false;
+  }
+
+  const isSlip =
+    km.classification === "blunder" ||
+    km.classification === "mistake" ||
+    km.classification === "inaccuracy";
+
+  if (km.classification === "brilliant" || km.classification === "great") {
+    return false;
+  }
+
+  if (!isSlip && m.deltaE < 0.8) return false;
+
+  return m.deltaE >= 0.5;
+}
+
+function pickDecisiveMoment(
+  moments: KeyMoment[],
+  moves: AnalyzedMove[]
+): KeyMoment | null {
+  const priority = (km: KeyMoment) => {
+    const rank =
+      km.classification === "blunder"
+        ? 4
+        : km.classification === "mistake"
+          ? 3
+          : km.classification === "inaccuracy"
+            ? 2
+            : 0;
+    const m = moves[km.moveIdx];
+    return rank * 100 + km.swing + (m?.deltaE ?? 0);
+  };
+
+  const eligible = moments.filter((km) => isStoryWorthyMoment(km, moves));
+  if (eligible.length === 0) return null;
+  return [...eligible].sort((a, b) => priority(b) - priority(a))[0]!;
+}
+
 function slipLabel(classification: KeyMoment["classification"]): string {
   if (!classification) return "critical slip";
   const meta = CLASSIFICATION_META[classification as keyof typeof CLASSIFICATION_META];
@@ -299,6 +360,7 @@ function swingPhrase(pawns: number): string {
 
 function buildKeyPoint(
   summary: ReviewSummary,
+  moves: AnalyzedMove[],
   whiteName: string,
   blackName: string,
   seed: number
@@ -312,15 +374,14 @@ function buildKeyPoint(
   const trailerName = accLeader === "white" ? blackName : whiteName;
   const trailerSide: StorySide = accLeader === "white" ? "black" : "white";
 
-  const moments = [...(summary.keyMoments ?? [])].sort((a, b) => b.swing - a.swing);
-  const top = moments[0];
+  const moments = [...(summary.keyMoments ?? [])];
+  const top = pickDecisiveMoment(moments, moves);
   const wSlips = countMistakes(summary, "white");
   const bSlips = countMistakes(summary, "black");
 
-  if (top && top.swing >= 2.5) {
+  if (top && top.swing >= 1.5) {
     const culprit: StorySide = top.color === "w" ? "white" : "black";
     const culpritName = culprit === "white" ? whiteName : blackName;
-    const move = moveNotation(top);
     const slip = slipLabel(top.classification);
     const swing = swingPhrase(top.swing);
 
@@ -328,14 +389,14 @@ function buildKeyPoint(
       return pick(seed, 20, [
         [
           textSeg("What decided it was "),
-          textSeg(move),
+          moveSeg(top),
           textSeg(" — "),
           playerSeg(culpritName, culprit),
           textSeg(`'s ${slip} (${swing}) in an otherwise close game.`),
         ],
         [
           textSeg("The turning point: "),
-          textSeg(move),
+          moveSeg(top),
           textSeg(", a "),
           textSeg(slip),
           textSeg(" from "),
@@ -349,7 +410,7 @@ function buildKeyPoint(
       return pick(seed, 22, [
         [
           textSeg("On top of a one-sided accuracy gap, "),
-          textSeg(move),
+          moveSeg(top),
           textSeg(" was the headline — "),
           playerSeg(culpritName, culprit),
           textSeg(`'s ${slip} (${swing}) in a game `),
@@ -359,7 +420,7 @@ function buildKeyPoint(
         [
           playerSeg(leaderName, accLeader),
           textSeg(" were in a different league; "),
-          textSeg(move),
+          moveSeg(top),
           textSeg(" just made it louder — a "),
           textSeg(slip),
           textSeg(` worth ${swing}.`),
@@ -368,8 +429,8 @@ function buildKeyPoint(
           textSeg("Not a close contest: "),
           playerSeg(leaderName, accLeader),
           textSeg(" dominated accuracy, and "),
-          textSeg(move),
-          textSeg(" was the biggest swing anyway."),
+          moveSeg(top),
+          textSeg(" was the biggest real swing."),
         ],
       ]);
     }
@@ -377,14 +438,14 @@ function buildKeyPoint(
     return pick(seed, 24, [
       [
         textSeg("The difference showed clearest on "),
-        textSeg(move),
+        moveSeg(top),
         textSeg(" — "),
         playerSeg(culpritName, culprit),
         textSeg(`'s ${slip} (${swing}).`),
       ],
       [
         textSeg("That swung it: "),
-        textSeg(move),
+        moveSeg(top),
         textSeg(", a "),
         textSeg(slip),
         textSeg(" from "),
@@ -565,7 +626,7 @@ export function buildReviewStory(
 ): ReviewStory {
   const seed = storySeed(summary, moves);
   const arc = buildNarrativeBody(summary, whiteName, blackName, seed);
-  const keyPoint = buildKeyPoint(summary, whiteName, blackName, seed);
+  const keyPoint = buildKeyPoint(summary, moves, whiteName, blackName, seed);
   return {
     body: joinParagraph(arc, keyPoint),
   };

@@ -52,6 +52,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
           moves={moves}
           whiteName={whiteName ?? "White"}
           blackName={blackName ?? "Black"}
+          onJumpToMove={onMoveClick}
         />
       )}
       <div className="flex justify-around gap-2 py-1">
