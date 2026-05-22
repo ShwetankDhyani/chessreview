@@ -30,6 +30,9 @@ const PHASE_LABELS: Record<"opening" | "middlegame" | "endgame", string> = {
   endgame: "Endgame",
 };
 
+const MOVE_GRID =
+  "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)";
+
 function accuracyStrokeColor(value: number): string {
   if (value >= 85) return "#6daa6d";
   if (value >= 65) return "#e6c84a";
@@ -40,22 +43,22 @@ function accuracyStrokeColor(value: number): string {
 function ReviewSection({
   title,
   children,
-  className = "",
+  first = false,
 }: {
   title: string;
   children: React.ReactNode;
-  className?: string;
+  first?: boolean;
 }) {
   return (
     <section
-      className={`rounded-xl border border-chess-border/55 bg-chess-bg/20 overflow-hidden ${className}`}
+      className={
+        first ? "" : "pt-4 mt-4 border-t border-chess-border/50"
+      }
     >
-      <div className="px-3 py-2 border-b border-chess-border/45 bg-chess-panel/40">
-        <h3 className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider">
-          {title}
-        </h3>
-      </div>
-      <div className="p-3">{children}</div>
+      <h3 className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider mb-3">
+        {title}
+      </h3>
+      {children}
     </section>
   );
 }
@@ -70,6 +73,9 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (key: string) =>
     setExpanded((prev) => (prev === key ? null : key));
+
+  const wLabel = whiteName ?? "White";
+  const bLabel = blackName ?? "Black";
 
   const getMovesFor = (classification: string, color: "w" | "b") =>
     moves.reduce<Array<{ idx: number; move: AnalyzedMove }>>((acc, m, i) => {
@@ -86,14 +92,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
     accGap < 0.5 ? null : wAcc >= bAcc ? "white" : "black";
 
   return (
-    <div className="flex flex-col gap-3 p-3 sm:p-4 animate-fade-in">
-      <ReviewSection title="Overall accuracy">
+    <div className="flex flex-col p-3 sm:p-4 animate-fade-in">
+      <ReviewSection title="Overall accuracy" first>
         <div className="flex items-stretch gap-1">
-          <AccuracyWheel
-            accuracy={wAcc}
-            color="white"
-            username={whiteName}
-          />
+          <AccuracyWheel accuracy={wAcc} color="white" username={wLabel} />
           <div className="flex flex-col items-center justify-center px-1.5 min-w-[2.75rem]">
             <span className="text-[9px] text-chess-muted uppercase tracking-wider">
               Gap
@@ -106,41 +108,32 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
               {accGap.toFixed(0)}%
             </span>
             {accLeader && (
-              <span className="text-[9px] text-chess-muted mt-0.5 text-center leading-tight max-w-[3rem]">
-                {accLeader === "white"
-                  ? (whiteName ?? "White")
-                  : (blackName ?? "Black")}
+              <span className="text-[9px] text-chess-muted mt-0.5 text-center leading-tight max-w-[3rem] truncate">
+                {accLeader === "white" ? wLabel : bLabel}
               </span>
             )}
           </div>
-          <AccuracyWheel
-            accuracy={bAcc}
-            color="black"
-            username={blackName}
-          />
+          <AccuracyWheel accuracy={bAcc} color="black" username={bLabel} />
         </div>
       </ReviewSection>
 
       <ReviewSection title="Move breakdown">
         <div
           className="grid gap-x-2 mb-2 min-w-0"
-          style={{
-            gridTemplateColumns:
-              "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)",
-          }}
+          style={{ gridTemplateColumns: MOVE_GRID }}
         >
-          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-right truncate">
-            White
-          </span>
-          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center whitespace-nowrap">
+          <div className="flex justify-end min-w-0">
+            <PlayerLabel side="white" name={wLabel} align="end" />
+          </div>
+          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center whitespace-nowrap self-center">
             Type
           </span>
-          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-left truncate">
-            Black
-          </span>
+          <div className="flex justify-start min-w-0">
+            <PlayerLabel side="black" name={bLabel} />
+          </div>
         </div>
 
-        <div className="space-y-0.5 min-w-0 rounded-lg border border-chess-border/35 bg-chess-bg/30 p-1">
+        <div className="space-y-px min-w-0">
           {ROWS.map((key) => {
             const meta = CLASSIFICATION_META[key];
             const whiteCount =
@@ -153,13 +146,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             return (
               <React.Fragment key={key}>
                 <div
-                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 px-1.5 sm:px-2 rounded-md hover:bg-chess-hover/30 min-w-0 transition-colors"
-                  style={{
-                    gridTemplateColumns:
-                      "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)",
-                  }}
+                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-chess-hover/25 rounded-md transition-colors"
+                  style={{ gridTemplateColumns: MOVE_GRID }}
                 >
-                  <div className="flex justify-end min-w-0">
+                  <div className="flex justify-end min-w-0 pr-1">
                     <CountBadge
                       count={whiteCount}
                       color={meta.color}
@@ -180,7 +170,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                       {meta.label}
                     </span>
                   </div>
-                  <div className="flex justify-start min-w-0">
+                  <div className="flex justify-start min-w-0 pl-1">
                     <CountBadge
                       count={blackCount}
                       color={meta.color}
@@ -222,17 +212,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
       {summary.phaseAccuracy && (
         <ReviewSection title="Phase accuracy">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <PlayerColumnHeader
-              side="white"
-              name={whiteName ?? "White"}
-            />
-            <PlayerColumnHeader
-              side="black"
-              name={blackName ?? "Black"}
-              align="end"
-            />
+            <PlayerLabel side="white" name={wLabel} />
+            <PlayerLabel side="black" name={bLabel} align="end" />
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-4">
             {(["opening", "middlegame", "endgame"] as const).map((phase) => {
               const pa = summary.phaseAccuracy![phase];
               return (
@@ -241,6 +224,8 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                   label={PHASE_LABELS[phase]}
                   white={pa.white}
                   black={pa.black}
+                  whiteName={wLabel}
+                  blackName={bLabel}
                 />
               );
             })}
@@ -290,14 +275,14 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   );
 };
 
-const PlayerColumnHeader: React.FC<{
+const PlayerLabel: React.FC<{
   side: "white" | "black";
   name: string;
   align?: "start" | "end";
 }> = ({ side, name, align = "start" }) => (
   <div
-    className={`flex items-center gap-1.5 min-w-0 ${
-      align === "end" ? "justify-end flex-row-reverse" : ""
+    className={`flex items-center gap-1.5 min-w-0 max-w-full ${
+      align === "end" ? "flex-row-reverse" : ""
     }`}
   >
     <span
@@ -307,7 +292,11 @@ const PlayerColumnHeader: React.FC<{
         border: side === "black" ? "1px solid #666" : "none",
       }}
     />
-    <span className="text-[10px] font-semibold text-chess-subtext truncate">
+    <span
+      className={`text-[10px] font-semibold text-chess-subtext truncate ${
+        align === "end" ? "text-right" : "text-left"
+      }`}
+    >
       {name}
     </span>
   </div>
@@ -317,7 +306,9 @@ const PhaseCompareRow: React.FC<{
   label: string;
   white: number;
   black: number;
-}> = ({ label, white, black }) => {
+  whiteName: string;
+  blackName: string;
+}> = ({ label, white, black, whiteName, blackName }) => {
   const gap = Math.abs(white - black);
   const leader: "white" | "black" | null =
     gap < 1 ? null : white >= black ? "white" : "black";
@@ -325,26 +316,25 @@ const PhaseCompareRow: React.FC<{
   const bColor = accuracyStrokeColor(black);
 
   return (
-    <div className="rounded-lg border border-chess-border/35 bg-chess-bg/25 px-2.5 py-2.5">
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-xs text-chess-subtext font-medium">{label}</span>
         {leader ? (
           <span className="text-[10px] text-chess-muted tabular-nums">
             +{gap.toFixed(0)}%{" "}
             <span className="text-chess-accent/90">
-              {leader === "white" ? "White" : "Black"}
+              {leader === "white" ? whiteName : blackName}
             </span>
           </span>
         ) : (
           <span className="text-[10px] text-chess-muted">Even</span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <PhaseSide
           value={white}
           color={wColor}
           highlight={leader === "white"}
-          align="left"
         />
         <PhaseSide
           value={black}
@@ -361,25 +351,21 @@ const PhaseSide: React.FC<{
   value: number;
   color: string;
   highlight?: boolean;
-  align: "left" | "right";
-}> = ({ value, color, highlight, align }) => (
-  <div
-    className={`rounded-md py-1.5 px-2 ${
-      highlight
-        ? "bg-chess-accent/[0.07] border border-chess-accent/25"
-        : "bg-chess-bg/35 border border-transparent"
-    } ${align === "right" ? "text-right" : "text-left"}`}
-  >
+  align?: "left" | "right";
+}> = ({ value, color, highlight, align = "left" }) => (
+  <div className={align === "right" ? "text-right" : "text-left"}>
     <span
-      className="text-sm font-bold tabular-nums block mb-1.5"
+      className={`text-sm font-bold tabular-nums block mb-1 ${
+        highlight ? "text-chess-text" : ""
+      }`}
       style={{ color: value > 0 ? color : "#555" }}
     >
       {value > 0 ? `${value.toFixed(0)}%` : "—"}
     </span>
     <div
-      className={`h-2 rounded-full bg-chess-bg/55 overflow-hidden flex ${
+      className={`h-1.5 rounded-full bg-chess-border/40 overflow-hidden flex ${
         align === "right" ? "justify-end" : ""
-      }`}
+      } ${highlight ? "ring-1 ring-chess-accent/30" : ""}`}
     >
       <div
         className="h-full rounded-full transition-all duration-500"
@@ -426,8 +412,8 @@ const MoveDropdown: React.FC<{
   onMoveClick: (idx: number) => void;
 }> = ({ movesForType, color, onMoveClick }) => (
   <div
-    className="mx-2 mb-1 rounded overflow-hidden border"
-    style={{ borderColor: `${color}44`, backgroundColor: `${color}08` }}
+    className="mx-1 mb-1 rounded overflow-hidden"
+    style={{ backgroundColor: `${color}0c` }}
   >
     {movesForType.map(({ idx, move }) => {
       const moveNum = Math.floor(idx / 2) + 1;
@@ -437,7 +423,7 @@ const MoveDropdown: React.FC<{
           key={idx}
           type="button"
           onClick={() => onMoveClick(idx)}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-chess-hover transition-colors text-left"
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-chess-hover/50 transition-colors text-left"
         >
           <span className="text-chess-muted font-mono w-8 flex-shrink-0">
             {moveNum}
