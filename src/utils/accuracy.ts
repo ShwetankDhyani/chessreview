@@ -3,8 +3,10 @@ import type { AnalyzedMove } from "../types";
 // Lichess per-move + game accuracy (open source)
 // https://lichess.org/page/accuracy
 //
-// Chess.com CAPS2 uses the same expected-points model; game accuracy is
-// calibrated to the ~50–95 band (proprietary — approximate mapping below).
+// Game accuracy aligns with Chess.com CAPS2 expectations:
+// - Book moves count as 100% (scored like "best")
+// - Near-perfect raw scores can display up to 99.9
+// - Typical games still spread mostly in the ~50–95 band
 
 const ACC_A = 103.1668100711649;
 const ACC_B = -0.04354415386753951;
@@ -104,23 +106,35 @@ function lichessGameAccuracy(accuracies: number[], weights: number[]): number {
   return (weightedMean(accuracies, weights) + harmonicMean(accuracies)) / 2;
 }
 
-/** CAPS2-style display calibration (~50–95 for typical games) */
+/**
+ * Chess.com CAPS2-style display calibration.
+ * Strong games (high raw) reach ~99.9; typical games stay mostly ~50–95.
+ */
 export function caps2DisplayAccuracy(rawLichess: number): number {
   if (!Number.isFinite(rawLichess)) return 0;
   const r = Math.max(0, Math.min(100, rawLichess));
 
   if (r <= 50) return Math.round(r * 0.92 * 10) / 10;
 
+  if (r >= 88) {
+    const headroom = 99.9 - r;
+    return Math.round(Math.min(99.9, r + headroom * 0.75) * 10) / 10;
+  }
+
   const excess = r - 50;
-  const calibrated = 50 + excess * 0.7;
-  return Math.round(Math.min(98, Math.max(0, calibrated)) * 10) / 10;
+  const calibrated = 50 + excess * 0.88;
+  return Math.round(Math.min(97, Math.max(0, calibrated)) * 10) / 10;
 }
 
 function skipMove(m: AnalyzedMove): boolean {
-  if (m.classification === "book") return true;
   if (m.evalAfter?.mate !== undefined) return true;
   if ((m.epLoss ?? 0) >= 0.99) return true;
   return false;
+}
+
+function plyAccuracy(m: AnalyzedMove): number {
+  if (m.classification === "book") return 100;
+  return moveAccuracyFromEpLoss(m.epLoss ?? 0);
 }
 
 export interface PlayerAccuracyResult {
@@ -154,7 +168,7 @@ export function computePlayerAccuracy(
     const m = moves[i];
     if (m.color !== color || skipMove(m)) continue;
 
-    const acc = moveAccuracyFromEpLoss(m.epLoss ?? 0);
+    const acc = plyAccuracy(m);
     allAcc.push(acc);
     allWeights.push(plyWeights[i] ?? 1);
 
