@@ -8,6 +8,9 @@ describe("parseGameUrl", () => {
     expect(parseGameUrl("https://lichess.org/game/AbCdEf12")?.gameId).toBe("AbCdEf12");
     expect(parseGameUrl("https://lichess.org/AbCdEf12/black")?.gameId).toBe("AbCdEf12");
     expect(parseGameUrl("https://www.lichess.org/AbCdEf12")?.gameId).toBe("AbCdEf12");
+    expect(parseGameUrl("https://lichess.org/dOgzWsouXS6w")?.gameId).toBe(
+      "dOgzWsou"
+    );
   });
 
   it("parses chess.com live and analysis links", () => {

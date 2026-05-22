@@ -17,17 +17,27 @@ export interface ParsedGameUrl {
   gameType?: "live" | "daily";
 }
 
+/** Lichess ids are 8 chars; share links may add a suffix (e.g. /dOgzWsouXS6w). */
+function normalizeLichessId(slug: string): string | null {
+  if (slug.length === 8) return slug;
+  if (slug.length > 8) return slug.slice(0, 8);
+  return null;
+}
+
 function parseLichessGameId(pathname: string): string | null {
-  const patterns = [
-    /^\/(?:embed\/)?(?:game\/)?([a-zA-Z0-9]{8})(?:\/|$)/,
-    /\/(?:embed\/)?game\/([a-zA-Z0-9]{8})(?:\/|$)/i,
-    /^\/([a-zA-Z0-9]{8})(?:\/(?:white|black|black#?\d*))?\/?$/i,
-    /\/broadcast\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/([a-zA-Z0-9]{8})\/?$/i,
-  ];
-  for (const re of patterns) {
-    const m = pathname.match(re);
-    if (m?.[1]) return m[1];
-  }
+  const broadcast = pathname.match(
+    /\/broadcast\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/([a-zA-Z0-9]{8})\/?$/i
+  );
+  if (broadcast?.[1]) return broadcast[1];
+
+  const gamePath = pathname.match(
+    /^\/(?:embed\/)?game\/([a-zA-Z0-9]{8,})(?:\/|$)/i
+  );
+  if (gamePath?.[1]) return normalizeLichessId(gamePath[1]);
+
+  const root = pathname.match(/^\/([a-zA-Z0-9]{8,})(?:\/|$)/);
+  if (root?.[1]) return normalizeLichessId(root[1]);
+
   return null;
 }
 
