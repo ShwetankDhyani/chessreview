@@ -6,6 +6,8 @@ import {
   winPercentFromCp,
 } from "./accuracy";
 import {
+  BOOK_MAX_PLY,
+  EP_THRESHOLDS,
   couldBeBookMove,
   classifyMove,
   detectVoluntarySacrifice,
@@ -349,6 +351,14 @@ export async function analyzePgn(
       }
     }
 
+    const inOpeningBook =
+      classification === "book" ||
+      couldBeBook ||
+      (!bookEnded &&
+        i < BOOK_MAX_PLY &&
+        bothEvaluated &&
+        epLoss <= EP_THRESHOLDS.inaccuracy);
+
     moves.push({
       moveNumber: Math.floor(i / 2) + 1,
       color: move.color,
@@ -363,6 +373,7 @@ export async function analyzePgn(
       deltaE: deltaCP / 100,
       epLoss,
       classification,
+      inOpeningBook,
       isSacrifice,
       bestMove: bestMoveUci,
       bestMoveSan,

@@ -33,6 +33,8 @@ export interface AnalyzedMove {
   eActual: number;
   deltaE: number;
   classification: MoveClassification;
+  /** Still in opening theory — hide best-move hints on the board. */
+  inOpeningBook?: boolean;
   /** Expected points lost vs engine best (0–1), CAPS2 input */
   epLoss?: number;
   isSacrifice?: boolean;

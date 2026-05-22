@@ -20,10 +20,15 @@ function move(
 }
 
 describe("shouldSuggestBestMove", () => {
-  it("returns false for book and best classifications", () => {
+  it("returns false for book openings and best classifications", () => {
     expect(shouldSuggestBestMove(move({ classification: "book", uci: "e2e4" }))).toBe(
       false
     );
+    expect(
+      shouldSuggestBestMove(
+        move({ classification: "excellent", uci: "g1f3", inOpeningBook: true })
+      )
+    ).toBe(false);
     expect(shouldSuggestBestMove(move({ classification: "best", uci: "e2e4" }))).toBe(
       false
     );

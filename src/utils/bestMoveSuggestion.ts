@@ -6,8 +6,10 @@ export function shouldSuggestBestMove(
 ): boolean {
   if (!move?.bestMove || move.bestMove.length < 4) return false;
 
+  if (move.inOpeningBook || move.classification === "book") return false;
+
   const classification = move.classification;
-  if (classification === "best" || classification === "book") return false;
+  if (classification === "best") return false;
 
   const played = move.uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
   const engine = move.bestMove.replace(/[^a-h0-9]/gi, "").slice(0, 4);
