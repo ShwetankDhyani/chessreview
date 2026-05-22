@@ -1,4 +1,9 @@
 import type { AnalyzedMove } from "../types";
+import { EP_THRESHOLDS } from "./moveClassification";
+
+function normalizeUci(uci: string): string {
+  return uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
+}
 
 /** Show engine best-move hint unless the played move is book or already engine-best. */
 export function shouldSuggestBestMove(
@@ -11,9 +16,28 @@ export function shouldSuggestBestMove(
   const classification = move.classification;
   if (classification === "best") return false;
 
-  const played = move.uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
-  const engine = move.bestMove.replace(/[^a-h0-9]/gi, "").slice(0, 4);
+  const played = normalizeUci(move.uci);
+  const engine = normalizeUci(move.bestMove);
   if (played && engine && played === engine) return false;
+
+  if (
+    move.bestMoveSan &&
+    move.san &&
+    move.bestMoveSan.replace(/[+#]/g, "") === move.san.replace(/[+#]/g, "")
+  ) {
+    return false;
+  }
+
+  const epLoss = move.epLoss ?? 1;
+  if (epLoss <= EP_THRESHOLDS.inaccuracy) {
+    if (
+      classification === "excellent" ||
+      classification === "good" ||
+      classification === "great"
+    ) {
+      return false;
+    }
+  }
 
   return true;
 }

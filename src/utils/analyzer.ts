@@ -317,6 +317,14 @@ export async function analyzePgn(
         })
       : null;
 
+    const inOpeningBook =
+      classification === "book" ||
+      couldBeBook ||
+      (!bookEnded &&
+        i < BOOK_MAX_PLY &&
+        bothEvaluated &&
+        epLoss <= EP_THRESHOLDS.inaccuracy);
+
     if (classification !== "book" && classification !== null) bookEnded = true;
 
     let bestMoveSan: string | undefined;
@@ -350,14 +358,6 @@ export async function analyzePgn(
         /* ignore */
       }
     }
-
-    const inOpeningBook =
-      classification === "book" ||
-      couldBeBook ||
-      (!bookEnded &&
-        i < BOOK_MAX_PLY &&
-        bothEvaluated &&
-        epLoss <= EP_THRESHOLDS.inaccuracy);
 
     moves.push({
       moveNumber: Math.floor(i / 2) + 1,

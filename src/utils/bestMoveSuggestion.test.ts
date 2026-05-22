@@ -42,6 +42,46 @@ describe("shouldSuggestBestMove", () => {
     ).toBe(false);
   });
 
+  it("returns false for first-ply opening moves marked inOpeningBook", () => {
+    expect(
+      shouldSuggestBestMove(
+        move({
+          classification: "best",
+          uci: "e2e4",
+          bestMove: "e2e4",
+          inOpeningBook: true,
+          epLoss: 0.002,
+        })
+      )
+    ).toBe(false);
+    expect(
+      shouldSuggestBestMove(
+        move({
+          classification: "excellent",
+          uci: "e2e4",
+          bestMove: "e2e4",
+          inOpeningBook: true,
+          epLoss: 0.01,
+        })
+      )
+    ).toBe(false);
+  });
+
+  it("returns false when SAN matches engine best even if label is excellent", () => {
+    expect(
+      shouldSuggestBestMove(
+        move({
+          classification: "excellent",
+          san: "e4",
+          uci: "e2e4",
+          bestMove: "e2e4",
+          bestMoveSan: "e4",
+          epLoss: 0.01,
+        })
+      )
+    ).toBe(false);
+  });
+
   it("returns true for other classifications with a different best move", () => {
     expect(
       shouldSuggestBestMove(
