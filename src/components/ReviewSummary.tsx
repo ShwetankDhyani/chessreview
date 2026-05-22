@@ -118,20 +118,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
       </ReviewSection>
 
       <ReviewSection title="Move breakdown">
-        <div
-          className="grid gap-x-2 mb-2 min-w-0"
-          style={{ gridTemplateColumns: MOVE_GRID }}
-        >
-          <div className="flex justify-end min-w-0">
-            <PlayerLabel side="white" name={wLabel} align="end" />
-          </div>
-          <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center whitespace-nowrap self-center">
-            Type
-          </span>
-          <div className="flex justify-start min-w-0">
-            <PlayerLabel side="black" name={bLabel} />
-          </div>
-        </div>
+        <PlayerCompareHeader whiteName={wLabel} blackName={bLabel} />
+        <p className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center mb-2">
+          Type
+        </p>
 
         <div className="space-y-px min-w-0">
           {ROWS.map((key) => {
@@ -211,10 +201,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
       {summary.phaseAccuracy && (
         <ReviewSection title="Phase accuracy">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <PlayerLabel side="white" name={wLabel} />
-            <PlayerLabel side="black" name={bLabel} align="end" />
-          </div>
+          <PlayerCompareHeader whiteName={wLabel} blackName={bLabel} />
           <div className="space-y-4">
             {(["opening", "middlegame", "endgame"] as const).map((phase) => {
               const pa = summary.phaseAccuracy![phase];
@@ -275,30 +262,55 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   );
 };
 
-const PlayerLabel: React.FC<{
+const PieceIndicator: React.FC<{ side: "white" | "black" }> = ({ side }) => (
+  <span
+    className="h-3.5 w-3.5 rounded-full flex-shrink-0"
+    style={{
+      background:
+        side === "white"
+          ? "linear-gradient(145deg, #f5f3f0 0%, #d8d6d3 100%)"
+          : "linear-gradient(145deg, #3d3d3d 0%, #1a1a1a 100%)",
+      border:
+        side === "white"
+          ? "1.5px solid rgba(255,255,255,0.35)"
+          : "1.5px solid rgba(255,255,255,0.12)",
+      boxShadow:
+        side === "white"
+          ? "0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5)"
+          : "0 1px 2px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.06)",
+    }}
+    aria-hidden
+  />
+);
+
+const PlayerName: React.FC<{
   side: "white" | "black";
   name: string;
   align?: "start" | "end";
 }> = ({ side, name, align = "start" }) => (
   <div
-    className={`flex items-center gap-1.5 min-w-0 max-w-full ${
-      align === "end" ? "flex-row-reverse" : ""
+    className={`flex items-center gap-2 min-w-0 flex-1 ${
+      align === "end" ? "flex-row-reverse justify-end" : ""
     }`}
   >
+    <PieceIndicator side={side} />
     <span
-      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-      style={{
-        backgroundColor: side === "white" ? "#e8e6e3" : "#1a1a1a",
-        border: side === "black" ? "1px solid #666" : "none",
-      }}
-    />
-    <span
-      className={`text-[10px] font-semibold text-chess-subtext truncate ${
+      className={`text-sm font-semibold text-chess-text truncate leading-snug ${
         align === "end" ? "text-right" : "text-left"
       }`}
     >
       {name}
     </span>
+  </div>
+);
+
+const PlayerCompareHeader: React.FC<{
+  whiteName: string;
+  blackName: string;
+}> = ({ whiteName, blackName }) => (
+  <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-chess-border/45">
+    <PlayerName side="white" name={whiteName} />
+    <PlayerName side="black" name={blackName} align="end" />
   </div>
 );
 
