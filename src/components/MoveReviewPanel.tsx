@@ -374,7 +374,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         if (cancelled) return;
 
         if (!isGeminiConfigured()) {
-          const fallback = getFallbackMoveComment(move, hint);
+          const fallback = getFallbackMoveComment(move, hint, moveIdx);
           if (fallback) aiCommentCache.set(cacheKey, fallback);
           setAiComment(fallback);
           setCoachFromAi(false);
@@ -398,7 +398,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           })
           .catch(() => {
             if (cancelled) return;
-            const fallback = getFallbackMoveComment(move, hint);
+            const fallback = getFallbackMoveComment(move, hint, moveIdx);
             if (fallback) aiCommentCache.set(cacheKey, fallback);
             setAiComment(fallback);
             setCoachFromAi(false);

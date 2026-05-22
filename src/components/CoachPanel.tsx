@@ -206,25 +206,29 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
     if (!gemini) {
       staticComment.current =
-        getFallbackMoveComment(currentMove, openingHint) ??
+        getFallbackMoveComment(currentMove, openingHint, currentMoveIdx) ??
         `${currentMove.san} — select another move for more detail.`;
       setCommentLoading(false);
       return;
     }
 
     setCommentLoading(true);
-    getMovComment(currentMove, { moveIdx: currentMoveIdx, openingHint })
+    getMovComment(currentMove, {
+      moveIdx: currentMoveIdx,
+      openingHint,
+      recentPhrases: [],
+    })
       .then((c) => {
         setAiComment(c);
         staticComment.current =
           c ??
-          getFallbackMoveComment(currentMove, openingHint) ??
+          getFallbackMoveComment(currentMove, openingHint, currentMoveIdx) ??
           staticComment.current;
         setCommentLoading(false);
       })
       .catch(() => {
         staticComment.current =
-          getFallbackMoveComment(currentMove, openingHint) ?? staticComment.current;
+          getFallbackMoveComment(currentMove, openingHint, currentMoveIdx) ?? staticComment.current;
         setCommentLoading(false);
       });
   }, [currentMoveIdx, currentMove, gemini, moves]);
@@ -245,7 +249,8 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
   if (currentMove && currentMoveIdx !== staticCommentIdx.current) {
     staticCommentIdx.current = currentMoveIdx;
-    staticComment.current = getFallbackMoveComment(currentMove) ?? "";
+    staticComment.current =
+      getFallbackMoveComment(currentMove, undefined, currentMoveIdx) ?? "";
   }
 
   const displayComment = aiComment

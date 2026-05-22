@@ -1,5 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalyzedMove, ReviewSummary } from "../types";
+import {
+  describePositionForCoach,
+  getPositionAwareMoveComment,
+  playerCp,
+} from "./coachPositionContext";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
@@ -49,9 +54,7 @@ export interface MoveCommentContext {
 }
 
 function playerEvalCp(move: AnalyzedMove, when: "before" | "after"): string {
-  const cp = (when === "before" ? move.evalBefore?.cp : move.evalAfter?.cp) ?? 0;
-  const signed = move.color === "w" ? cp : -cp;
-  return (signed / 100).toFixed(1);
+  return (playerCp(move, when) / 100).toFixed(1);
 }
 
 function looksRepetitive(text: string, recent: string[]): boolean {
@@ -95,12 +98,18 @@ ${move.bestMoveSan && move.uci !== move.bestMove ? `Stronger try: ${move.bestMov
 ${move.pvLine?.length ? `Engine line: ${move.pvLine.slice(0, 4).join(" ")}` : ""}
 ${ctx.openingHint ? `Opening context: ${ctx.openingHint}` : ""}
 ${recentBlock}
+Position context (match tone to reality — do not cheer a lost game):
+${describePositionForCoach(move)}
+
 Write ONE coaching note (2 short sentences, max 200 characters).
 
 Style:
 - Sound human and conversational — like a coach beside the board, not a report.
 - Explain the chess idea (tactics, space, king safety, piece activity, pawn breaks, tempo).
-- Vary openings: question, observation, encouragement, or concrete advice.
+- Vary openings: question, observation, wry honesty, relief, or concrete advice — not the same rhythm every move.
+- If brilliant while still losing: admire the idea but note it may be too late; do not pretend the game is fine.
+- If blunder while already losing badly: matter-of-fact, no false hope or generic pep talk.
+- If already winning and accurate: calm satisfaction, not over-the-top praise.
 - Do NOT repeat phrasing from the list above.
 - Do NOT say "this move", "the move", "engine wanted/suggests", "lets advantage slip", or restate the classification label.
 - No markdown, bullets, emojis, or quotes.`;
@@ -143,50 +152,10 @@ Style:
 // ─── Short fallback when AI is off or fails ───────────────────────────────────
 export function getFallbackMoveComment(
   move: AnalyzedMove,
-  openingHint?: string
+  openingHint?: string,
+  moveIdx = 0
 ): string | null {
-  const c = move.classification;
-  if (!c) return null;
-  const { san, bestMoveSan: best } = move;
-  const loss = Math.abs(move.deltaE);
-  const lossBit = loss >= 0.15 ? ` (~${loss.toFixed(1)} pawns)` : "";
-
-  switch (c) {
-    case "brilliant":
-      return move.isSacrifice
-        ? `${san} — a bold sacrifice with real point behind it.`
-        : `${san} — sharp and exactly what the position called for.`;
-    case "great":
-      return `${san} — you found the critical resource here.`;
-    case "best":
-      return `${san} — clean and precise.`;
-    case "excellent":
-      return best && best !== san
-        ? `${san} — very strong; ${best} was only a touch more exact.`
-        : `${san} — accurate and well timed.`;
-    case "good":
-      return best && best !== san
-        ? `${san} — playable, though ${best} was a bit more demanding.`
-        : `${san} — keeps the game balanced.`;
-    case "book":
-      return openingHint
-        ? `${san} — ${openingHint}`
-        : `${san} — still in known theory.`;
-    case "inaccuracy":
-      return best
-        ? `${san}${lossBit} — ${best} would have kept more pressure.`
-        : `${san}${lossBit} — a small loosening; check opponent replies first.`;
-    case "mistake":
-      return best
-        ? `${san}${lossBit} — ${best} was the way to stay in the game.`
-        : `${san}${lossBit} — the evaluation shifts here.`;
-    case "blunder":
-      return best
-        ? `${san}${lossBit} — ${best} avoids the tactical leak.`
-        : `${san}${lossBit} — a turning point in the game.`;
-    default:
-      return null;
-  }
+  return getPositionAwareMoveComment(move, moveIdx, openingHint);
 }
 
 // ─── Full game coaching report ────────────────────────────────────────────────

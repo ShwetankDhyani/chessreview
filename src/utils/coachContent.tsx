@@ -1,5 +1,10 @@
 import React, { useMemo } from "react";
 import type { AnalyzedMove } from "../types";
+import {
+  commentarySeed,
+  getPositionOutlook,
+  pickSeeded,
+} from "./coachPositionContext";
 
 export type CoachMood =
   | "brilliant"
@@ -13,7 +18,13 @@ export type CoachMood =
   | "quiet"
   | "neutral";
 
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function pickForMove<T>(move: AnalyzedMove, moveIdx: number, arr: T[]): T {
+  return pickSeeded(commentarySeed(move, moveIdx), arr);
+}
 
 // ── Opening detection ────────────────────────────────────────────────────────
 const OPENINGS: { pattern: RegExp; name: string; flavor: string }[] = [
@@ -124,19 +135,17 @@ function likelyZugzwang(move: AnalyzedMove): boolean {
   return Math.abs(cp) < 80 && Math.abs(after - cp) > 120 && !isCapture(move.san) && !isCheck(move.san);
 }
 
-// ── Position state from eval ────────────────────────────────────────────────
-type PositionState = "winning" | "losing" | "mating" | "mated" | "level";
+function isLosingOutlook(outlook: ReturnType<typeof getPositionOutlook>): boolean {
+  return (
+    outlook === "slight_down" ||
+    outlook === "trouble" ||
+    outlook === "desperate" ||
+    outlook === "losing_mate"
+  );
+}
 
-function getPositionState(move: AnalyzedMove): PositionState {
-  const e = move.evalAfter;
-  if (!e) return "level";
-  if (e.mate !== undefined) return e.mate > 0 ? "mating" : "mated";
-  const cp = e.cp ?? 0;
-  // cp is white-relative; flip for black
-  const playerCp = move.color === "w" ? cp : -cp;
-  if (playerCp >= 200) return "winning";
-  if (playerCp <= -200) return "losing";
-  return "level";
+function isLostOutlook(outlook: ReturnType<typeof getPositionOutlook>): boolean {
+  return outlook === "trouble" || outlook === "desperate" || outlook === "losing_mate";
 }
 
 // ── Content builder ──────────────────────────────────────────────────────────
@@ -152,19 +161,36 @@ export function buildCoachContent(
   moveIdx: number
 ): CoachContent {
   const c = move.classification;
-  const pos = getPositionState(move);
+  const outlookBefore = getPositionOutlook(move, "before");
+  const outlookAfter = getPositionOutlook(move, "after");
+  const losingAfter = isLosingOutlook(outlookAfter);
+  const lostBefore = isLostOutlook(outlookBefore);
 
   if (c === "brilliant") {
-    const lines = [
-      pick([
-        `A standout move. ${move.san} matches the engine's top line and is difficult to find over the board.`,
-        `${move.san} is the kind of creative try the engine fully endorses — worth studying.`,
-        `Strong intuition here. ${move.san} holds up under deep analysis.`,
-      ]),
-      move.isSacrifice
-        ? "The material investment is sound; the follow-up justifies the sacrifice."
-        : "This was the critical moment in the position.",
-    ];
+    const lines = losingAfter && (lostBefore || outlookBefore === "slight_down")
+      ? [
+          pickForMove(move, moveIdx, [
+            `${move.san} — gorgeous idea, but the position was already against you. A bit late, perhaps?`,
+            `Love the creativity in ${move.san}. Shame the eval was already ugly.`,
+            `${move.san}! The kind of resource you'd want earlier — brilliance with the clock running down.`,
+          ]),
+          move.isSacrifice
+            ? "Bold when you're already in trouble — respect the fight, even if it can't save everything."
+            : "The engine loves it; climbing back from here is still a long shot.",
+        ]
+      : [
+          pickForMove(move, moveIdx, [
+            `A standout move. ${move.san} matches the engine's top line and is difficult to find over the board.`,
+            `${move.san} is the kind of creative try the engine fully endorses — worth studying.`,
+            `Strong intuition here. ${move.san} holds up under deep analysis.`,
+          ]),
+          move.isSacrifice
+            ? "The material investment is sound; the follow-up justifies the sacrifice."
+            : pickForMove(move, moveIdx, [
+                "This was the critical moment in the position.",
+                "That's the kind of move that turns a game on its head.",
+              ]),
+        ];
     return { mood: "brilliant", color: "#1baca6", lines };
   }
 
@@ -172,11 +198,16 @@ export function buildCoachContent(
     mood: "great",
     color: "#4a7eb8",
     lines: [
-      pick([
-        `${move.san} — timely and precise. You seized the moment in the position.`,
-        `An important practical decision. ${move.san} keeps the initiative.`,
-        `${move.san} is exactly what the situation demanded.`,
-      ]),
+      pickForMove(move, moveIdx, losingAfter && lostBefore
+        ? [
+            `${move.san} — a strong practical try, but you were already in the hole.`,
+            `Good fighting chess with ${move.san}, even if the eval was grim beforehand.`,
+          ]
+        : [
+            `${move.san} — timely and precise. You seized the moment in the position.`,
+            `An important practical decision. ${move.san} keeps the initiative.`,
+            `${move.san} is exactly what the situation demanded.`,
+          ]),
     ],
   };
 
@@ -184,7 +215,7 @@ export function buildCoachContent(
     mood: "excellent",
     color: "#5c9e47",
     lines: [
-      pick([
+      pickForMove(move, moveIdx, [
         `${move.san} is very close to the engine's preference — clean and accurate.`,
         `Well chosen. ${move.san} maintains your advantages without unnecessary risk.`,
         `${move.san} — solid technique. Small differences from the engine line are negligible.`,
@@ -196,22 +227,22 @@ export function buildCoachContent(
     mood: "blunder",
     color: "#ca3c3c",
     lines: [
-      pick([
+      pickForMove(move, moveIdx, [
         `A major swing in evaluation. ${move.san} misses the engine's main idea.`,
         `This changes the assessment of the game. ${move.san} gives back substantial ground.`,
         `${move.san} is the turning point — compare it with the suggested line below.`,
       ]),
-      pos === "losing" || pos === "mated"
-        ? pick([
-            `The position was already difficult; ${move.san} makes recovery much harder.`,
-            `After ${move.san}, practical winning chances drop sharply.`,
+      lostBefore
+        ? pickForMove(move, moveIdx, [
+            `The game was already grim; ${move.san} seals it.`,
+            `After ${move.san}, there's little left to play for — no sugarcoating it.`,
           ])
         : move.bestMoveSan
-          ? pick([
+          ? pickForMove(move, moveIdx, [
               `The engine strongly prefers ${move.bestMoveSan} instead of ${move.san}.`,
               `Consider ${move.bestMoveSan} — it keeps a much healthier evaluation.`,
             ])
-          : pick([
+          : pickForMove(move, moveIdx, [
               `Review why ${move.san} fails to meet the position's demands.`,
               `Take time to understand what ${move.san} allows for the opponent.`,
             ]),
@@ -221,19 +252,19 @@ export function buildCoachContent(
   if (c === "mistake") return {
     mood: "mistake", color: "#e07b39",
     lines: [
-      pos === "losing" || pos === "mated"
-        ? pick([
+      pickForMove(move, moveIdx, lostBefore
+        ? [
             `${move.san} — already in trouble and this makes it worse. Needed something fighting.`,
             `When you're losing every move needs to create problems. ${move.san} doesn't do that.`,
             `${move.san}... the position was already bad and this just accelerates it.`,
-          ])
+          ]
         : move.bestMoveSan
-          ? pick([
+          ? [
               `${move.san} — I'd have gone ${move.bestMoveSan} there. The advantage slips.`,
               `Hmm. ${move.san} when ${move.bestMoveSan} keeps the pressure on. Bit of a let-down.`,
               `Close, but ${move.san} isn't quite it. ${move.bestMoveSan} was the cleaner option.`,
-            ])
-          : pick([
+            ]
+          : [
               `${move.san}... not what the position was asking for. The edge is gone.`,
               `Hmm, ${move.san}. I'd have thought longer there. Something's off.`,
               `That felt slightly wrong as soon as I saw it. ${move.san} gives too much away.`,
@@ -241,7 +272,49 @@ export function buildCoachContent(
     ],
   };
 
-  if (c === "inaccuracy" || c === "good" || c === "best" || c === "book") {
+  if (c === "inaccuracy") {
+    return {
+      mood: "inaccuracy",
+      color: "#e6c84a",
+      lines: [
+        pickForMove(move, moveIdx, lostBefore
+          ? [
+              `${move.san} — small slip, but every half-pawn hurts when you're already down.`,
+              `${move.san} — not fatal alone, yet the position was already tough.`,
+            ]
+          : move.bestMoveSan
+            ? [
+                `${move.san} — ${move.bestMoveSan} would have kept more tension.`,
+                `A tiny loosening with ${move.san}; ${move.bestMoveSan} was sharper.`,
+              ]
+            : [
+                `${move.san} — a small imprecision. Check what your opponent can do next.`,
+                `${move.san} — nothing catastrophic, but the edge softens a little.`,
+              ]),
+      ],
+    };
+  }
+
+  if (c === "good" || c === "best" || c === "book") {
+    const opening = detectOpening(allMoves);
+    const moveNote = c === "book" ? getMoveComment(move.san, opening?.name ?? null) : null;
+    if (moveNote) {
+      return { mood: c === "book" ? "book" : "good", color: "#6daa6d", lines: [moveNote] };
+    }
+    if (c === "book") {
+      return {
+        mood: "book",
+        color: "#a88865",
+        lines: [
+          pickForMove(move, moveIdx, [
+            `${move.san} — still in known theory.`,
+            opening
+              ? `${move.san} — a standard line in the ${opening.name}.`
+              : `${move.san} — book move.`,
+          ]),
+        ],
+      };
+    }
     return { mood: "neutral", color: "#888", lines: [] };
   }
 

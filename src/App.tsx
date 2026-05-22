@@ -38,6 +38,7 @@ import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
+import { KeyMomentNavButtons } from "./components/KeyMomentNavButtons";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -492,23 +493,6 @@ export default function App() {
     },
     [moves.length, navigateToMove]
   );
-
-  const KEY_CLASSIFICATIONS = new Set(["brilliant", "great", "mistake", "blunder"]);
-
-  const navigateToKeyMove = useCallback((direction: "prev" | "next") => {
-    const indices = moves
-      .map((m, i) => ({ i, c: m.classification }))
-      .filter(({ c }) => c && KEY_CLASSIFICATIONS.has(c))
-      .map(({ i }) => i);
-    if (!indices.length) return;
-    if (direction === "next") {
-      const next = indices.find((i) => i > currentMoveIdx);
-      if (next !== undefined) navigateToMove(next);
-    } else {
-      const prev = [...indices].reverse().find((i) => i < currentMoveIdx);
-      if (prev !== undefined) navigateToMove(prev);
-    }
-  }, [moves, currentMoveIdx, navigateToMove]);
 
   useEffect(() => {
     showAnalysisProgressRef.current = showAnalysisProgress;
@@ -1292,22 +1276,11 @@ export default function App() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM6 5l8 7-8 7z" /></svg>
                     </button>
                     <div className="h-px bg-chess-border my-1" />
-                    <button
-                      onClick={() => navigateToKeyMove("prev")}
-                      className="board-nav-btn board-nav-btn--key"
-                      title="Previous key move"
-                      aria-label="Previous key move"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22z M11 9h2v6h-2z M11 16h2v2h-2z" /></svg>
-                    </button>
-                    <button
-                      onClick={() => navigateToKeyMove("next")}
-                      className="board-nav-btn board-nav-btn--key"
-                      title="Next key move"
-                      aria-label="Next key move"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22z M11 9h2v6h-2z M11 16h2v2h-2z" /></svg>
-                    </button>
+                    <KeyMomentNavButtons
+                      moves={moves}
+                      currentMoveIdx={currentMoveIdx}
+                      onGoToIndex={navigateToMove}
+                    />
                   </>
                 )}
               </div>
