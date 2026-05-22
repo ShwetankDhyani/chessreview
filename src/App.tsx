@@ -33,6 +33,7 @@ import {
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
+import { AnalysisModeBadge } from "./components/AnalysisModeBadge";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
@@ -572,6 +573,14 @@ export default function App() {
     setClocks(extractClocks(parsed.pgn));
   }, []);
 
+  const selectGameAndAnalyze = useCallback(
+    (pgnStr: string) => {
+      loadPgn(pgnStr);
+      void startAnalysis(pgnStr);
+    },
+    [loadPgn, startAnalysis]
+  );
+
   // Unlock Web Audio on first touch (required on iOS / Android Chrome)
   useEffect(() => {
     const unlock = () => unlockChessAudio();
@@ -972,11 +981,20 @@ export default function App() {
             ))}
           </div>
 
+          <div className="px-3 pt-2 flex-shrink-0 border-b border-chess-border/60">
+            <AnalysisModeBadge
+              engineBackend={engineBackend}
+              hasRemoteEngine={hasRemoteEngine}
+              depth={depth}
+              onRetry={hasRemoteEngine ? () => void recheckEngine() : undefined}
+            />
+          </div>
+
           <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
             {tab === "games" && (
               <GameList
                 username=""
-                onGameSelect={(pgnStr) => loadPgn(pgnStr)}
+                onGameSelect={selectGameAndAnalyze}
                 onLinkProfile={openProfilePanel}
               />
             )}
@@ -1322,12 +1340,17 @@ export default function App() {
                 className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
+                <div className="px-3 pt-2 flex-shrink-0 border-b border-chess-border/60">
+                  <AnalysisModeBadge
+                    engineBackend={engineBackend}
+                    hasRemoteEngine={hasRemoteEngine}
+                    depth={depth}
+                    onRetry={hasRemoteEngine ? () => void recheckEngine() : undefined}
+                  />
+                </div>
                 <GameList
                   username=""
-                  onGameSelect={(pgnStr) => {
-                    loadPgn(pgnStr);
-                    setTab("moves");
-                  }}
+                  onGameSelect={selectGameAndAnalyze}
                   onLinkProfile={openProfilePanel}
                 />
               </div>

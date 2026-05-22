@@ -28,20 +28,20 @@ export function resolveEngineUi(
   if (engineBackend === "native") {
     return {
       tone: "online",
-      title: "Laptop engine connected",
-      shortLabel: "Native",
+      title: "Deep review server connected",
+      shortLabel: "Deep",
     };
   }
   if (engineBackend === "unavailable") {
     return {
       tone: "offline",
-      title: "Laptop engine offline — tap Depth to retry",
+      title: "Review server offline — tap Depth to retry",
       shortLabel: "Offline",
     };
   }
   return {
     tone: "fallback",
-    title: "Lichess fallback (slower than laptop engine)",
+    title: "Lichess fallback — connect your review server for full depth",
     shortLabel: "Fallback",
   };
 }

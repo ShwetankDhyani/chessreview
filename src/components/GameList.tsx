@@ -5,6 +5,7 @@ import { RatingStat, TimeClassIcon } from "./TimeClassIcon";
 import { fetchLichessGames } from "../utils/lichessApi";
 import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
+import { GameUrlImport } from "./GameUrlImport";
 
 type Platform = "chesscom" | "lichess";
 
@@ -178,7 +179,10 @@ export const GameList: React.FC<GameListProps> = ({
     });
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0 flex-1">
+      <div className="page-inline-pad flex-shrink-0 py-3 border-b border-chess-border/70">
+        <GameUrlImport onImported={onGameSelect} compact />
+      </div>
       {/* ── Header (profile only) ── */}
       {inputVal && (
       <div className="page-inline-pad flex-shrink-0 border-b border-chess-border py-3 space-y-2.5">
@@ -287,6 +291,9 @@ export const GameList: React.FC<GameListProps> = ({
         <div className="flex-1 min-h-0 flex flex-col max-w-md mx-auto w-full">
           <AccountLinkPromo onConnect={onLinkProfile} />
           <div className="page-inline-pad flex-1 min-h-0 flex flex-col py-3 pb-5">
+            <p className="text-[10px] text-chess-muted mb-2 text-center">
+              Or paste PGN / open a .pgn file
+            </p>
             <PgnPastePanel onLoad={onGameSelect} compact className="flex-1 min-h-0" />
           </div>
         </div>
