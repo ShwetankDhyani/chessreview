@@ -27,7 +27,7 @@ function StoryText({
         }
         if (seg.kind === "player") {
           return (
-            <span key={i} className="text-chess-text font-medium">
+            <span key={i} className="text-chess-subtext/90 font-medium">
               {seg.name}
             </span>
           );
@@ -45,16 +45,14 @@ function StoryText({
               hapticTap();
               onJumpToMove(seg.moveIdx);
             }}
-            className={`inline font-mono text-[0.95em] font-medium align-baseline cursor-pointer border-0 bg-transparent p-0 mx-0.5 underline underline-offset-[3px] transition-opacity hover:opacity-80 ${
-              meta
-                ? ""
-                : "text-chess-accent decoration-chess-accent/35 hover:decoration-chess-accent/60"
+            className={`inline font-mono text-[0.92em] font-medium align-baseline cursor-pointer border-0 bg-transparent p-0 mx-0.5 underline underline-offset-[3px] decoration-chess-muted/40 transition-opacity hover:opacity-80 ${
+              meta ? "" : "text-chess-subtext decoration-chess-accent/30 hover:decoration-chess-accent/50"
             }`}
             style={
               meta
                 ? {
-                    color: meta.color,
-                    textDecorationColor: `${meta.color}50`,
+                    color: `${meta.color}bb`,
+                    textDecorationColor: `${meta.color}40`,
                   }
                 : undefined
             }
@@ -79,17 +77,17 @@ export function ReviewStoryCard({
 
   return (
     <div className="rounded-xl border border-chess-accent/20 bg-gradient-to-br from-chess-accent/[0.08] via-chess-bg/50 to-transparent p-3.5 mb-3 shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-accent/80 mb-2.5">
+      <p className="text-xs text-chess-muted font-semibold uppercase tracking-wider mb-2 px-1">
         Game story
       </p>
-      <div className="space-y-2">
+      <div className="space-y-2.5 px-1">
         {story.lines.map((line, i) => (
           <p
             key={i}
             className={
               i === 0
-                ? "text-[13px] text-chess-text leading-[1.55]"
-                : "text-xs text-chess-subtext leading-[1.5] pl-2.5 border-l border-chess-border/50"
+                ? "text-xs text-chess-subtext font-medium leading-relaxed"
+                : "text-xs text-chess-muted leading-relaxed pl-2.5 border-l border-chess-border/40"
             }
           >
             <StoryText segments={line} onJumpToMove={onJumpToMove} />
