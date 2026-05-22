@@ -9,6 +9,7 @@ interface ReviewStoryCardProps {
   moves: AnalyzedMove[];
   whiteName: string;
   blackName: string;
+  gameResult?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
   onJumpToMove: (idx: number) => void;
 }
 
@@ -71,9 +72,16 @@ export function ReviewStoryCard({
   moves,
   whiteName,
   blackName,
+  gameResult,
   onJumpToMove,
 }: ReviewStoryCardProps) {
-  const story = buildReviewStory(summary, moves, whiteName, blackName);
+  const story = buildReviewStory(
+    summary,
+    moves,
+    whiteName,
+    blackName,
+    gameResult
+  );
 
   return (
     <div className="rounded-xl border border-chess-accent/20 bg-gradient-to-br from-chess-accent/[0.08] via-chess-bg/50 to-transparent p-3.5 mb-3 shadow-sm">

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { AnalyzeBoardStack } from "./components/AnalyzeBoardStack";
 import { MoveList } from "./components/MoveList";
 import { ReviewSummaryPanel } from "./components/ReviewSummary";
+import { ReviewEmptyState } from "./components/ReviewEmptyState";
 import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
@@ -1117,13 +1118,12 @@ export default function App() {
                     summary={summary}
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
+                    gameResult={gameMeta?.result ?? null}
                     moves={moves}
                     onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
                   />
                 ) : (
-                  <div className="px-4 py-8 text-chess-muted text-xs text-center leading-relaxed">
-                    Load and analyze a game to see the review summary.
-                  </div>
+                  <ReviewEmptyState onGoToGames={() => setTab("games")} />
                 )}
               </div>
             )}
@@ -1400,6 +1400,7 @@ export default function App() {
                     summary={summary}
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
+                    gameResult={gameMeta?.result ?? null}
                     moves={moves}
                     onMoveClick={(idx) => {
                       navigateToMove(idx);
@@ -1407,9 +1408,7 @@ export default function App() {
                     }}
                   />
                 ) : (
-                  <div className="py-8 text-chess-muted text-xs text-center leading-relaxed">
-                    Load and analyze a game to see the review summary.
-                  </div>
+                  <ReviewEmptyState onGoToGames={() => setTab("games")} />
                 )}
               </div>
             )}

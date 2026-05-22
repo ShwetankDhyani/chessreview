@@ -9,6 +9,7 @@ interface ReviewSummaryProps {
   summary: ReviewSummaryType;
   whiteName?: string;
   blackName?: string;
+  gameResult?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
   moves?: AnalyzedMove[];
   onMoveClick?: (idx: number) => void;
 }
@@ -29,6 +30,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   summary,
   whiteName,
   blackName,
+  gameResult,
   moves = [],
   onMoveClick,
 }) => {
@@ -52,6 +54,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
           moves={moves}
           whiteName={whiteName ?? "White"}
           blackName={blackName ?? "Black"}
+          gameResult={gameResult}
           onJumpToMove={onMoveClick}
         />
       )}
