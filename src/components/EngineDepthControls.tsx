@@ -26,9 +26,9 @@ function depthOptions(
 }
 
 function depthHint(d: number): string {
-  if (d === 12) return "Fastest (best for old laptop server)";
-  if (d === 14) return "Recommended (best speed/quality)";
-  if (d === 16) return "Stronger, ~2× slower";
+  if (d === 12) return "Default (recommended)";
+  if (d === 14) return "Stronger, slower than default";
+  if (d === 16) return "Deep, ~2× slower than 12";
   if (d === 18) return "Deep (long waits)";
   return "Max";
 }
