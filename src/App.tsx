@@ -22,7 +22,7 @@ import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { parseGameText } from "./utils/pgnParse";
-import { countPgnPlies } from "./utils/pgnPlies";
+import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { useSmoothAnalysisProgress } from "./hooks/useSmoothAnalysisProgress";
@@ -1539,12 +1539,14 @@ function MobileBoardControls({
     );
   }
 
-  const label =
-    moveIndex < 0 ? `0/${moveCount}` : `${moveIndex + 1}/${moveCount}`;
+  const label = formatChessMoveCounter(moveIndex, moveCount);
 
   return (
     <div className="ml-auto flex flex-shrink-0 items-center gap-2">
-      <span className="text-[11px] text-chess-muted font-mono tabular-nums">
+      <span
+        className="text-[11px] text-chess-muted font-mono tabular-nums"
+        title="Full move number"
+      >
         {label}
       </span>
       <button
