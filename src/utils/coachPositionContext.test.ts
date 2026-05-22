@@ -36,8 +36,8 @@ describe("getPositionAwareMoveComment", () => {
       san: "Qh7+",
       classification: "brilliant",
       color: "w",
-      evalBefore: { cp: -500 },
-      evalAfter: { cp: -450 },
+      evalBefore: { cp: -500, depth: 12, source: "server" },
+      evalAfter: { cp: -450, depth: 12, source: "server" },
       isSacrifice: true,
     });
     expect(getPositionOutlook(m, "before")).toBe("desperate");
@@ -50,8 +50,8 @@ describe("getPositionAwareMoveComment", () => {
       san: "Ke2",
       classification: "blunder",
       color: "w",
-      evalBefore: { cp: -600 },
-      evalAfter: { cp: -900 },
+      evalBefore: { cp: -600, depth: 12, source: "server" },
+      evalAfter: { cp: -900, depth: 12, source: "server" },
       deltaE: -3,
       bestMoveSan: "Kd1",
     });
@@ -65,8 +65,8 @@ describe("getPositionAwareMoveComment", () => {
       san: "Qf2",
       classification: "blunder",
       color: "w",
-      evalBefore: { cp: 500 },
-      evalAfter: { cp: 100 },
+      evalBefore: { cp: 500, depth: 12, source: "server" },
+      evalAfter: { cp: 100, depth: 12, source: "server" },
       deltaE: -4,
     });
     const text = getPositionAwareMoveComment(m, 7);
