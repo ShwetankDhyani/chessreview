@@ -1,0 +1,22 @@
+{
+  "name": "ChessReview.org",
+  "short_name": "ChessReview",
+  "description": "Analyze your chess games with engine-powered move reviews.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#312e2b",
+  "background_color": "#262421",
+  "display": "standalone"
+}

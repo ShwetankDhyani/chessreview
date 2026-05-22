@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ChessReview">
+  <rect width="32" height="32" rx="7" fill="#312e2b"/>
+  <g fill="#81b64c">
+    <rect x="11" y="7" width="10" height="3" rx="1"/>
+    <rect x="9" y="10" width="14" height="2.5" rx="0.5"/>
+    <rect x="12" y="12.5" width="8" height="9.5" rx="1"/>
+    <rect x="10" y="22" width="12" height="3" rx="1"/>
+  </g>
+</svg>
