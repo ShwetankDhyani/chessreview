@@ -529,6 +529,90 @@
   }
 }
 
+/* Mobile board — subtle side tap zones */
+.mobile-tap-edge--idle[data-side="prev"] {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.14) 0%,
+    transparent 72%
+  );
+}
+
+.mobile-tap-edge--idle[data-side="next"] {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.14) 0%,
+    transparent 72%
+  );
+}
+
+.mobile-tap-edge--hint {
+  animation: mobileTapEdgePulse 2.2s ease-in-out infinite;
+}
+
+.mobile-tap-edge--hint[data-side="prev"] {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.12) 45%,
+    transparent 80%
+  );
+}
+
+.mobile-tap-edge--hint[data-side="next"] {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.12) 45%,
+    transparent 80%
+  );
+}
+
+@keyframes mobileTapEdgePulse {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.mobile-tap-chevron--hint {
+  animation: mobileTapChevronPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes mobileTapChevronPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.mobile-tap-hint-pill {
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  animation: mobileTapHintIn 0.45s ease-out;
+}
+
+@keyframes mobileTapHintIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .board-verdict-card {
   display: flex;
   flex-direction: column;
