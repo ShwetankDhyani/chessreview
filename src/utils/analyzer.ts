@@ -227,7 +227,7 @@ function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
     coverage: buildCoverage(moves),
     accuracyMeta: {
       method: "ep_loss_caps",
-      formulaVersion: "v2.1-ep-harmonic",
+      formulaVersion: "v2.2-caps2-grades",
     },
   };
 }

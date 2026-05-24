@@ -112,6 +112,11 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
               · D{run.requestedDepth} · {run.engineVersion}
             </span>
           )}
+          {summary.accuracyMeta?.formulaVersion && (
+            <span className="ml-2 text-chess-subtext">
+              · {summary.accuracyMeta.formulaVersion}
+            </span>
+          )}
         </div>
       )}
       <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />

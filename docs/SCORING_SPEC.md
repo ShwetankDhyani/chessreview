@@ -1,4 +1,4 @@
-# Scoring Spec v2.1 (Consensus, Chess.com-parity oriented)
+# Scoring Spec v2.2 (Consensus, Chess.com CAPS2-oriented)
 
 This document defines the canonical review math used by ChessReview.org.
 
@@ -29,28 +29,28 @@ Per move, the analyzer builds:
 
 Classification bands and heuristics are implemented in `moveClassification.ts`.
 
-## 4) Accuracy Aggregation
+## 4) Accuracy Aggregation (CAPS2-style)
 
-**Headline game and phase accuracy** use engine expected-points loss per classified ply:
+Per classified ply:
 
-1. `epLoss` per move (same input as classification).
-2. Optional dampening when the mover was already winning (`effectiveEpLossForAccuracy`).
-3. `moveAccuracyFromEpLoss` — Lichess/CAPS logistic curve on win-% lost.
-4. Book moves score 100 for that ply (opening theory).
-5. Game score = average of arithmetic mean and harmonic mean of ply scores (harmonic punishes mistakes).
-6. **Display** — round to one decimal, cap at 99.9; **no boost** toward 99.9 for high raw values.
+1. `epScore` = `moveAccuracyFromEpLoss(epLoss)` (CAPS win-% curve).
+2. `gradeCap` = classification grade (`best`/`book` = **97**, not 100 — CAPS2 “test” scoring).
+3. `plyScore` = `min(epScore, gradeCap)` so labeled mistakes cannot score like perfect moves.
+4. Game raw = average of **arithmetic** and **harmonic** mean of `plyScore` (harmonic punishes errors).
+5. `caps2GameCalibration(raw)` compresses raw 92–100 into ~92–97 so many “best” moves do not print as 99%+.
+6. Display: round to one decimal, cap at 99.9.
 
-Typical ranges (rapid/online, one game):
+Typical single-game ranges (aligned with Chess.com CAPS2: most scores **50–95**):
 
 | Quality | Approx. accuracy |
 |--------|-------------------|
-| Clean win, few errors | 92–97 |
-| Solid game with a few inaccuracies | 85–92 |
-| Messy / many mistakes | 70–85 |
+| Very clean | 90–95 |
+| Solid with a few inaccuracies | 82–90 |
+| Messy / multiple mistakes | 65–82 |
 
-The move-breakdown table still shows classification **counts**; label bucket weights (best=100, inaccuracy=79, …) are not used for the headline %.
+Move-breakdown **counts** are unchanged; grades are separate from icons.
 
-No hidden exclusions: every classified ply in the breakdown is in the accuracy denominator.
+Every classified ply in the breakdown is in the accuracy denominator.
 
 ## 5) Coverage and Trust Signals
 
