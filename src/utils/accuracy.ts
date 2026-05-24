@@ -146,28 +146,26 @@ function labelBasedGameAccuracy(labelScores: number[]): number {
   return (arithmeticMean(labelScores) + harmonicMean(labelScores)) / 2;
 }
 
-function combineGameAccuracy(epBased: number, labelBased: number): number {
-  return epBased * 0.35 + labelBased * 0.65;
-}
-
 /**
- * Chess.com CAPS2-style display calibration.
- * Strong games (high raw) reach ~99.9; typical games stay mostly ~50–95.
+ * Display calibration — must not contradict the move breakdown.
+ * High raw scores stay high; only weak games are compressed slightly.
  */
-export function caps2DisplayAccuracy(rawLichess: number): number {
-  if (!Number.isFinite(rawLichess)) return 0;
-  const r = Math.max(0, Math.min(100, rawLichess));
+export function caps2DisplayAccuracy(raw: number): number {
+  if (!Number.isFinite(raw)) return 0;
+  const r = Math.max(0, Math.min(100, raw));
 
   if (r <= 50) return Math.round(r * 0.92 * 10) / 10;
 
-  if (r >= 88) {
+  if (r >= 92) {
     const headroom = 99.9 - r;
-    return Math.round(Math.min(99.9, r + headroom * 0.75) * 10) / 10;
+    return Math.round(Math.min(99.9, r + headroom * 0.85) * 10) / 10;
   }
 
-  const excess = r - 50;
-  const calibrated = 50 + excess * 0.88;
-  return Math.round(Math.min(97, Math.max(0, calibrated)) * 10) / 10;
+  return Math.round(r * 10) / 10;
+}
+
+function displayGameAccuracy(labelScores: number[]): number {
+  return caps2DisplayAccuracy(labelBasedGameAccuracy(labelScores));
 }
 
 function skipMove(m: AnalyzedMove): boolean {
@@ -216,13 +214,9 @@ function plyAccuracy(m: AnalyzedMove): number {
   return moveAccuracyFromEpLoss(effectiveEpLossForAccuracy(m));
 }
 
-function phaseDisplayAccuracy(epValues: number[], labelValues: number[]): number {
+function phaseDisplayAccuracy(labelValues: number[]): number {
   if (!labelValues.length) return 0;
-  const raw = combineGameAccuracy(
-    epValues.length ? harmonicMean(epValues) : 0,
-    labelBasedGameAccuracy(labelValues)
-  );
-  return caps2DisplayAccuracy(raw);
+  return displayGameAccuracy(labelValues);
 }
 
 export interface PlayerAccuracyResult {
@@ -233,25 +227,10 @@ export interface PlayerAccuracyResult {
 export function computePlayerAccuracy(
   moves: AnalyzedMove[],
   color: "w" | "b",
-  resolvedCpWhite: Map<string, number>,
+  _resolvedCpWhite: Map<string, number>,
   phaseForMove: (m: AnalyzedMove, idx: number) => "opening" | "middlegame" | "endgame"
 ): PlayerAccuracyResult {
-  const allWinPcts: number[] = [winPercentFromCp(INITIAL_CP)];
-  for (const m of moves) {
-    const cp = resolvedCpWhite.get(m.fenAfter) ?? 0;
-    allWinPcts.push(winPercentFromCp(cp));
-  }
-
-  const plyWeights = computePlyWeights(allWinPcts, moves.length);
-
-  const allAcc: number[] = [];
   const allLabelAcc: number[] = [];
-  const allWeights: number[] = [];
-  const phaseEp: Record<"opening" | "middlegame" | "endgame", number[]> = {
-    opening: [],
-    middlegame: [],
-    endgame: [],
-  };
   const phaseLabel: Record<"opening" | "middlegame" | "endgame", number[]> = {
     opening: [],
     middlegame: [],
@@ -262,27 +241,19 @@ export function computePlayerAccuracy(
     const m = moves[i];
     if (m.color !== color || skipMove(m)) continue;
 
-    const acc = plyAccuracy(m);
     const labelAcc = classificationPlyAccuracy(m);
-    allAcc.push(acc);
     allLabelAcc.push(labelAcc);
-    allWeights.push(adjustedPlyWeight(plyWeights[i] ?? 1, m));
 
     const phase = phaseForMove(m, i);
-    phaseEp[phase].push(acc);
     phaseLabel[phase].push(labelAcc);
   }
 
-  const rawEp = lichessGameAccuracy(allAcc, allWeights);
-  const rawLabel = labelBasedGameAccuracy(allLabelAcc);
-  const rawGame = combineGameAccuracy(rawEp, rawLabel);
-
   return {
-    game: caps2DisplayAccuracy(rawGame),
+    game: displayGameAccuracy(allLabelAcc),
     phase: {
-      opening: phaseDisplayAccuracy(phaseEp.opening, phaseLabel.opening),
-      middlegame: phaseDisplayAccuracy(phaseEp.middlegame, phaseLabel.middlegame),
-      endgame: phaseDisplayAccuracy(phaseEp.endgame, phaseLabel.endgame),
+      opening: phaseDisplayAccuracy(phaseLabel.opening),
+      middlegame: phaseDisplayAccuracy(phaseLabel.middlegame),
+      endgame: phaseDisplayAccuracy(phaseLabel.endgame),
     },
   };
 }

@@ -33,6 +33,8 @@ describe("caps2DisplayAccuracy", () => {
 
   it("does not crush high raw scores to the low 80s", () => {
     expect(caps2DisplayAccuracy(97)).toBeGreaterThan(90);
+    expect(caps2DisplayAccuracy(96)).toBeGreaterThanOrEqual(96);
+    expect(caps2DisplayAccuracy(85)).toBeGreaterThanOrEqual(85);
   });
 });
 
@@ -232,6 +234,8 @@ describe("computePlayerAccuracy", () => {
     const w = computePlayerAccuracy(all, "w", cpMap, () => "middlegame");
     const b = computePlayerAccuracy(all, "b", cpMap, () => "middlegame");
     expect(w.game).toBeGreaterThan(b.game);
-    expect(w.game).toBeGreaterThanOrEqual(90);
+    expect(w.game).toBeGreaterThanOrEqual(94);
+    expect(b.game).toBeLessThan(w.game);
+    expect(b.game).toBeLessThan(96);
   });
 });
