@@ -33,6 +33,7 @@ import {
   canAnimateOneStep,
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
+import { ReanalyzeButton } from "./components/ReanalyzeButton";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
@@ -109,6 +110,8 @@ export default function App() {
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const currentMoveIdxRef = useRef(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
+  /** True after at least one successful review — keeps re-analyze visible while re-running. */
+  const [reviewReady, setReviewReady] = useState(false);
   const [analysisRunning, setAnalysisRunning] = useState(false);
   const [showAnalysisProgress, setShowAnalysisProgress] = useState(false);
   const showAnalysisProgressRef = useRef(false);
@@ -545,6 +548,7 @@ export default function App() {
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisState("done");
+        setReviewReady(true);
 
         if (openReview) {
           setTab("review");
@@ -578,6 +582,14 @@ export default function App() {
     void runAnalysis(pgn, { visible: true });
   }, [pgn, analysisState, moves.length, analysisRunning, runAnalysis]);
 
+  /** Re-run full analysis (e.g. after depth change or accuracy formula update). */
+  const requestReanalysis = useCallback(() => {
+    if (!pgn.trim() || analysisRunning) return;
+    void runAnalysis(pgn, { visible: true });
+  }, [pgn, analysisRunning, runAnalysis]);
+
+  const canReanalyze = !!pgn.trim() && reviewReady;
+
   const loadPgn = useCallback((pgnStr: string) => {
     const parsed = parseGameText(pgnStr);
     if (!parsed.ok) {
@@ -598,6 +610,7 @@ export default function App() {
     setCurrentFen("start");
     setCurrentEval(null);
     setAnalysisState("loading");
+    setReviewReady(false);
     setTab("moves");
     // Remount the board only on game change so any lingering animation state
     // from the previous game is dropped. Per-move navigation never remounts.
@@ -788,6 +801,14 @@ export default function App() {
           </span>
         </div>
         <div className="flex-1 min-w-0" />
+
+        {canReanalyze ? (
+          <ReanalyzeButton
+            onClick={requestReanalysis}
+            disabled={isAnalyzing}
+            spinning={isAnalyzing}
+          />
+        ) : null}
 
         <EngineDepthControls
           depth={depth}
@@ -1039,6 +1060,13 @@ export default function App() {
                         <AnalyzeNowButton
                           variant="compact"
                           onClick={() => requestAnalysisUi()}
+                        />
+                      )}
+                      {canReanalyze && (
+                        <ReanalyzeButton
+                          onClick={requestReanalysis}
+                          disabled={isAnalyzing}
+                          spinning={isAnalyzing}
                         />
                       )}
                       {isAnalyzing && (

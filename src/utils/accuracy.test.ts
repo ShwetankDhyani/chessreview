@@ -126,4 +126,112 @@ describe("computePlayerAccuracy", () => {
     expect(result.game).toBeGreaterThanOrEqual(88);
     expect(result.phase.middlegame).toBeGreaterThanOrEqual(80);
   });
+
+  it("rates the cleaner move chart higher (more best, fewer errors)", () => {
+    const cp = { depth: 14, source: "server" as const };
+    const whiteMoves: AnalyzedMove[] = [
+      ...Array(21).fill(null).map((_, i) =>
+        move({
+          color: "w",
+          classification: "best",
+          san: `wb${i}`,
+          epLoss: 0.004,
+          evalBefore: { cp: 300, ...cp },
+          evalAfter: { cp: 320, ...cp },
+        })
+      ),
+      ...Array(2).fill(null).map((_, i) =>
+        move({
+          color: "w",
+          classification: "inaccuracy",
+          san: `wi${i}`,
+          epLoss: 0.09,
+          evalBefore: { cp: 400, ...cp },
+          evalAfter: { cp: 350, ...cp },
+        })
+      ),
+      move({
+        color: "w",
+        classification: "mistake",
+        san: "Wm",
+        epLoss: 0.16,
+        evalBefore: { cp: 500, ...cp },
+        evalAfter: { cp: 380, ...cp },
+      }),
+      move({
+        color: "w",
+        classification: "book",
+        san: "e4",
+        epLoss: 0.002,
+        evalBefore: { cp: 20, ...cp },
+        evalAfter: { cp: 25, ...cp },
+      }),
+    ];
+    const blackMoves: AnalyzedMove[] = [
+      ...Array(12).fill(null).map((_, i) =>
+        move({
+          color: "b",
+          classification: "best",
+          san: `bb${i}`,
+          epLoss: 0.004,
+          evalBefore: { cp: -200, ...cp },
+          evalAfter: { cp: -220, ...cp },
+        })
+      ),
+      ...Array(4).fill(null).map((_, i) =>
+        move({
+          color: "b",
+          classification: "excellent",
+          san: `be${i}`,
+          epLoss: 0.015,
+          evalBefore: { cp: -180, ...cp },
+          evalAfter: { cp: -200, ...cp },
+        })
+      ),
+      ...Array(3).fill(null).map((_, i) =>
+        move({
+          color: "b",
+          classification: "good",
+          san: `bg${i}`,
+          epLoss: 0.04,
+          evalBefore: { cp: -150, ...cp },
+          evalAfter: { cp: -170, ...cp },
+        })
+      ),
+      ...Array(3).fill(null).map((_, i) =>
+        move({
+          color: "b",
+          classification: "inaccuracy",
+          san: `bi${i}`,
+          epLoss: 0.09,
+          evalBefore: { cp: -120, ...cp },
+          evalAfter: { cp: -160, ...cp },
+        })
+      ),
+      ...Array(2).fill(null).map((_, i) =>
+        move({
+          color: "b",
+          classification: "mistake",
+          san: `bm${i}`,
+          epLoss: 0.16,
+          evalBefore: { cp: -80, ...cp },
+          evalAfter: { cp: -140, ...cp },
+        })
+      ),
+      move({
+        color: "b",
+        classification: "book",
+        san: "e5",
+        epLoss: 0.002,
+        evalBefore: { cp: -15, ...cp },
+        evalAfter: { cp: -20, ...cp },
+      }),
+    ];
+    const all = [...whiteMoves, ...blackMoves];
+    const cpMap = new Map(all.map((m) => [m.fenAfter, m.evalAfter!.cp!]));
+    const w = computePlayerAccuracy(all, "w", cpMap, () => "middlegame");
+    const b = computePlayerAccuracy(all, "b", cpMap, () => "middlegame");
+    expect(w.game).toBeGreaterThan(b.game);
+    expect(w.game).toBeGreaterThanOrEqual(90);
+  });
 });
