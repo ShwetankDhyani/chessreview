@@ -27,17 +27,15 @@ const COUNTED_CLASSIFICATIONS = Object.keys(
   MOVE_GRADE_SCORE
 ) as Array<Exclude<MoveClassification, null>>;
 
-/** Expected-points model (Lichess logistic) used for per-move loss. */
-export function winPercentFromCp(cp: number): number {
-  const clamped = Math.max(-1000, Math.min(1000, cp));
-  const wc = 2 / (1 + Math.exp(-0.00368208 * clamped)) - 1;
-  return 50 + 50 * wc;
-}
+import { expectedPointsLoss, winPercentFromCp } from "../analysis/expectedPoints";
 
+export { winPercentFromCp };
+
+/** Centipawn-based expected points lost (mover POV cp). */
 export function expectedPointsLost(cpAfterBest: number, cpAfterActual: number): number {
-  const best = winPercentFromCp(cpAfterBest);
-  const actual = winPercentFromCp(cpAfterActual);
-  return Math.max(0, (best - actual) / 100);
+  const eBest = winPercentFromCp(cpAfterBest) / 100;
+  const eActual = winPercentFromCp(cpAfterActual) / 100;
+  return expectedPointsLoss(eBest, eActual);
 }
 
 /** Per-move accuracy from expected-points loss (CAPS curve). */

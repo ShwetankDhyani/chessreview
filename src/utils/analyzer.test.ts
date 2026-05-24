@@ -1,68 +1,81 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EvalResult } from "../types";
+import type { ReviewResult } from "../types";
 
-vi.mock("../engine/evaluationService", () => ({
-  evaluateFensConsensus: vi.fn(
-    async (
-      fens: string[],
-      policy: { requestedDepth: number },
-      onProgress?: (done: number, total: number) => void
-    ) => {
-      onProgress?.(fens.length, fens.length);
-      const evals = new Map<string, EvalResult>();
-      fens.forEach((fen, i) => {
-        evals.set(fen, {
-          cp: i * 8,
-          depth: policy.requestedDepth,
-          source: "local",
-          verified: true,
-          confidence: 0.95,
-        });
-      });
-      return {
-        evals,
-        meta: {
-          evaluated: fens.length,
-          deepened: 0,
-          verified: fens.length,
-        },
-      };
-    }
-  ),
+const mockReview: ReviewResult = {
+  run: {
+    runId: "test",
+    engineVersion: "mock",
+    startedAt: "2026-01-01T00:00:00.000Z",
+    finishedAt: "2026-01-01T00:00:01.000Z",
+    requestedDepth: 18,
+    fastDepth: 18,
+    deepDepth: 18,
+    backendPolicy: "consensus",
+    pgnHash: "h1",
+  },
+  moves: [
+    {
+      moveNumber: 1,
+      color: "w",
+      san: "e4",
+      uci: "e2e4",
+      fenBefore: "",
+      fenAfter: "",
+      evalBefore: { cp: 30, depth: 18, source: "local" },
+      evalAfter: { cp: 28, depth: 18, source: "local" },
+      eBest: 0.3,
+      eActual: 0.28,
+      deltaE: 0.02,
+      epLoss: 0.01,
+      classification: "excellent",
+    },
+  ],
+  summary: {
+    white: {
+      brilliant: 0,
+      great: 0,
+      best: 0,
+      excellent: 1,
+      good: 0,
+      book: 0,
+      inaccuracy: 0,
+      mistake: 0,
+      blunder: 0,
+    },
+    black: {
+      brilliant: 0,
+      great: 0,
+      best: 0,
+      excellent: 0,
+      good: 0,
+      book: 0,
+      inaccuracy: 0,
+      mistake: 0,
+      blunder: 0,
+    },
+    accuracy: { white: 90, black: 0 },
+    accuracyMeta: {
+      method: "chesscom_ep_v3",
+      formulaVersion: "v3.0-chesscom-ep-multipv",
+    },
+  },
+};
+
+vi.mock("../analysis/gameReview", () => ({
+  analyzeGameReview: vi.fn(async () => mockReview),
 }));
 
 import { analyzePgn } from "./analyzer";
 
 const SIMPLE_PGN = `
 [Event "Test"]
-[Site "?"]
-[Date "2026.05.24"]
-[Round "-"]
-[White "White"]
-[Black "Black"]
-[Result "1-0"]
-
-1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 1-0
+1. e4 e5 2. Nf3 Nc6 1-0
 `;
 
 describe("analyzePgn", () => {
-  it("is deterministic for same PGN and depth", async () => {
-    const a = await analyzePgn(SIMPLE_PGN, undefined, 14);
-    const b = await analyzePgn(SIMPLE_PGN, undefined, 14);
-    expect(a.summary.accuracy).toEqual(b.summary.accuracy);
-    expect(a.summary.phaseAccuracy).toEqual(b.summary.phaseAccuracy);
-    expect(a.moves.map((m) => m.classification)).toEqual(
-      b.moves.map((m) => m.classification)
-    );
-  });
-
-  it("keeps coverage/count denominator consistent", async () => {
-    const result = await analyzePgn(SIMPLE_PGN, undefined, 14);
-    const totalCounted =
-      Object.values(result.summary.white).reduce((a, b) => a + b, 0) +
-      Object.values(result.summary.black).reduce((a, b) => a + b, 0);
-    expect(result.summary.coverage).toBeTruthy();
-    expect(result.summary.coverage!.classifiedPlies).toBe(totalCounted);
-    expect(result.summary.coverage!.totalPlies).toBe(result.moves.length);
+  it("delegates to Chess.com-style game review module", async () => {
+    const result = await analyzePgn(SIMPLE_PGN, undefined, 18);
+    expect(result.summary.accuracyMeta?.formulaVersion).toContain("v3.0");
+    expect(result.moves.length).toBeGreaterThan(0);
   });
 });

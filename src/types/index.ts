@@ -88,7 +88,7 @@ export interface ReviewSummary {
 }
 
 export interface AccuracyMeta {
-  method: "ep_loss_caps" | "classification_counts";
+  method: "ep_loss_caps" | "classification_counts" | "chesscom_ep_v3";
   formulaVersion: string;
 }
 
