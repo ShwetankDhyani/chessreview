@@ -15,11 +15,14 @@ Modular implementation under `src/analysis/`.
 | `stockfishClient.ts` | Main-thread worker API |
 | `gameReview.ts` | PGN iterator → `ReviewResult` |
 
-## Engine
+## Engine (hybrid v3.1 — fast)
 
-- WASM worker loads `/public/stockfish.js` (replace with SF 16.1 build when ready).
-- `MultiPV = 2` (configurable), `depth >= 18`.
-- Entry: `analyzePgn()` in `src/utils/analyzer.ts` → `analyzeGameReview()`.
+1. **Batch pass** — `evaluateFensConsensus` via native Stockfish server / cloud (all FENs in chunks).
+2. **Extra FENs** — positions after engine best move (when not played).
+3. **MultiPV WASM** — only up to 12 “Great” candidate plies (not every position).
+4. **Fallback** — full WASM MultiPV if batch coverage &lt; 85%.
+
+Entry: `analyzePgn()` → `analyzeGameReview()`. Banner: `v3.1-hybrid-batch` when fast path wins.
 
 ## Expected points
 

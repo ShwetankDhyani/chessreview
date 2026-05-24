@@ -56,7 +56,7 @@ const mockReview: ReviewResult = {
     accuracy: { white: 90, black: 0 },
     accuracyMeta: {
       method: "chesscom_ep_v3",
-      formulaVersion: "v3.0-chesscom-ep-multipv",
+      formulaVersion: "v3.1-hybrid-batch",
     },
   },
 };
@@ -75,7 +75,7 @@ const SIMPLE_PGN = `
 describe("analyzePgn", () => {
   it("delegates to Chess.com-style game review module", async () => {
     const result = await analyzePgn(SIMPLE_PGN, undefined, 18);
-    expect(result.summary.accuracyMeta?.formulaVersion).toContain("v3.0");
+    expect(result.summary.accuracyMeta?.formulaVersion).toMatch(/v3\.1/);
     expect(result.moves.length).toBeGreaterThan(0);
   });
 });

@@ -10,8 +10,8 @@ export async function analyzePgn(
   depth = 18
 ): Promise<ReviewResult> {
   return analyzeGameReview(pgn, {
-    depth: Math.max(18, depth),
-    minDepth: 18,
+    depth: Math.max(14, depth),
+    minDepth: 14,
     multiPv: 2,
     onProgress: (done, total) => {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;

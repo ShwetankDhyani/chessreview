@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type Move } from "chess.js";
 import type {
   AnalyzedMove,
   ClassificationCounts,
@@ -14,20 +14,26 @@ import {
   epLossFromPlayed,
   type ClassifyReviewInput,
 } from "./classifyReviewMove";
-import {
-  expectedPointsFromEval,
-} from "./expectedPoints";
+import { expectedPointsFromEval } from "./expectedPoints";
 import { checkOpeningBookSync } from "./openingBook";
 import {
   analyzePositionMultiPv,
   lineCpWhite,
   positionAnalysisToEvalResult,
 } from "./stockfishClient";
+import {
+  batchCacheIsUsable,
+  buildBatchPositionCache,
+  enrichGreatMoveCandidates,
+} from "./evalCache";
 import type { PositionAnalysis, ReviewEngineOptions } from "./types";
 import { detectPieceSacrifice } from "./detectPieceSacrifice";
+import { GREAT_MIN_BEST_EP } from "./types";
 
-const MIN_DEPTH = 18;
+const DEFAULT_DEPTH = 16;
+const WASM_FALLBACK_MIN_DEPTH = 14;
 const DEFAULT_MULTIPV = 2;
+const MIN_VERIFY_DEPTH = 10;
 
 function hashText(value: string): string {
   let hash = 5381;
@@ -71,7 +77,7 @@ function cpForMover(cpWhite: number, mover: "w" | "b"): number {
   return mover === "w" ? cpWhite : -cpWhite;
 }
 
-function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
+function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSummary {
   const white = emptyCounts();
   const black = emptyCounts();
 
@@ -102,7 +108,7 @@ function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
     },
     accuracyMeta: {
       method: "chesscom_ep_v3",
-      formulaVersion: "v3.0-chesscom-ep-multipv",
+      formulaVersion,
     },
   };
 }
@@ -110,11 +116,94 @@ function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
 export interface GameReviewOptions extends ReviewEngineOptions {
   onProgress?: (done: number, total: number) => void;
   openingBook?: ReadonlySet<string>;
+  forceWasmMultiPv?: boolean;
+}
+
+async function buildAnalysisCache(
+  fens: string[],
+  depth: number,
+  multiPv: number,
+  forceWasm: boolean,
+  onProgress?: (done: number, total: number) => void
+): Promise<{ cache: Map<string, PositionAnalysis>; engineTag: string }> {
+  if (!forceWasm) {
+    const batch = await buildBatchPositionCache(fens, depth, (done, total) => {
+      onProgress?.(Math.round((done / Math.max(total, 1)) * 88), 100);
+    });
+    if (batchCacheIsUsable(batch, fens)) {
+      onProgress?.(90, 100);
+      return { cache: batch, engineTag: "v3.1-hybrid-batch" };
+    }
+  }
+
+  const cache = new Map<string, PositionAnalysis>();
+  const wasmDepth = Math.max(WASM_FALLBACK_MIN_DEPTH, depth);
+  let done = 0;
+  for (const fen of fens) {
+    cache.set(
+      fen,
+      await analyzePositionMultiPv(fen, { depth: wasmDepth, multiPv })
+    );
+    done++;
+    onProgress?.(Math.round((done / fens.length) * 88), 100);
+  }
+  return { cache, engineTag: "v3.1-wasm-multipv" };
+}
+
+function collectExtraBestFens(
+  fens: string[],
+  history: Move[],
+  cache: Map<string, PositionAnalysis>
+): string[] {
+  const extra: string[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const fenBefore = fens[i];
+    const before = cache.get(fenBefore);
+    const bestUci = before?.lines[0]?.bestMove ?? before?.lines[0]?.pv[0];
+    if (!bestUci) continue;
+    const played = (
+      history[i].from +
+      history[i].to +
+      (history[i].promotion ?? "")
+    ).toLowerCase();
+    if (bestUci.toLowerCase() === played) continue;
+    const fenBest = applyUci(fenBefore, bestUci);
+    if (fenBest && !cache.has(fenBest)) extra.push(fenBest);
+  }
+  return extra;
+}
+
+function collectGreatCandidates(
+  fens: string[],
+  history: Move[],
+  cache: Map<string, PositionAnalysis>
+): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const fenBefore = fens[i];
+    const before = cache.get(fenBefore);
+    const line = before?.lines[0];
+    if (!line) continue;
+    const mover = history[i].color;
+    const eBefore = expectedPointsFromEval(
+      { cp: lineCpWhite(line), mate: line.mate },
+      mover
+    );
+    const bestUci = line.bestMove ?? line.pv[0];
+    const played = (
+      history[i].from +
+      history[i].to +
+      (history[i].promotion ?? "")
+    ).toLowerCase();
+    if (eBefore >= GREAT_MIN_BEST_EP && bestUci?.toLowerCase() === played) {
+      out.push(fenBefore);
+    }
+  }
+  return out;
 }
 
 /**
- * Sequential Chess.com-style game review: MultiPV Stockfish WASM per position,
- * expected-points classification, CAPS2 accuracy.
+ * Fast hybrid review: batch eval all FENs, MultiPV WASM only for Great candidates.
  */
 export async function analyzeGameReview(
   pgn: string,
@@ -122,12 +211,12 @@ export async function analyzeGameReview(
 ): Promise<ReviewResult> {
   const startedAt = nowIso();
   const runId = `${Date.now().toString(36)}-${hashText(pgn).slice(0, 8)}`;
-  const depth = Math.max(options.minDepth ?? MIN_DEPTH, options.depth ?? MIN_DEPTH);
+  const depth = Math.max(options.minDepth ?? DEFAULT_DEPTH, options.depth ?? DEFAULT_DEPTH);
   const multiPv = options.multiPv ?? DEFAULT_MULTIPV;
 
   const chess = new Chess();
   chess.loadPgn(pgn);
-  const history = chess.history({ verbose: true });
+  const history = chess.history({ verbose: true }) as Move[];
 
   const fens: string[] = [];
   const tmp = new Chess();
@@ -137,21 +226,30 @@ export async function analyzeGameReview(
     fens.push(tmp.fen());
   }
 
-  const uniqueFens = [...new Set(fens)];
-  const analysisCache = new Map<string, PositionAnalysis>();
-  const totalSteps = uniqueFens.length + history.length;
-  let doneSteps = 0;
+  const { cache: analysisCache, engineTag } = await buildAnalysisCache(
+    [...new Set(fens)],
+    depth,
+    multiPv,
+    !!options.forceWasmMultiPv,
+    options.onProgress
+  );
 
-  const report = () => {
-    doneSteps++;
-    options.onProgress?.(Math.min(doneSteps, totalSteps), totalSteps);
-  };
-
-  for (const fen of uniqueFens) {
-    const analysis = await analyzePositionMultiPv(fen, { depth, multiPv });
-    analysisCache.set(fen, analysis);
-    report();
+  const extraBestFens = collectExtraBestFens(fens, history, analysisCache);
+  if (extraBestFens.length > 0 && !options.forceWasmMultiPv) {
+    const extra = await buildBatchPositionCache(extraBestFens, depth, (d, t) => {
+      options.onProgress?.(88 + Math.round((d / Math.max(t, 1)) * 4), 100);
+    });
+    for (const [fen, a] of extra) analysisCache.set(fen, a);
   }
+
+  if (!options.forceWasmMultiPv) {
+    const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
+    if (greatCandidates.length > 0) {
+      await enrichGreatMoveCandidates(analysisCache, greatCandidates, depth, multiPv);
+    }
+  }
+
+  options.onProgress?.(95, 100);
 
   const moves: AnalyzedMove[] = [];
   let priorClass: MoveClassification | null = null;
@@ -198,35 +296,17 @@ export async function analyzeGameReview(
 
     if (bestUci) {
       fenAfterBest = applyUci(fenBefore, bestUci);
-      if (fenAfterBest) {
-        let bestAnalysis = analysisCache.get(fenAfterBest);
-        if (!bestAnalysis) {
-          bestAnalysis = await analyzePositionMultiPv(fenAfterBest, { depth, multiPv });
-          analysisCache.set(fenAfterBest, bestAnalysis);
-          report();
-        }
-        const cpBest = lineCpWhite(bestAnalysis.lines[0] ?? {});
+      const bestAnalysis = fenAfterBest ? analysisCache.get(fenAfterBest) : undefined;
+      if (bestAnalysis?.lines[0]) {
+        const cpBest = lineCpWhite(bestAnalysis.lines[0]);
         eAfterBest = expectedPointsFromEval(
-          { cp: cpBest, mate: bestAnalysis.lines[0]?.mate },
+          { cp: cpBest, mate: bestAnalysis.lines[0].mate },
           mover
         );
       }
     }
 
     const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
-    const epLoss = epLossFromPlayed({
-      fenBefore,
-      fenAfter,
-      fenAfterBest,
-      mover,
-      playedUci: playerUci,
-      eBefore,
-      eAfterPlayed,
-      eAfterBest,
-      multipvLines: beforeAnalysis?.lines ?? [],
-      opponentPriorClass: priorClass,
-      opponentPriorEpLoss: priorEpLoss,
-    });
 
     const classifyInput: ClassifyReviewInput = {
       fenBefore,
@@ -242,6 +322,8 @@ export async function analyzeGameReview(
       opponentPriorClass: priorClass,
       opponentPriorEpLoss: priorEpLoss,
     };
+
+    const epLoss = epLossFromPlayed(classifyInput);
 
     const inBook =
       checkOpeningBookSync(fenBefore, options.openingBook) ||
@@ -297,7 +379,7 @@ export async function analyzeGameReview(
       }
     }
 
-    const verified = (beforeAnalysis?.depth ?? 0) >= MIN_DEPTH;
+    const verified = (beforeAnalysis?.depth ?? 0) >= MIN_VERIFY_DEPTH;
 
     moves.push({
       moveNumber: Math.floor(i / 2) + 1,
@@ -326,16 +408,17 @@ export async function analyzeGameReview(
 
     priorClass = classification;
     priorEpLoss = epLoss;
-    report();
   }
+
+  options.onProgress?.(100, 100);
 
   const run: ReviewRun = {
     runId,
-    engineVersion: "stockfish-wasm-multipv-v3",
+    engineVersion: `stockfish-${engineTag}`,
     startedAt,
     finishedAt: nowIso(),
     requestedDepth: depth,
-    fastDepth: depth,
+    fastDepth: Math.min(12, depth),
     deepDepth: depth,
     backendPolicy: "consensus",
     pgnHash: hashText(pgn),
@@ -344,7 +427,7 @@ export async function analyzeGameReview(
   return {
     run,
     moves,
-    summary: buildSummary(moves),
+    summary: buildSummary(moves, engineTag),
   };
 }
 

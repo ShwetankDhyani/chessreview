@@ -36,6 +36,12 @@ export {
   terminateReviewWorker,
 } from "./stockfishClient";
 
+export {
+  buildBatchPositionCache,
+  batchCacheIsUsable,
+  enrichGreatMoveCandidates,
+} from "./evalCache";
+
 export { analyzeGameReview, type GameReviewOptions } from "./gameReview";
 
 export type { MultiPvLine, PositionAnalysis, ReviewEngineOptions } from "./types";
