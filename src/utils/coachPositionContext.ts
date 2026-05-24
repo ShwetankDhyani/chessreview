@@ -1,3 +1,4 @@
+import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
 import {
   bestLines,
@@ -130,6 +131,10 @@ export function getPositionAwareMoveComment(
 ): string | null {
   const c = move.classification;
   if (!c) return null;
+
+  if (isDeliveredCheckmate(move.fenAfter)) {
+    return `${move.san} — checkmate. The game is over.`;
+  }
 
   const seed = commentarySeed(move, moveIdx);
   const { san, bestMoveSan: best } = move;

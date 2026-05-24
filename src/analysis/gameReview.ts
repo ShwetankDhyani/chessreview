@@ -28,6 +28,7 @@ import {
 } from "./evalCache";
 import type { PositionAnalysis, ReviewEngineOptions } from "./types";
 import { detectPieceSacrifice } from "./detectPieceSacrifice";
+import { isDeliveredCheckmate } from "./mateDetection";
 import { GREAT_MIN_BEST_EP } from "./types";
 
 const DEFAULT_DEPTH = 16;
@@ -285,7 +286,7 @@ export async function analyzeGameReview(
       ? positionAnalysisToEvalResult(beforeAnalysis, 0)
       : { cp: 0, depth: 0, source: "local", verified: false };
 
-    const evalAfter: EvalResult = afterAnalysis
+    let evalAfter: EvalResult = afterAnalysis
       ? positionAnalysisToEvalResult(afterAnalysis, 0)
       : { cp: 0, depth: 0, source: "local", verified: false };
 
@@ -296,13 +297,23 @@ export async function analyzeGameReview(
       ? lineCpWhite(afterAnalysis.lines[0] ?? {})
       : 0;
 
+    const deliveredMate = isDeliveredCheckmate(fenAfter);
+    if (deliveredMate) {
+      evalAfter = {
+        ...evalAfter,
+        cp: undefined,
+        mate: mover === "w" ? 1 : -1,
+      };
+    }
+
     const eBefore = expectedPointsFromEval(
       { cp: cpWhiteBefore, mate: beforeAnalysis?.lines[0]?.mate },
       mover
     );
     const eAfterPlayed = expectedPointsFromEval(
       { cp: cpWhiteAfter, mate: afterAnalysis?.lines[0]?.mate },
-      mover
+      mover,
+      { afterDeliveredCheckmate: deliveredMate }
     );
 
     const bestUci =
@@ -339,14 +350,20 @@ export async function analyzeGameReview(
       opponentPriorEpLoss: priorEpLoss,
     };
 
-    const epLoss = epLossFromPlayed(classifyInput);
+    let epLoss = epLossFromPlayed(classifyInput);
+    if (deliveredMate) {
+      classifyInput.eAfterPlayed = 1;
+      classifyInput.eAfterBest = 1;
+      epLoss = 0;
+    }
 
     const inBook =
       checkOpeningBookSync(fenBefore, options.openingBook) ||
       (!bookEnded && i < 16 && epLoss <= 0.1);
 
-    const classification: MoveClassification =
-      beforeAnalysis && beforeAnalysis.lines.length > 0
+    const classification: MoveClassification = deliveredMate
+      ? "best"
+      : beforeAnalysis && beforeAnalysis.lines.length > 0
         ? inBook && !bookEnded
           ? "book"
           : classifyReviewMove(classifyInput)
@@ -408,7 +425,7 @@ export async function analyzeGameReview(
       evalAfter,
       eBest: cpBestMover / 100,
       eActual: cpAfterMover / 100,
-      deltaE: (cpBeforeMover - cpAfterMover) / 100,
+      deltaE: deliveredMate ? 0 : epLoss,
       epLoss,
       classification,
       inOpeningBook: classification === "book",

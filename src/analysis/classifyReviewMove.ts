@@ -10,6 +10,7 @@ import {
   BRILLIANT_MIN_WP_AFTER,
 } from "./types";
 import { expectedPointsFromMoverCp, expectedPointsLoss } from "./expectedPoints";
+import { isDeliveredCheckmate } from "./mateDetection";
 
 export interface ClassifyReviewInput {
   fenBefore: string;
@@ -103,6 +104,10 @@ export function detectBrilliantMove(
 export function classifyReviewMove(input: ClassifyReviewInput): MoveClassification {
   if (checkOpeningBookSync(input.fenBefore, input.openingBook)) {
     return "book";
+  }
+
+  if (isDeliveredCheckmate(input.fenAfter)) {
+    return "best";
   }
 
   const eLoss = epLossFromPlayed(input);

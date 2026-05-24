@@ -28,6 +28,11 @@ export {
 } from "./classifyReviewMove";
 
 export { checkOpeningBook, checkOpeningBookSync } from "./openingBook";
+export {
+  isCheckmatePosition,
+  isDeliveredCheckmate,
+  isDecisiveWinForMover,
+} from "./mateDetection";
 export { detectPieceSacrifice } from "./detectPieceSacrifice";
 
 export {

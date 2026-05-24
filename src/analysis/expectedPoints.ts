@@ -21,8 +21,10 @@ export function expectedPointsFromCpWhite(cpWhite: number, mover: "w" | "b"): nu
 
 export function expectedPointsFromEval(
   evalWhite: { cp?: number; mate?: number },
-  mover: "w" | "b"
+  mover: "w" | "b",
+  options?: { afterDeliveredCheckmate?: boolean }
 ): number {
+  if (options?.afterDeliveredCheckmate) return 1;
   if (evalWhite.mate !== undefined) {
     const whiteWinning = evalWhite.mate > 0;
     const moverWinning = mover === "w" ? whiteWinning : !whiteWinning;
