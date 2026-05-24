@@ -281,6 +281,11 @@ export function classifyMove(input: ClassifyMoveInput): MoveClassification {
   if (epLoss <= EP_THRESHOLDS.good) return "good";
   if (epLoss <= EP_THRESHOLDS.inaccuracy) return "inaccuracy";
   if (epLoss <= EP_THRESHOLDS.mistake) return "mistake";
+
+  // Already crushing: losing some win% is not the same as a game-losing blunder.
+  if (wpBefore >= 0.82 && wpAfter >= 0.68) return "inaccuracy";
+  if (wpBefore >= 0.72 && wpAfter >= 0.55) return "mistake";
+
   return "blunder";
 }
 

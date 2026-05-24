@@ -64,8 +64,37 @@ describe("classifyMove", () => {
     expect(classifyMove({ ...base, epLoss: 0.015, isTop: false })).toBe("excellent");
   });
 
-  it("blunder above 20%", () => {
-    expect(classifyMove({ ...base, epLoss: 0.25, isTop: false })).toBe("blunder");
+  it("blunder above 20% in a balanced game", () => {
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.25,
+        isTop: false,
+        wpBeforePct: 52,
+        wpAfterActualPct: 38,
+      })
+    ).toBe("blunder");
+  });
+
+  it("downgrades throwaway when still comfortably winning", () => {
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.25,
+        isTop: false,
+        wpBeforePct: 92,
+        wpAfterActualPct: 78,
+      })
+    ).toBe("inaccuracy");
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.18,
+        isTop: false,
+        wpBeforePct: 76,
+        wpAfterActualPct: 58,
+      })
+    ).toBe("mistake");
   });
 
   it("no brilliant without qualifiesBrilliant", () => {

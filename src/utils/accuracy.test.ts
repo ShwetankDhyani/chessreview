@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
-import { caps2DisplayAccuracy, computePlayerAccuracy } from "./accuracy";
+import {
+  caps2DisplayAccuracy,
+  computePlayerAccuracy,
+  effectiveEpLossForAccuracy,
+  moverWinChance,
+} from "./accuracy";
 
 function move(
   partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "color" | "classification">
@@ -28,6 +33,21 @@ describe("caps2DisplayAccuracy", () => {
 
   it("does not crush high raw scores to the low 80s", () => {
     expect(caps2DisplayAccuracy(97)).toBeGreaterThan(90);
+  });
+});
+
+describe("effectiveEpLossForAccuracy", () => {
+  it("dampens losses when the player stays clearly winning", () => {
+    const slip = move({
+      color: "w",
+      classification: "blunder",
+      epLoss: 0.28,
+      evalBefore: { cp: 900, depth: 14, source: "server" },
+      evalAfter: { cp: 550, depth: 14, source: "server" },
+    });
+    expect(moverWinChance(slip, "before")).toBeGreaterThan(0.85);
+    expect(moverWinChance(slip, "after")).toBeGreaterThan(0.7);
+    expect(effectiveEpLossForAccuracy(slip)).toBeLessThan(0.1);
   });
 });
 
@@ -68,5 +88,42 @@ describe("computePlayerAccuracy", () => {
     const result = computePlayerAccuracy(blackMoves, "b", cpMap, () => "middlegame");
     expect(result.game).toBeGreaterThanOrEqual(98);
     expect(result.game).toBeLessThanOrEqual(99.9);
+  });
+
+  it("keeps high game accuracy when one throwaway happens while still winning", () => {
+    const whiteMoves: AnalyzedMove[] = [
+      ...Array(10).fill(null).map((_, i) =>
+        move({
+          color: "w",
+          classification: "best",
+          san: `b${i}`,
+          epLoss: 0.003,
+          evalBefore: { cp: 400 + i * 20, depth: 14, source: "server" },
+          evalAfter: { cp: 420 + i * 20, depth: 14, source: "server" },
+        })
+      ),
+      move({
+        color: "w",
+        classification: "inaccuracy",
+        san: "Rf1",
+        epLoss: 0.22,
+        evalBefore: { cp: 850, depth: 14, source: "server" },
+        evalAfter: { cp: 520, depth: 14, source: "server" },
+      }),
+      ...Array(3).fill(null).map((_, i) =>
+        move({
+          color: "w",
+          classification: "best",
+          san: `e${i}`,
+          epLoss: 0.004,
+          evalBefore: { cp: 600, depth: 14, source: "server" },
+          evalAfter: { cp: 620, depth: 14, source: "server" },
+        })
+      ),
+    ];
+    const cpMap = new Map(whiteMoves.map((m) => [m.fenAfter, m.evalAfter!.cp!]));
+    const result = computePlayerAccuracy(whiteMoves, "w", cpMap, () => "middlegame");
+    expect(result.game).toBeGreaterThanOrEqual(88);
+    expect(result.phase.middlegame).toBeGreaterThanOrEqual(80);
   });
 });

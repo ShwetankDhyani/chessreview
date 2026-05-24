@@ -132,9 +132,50 @@ function skipMove(m: AnalyzedMove): boolean {
   return false;
 }
 
+/** Mover win chance 0–1 from stored eval (white-relative cp flipped for Black). */
+export function moverWinChance(
+  move: AnalyzedMove,
+  when: "before" | "after"
+): number {
+  const e = when === "before" ? move.evalBefore : move.evalAfter;
+  if (!e) return 0.5;
+  if (e.mate !== undefined) {
+    const whiteWinning = e.mate > 0;
+    const playerWinning = move.color === "w" ? whiteWinning : !whiteWinning;
+    return playerWinning ? 0.99 : 0.01;
+  }
+  const cp = e.cp ?? 0;
+  const signed = move.color === "w" ? cp : -cp;
+  return winPercentFromCp(signed) / 100;
+}
+
+/**
+ * When already winning, the same centipawn slip costs less in accuracy
+ * (matches how Chess.com-style reviews treat throwaways in won positions).
+ */
+export function effectiveEpLossForAccuracy(move: AnalyzedMove): number {
+  const epLoss = move.epLoss ?? 0;
+  if (epLoss <= 0) return 0;
+
+  const before = moverWinChance(move, "before");
+  const after = moverWinChance(move, "after");
+
+  if (before >= 0.88 && after >= 0.72) return epLoss * 0.22;
+  if (before >= 0.78 && after >= 0.62) return epLoss * 0.4;
+  if (before >= 0.68 && after >= 0.52) return epLoss * 0.58;
+
+  return epLoss;
+}
+
 function plyAccuracy(m: AnalyzedMove): number {
   if (m.classification === "book") return 100;
-  return moveAccuracyFromEpLoss(m.epLoss ?? 0);
+  return moveAccuracyFromEpLoss(effectiveEpLossForAccuracy(m));
+}
+
+function phaseDisplayAccuracy(values: number[]): number {
+  if (!values.length) return 0;
+  const raw = harmonicMean(values);
+  return caps2DisplayAccuracy(raw);
 }
 
 export interface PlayerAccuracyResult {
@@ -181,11 +222,9 @@ export function computePlayerAccuracy(
   return {
     game: caps2DisplayAccuracy(rawGame),
     phase: {
-      opening: phaseAcc.opening.length ? harmonicMean(phaseAcc.opening) : 0,
-      middlegame: phaseAcc.middlegame.length
-        ? harmonicMean(phaseAcc.middlegame)
-        : 0,
-      endgame: phaseAcc.endgame.length ? harmonicMean(phaseAcc.endgame) : 0,
+      opening: phaseDisplayAccuracy(phaseAcc.opening),
+      middlegame: phaseDisplayAccuracy(phaseAcc.middlegame),
+      endgame: phaseDisplayAccuracy(phaseAcc.endgame),
     },
   };
 }
