@@ -79,20 +79,30 @@ export function batchCacheIsUsable(
 /**
  * MultiPV on a few plies only (Great-move detection) — not the whole game.
  */
+const GREAT_ENRICH_TIMEOUT_MS = 12_000;
+
 export async function enrichGreatMoveCandidates(
   cache: Map<string, PositionAnalysis>,
   candidates: string[],
   depth: number,
-  multiPv = 2
+  multiPv = 2,
+  onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   const unique = [...new Set(candidates)].slice(0, MAX_MULTIPV_GREAT_PLIES);
+  let done = 0;
   for (const fen of unique) {
-    const analysis = await analyzePositionMultiPv(fen, {
-      depth,
-      multiPv,
-      timeoutMs: 45_000,
-    });
-    if (analysis.lines.length >= 2) cache.set(fen, analysis);
+    try {
+      const analysis = await analyzePositionMultiPv(fen, {
+        depth: Math.min(depth, 14),
+        multiPv,
+        timeoutMs: GREAT_ENRICH_TIMEOUT_MS,
+      });
+      if (analysis.lines.length >= 2) cache.set(fen, analysis);
+    } catch {
+      /* skip — Great detection optional for this ply */
+    }
+    done++;
+    onProgress?.(done, unique.length);
   }
 }
 

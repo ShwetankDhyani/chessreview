@@ -234,22 +234,38 @@ export async function analyzeGameReview(
     options.onProgress
   );
 
+  const usedBatchPath = engineTag === "v3.1-hybrid-batch";
+
   const extraBestFens = collectExtraBestFens(fens, history, analysisCache);
   if (extraBestFens.length > 0 && !options.forceWasmMultiPv) {
     const extra = await buildBatchPositionCache(extraBestFens, depth, (d, t) => {
-      options.onProgress?.(88 + Math.round((d / Math.max(t, 1)) * 4), 100);
+      options.onProgress?.(88 + Math.round((d / Math.max(t, 1)) * 6), 100);
     });
     for (const [fen, a] of extra) analysisCache.set(fen, a);
+  } else {
+    options.onProgress?.(94, 100);
   }
 
-  if (!options.forceWasmMultiPv) {
+  // WASM MultiPV enrichment is slow; skip on fast batch path (Great labels optional).
+  if (!options.forceWasmMultiPv && !usedBatchPath) {
     const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
     if (greatCandidates.length > 0) {
-      await enrichGreatMoveCandidates(analysisCache, greatCandidates, depth, multiPv);
+      await enrichGreatMoveCandidates(
+        analysisCache,
+        greatCandidates,
+        depth,
+        multiPv,
+        (d, t) => {
+          options.onProgress?.(
+            90 + Math.round((d / Math.max(t, 1)) * 8),
+            100
+          );
+        }
+      );
     }
   }
 
-  options.onProgress?.(95, 100);
+  options.onProgress?.(98, 100);
 
   const moves: AnalyzedMove[] = [];
   let priorClass: MoveClassification | null = null;
@@ -408,6 +424,11 @@ export async function analyzeGameReview(
 
     priorClass = classification;
     priorEpLoss = epLoss;
+
+    if (history.length > 0 && (i + 1) % 4 === 0) {
+      const classifyPct = 98 + Math.round(((i + 1) / history.length) * 1.5);
+      options.onProgress?.(Math.min(99, classifyPct), 100);
+    }
   }
 
   options.onProgress?.(100, 100);

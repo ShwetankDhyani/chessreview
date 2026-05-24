@@ -65,7 +65,8 @@ export function useSmoothAnalysisProgress(
       const gap = target - cur;
       const step =
         gap <= 0 ? 0.2 : Math.max(0.3, Math.min(2.2, gap * 0.1));
-      const next = Math.min(99, cur + step);
+      const cap = rawPercent >= 100 ? 100 : 99;
+      const next = Math.min(cap, cur + step);
       displayRef.current = next;
       setDisplay(next);
     }, 45);
@@ -73,6 +74,6 @@ export function useSmoothAnalysisProgress(
     return () => window.clearInterval(tick);
   }, [state, rawPercent]);
 
-  if (state === "done") return 100;
+  if (state === "done" || rawPercent >= 100) return 100;
   return Math.min(99, Math.round(display));
 }

@@ -552,16 +552,16 @@ export default function App() {
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 
-        setProgress({ done: 100, total: 100 });
         setMoves(result.moves);
         setSummary(result.summary);
         setReviewResult(result);
         const openReview = showAnalysisProgressRef.current;
+        setProgress({ done: 100, total: 100 });
+        setAnalysisState("done");
+        setReviewReady(true);
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
-        setAnalysisState("done");
-        setReviewReady(true);
 
         if (openReview) {
           setTab("review");
