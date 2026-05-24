@@ -802,14 +802,6 @@ export default function App() {
         </div>
         <div className="flex-1 min-w-0" />
 
-        {canReanalyze ? (
-          <ReanalyzeButton
-            onClick={requestReanalysis}
-            disabled={isAnalyzing}
-            spinning={isAnalyzing}
-          />
-        ) : null}
-
         <EngineDepthControls
           depth={depth}
           engineBackend={engineBackend}
@@ -1062,13 +1054,6 @@ export default function App() {
                           onClick={() => requestAnalysisUi()}
                         />
                       )}
-                      {canReanalyze && (
-                        <ReanalyzeButton
-                          onClick={requestReanalysis}
-                          disabled={isAnalyzing}
-                          spinning={isAnalyzing}
-                        />
-                      )}
                       {isAnalyzing && (
                         <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] text-chess-accent font-semibold tabular-nums">
                           <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
@@ -1252,6 +1237,15 @@ export default function App() {
                     side={boardFlipped ? "b" : "w"}
                   />
                 </div>
+                {canReanalyze && (
+                  <div className="pl-[34px] flex justify-center pt-1.5">
+                    <ReanalyzeButton
+                      onClick={requestReanalysis}
+                      disabled={isAnalyzing}
+                      spinning={isAnalyzing}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col items-stretch gap-1 w-11">
@@ -1475,6 +1469,15 @@ export default function App() {
                   />
                 }
               />
+              {canReanalyze && (
+                <div className="flex justify-center pt-1.5 w-full">
+                  <ReanalyzeButton
+                    onClick={requestReanalysis}
+                    disabled={isAnalyzing}
+                    spinning={isAnalyzing}
+                  />
+                </div>
+              )}
                 </>
               ) : (
                 <MobileGameHero
