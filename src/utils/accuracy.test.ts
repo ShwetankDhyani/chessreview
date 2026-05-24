@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
 import {
+  accuracyFromClassificationCounts,
   caps2DisplayAccuracy,
   computePlayerAccuracy,
   effectiveEpLossForAccuracy,
   moverWinChance,
 } from "./accuracy";
+import type { ClassificationCounts } from "../types";
 
 function move(
   partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "color" | "classification">
@@ -50,6 +52,47 @@ describe("effectiveEpLossForAccuracy", () => {
     expect(moverWinChance(slip, "before")).toBeGreaterThan(0.85);
     expect(moverWinChance(slip, "after")).toBeGreaterThan(0.7);
     expect(effectiveEpLossForAccuracy(slip)).toBeLessThan(0.1);
+  });
+});
+
+function counts(
+  partial: Partial<ClassificationCounts>
+): ClassificationCounts {
+  return {
+    brilliant: 0,
+    great: 0,
+    best: 0,
+    excellent: 0,
+    good: 0,
+    book: 0,
+    inaccuracy: 0,
+    mistake: 0,
+    blunder: 0,
+    ...partial,
+  };
+}
+
+describe("accuracyFromClassificationCounts", () => {
+  it("scores from the same numbers shown in the move breakdown", () => {
+    const white = counts({
+      best: 21,
+      book: 1,
+      inaccuracy: 2,
+      mistake: 1,
+    });
+    const black = counts({
+      best: 12,
+      excellent: 4,
+      good: 3,
+      book: 1,
+      inaccuracy: 3,
+      mistake: 2,
+    });
+    const w = accuracyFromClassificationCounts(white);
+    const b = accuracyFromClassificationCounts(black);
+    expect(w).toBeGreaterThan(b);
+    expect(w).toBeGreaterThanOrEqual(96);
+    expect(b).toBeLessThan(w);
   });
 });
 
@@ -235,7 +278,46 @@ describe("computePlayerAccuracy", () => {
     const b = computePlayerAccuracy(all, "b", cpMap, () => "middlegame");
     expect(w.game).toBeGreaterThan(b.game);
     expect(w.game).toBeGreaterThanOrEqual(94);
-    expect(b.game).toBeLessThan(w.game);
-    expect(b.game).toBeLessThan(96);
+  });
+
+  it("does not drop mate-line best moves from the accuracy pool", () => {
+    const mateBest = Array(14)
+      .fill(null)
+      .map((_, i) =>
+        move({
+          color: "w",
+          classification: "best",
+          san: `m${i}`,
+          epLoss: 0.002,
+          evalAfter: { mate: 3, depth: 14, source: "server" },
+        })
+      );
+    const other = [
+      ...Array(7).fill(null).map((_, i) =>
+        move({
+          color: "w",
+          classification: "best",
+          san: `b${i}`,
+          epLoss: 0.004,
+        })
+      ),
+      move({
+        color: "w",
+        classification: "inaccuracy",
+        san: "a6",
+        epLoss: 0.09,
+      }),
+      move({
+        color: "w",
+        classification: "mistake",
+        san: "Rf1",
+        epLoss: 0.16,
+      }),
+      move({ color: "w", classification: "book", san: "e4", epLoss: 0.002 }),
+    ];
+    const whiteMoves = [...mateBest, ...other];
+    const cpMap = new Map(whiteMoves.map((m) => [m.fenAfter, 0]));
+    const result = computePlayerAccuracy(whiteMoves, "w", cpMap, () => "middlegame");
+    expect(result.game).toBeGreaterThanOrEqual(94);
   });
 });

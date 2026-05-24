@@ -1,4 +1,8 @@
-import type { AnalyzedMove, MoveClassification } from "../types";
+import type {
+  AnalyzedMove,
+  ClassificationCounts,
+  MoveClassification,
+} from "../types";
 
 // Lichess per-move + game accuracy (open source)
 // https://lichess.org/page/accuracy
@@ -111,8 +115,11 @@ function lichessGameAccuracy(accuracies: number[], weights: number[]): number {
   return (weightedMean(accuracies, weights) + harmonicMean(accuracies)) / 2;
 }
 
-/** Visible label quality — aligns accuracy % with the move breakdown users see. */
-const CLASSIFICATION_ACCURACY: Record<Exclude<MoveClassification, null>, number> = {
+/** Visible label quality — must match the move breakdown table exactly. */
+export const CLASSIFICATION_ACCURACY: Record<
+  Exclude<MoveClassification, null>,
+  number
+> = {
   brilliant: 100,
   great: 99,
   best: 100,
@@ -140,10 +147,27 @@ function adjustedPlyWeight(base: number, move: AnalyzedMove): number {
   return base;
 }
 
-function labelBasedGameAccuracy(labelScores: number[]): number {
-  if (!labelScores.length) return 0;
-  if (labelScores.length === 1) return labelScores[0];
-  return (arithmeticMean(labelScores) + harmonicMean(labelScores)) / 2;
+const COUNTED_CLASSIFICATIONS = Object.keys(
+  CLASSIFICATION_ACCURACY
+) as Array<Exclude<MoveClassification, null>>;
+
+/**
+ * Overall accuracy from the same counts shown in the review sidebar.
+ * Weighted average — no hidden ply drops (e.g. mate lines still count as best).
+ */
+export function accuracyFromClassificationCounts(
+  counts: ClassificationCounts
+): number {
+  let total = 0;
+  let weighted = 0;
+  for (const key of COUNTED_CLASSIFICATIONS) {
+    const n = counts[key];
+    if (n <= 0) continue;
+    weighted += n * CLASSIFICATION_ACCURACY[key];
+    total += n;
+  }
+  if (total === 0) return 0;
+  return caps2DisplayAccuracy(weighted / total);
 }
 
 /**
@@ -156,7 +180,7 @@ export function caps2DisplayAccuracy(raw: number): number {
 
   if (r <= 50) return Math.round(r * 0.92 * 10) / 10;
 
-  if (r >= 92) {
+  if (r >= 96) {
     const headroom = 99.9 - r;
     return Math.round(Math.min(99.9, r + headroom * 0.85) * 10) / 10;
   }
@@ -165,10 +189,13 @@ export function caps2DisplayAccuracy(raw: number): number {
 }
 
 function displayGameAccuracy(labelScores: number[]): number {
-  return caps2DisplayAccuracy(labelBasedGameAccuracy(labelScores));
+  if (!labelScores.length) return 0;
+  return caps2DisplayAccuracy(arithmeticMean(labelScores));
 }
 
 function skipMove(m: AnalyzedMove): boolean {
+  // Classified plies always count — mate sequences are often labeled "best" in the chart.
+  if (m.classification) return false;
   if (m.evalAfter?.mate !== undefined) return true;
   if ((m.epLoss ?? 0) >= 0.99) return true;
   return false;

@@ -1,7 +1,7 @@
 import { Chess, type Move as ChessMove } from "chess.js";
 import { evaluateFen, evaluateFensBatch } from "../engine/evaluationService";
 import {
-  computePlayerAccuracy,
+  accuracyFromClassificationCounts,
   expectedPointsLost,
   winPercentFromCp,
 } from "./accuracy";
@@ -436,38 +436,51 @@ function buildSummary(
   const phaseForMove = (m: AnalyzedMove, idx: number) =>
     detectPhase(m.fenBefore, stillInBookAt[idx] ?? false, idx);
 
-  const whiteAcc = computePlayerAccuracy(
-    moves,
-    "w",
-    resolvedCpWhite,
-    phaseForMove
-  );
-  const blackAcc = computePlayerAccuracy(
-    moves,
-    "b",
-    resolvedCpWhite,
-    phaseForMove
-  );
+  const phaseWhite: Record<
+    "opening" | "middlegame" | "endgame",
+    ClassificationCounts
+  > = {
+    opening: emptyCounts(),
+    middlegame: emptyCounts(),
+    endgame: emptyCounts(),
+  };
+  const phaseBlack: Record<
+    "opening" | "middlegame" | "endgame",
+    ClassificationCounts
+  > = {
+    opening: emptyCounts(),
+    middlegame: emptyCounts(),
+    endgame: emptyCounts(),
+  };
+
+  for (let i = 0; i < moves.length; i++) {
+    const m = moves[i];
+    const c = m.classification;
+    if (!c) continue;
+    const phase = phaseForMove(m, i);
+    const bucket = m.color === "w" ? phaseWhite[phase] : phaseBlack[phase];
+    if (c in bucket) (bucket as unknown as Record<string, number>)[c]++;
+  }
 
   return {
     white,
     black,
     accuracy: {
-      white: whiteAcc.game,
-      black: blackAcc.game,
+      white: accuracyFromClassificationCounts(white),
+      black: accuracyFromClassificationCounts(black),
     },
     phaseAccuracy: {
       opening: {
-        white: whiteAcc.phase.opening,
-        black: blackAcc.phase.opening,
+        white: accuracyFromClassificationCounts(phaseWhite.opening),
+        black: accuracyFromClassificationCounts(phaseBlack.opening),
       },
       middlegame: {
-        white: whiteAcc.phase.middlegame,
-        black: blackAcc.phase.middlegame,
+        white: accuracyFromClassificationCounts(phaseWhite.middlegame),
+        black: accuracyFromClassificationCounts(phaseBlack.middlegame),
       },
       endgame: {
-        white: whiteAcc.phase.endgame,
-        black: blackAcc.phase.endgame,
+        white: accuracyFromClassificationCounts(phaseWhite.endgame),
+        black: accuracyFromClassificationCounts(phaseBlack.endgame),
       },
     },
     keyMoments,
