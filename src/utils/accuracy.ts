@@ -1,4 +1,12 @@
-import type { ClassificationCounts, MoveClassification } from "../types";
+import type {
+  AnalyzedMove,
+  ClassificationCounts,
+  MoveClassification,
+} from "../types";
+
+const ACC_A = 103.1668100711649;
+const ACC_B = -0.04354415386753951;
+const ACC_C = -3.166924740191411;
 
 /** Expected-points model (Lichess logistic) used for per-move loss. */
 export function winPercentFromCp(cp: number): number {
@@ -13,7 +21,104 @@ export function expectedPointsLost(cpAfterBest: number, cpAfterActual: number): 
   return Math.max(0, (best - actual) / 100);
 }
 
-/** Visible label quality — canonical mapping for summary accuracy. */
+/** Per-move accuracy from expected-points loss (Chess.com CAPS / Lichess curve). */
+export function moveAccuracyFromEpLoss(epLoss: number): number {
+  const winDiff = Math.max(0, epLoss * 100);
+  if (winDiff <= 0) return 100;
+  const raw = ACC_A * Math.exp(ACC_B * winDiff) + ACC_C;
+  return Math.min(100, Math.max(0, raw + 1));
+}
+
+function harmonicMean(values: number[]): number {
+  if (values.length === 0) return 0;
+  const epsilon = 0.01;
+  let sum = 0;
+  for (const v of values) {
+    sum += 1 / Math.max(v, epsilon);
+  }
+  return values.length / sum;
+}
+
+function arithmeticMean(values: number[]): number {
+  if (!values.length) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+/** Mover win chance 0–1 from stored eval (white-relative cp flipped for Black). */
+export function moverWinChance(
+  move: AnalyzedMove,
+  when: "before" | "after"
+): number {
+  const e = when === "before" ? move.evalBefore : move.evalAfter;
+  if (!e) return 0.5;
+  if (e.mate !== undefined) {
+    const whiteWinning = e.mate > 0;
+    const playerWinning = move.color === "w" ? whiteWinning : !whiteWinning;
+    return playerWinning ? 0.99 : 0.01;
+  }
+  const cp = e.cp ?? 0;
+  const signed = move.color === "w" ? cp : -cp;
+  return winPercentFromCp(signed) / 100;
+}
+
+/** Slight dampening when already winning — avoids absurdly low % on throwaways in won games. */
+export function effectiveEpLossForAccuracy(move: AnalyzedMove): number {
+  const epLoss = move.epLoss ?? 0;
+  if (epLoss <= 0) return 0;
+
+  const before = moverWinChance(move, "before");
+  const after = moverWinChance(move, "after");
+
+  if (before >= 0.92 && after >= 0.78) return epLoss * 0.35;
+  if (before >= 0.85 && after >= 0.68) return epLoss * 0.5;
+  if (before >= 0.75 && after >= 0.58) return epLoss * 0.65;
+
+  return epLoss;
+}
+
+/** Single-ply score used for game accuracy — driven by engine loss, not label buckets. */
+export function plyAccuracyScore(move: AnalyzedMove): number {
+  if (!move.classification) return 0;
+  if (move.classification === "book") return 100;
+  return moveAccuracyFromEpLoss(effectiveEpLossForAccuracy(move));
+}
+
+/**
+ * Game accuracy: Lichess-style blend of mean + harmonic mean on per-move CAPS scores.
+ * Harmonic mean punishes mistakes so 2 inaccuracies + 1 mistake cannot read as 99%.
+ */
+export function gameAccuracyFromMoves(
+  moves: AnalyzedMove[],
+  color: "w" | "b"
+): number {
+  const scores: number[] = [];
+  for (const m of moves) {
+    if (m.color !== color || !m.classification) continue;
+    scores.push(plyAccuracyScore(m));
+  }
+  if (!scores.length) return 0;
+
+  const mean = arithmeticMean(scores);
+  const harmonic = harmonicMean(scores);
+  const raw = (mean + harmonic) / 2;
+  return displayAccuracy(raw);
+}
+
+/**
+ * Display value — no artificial boost toward 99.9.
+ * Raw engine-based scores are shown as-is (rounded), capped at 99.9.
+ */
+export function caps2DisplayAccuracy(raw: number): number {
+  return displayAccuracy(raw);
+}
+
+export function displayAccuracy(raw: number): number {
+  if (!Number.isFinite(raw)) return 0;
+  const r = Math.max(0, Math.min(100, raw));
+  return Math.round(Math.min(99.9, r) * 10) / 10;
+}
+
+/** Legacy label map — used only for diagnostics, not headline game %. */
 export const CLASSIFICATION_ACCURACY: Record<
   Exclude<MoveClassification, null>,
   number
@@ -33,19 +138,7 @@ const COUNTED_CLASSIFICATIONS = Object.keys(
   CLASSIFICATION_ACCURACY
 ) as Array<Exclude<MoveClassification, null>>;
 
-/** Display calibration that preserves strong games and avoids contradictory compression. */
-export function caps2DisplayAccuracy(raw: number): number {
-  if (!Number.isFinite(raw)) return 0;
-  const r = Math.max(0, Math.min(100, raw));
-  if (r <= 50) return Math.round(r * 0.92 * 10) / 10;
-  if (r >= 96) {
-    const headroom = 99.9 - r;
-    return Math.round(Math.min(99.9, r + headroom * 0.85) * 10) / 10;
-  }
-  return Math.round(r * 10) / 10;
-}
-
-/** Summary accuracy from move-breakdown counts (single canonical path). */
+/** Label average (informational); headline accuracy uses gameAccuracyFromMoves. */
 export function accuracyFromClassificationCounts(
   counts: ClassificationCounts
 ): number {
@@ -58,5 +151,5 @@ export function accuracyFromClassificationCounts(
     total += n;
   }
   if (total === 0) return 0;
-  return caps2DisplayAccuracy(weighted / total);
+  return displayAccuracy(weighted / total);
 }

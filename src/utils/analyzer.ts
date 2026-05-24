@@ -1,6 +1,10 @@
 import { Chess, type Move as ChessMove } from "chess.js";
 import { evaluateFensConsensus } from "../engine/evaluationService";
-import { accuracyFromClassificationCounts, expectedPointsLost, winPercentFromCp } from "./accuracy";
+import {
+  expectedPointsLost,
+  gameAccuracyFromMoves,
+  winPercentFromCp,
+} from "./accuracy";
 import {
   BOOK_MAX_PLY,
   EP_THRESHOLDS,
@@ -184,32 +188,46 @@ function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
     bucket[c]++;
   }
 
+  const phaseAccuracyFromMoves = (
+    phase: "opening" | "middlegame" | "endgame"
+  ) => ({
+    white: gameAccuracyFromMoves(
+      moves.filter(
+        (m, idx) =>
+          m.color === "w" &&
+          m.classification &&
+          detectPhase(m.fenBefore, stillInBookAt[idx] ?? false, idx) === phase
+      ),
+      "w"
+    ),
+    black: gameAccuracyFromMoves(
+      moves.filter(
+        (m, idx) =>
+          m.color === "b" &&
+          m.classification &&
+          detectPhase(m.fenBefore, stillInBookAt[idx] ?? false, idx) === phase
+      ),
+      "b"
+    ),
+  });
+
   return {
     white,
     black,
     accuracy: {
-      white: accuracyFromClassificationCounts(white),
-      black: accuracyFromClassificationCounts(black),
+      white: gameAccuracyFromMoves(moves, "w"),
+      black: gameAccuracyFromMoves(moves, "b"),
     },
     phaseAccuracy: {
-      opening: {
-        white: accuracyFromClassificationCounts(phaseWhite.opening),
-        black: accuracyFromClassificationCounts(phaseBlack.opening),
-      },
-      middlegame: {
-        white: accuracyFromClassificationCounts(phaseWhite.middlegame),
-        black: accuracyFromClassificationCounts(phaseBlack.middlegame),
-      },
-      endgame: {
-        white: accuracyFromClassificationCounts(phaseWhite.endgame),
-        black: accuracyFromClassificationCounts(phaseBlack.endgame),
-      },
+      opening: phaseAccuracyFromMoves("opening"),
+      middlegame: phaseAccuracyFromMoves("middlegame"),
+      endgame: phaseAccuracyFromMoves("endgame"),
     },
     keyMoments,
     coverage: buildCoverage(moves),
     accuracyMeta: {
-      method: "classification_counts",
-      formulaVersion: "v2.0-consensus",
+      method: "ep_loss_caps",
+      formulaVersion: "v2.1-ep-harmonic",
     },
   };
 }

@@ -1,22 +1,79 @@
 import { describe, expect, it } from "vitest";
-import type { ClassificationCounts } from "../types";
+import type { AnalyzedMove, ClassificationCounts } from "../types";
 import {
   accuracyFromClassificationCounts,
   caps2DisplayAccuracy,
   expectedPointsLost,
+  gameAccuracyFromMoves,
+  moveAccuracyFromEpLoss,
   winPercentFromCp,
 } from "./accuracy";
 
-describe("caps2DisplayAccuracy", () => {
-  it("preserves near-perfect raw scores up to 99.9", () => {
-    expect(caps2DisplayAccuracy(97)).toBeGreaterThanOrEqual(99);
-    expect(caps2DisplayAccuracy(97)).toBeLessThanOrEqual(99.9);
+describe("displayAccuracy (caps2DisplayAccuracy)", () => {
+  it("does not inflate high raw scores toward 99.9", () => {
+    expect(caps2DisplayAccuracy(97)).toBe(97);
+    expect(caps2DisplayAccuracy(96)).toBe(96);
   });
 
-  it("does not crush high raw scores to the low 80s", () => {
-    expect(caps2DisplayAccuracy(97)).toBeGreaterThan(90);
-    expect(caps2DisplayAccuracy(96)).toBeGreaterThanOrEqual(96);
-    expect(caps2DisplayAccuracy(85)).toBeGreaterThanOrEqual(85);
+  it("rounds and caps at 99.9", () => {
+    expect(caps2DisplayAccuracy(99.95)).toBe(99.9);
+    expect(caps2DisplayAccuracy(85.04)).toBe(85);
+  });
+});
+
+describe("moveAccuracyFromEpLoss", () => {
+  it("maps small losses to high but not perfect scores", () => {
+    expect(moveAccuracyFromEpLoss(0)).toBe(100);
+    expect(moveAccuracyFromEpLoss(0.09)).toBeLessThan(92);
+    expect(moveAccuracyFromEpLoss(0.16)).toBeLessThan(80);
+  });
+});
+
+describe("gameAccuracyFromMoves", () => {
+  function mockMove(
+    color: "w" | "b",
+    classification: NonNullable<AnalyzedMove["classification"]>,
+    epLoss: number
+  ): AnalyzedMove {
+    return {
+      ply: 1,
+      color,
+      san: "e4",
+      fenBefore: "",
+      fenAfter: "",
+      classification,
+      epLoss,
+      evalBefore: { cp: 20 },
+      evalAfter: { cp: 20 },
+    } as AnalyzedMove;
+  }
+
+  it("returns realistic game scores for a strong-but-imperfect profile", () => {
+    const white: AnalyzedMove[] = [
+      ...Array.from({ length: 17 }, () => mockMove("w", "best", 0.004)),
+      mockMove("w", "excellent", 0.015),
+      ...Array.from({ length: 4 }, () => mockMove("w", "book", 0.002)),
+      mockMove("w", "inaccuracy", 0.09),
+      mockMove("w", "inaccuracy", 0.09),
+      mockMove("w", "mistake", 0.16),
+    ];
+    const black: AnalyzedMove[] = [
+      ...Array.from({ length: 9 }, () => mockMove("b", "best", 0.004)),
+      ...Array.from({ length: 4 }, () => mockMove("b", "excellent", 0.02)),
+      ...Array.from({ length: 2 }, () => mockMove("b", "good", 0.05)),
+      ...Array.from({ length: 3 }, () => mockMove("b", "book", 0.002)),
+      ...Array.from({ length: 5 }, () => mockMove("b", "inaccuracy", 0.09)),
+      mockMove("b", "mistake", 0.16),
+      mockMove("b", "mistake", 0.16),
+    ];
+
+    const w = gameAccuracyFromMoves(white, "w");
+    const b = gameAccuracyFromMoves(black, "b");
+    expect(w).toBeGreaterThan(b);
+    expect(w).toBeGreaterThanOrEqual(90);
+    expect(w).toBeLessThan(98);
+    expect(b).toBeGreaterThanOrEqual(80);
+    expect(b).toBeLessThan(90);
   });
 });
 
@@ -48,27 +105,16 @@ function counts(
   };
 }
 
-describe("accuracyFromClassificationCounts", () => {
-  it("scores from the same numbers shown in the move breakdown", () => {
+describe("accuracyFromClassificationCounts (label average only)", () => {
+  it("can overstate strength vs engine-based game score", () => {
     const white = counts({
       best: 21,
       book: 1,
       inaccuracy: 2,
       mistake: 1,
     });
-    const black = counts({
-      best: 12,
-      excellent: 4,
-      good: 3,
-      book: 1,
-      inaccuracy: 3,
-      mistake: 2,
-    });
-    const w = accuracyFromClassificationCounts(white);
-    const b = accuracyFromClassificationCounts(black);
-    expect(w).toBeGreaterThan(b);
-    expect(w).toBeGreaterThanOrEqual(96);
-    expect(b).toBeLessThan(w);
+    const labelOnly = accuracyFromClassificationCounts(white);
+    expect(labelOnly).toBeGreaterThanOrEqual(96);
   });
 
   it("is monotonic when improving move quality", () => {
@@ -89,4 +135,3 @@ describe("accuracyFromClassificationCounts", () => {
     );
   });
 });
-

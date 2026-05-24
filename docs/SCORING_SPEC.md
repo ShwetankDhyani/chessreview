@@ -1,4 +1,4 @@
-# Scoring Spec v2.0 (Consensus, Chess.com-parity oriented)
+# Scoring Spec v2.1 (Consensus, Chess.com-parity oriented)
 
 This document defines the canonical review math used by ChessReview.org.
 
@@ -31,24 +31,26 @@ Classification bands and heuristics are implemented in `moveClassification.ts`.
 
 ## 4) Accuracy Aggregation
 
-Overall and phase accuracy are computed from classification counts:
+**Headline game and phase accuracy** use engine expected-points loss per classified ply:
 
-- `classification -> score` mapping:
-  - brilliant: 100
-  - great: 99
-  - best: 100
-  - excellent: 96
-  - good: 91
-  - book: 100
-  - inaccuracy: 79
-  - mistake: 63
-  - blunder: 38
-- weighted mean across counted classes.
-- display calibration:
-  - low scores slightly compressed,
-  - high scores kept high (with small headroom lift only near perfect games).
+1. `epLoss` per move (same input as classification).
+2. Optional dampening when the mover was already winning (`effectiveEpLossForAccuracy`).
+3. `moveAccuracyFromEpLoss` — Lichess/CAPS logistic curve on win-% lost.
+4. Book moves score 100 for that ply (opening theory).
+5. Game score = average of arithmetic mean and harmonic mean of ply scores (harmonic punishes mistakes).
+6. **Display** — round to one decimal, cap at 99.9; **no boost** toward 99.9 for high raw values.
 
-No hidden exclusions are allowed for labeled moves.
+Typical ranges (rapid/online, one game):
+
+| Quality | Approx. accuracy |
+|--------|-------------------|
+| Clean win, few errors | 92–97 |
+| Solid game with a few inaccuracies | 85–92 |
+| Messy / many mistakes | 70–85 |
+
+The move-breakdown table still shows classification **counts**; label bucket weights (best=100, inaccuracy=79, …) are not used for the headline %.
+
+No hidden exclusions: every classified ply in the breakdown is in the accuracy denominator.
 
 ## 5) Coverage and Trust Signals
 

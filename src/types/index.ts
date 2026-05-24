@@ -88,7 +88,7 @@ export interface ReviewSummary {
 }
 
 export interface AccuracyMeta {
-  method: "classification_counts";
+  method: "ep_loss_caps" | "classification_counts";
   formulaVersion: string;
 }
 
