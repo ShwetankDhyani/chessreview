@@ -98,7 +98,7 @@ describe("classifyMove", () => {
         wpBeforePct: 76,
         wpAfterActualPct: 58,
       })
-    ).toBe("blunder");
+    ).toBe("mistake");
   });
 
   it("does not label best when engine UCI matches but loss is large", () => {
@@ -115,7 +115,7 @@ describe("classifyMove", () => {
     ).toBe("blunder");
   });
 
-  it("upgrades moderate epLoss to blunder on game-changing cp swing", () => {
+  it("keeps mistake when ep loss is moderate but eval bar barely moves", () => {
     expect(
       classifyMove({
         ...base,
@@ -126,7 +126,7 @@ describe("classifyMove", () => {
         wpBeforePct: 52,
         wpAfterActualPct: 50,
       })
-    ).toBe("blunder");
+    ).toBe("inaccuracy");
     expect(
       classifyMove({
         ...base,
@@ -137,14 +137,14 @@ describe("classifyMove", () => {
         wpBeforePct: 55,
         wpAfterActualPct: 52,
       })
-    ).toBe("blunder");
+    ).toBe("inaccuracy");
   });
 
-  it("keeps true mistakes when swing is moderate", () => {
+  it("blunders only on large visible swing or very high ep loss", () => {
     expect(
       classifyMove({
         ...base,
-        epLoss: 0.09,
+        epLoss: 0.12,
         isTop: false,
         cpLossVsBest: 55,
         cpSwing: 70,
@@ -152,6 +152,17 @@ describe("classifyMove", () => {
         wpAfterActualPct: 48,
       })
     ).toBe("mistake");
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.08,
+        isTop: false,
+        cpLossVsBest: 30,
+        cpSwing: 240,
+        wpBeforePct: 55,
+        wpAfterActualPct: 48,
+      })
+    ).toBe("blunder");
   });
 
   it("no brilliant without qualifiesBrilliant", () => {
@@ -187,13 +198,34 @@ describe("isEngineTopMove", () => {
 });
 
 describe("isGameChangingBlunder", () => {
-  it("flags large win-% drop", () => {
+  it("ignores moderate ep/cp when bar barely moves", () => {
+    expect(
+      isGameChangingBlunder({
+        epLoss: 0.12,
+        cpLossVsBest: 110,
+        cpSwing: 40,
+        wpBeforePct: 52,
+        wpAfterActualPct: 50,
+      })
+    ).toBe(false);
+  });
+
+  it("flags large win-% or cp swing", () => {
     expect(
       isGameChangingBlunder({
         epLoss: 0.06,
         cpLossVsBest: 30,
         cpSwing: 40,
         wpBeforePct: 72,
+        wpAfterActualPct: 48,
+      })
+    ).toBe(true);
+    expect(
+      isGameChangingBlunder({
+        epLoss: 0.08,
+        cpLossVsBest: 30,
+        cpSwing: 230,
+        wpBeforePct: 55,
         wpAfterActualPct: 50,
       })
     ).toBe(true);

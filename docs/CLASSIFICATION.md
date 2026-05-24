@@ -18,21 +18,21 @@ Moves without reliable eval get `classification: null` (never guessed).
 | Best | ≤ 0.4% and engine-top quality |
 | Excellent | ≤ 1.2% |
 | Good | ≤ 3% |
-| Inaccuracy | ≤ 7% |
-| Mistake | ≤ 10% (only if not game-changing) |
-| Blunder | > 10% ep **or** game-changing (see below) |
+| Inaccuracy | ≤ 10% |
+| Mistake | ≤ 20% (if eval bar / win-% did not swing hard) |
+| Blunder | > 20% ep **or** visible game-changing swing (below) |
 
-## Blunder (game-changing)
+## Blunder (visible swing only)
 
-Aligned with Chess.com / Lichess spirit: a blunder is not only “>20% ep” on paper — it is any move that **meaningfully changes the game**:
+A **blunder** needs a clear eval-bar or win-% change — not just “not the engine’s #1”:
 
-- `epLoss` > 10%, or
-- ≥ **100 cp** worse than the engine best line, or
-- ≥ **160 cp** eval drop from before the move to after the played move, or
-- ≥ **18%** win-chance swing for the mover, or
-- Was clearly winning (≥60% → ≤40%) with a large swing.
+- ≥ **220 cp** drop from before the move to after the played move, or
+- ≥ **22%** win-chance swing, or
+- ≥ **250 cp** worse than best line alone, or
+- Combined: ≥ **160 cp** vs best **and** ≥ **14%** win swing, or
+- Threw away a win (≥68% → ≤35%) with ≥ **20%** win swing.
 
-Moderate epLoss (7–10%) stays **mistake** only when the swing is not game-changing.
+Moderate errors (10–20% ep, ~1 pawn noise) stay **mistake** / **inaccuracy**, not blunder.
 
 ## Engine “top move”
 
