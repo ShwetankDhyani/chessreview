@@ -6,6 +6,8 @@ import {
   detectVoluntarySacrifice,
   exchangeBalanceAfterMove,
   isEngineTopMove,
+  isExactEngineMove,
+  isGameChangingBlunder,
   isRecaptureOnSquare,
   qualifiesForBrilliant,
   staticExchangeEval,
@@ -54,14 +56,16 @@ describe("classifyMove", () => {
     isTop: true,
     prevWpForMoverPct: 50,
     hasMateScore: false,
+    cpLossVsBest: 0,
+    cpSwing: 0,
   };
 
   it("best on tiny epLoss", () => {
     expect(classifyMove({ ...base, epLoss: 0.004 })).toBe("best");
   });
 
-  it("excellent at 1.5% loss", () => {
-    expect(classifyMove({ ...base, epLoss: 0.015, isTop: false })).toBe("excellent");
+  it("excellent at 1.0% loss", () => {
+    expect(classifyMove({ ...base, epLoss: 0.01, isTop: false })).toBe("excellent");
   });
 
   it("blunder above 20% in a balanced game", () => {
@@ -76,7 +80,7 @@ describe("classifyMove", () => {
     ).toBe("blunder");
   });
 
-  it("downgrades throwaway when still comfortably winning", () => {
+  it("does not auto-downgrade large losses just because side is winning", () => {
     expect(
       classifyMove({
         ...base,
@@ -85,7 +89,7 @@ describe("classifyMove", () => {
         wpBeforePct: 92,
         wpAfterActualPct: 78,
       })
-    ).toBe("inaccuracy");
+    ).toBe("blunder");
     expect(
       classifyMove({
         ...base,
@@ -93,6 +97,59 @@ describe("classifyMove", () => {
         isTop: false,
         wpBeforePct: 76,
         wpAfterActualPct: 58,
+      })
+    ).toBe("blunder");
+  });
+
+  it("does not label best when engine UCI matches but loss is large", () => {
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.15,
+        isTop: true,
+        cpLossVsBest: 180,
+        cpSwing: 200,
+        wpBeforePct: 70,
+        wpAfterActualPct: 48,
+      })
+    ).toBe("blunder");
+  });
+
+  it("upgrades moderate epLoss to blunder on game-changing cp swing", () => {
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.08,
+        isTop: false,
+        cpLossVsBest: 110,
+        cpSwing: 0,
+        wpBeforePct: 52,
+        wpAfterActualPct: 50,
+      })
+    ).toBe("blunder");
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.08,
+        isTop: false,
+        cpLossVsBest: 20,
+        cpSwing: 170,
+        wpBeforePct: 55,
+        wpAfterActualPct: 52,
+      })
+    ).toBe("blunder");
+  });
+
+  it("keeps true mistakes when swing is moderate", () => {
+    expect(
+      classifyMove({
+        ...base,
+        epLoss: 0.09,
+        isTop: false,
+        cpLossVsBest: 55,
+        cpSwing: 70,
+        wpBeforePct: 52,
+        wpAfterActualPct: 48,
       })
     ).toBe("mistake");
   });
@@ -119,8 +176,34 @@ describe("couldBeBookMove", () => {
 });
 
 describe("isEngineTopMove", () => {
-  it("accepts near-zero epLoss without UCI match", () => {
-    expect(isEngineTopMove(0.005, "e2e4", "g1f3")).toBe(true);
+  it("rejects non-matching UCI when loss is above best band", () => {
+    expect(isEngineTopMove(0.01, "e2e4", "g1f3")).toBe(false);
+  });
+
+  it("accepts exact match with small loss", () => {
+    expect(isEngineTopMove(0.005, "e2e4", "e2e4")).toBe(true);
+    expect(isEngineTopMove(0.02, "e2e4", "e2e4")).toBe(false);
+  });
+});
+
+describe("isGameChangingBlunder", () => {
+  it("flags large win-% drop", () => {
+    expect(
+      isGameChangingBlunder({
+        epLoss: 0.06,
+        cpLossVsBest: 30,
+        cpSwing: 40,
+        wpBeforePct: 72,
+        wpAfterActualPct: 50,
+      })
+    ).toBe(true);
+  });
+});
+
+describe("isExactEngineMove", () => {
+  it("detects UCI equality", () => {
+    expect(isExactEngineMove("e2e4", "E2E4")).toBe(true);
+    expect(isExactEngineMove("e2e4", "g1f3")).toBe(false);
   });
 });
 

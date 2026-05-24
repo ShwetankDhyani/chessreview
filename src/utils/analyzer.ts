@@ -227,7 +227,7 @@ function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
     coverage: buildCoverage(moves),
     accuracyMeta: {
       method: "ep_loss_caps",
-      formulaVersion: "v2.2-caps2-grades",
+      formulaVersion: "v2.3-strict-ep-loss",
     },
   };
 }
@@ -352,7 +352,7 @@ export async function analyzePgn(
     const cpBefore = sign * (strictCp.get(fenBefore) ?? 0);
     const cpAfter = sign * (strictCp.get(fenAfter) ?? 0);
     const clamp = (v: number) => Math.max(-1500, Math.min(1500, v));
-    const clampClass = (v: number) => Math.max(-600, Math.min(600, v));
+    const clampClass = (v: number) => Math.max(-900, Math.min(900, v));
     const cpBeforeClamped = clamp(cpBefore);
     const cpAfterClamped = clamp(cpAfter);
     const deltaCP = clampClass(cpBefore) - clampClass(cpAfter);
@@ -361,7 +361,7 @@ export async function analyzePgn(
     const wpAfterActualPct = winPercentFromCp(cpAfterClamped);
 
     const bestMoveUci = evalBefore.bestMove;
-    let cpAfterBest = cpBeforeClamped;
+    let cpAfterBest = cpBefore;
     let fenBest: string | null = null;
     if (bestMoveUci) {
       fenBest = applyUci(fenBefore, bestMoveUci);
@@ -369,7 +369,9 @@ export async function analyzePgn(
         cpAfterBest = sign * strictCp.get(fenBest)!;
       }
     }
-    const epLoss = expectedPointsLost(cpAfterBest, cpAfterClamped);
+    const epLoss = expectedPointsLost(clamp(cpAfterBest), cpAfterClamped);
+    const cpLossVsBest = Math.max(0, clamp(cpAfterBest) - cpAfterClamped);
+    const cpSwing = Math.max(0, cpBeforeClamped - cpAfterClamped);
     const hasBestLineEval = !bestMoveUci || (fenBest !== null && strictCp.has(fenBest));
     const bothEvaluated = hasReliableEval(
       evalBefore,
@@ -414,6 +416,8 @@ export async function analyzePgn(
     const classification: MoveClassification = bothEvaluated
       ? classifyMove({
           epLoss,
+          cpLossVsBest,
+          cpSwing,
           isBook: couldBeBook,
           qualifiesBrilliant: brilliantSac,
           wpBeforePct,

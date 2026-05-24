@@ -1,30 +1,23 @@
-import type {
-  AnalyzedMove,
-  ClassificationCounts,
-  MoveClassification,
-} from "../types";
+import type { AnalyzedMove, ClassificationCounts, MoveClassification } from "../types";
 
 const ACC_A = 103.1668100711649;
 const ACC_B = -0.04354415386753951;
 const ACC_C = -3.166924740191411;
 
-/**
- * CAPS2-style per-move grade (Chess.com: "best" is not 100 on the test).
- * Used as a ceiling so engine-tiny losses cannot inflate labeled errors.
- */
+/** Diagnostic label buckets for sidebar-only aggregates. */
 export const MOVE_GRADE_SCORE: Record<
   Exclude<MoveClassification, null>,
   number
 > = {
   brilliant: 100,
-  great: 98,
-  best: 97,
-  excellent: 93,
-  good: 86,
-  book: 97,
-  inaccuracy: 76,
-  mistake: 58,
-  blunder: 35,
+  great: 99,
+  best: 100,
+  excellent: 96,
+  good: 91,
+  book: 100,
+  inaccuracy: 79,
+  mistake: 63,
+  blunder: 38,
 };
 
 /** @deprecated alias — same as MOVE_GRADE_SCORE */
@@ -70,29 +63,17 @@ function arithmeticMean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-/** Single-ply score: engine CAPS capped by classification grade (CAPS2 parity). */
+/** Single-ply score from strict engine ep-loss only (no label cap). */
 export function plyAccuracyScore(move: AnalyzedMove): number {
   const c = move.classification;
   if (!c) return 0;
-
-  const gradeCap = MOVE_GRADE_SCORE[c];
+  if (c === "book") return 100;
   const epLoss = move.epLoss ?? 0;
-  const epScore = moveAccuracyFromEpLoss(epLoss);
-  return Math.min(epScore, gradeCap);
+  return moveAccuracyFromEpLoss(epLoss);
 }
 
 /**
- * CAPS2 game compression — many "best" moves must not print as 99%+.
- * Maps raw 92–100 into roughly 92–97 for display.
- */
-export function caps2GameCalibration(raw: number): number {
-  if (!Number.isFinite(raw) || raw <= 92) return raw;
-  const headroom = Math.min(8, raw - 92);
-  return 92 + headroom * 0.625;
-}
-
-/**
- * Game accuracy: blend of mean + harmonic on per-move scores, then CAPS2 calibration.
+ * Game accuracy: blend of mean + harmonic on strict ep-loss scores.
  */
 export function gameAccuracyFromMoves(
   moves: AnalyzedMove[],
@@ -108,11 +89,11 @@ export function gameAccuracyFromMoves(
   const mean = arithmeticMean(scores);
   const harmonic = harmonicMean(scores);
   const raw = (mean + harmonic) / 2;
-  return displayAccuracy(caps2GameCalibration(raw));
+  return displayAccuracy(raw);
 }
 
 export function caps2DisplayAccuracy(raw: number): number {
-  return displayAccuracy(caps2GameCalibration(raw));
+  return displayAccuracy(raw);
 }
 
 export function displayAccuracy(raw: number): number {
@@ -134,5 +115,5 @@ export function accuracyFromClassificationCounts(
     total += n;
   }
   if (total === 0) return 0;
-  return displayAccuracy(caps2GameCalibration(weighted / total));
+  return displayAccuracy(weighted / total);
 }

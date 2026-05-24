@@ -6,16 +6,32 @@
 import { Chess, type Move as ChessMove, type Color, type Square } from "chess.js";
 import type { MoveClassification } from "../types";
 
-/** Expected-points loss bands (Lichess / Chess.com CAPS-style) */
+/**
+ * Expected-points loss bands (Lichess-style win-% loss).
+ * Blunder is not only epLoss > mistake: game-changing swings upgrade too.
+ */
 export const EP_THRESHOLDS = {
-  best: 0.008,
-  excellent: 0.02,
-  good: 0.05,
-  inaccuracy: 0.1,
-  mistake: 0.2,
-  book: 0.005,
-  brilliantMaxEp: 0.02,
+  best: 0.004,
+  excellent: 0.012,
+  good: 0.03,
+  inaccuracy: 0.07,
+  mistake: 0.1,
+  book: 0.003,
+  brilliantMaxEp: 0.012,
 } as const;
+
+/** Centipawn thresholds (mover POV) — align with ~1–2 pawn swings as blunder territory. */
+export const CP_THRESHOLDS = {
+  /** Loss vs engine best line (cp) */
+  blunderVsBest: 100,
+  /** Eval drop from before the move to after played move (cp) */
+  blunderSwing: 160,
+  /** Smaller swing that still ends a clearly winning advantage */
+  blunderWinningSwing: 120,
+} as const;
+
+/** Win-% (0–1) swing for mover: before − after. */
+export const WP_SWING_BLUNDER = 0.18;
 
 export const BOOK_MAX_PLY = 16;
 export const MIN_EVAL_DEPTH = 10;
@@ -201,10 +217,17 @@ export function qualifiesForBrilliant(
   return bal !== null && bal <= -3;
 }
 
-export function isEngineTopMove(epLoss: number, playerUci: string, bestUci?: string): boolean {
-  if (epLoss <= EP_THRESHOLDS.best) return true;
+export function isExactEngineMove(playerUci: string, bestUci?: string): boolean {
   if (!bestUci) return false;
   return playerUci.toLowerCase() === bestUci.toLowerCase();
+}
+
+/** Engine top move: exact UCI only if loss is small; otherwise by epLoss band. */
+export function isEngineTopMove(epLoss: number, playerUci: string, bestUci?: string): boolean {
+  if (isExactEngineMove(playerUci, bestUci)) {
+    return epLoss <= EP_THRESHOLDS.excellent;
+  }
+  return epLoss <= EP_THRESHOLDS.best;
 }
 
 export function couldBeBookMove(
@@ -223,6 +246,10 @@ export function couldBeBookMove(
 
 export interface ClassifyMoveInput {
   epLoss: number;
+  /** Centipawns worse than best line (mover POV, ≥ 0). */
+  cpLossVsBest: number;
+  /** Centipawns lost from pre-move eval to post-played eval (mover POV, ≥ 0). */
+  cpSwing: number;
   isBook: boolean;
   qualifiesBrilliant: boolean;
   wpBeforePct: number;
@@ -232,9 +259,44 @@ export interface ClassifyMoveInput {
   hasMateScore: boolean;
 }
 
+/**
+ * Game-changing error (Chess.com / Lichess spirit): large win-% loss, pawn+ eval drop,
+ * or throwing away a winning advantage — not merely "not best".
+ */
+export function isGameChangingBlunder(input: {
+  epLoss: number;
+  cpLossVsBest: number;
+  cpSwing: number;
+  wpBeforePct: number;
+  wpAfterActualPct: number;
+}): boolean {
+  const wpBefore = input.wpBeforePct / 100;
+  const wpAfter = input.wpAfterActualPct / 100;
+  const wpSwing = Math.max(0, wpBefore - wpAfter);
+
+  if (input.epLoss > EP_THRESHOLDS.mistake) return true;
+  if (input.cpLossVsBest >= CP_THRESHOLDS.blunderVsBest) return true;
+  if (input.cpSwing >= CP_THRESHOLDS.blunderSwing) return true;
+  if (wpSwing >= WP_SWING_BLUNDER) return true;
+
+  if (
+    wpBefore >= 0.6 &&
+    wpAfter <= 0.4 &&
+    (wpSwing >= 0.12 || input.cpSwing >= CP_THRESHOLDS.blunderWinningSwing)
+  ) {
+    return true;
+  }
+
+  if (wpBefore >= 0.75 && wpAfter <= 0.55 && wpSwing >= 0.1) return true;
+
+  return false;
+}
+
 export function classifyMove(input: ClassifyMoveInput): MoveClassification {
   const {
     epLoss,
+    cpLossVsBest,
+    cpSwing,
     isBook,
     qualifiesBrilliant,
     wpBeforePct,
@@ -275,16 +337,25 @@ export function classifyMove(input: ClassifyMoveInput): MoveClassification {
     if (savedGame || capitalizesBlunder) return "great";
   }
 
-  if (isTop) return "best";
+  if (isTop && epLoss <= EP_THRESHOLDS.best) return "best";
   if (epLoss <= EP_THRESHOLDS.best) return "best";
   if (epLoss <= EP_THRESHOLDS.excellent) return "excellent";
   if (epLoss <= EP_THRESHOLDS.good) return "good";
   if (epLoss <= EP_THRESHOLDS.inaccuracy) return "inaccuracy";
-  if (epLoss <= EP_THRESHOLDS.mistake) return "mistake";
 
-  // Already crushing: losing some win% is not the same as a game-losing blunder.
-  if (wpBefore >= 0.82 && wpAfter >= 0.68) return "inaccuracy";
-  if (wpBefore >= 0.72 && wpAfter >= 0.55) return "mistake";
+  if (
+    isGameChangingBlunder({
+      epLoss,
+      cpLossVsBest,
+      cpSwing,
+      wpBeforePct,
+      wpAfterActualPct,
+    })
+  ) {
+    return "blunder";
+  }
+
+  if (epLoss <= EP_THRESHOLDS.mistake) return "mistake";
 
   return "blunder";
 }

@@ -3,7 +3,6 @@ import type { AnalyzedMove, ClassificationCounts } from "../types";
 import {
   accuracyFromClassificationCounts,
   caps2DisplayAccuracy,
-  caps2GameCalibration,
   expectedPointsLost,
   gameAccuracyFromMoves,
   moveAccuracyFromEpLoss,
@@ -11,11 +10,10 @@ import {
   winPercentFromCp,
 } from "./accuracy";
 
-describe("caps2GameCalibration", () => {
-  it("compresses very high raw aggregates into the 90s not 99s", () => {
-    expect(caps2GameCalibration(96.7)).toBeLessThan(96);
-    expect(caps2GameCalibration(96.7)).toBeGreaterThan(90);
-    expect(caps2DisplayAccuracy(97)).toBeLessThan(97);
+describe("caps2DisplayAccuracy", () => {
+  it("does not apply forced compression", () => {
+    expect(caps2DisplayAccuracy(97)).toBe(97);
+    expect(caps2DisplayAccuracy(96.7)).toBe(96.7);
   });
 });
 
@@ -35,10 +33,10 @@ describe("plyAccuracyScore", () => {
     } as AnalyzedMove;
   }
 
-  it("caps engine-perfect loss when move is labeled inaccuracy or worse", () => {
-    expect(plyAccuracyScore(mockMove("best", 0.002))).toBeLessThanOrEqual(97);
-    expect(plyAccuracyScore(mockMove("inaccuracy", 0.001))).toBe(76);
-    expect(plyAccuracyScore(mockMove("mistake", 0.001))).toBe(58);
+  it("uses strict ep-loss score for classified non-book moves", () => {
+    expect(plyAccuracyScore(mockMove("best", 0.002))).toBeGreaterThan(99);
+    expect(plyAccuracyScore(mockMove("inaccuracy", 0.001))).toBeGreaterThan(99);
+    expect(plyAccuracyScore(mockMove("mistake", 0.16))).toBeLessThan(80);
   });
 });
 
@@ -89,9 +87,9 @@ describe("gameAccuracyFromMoves", () => {
     const w = gameAccuracyFromMoves(white, "w");
     const b = gameAccuracyFromMoves(black, "b");
     expect(w).toBeGreaterThan(b);
-    expect(w).toBeGreaterThanOrEqual(88);
-    expect(w).toBeLessThan(96);
-    expect(b).toBeGreaterThanOrEqual(78);
+    expect(w).toBeGreaterThanOrEqual(86);
+    expect(w).toBeLessThan(95);
+    expect(b).toBeGreaterThanOrEqual(74);
     expect(b).toBeLessThan(90);
   });
 
@@ -102,7 +100,7 @@ describe("gameAccuracyFromMoves", () => {
       mockMove("w", "mistake", 0.18),
       mockMove("w", "inaccuracy", 0.11),
     ];
-    expect(gameAccuracyFromMoves(messy, "w")).toBeLessThan(92);
+    expect(gameAccuracyFromMoves(messy, "w")).toBeLessThan(90);
   });
 });
 
@@ -135,14 +133,13 @@ function counts(
 }
 
 describe("accuracyFromClassificationCounts", () => {
-  it("stays below 96 for many best moves plus a few errors", () => {
+  it("remains a high diagnostic average for mostly-best move buckets", () => {
     const white = counts({
       best: 21,
       book: 1,
       inaccuracy: 2,
       mistake: 1,
     });
-    expect(accuracyFromClassificationCounts(white)).toBeLessThan(96);
-    expect(accuracyFromClassificationCounts(white)).toBeGreaterThan(85);
+    expect(accuracyFromClassificationCounts(white)).toBeGreaterThan(95);
   });
 });
