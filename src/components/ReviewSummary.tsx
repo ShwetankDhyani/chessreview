@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import type { ReviewSummary as ReviewSummaryType, AnalyzedMove } from "../types";
+import type {
+  ReviewSummary as ReviewSummaryType,
+  AnalyzedMove,
+  ReviewRun,
+} from "../types";
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
@@ -9,6 +13,7 @@ interface ReviewSummaryProps {
   whiteName?: string;
   blackName?: string;
   moves?: AnalyzedMove[];
+  run?: ReviewRun | null;
   onMoveClick?: (idx: number) => void;
 }
 
@@ -66,6 +71,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   whiteName,
   blackName,
   moves = [],
+  run = null,
   onMoveClick,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -91,6 +97,23 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   return (
     <div className="flex flex-col p-3 sm:p-4 animate-fade-in">
+      {summary.coverage && (
+        <div className="mb-3 rounded-md border border-chess-border bg-chess-bg/60 px-2.5 py-2 text-[11px] text-chess-muted">
+          <span className="font-semibold text-chess-text">
+            Verified {summary.coverage.verifiedPlies}/{summary.coverage.totalPlies} plies
+          </span>
+          {summary.coverage.unverifiedPlies > 0 && (
+            <span className="ml-1 text-amber-300">
+              ({summary.coverage.unverifiedPlies} unverified)
+            </span>
+          )}
+          {run && (
+            <span className="ml-2 text-chess-subtext">
+              · D{run.requestedDepth} · {run.engineVersion}
+            </span>
+          )}
+        </div>
+      )}
       <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />
 
       <ReviewSection title="Overall accuracy" first>

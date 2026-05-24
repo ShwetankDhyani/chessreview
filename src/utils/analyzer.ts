@@ -1,10 +1,6 @@
 import { Chess, type Move as ChessMove } from "chess.js";
-import { evaluateFen, evaluateFensBatch } from "../engine/evaluationService";
-import {
-  accuracyFromClassificationCounts,
-  expectedPointsLost,
-  winPercentFromCp,
-} from "./accuracy";
+import { evaluateFensConsensus } from "../engine/evaluationService";
+import { accuracyFromClassificationCounts, expectedPointsLost, winPercentFromCp } from "./accuracy";
 import {
   BOOK_MAX_PLY,
   EP_THRESHOLDS,
@@ -19,24 +15,34 @@ import {
 } from "./moveClassification";
 import type {
   AnalyzedMove,
-  EvalResult,
-  MoveClassification,
-  ReviewSummary,
   ClassificationCounts,
+  EvalResult,
   KeyMoment,
+  MoveClassification,
+  ReviewCoverage,
+  ReviewResult,
+  ReviewRun,
+  ReviewSummary,
 } from "../types";
 
-// Lichess win% + Chess.com expected-points bands
-// https://lichess.org/page/accuracy
-// https://support.chess.com/en/articles/8572705
+const MIN_CLASSIFY_DEPTH = 10;
+const PASS1_END = 0.72;
+const PASS2_END = 0.98;
 
-function winningChances(cp: number): number {
-  const clamped = Math.max(-1000, Math.min(1000, cp));
-  return 2 / (1 + Math.exp(-0.00368208 * clamped)) - 1;
+function hashText(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 33) ^ value.charCodeAt(i);
+  }
+  return `h${(hash >>> 0).toString(16)}`;
 }
 
-function winPercent(cp: number): number {
-  return winPercentFromCp(cp);
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function buildRunId(pgn: string): string {
+  return `${Date.now().toString(36)}-${hashText(pgn).slice(0, 8)}`;
 }
 
 function evalToCp(e: EvalResult): number {
@@ -45,11 +51,7 @@ function evalToCp(e: EvalResult): number {
 }
 
 function isUsableEval(e: EvalResult | undefined): e is EvalResult {
-  return (
-    !!e &&
-    e.depth > 0 &&
-    (e.cp !== undefined || e.mate !== undefined)
-  );
+  return !!e && e.depth > 0 && (e.cp !== undefined || e.mate !== undefined);
 }
 
 function applyUci(fen: string, uci: string): string | null {
@@ -66,322 +68,12 @@ function applyUci(fen: string, uci: string): string | null {
   }
 }
 
-const PASS1_END = 0.72;
-const PASS2_END = 0.98;
-
 function reportAnalysisProgress(
   onProgress: ((done: number, total: number) => void) | undefined,
   fraction: number
 ) {
   const clamped = Math.min(1, Math.max(0, fraction));
   onProgress?.(Math.round(clamped * 100), 100);
-}
-
-export async function analyzePgn(
-  pgn: string,
-  onProgress?: (done: number, total: number) => void,
-  depth = 16
-): Promise<{ moves: AnalyzedMove[]; summary: ReviewSummary }> {
-  const chess = new Chess();
-  chess.loadPgn(pgn);
-  const history = chess.history({ verbose: true });
-
-  const fensList: string[] = [];
-  const tmp = new Chess();
-  fensList.push(tmp.fen());
-  for (const m of history) {
-    tmp.move(m.san);
-    fensList.push(tmp.fen());
-  }
-
-  const evalCache = new Map<string, EvalResult>();
-  const emptyEval = (): EvalResult => ({ cp: undefined, depth: 0, source: "local" });
-  const pass2Depth = Math.max(10, depth - 2);
-
-  onProgress?.(2, 100);
-
-  const fillFromBatch = (batch: Map<string, EvalResult>, fens: string[]) => {
-    for (const fen of fens) {
-      const result = batch.get(fen) ?? emptyEval();
-      evalCache.set(fen, result);
-    }
-  };
-
-  function playedUci(m: (typeof history)[0]): string {
-    return m.from + m.to + (m.promotion ?? "");
-  }
-
-  function collectBestLineFens(): string[] {
-    const extra: string[] = [];
-    for (let i = 0; i < history.length; i++) {
-      const fenBefore = fensList[i];
-      const ev = evalCache.get(fenBefore);
-      if (!ev?.bestMove) continue;
-      const bm = ev.bestMove.replace(/[^a-h0-9]/gi, "").slice(0, 4);
-      const played = playedUci(history[i]).slice(0, 4);
-      if (bm === played) continue;
-      const fenBest = applyUci(fenBefore, ev.bestMove);
-      if (fenBest && !evalCache.has(fenBest)) extra.push(fenBest);
-    }
-    return [...new Set(extra)];
-  }
-
-  // Native laptop server: batched HTTP + server-side eval cache
-  const pass1Batch = await evaluateFensBatch(fensList, depth, (d, t) => {
-    if (t > 0) reportAnalysisProgress(onProgress, 0.04 + (d / t) * (PASS1_END - 0.04));
-  });
-
-  const evalMissing = async (fens: string[]) => {
-    for (const fen of fens) {
-      if (isUsableEval(evalCache.get(fen))) continue;
-      const result = await evaluateFen(fen, depth).catch(emptyEval);
-      evalCache.set(fen, result);
-    }
-  };
-
-  if (pass1Batch.size > 0) {
-    fillFromBatch(pass1Batch, fensList);
-    await evalMissing(fensList.filter((f) => !isUsableEval(evalCache.get(f))));
-    reportAnalysisProgress(onProgress, PASS1_END);
-
-    const extraFens = collectBestLineFens();
-    if (extraFens.length > 0) {
-      reportAnalysisProgress(onProgress, PASS1_END + 0.02);
-      const pass2Batch = await evaluateFensBatch(extraFens, pass2Depth, (d, t) => {
-        if (t > 0) {
-          const span = PASS2_END - PASS1_END - 0.02;
-          reportAnalysisProgress(
-            onProgress,
-            PASS1_END + 0.02 + (d / t) * span
-          );
-        }
-      });
-      fillFromBatch(pass2Batch, extraFens);
-      await evalMissing(extraFens.filter((f) => !isUsableEval(evalCache.get(f))));
-    }
-    reportAnalysisProgress(onProgress, PASS2_END);
-  } else {
-    // Fallback: Lichess / browser worker (one FEN at a time)
-    const pass1Total = fensList.length;
-    let done = 0;
-    for (const fen of fensList) {
-      const result = await evaluateFen(fen, depth).catch(emptyEval);
-      evalCache.set(fen, result);
-      done++;
-      reportAnalysisProgress(
-        onProgress,
-        0.04 + (done / pass1Total) * (PASS1_END - 0.04)
-      );
-    }
-
-    const extraFens = collectBestLineFens();
-    const pass2Total = extraFens.length;
-    let pass2Done = 0;
-    for (const fen of extraFens) {
-      const result = await evaluateFen(fen, pass2Depth).catch(emptyEval);
-      evalCache.set(fen, result);
-      pass2Done++;
-      reportAnalysisProgress(
-        onProgress,
-        PASS1_END +
-          0.02 +
-          (pass2Done / Math.max(1, pass2Total)) * (PASS2_END - PASS1_END - 0.02)
-      );
-    }
-    reportAnalysisProgress(onProgress, PASS2_END);
-  }
-
-  // Strict map: only real engine/cloud evals (no stale carry-forward)
-  const strictCp = new Map<string, number>();
-  for (const [fen, e] of evalCache) {
-    if (isUsableEval(e)) strictCp.set(fen, evalToCp(e));
-  }
-
-  // Chart map: carry forward so the eval graph stays readable when Lichess 404s
-  let lastChartCp = 0;
-  const chartCpWhite = new Map<string, number>();
-  for (const fen of fensList) {
-    const e = evalCache.get(fen);
-    if (isUsableEval(e)) lastChartCp = evalToCp(e);
-    chartCpWhite.set(fen, lastChartCp);
-  }
-
-  const moves: AnalyzedMove[] = [];
-  let bookEnded = false;
-
-  for (let i = 0; i < history.length; i++) {
-    const move = history[i];
-    const fenBefore = fensList[i];
-    const fenAfter = fensList[i + 1];
-
-    const evalBefore = evalCache.get(fenBefore) ?? {
-      cp: 0,
-      depth: 0,
-      source: "local" as const,
-    };
-    const evalAfter = evalCache.get(fenAfter) ?? {
-      cp: 0,
-      depth: 0,
-      source: "local" as const,
-    };
-
-    const sign = move.color === "w" ? 1 : -1;
-    const cpBefore = sign * (strictCp.get(fenBefore) ?? 0);
-    const cpAfter = sign * (strictCp.get(fenAfter) ?? 0);
-
-    const clamp = (v: number) => Math.max(-1500, Math.min(1500, v));
-    const cpBeforeClamped = clamp(cpBefore);
-    const cpAfterClamped = clamp(cpAfter);
-
-    const wpBeforePct = winPercent(cpBeforeClamped);
-    const wpAfterActualPct = winPercent(cpAfterClamped);
-
-    const bestMoveUci = evalBefore?.bestMove;
-    let cpAfterBest = cpBeforeClamped;
-    let fenBest: string | null = null;
-    if (bestMoveUci) {
-      fenBest = applyUci(fenBefore, bestMoveUci);
-      if (fenBest && strictCp.has(fenBest)) {
-        cpAfterBest = sign * strictCp.get(fenBest)!;
-      }
-    }
-
-    const epLoss = expectedPointsLost(cpAfterBest, cpAfterClamped);
-
-    const clampClass = (v: number) => Math.max(-600, Math.min(600, v));
-    const deltaCP = clampClass(cpBefore) - clampClass(cpAfter);
-
-    const hasBestLineEval =
-      !bestMoveUci || (fenBest !== null && strictCp.has(fenBest));
-    const bothEvaluated = hasReliableEval(
-      evalBefore,
-      evalAfter,
-      strictCp.has(fenBefore),
-      strictCp.has(fenAfter),
-      hasBestLineEval
-    );
-
-    const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
-    const isTop = isEngineTopMove(epLoss, playerUci, bestMoveUci);
-
-    const prevWpForMoverPct = prevMoverWinPercent(
-      fensList,
-      i,
-      move.color,
-      chartCpWhite,
-      clamp,
-      winPercent
-    );
-
-    const couldBeBook = bothEvaluated
-      ? couldBeBookMove(
-          i,
-          bookEnded,
-          epLoss,
-          Math.abs(cpBeforeClamped),
-          isTop
-        )
-      : false;
-
-    const moveUci = playerUci;
-    const exchangeBal = exchangeBalanceAfterMove(fenBefore, moveUci, move.color);
-    const isSacrifice = detectVoluntarySacrifice(
-      fenBefore,
-      moveUci,
-      move.color,
-      history,
-      i
-    );
-    const brilliantSac = qualifiesForBrilliant(
-      fenBefore,
-      moveUci,
-      move.color,
-      history,
-      i,
-      exchangeBal
-    );
-
-    const hasMateScore =
-      evalBefore.mate !== undefined || evalAfter.mate !== undefined;
-
-    const classification: MoveClassification = bothEvaluated
-      ? classifyMove({
-          epLoss,
-          isBook: couldBeBook,
-          qualifiesBrilliant: brilliantSac,
-          wpBeforePct,
-          wpAfterActualPct,
-          isTop,
-          prevWpForMoverPct,
-          hasMateScore,
-        })
-      : null;
-
-    const inOpeningBook =
-      classification === "book" ||
-      couldBeBook ||
-      (!bookEnded &&
-        i < BOOK_MAX_PLY &&
-        bothEvaluated &&
-        epLoss <= EP_THRESHOLDS.inaccuracy);
-
-    if (classification !== "book" && classification !== null) bookEnded = true;
-
-    let bestMoveSan: string | undefined;
-    let pvLine: string[] | undefined;
-    if (bestMoveUci && bothEvaluated) {
-      try {
-        const tmpChess = new Chess(fenBefore);
-        const bm = tmpChess.move({
-          from: bestMoveUci.slice(0, 2),
-          to: bestMoveUci.slice(2, 4),
-          promotion: bestMoveUci[4] as "q" | "r" | "b" | "n" | undefined,
-        });
-        if (bm) {
-          bestMoveSan = bm.san;
-          pvLine = [];
-          for (const uciMove of (evalBefore?.pv ?? []).slice(1, 6)) {
-            try {
-              const m = tmpChess.move({
-                from: uciMove.slice(0, 2),
-                to: uciMove.slice(2, 4),
-                promotion: uciMove[4] as "q" | "r" | "b" | "n" | undefined,
-              });
-              if (m) pvLine.push(m.san);
-              else break;
-            } catch {
-              break;
-            }
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    moves.push({
-      moveNumber: Math.floor(i / 2) + 1,
-      color: move.color,
-      san: move.san,
-      uci: move.from + move.to + (move.promotion ?? ""),
-      fenBefore,
-      fenAfter,
-      evalBefore,
-      evalAfter,
-      eBest: cpBeforeClamped,
-      eActual: cpAfterClamped,
-      deltaE: deltaCP / 100,
-      epLoss,
-      classification,
-      inOpeningBook,
-      isSacrifice,
-      bestMove: bestMoveUci,
-      bestMoveSan,
-      pvLine,
-    });
-  }
-
-  return { moves, summary: buildSummary(moves, chartCpWhite) };
 }
 
 function emptyCounts(): ClassificationCounts {
@@ -398,10 +90,49 @@ function emptyCounts(): ClassificationCounts {
   };
 }
 
-function buildSummary(
-  moves: AnalyzedMove[],
-  resolvedCpWhite: Map<string, number>
-): ReviewSummary {
+function detectPhase(
+  fen: string,
+  stillInBook: boolean,
+  moveIdx: number
+): "opening" | "middlegame" | "endgame" {
+  if (stillInBook || moveIdx < 12) return "opening";
+  const board = fen.split(" ")[0];
+  let material = 0;
+  for (const ch of board) {
+    const lower = ch.toLowerCase();
+    if (lower === "q") material += 9;
+    else if (lower === "r") material += 5;
+    else if (lower === "b" || lower === "n") material += 3;
+    else if (lower === "p") material += 1;
+  }
+  if (material <= 24) return "endgame";
+  return "middlegame";
+}
+
+function buildCoverage(moves: AnalyzedMove[]): ReviewCoverage {
+  const coverage: ReviewCoverage = {
+    totalPlies: moves.length,
+    classifiedPlies: 0,
+    verifiedPlies: 0,
+    unverifiedPlies: 0,
+    unverifiedReasons: {
+      missing_eval: 0,
+      shallow_depth: 0,
+      high_disagreement: 0,
+    },
+  };
+  for (const m of moves) {
+    if (m.classification) coverage.classifiedPlies++;
+    if (m.verified) coverage.verifiedPlies++;
+    else {
+      coverage.unverifiedPlies++;
+      if (m.unverifiedReason) coverage.unverifiedReasons[m.unverifiedReason]++;
+    }
+  }
+  return coverage;
+}
+
+function buildSummary(moves: AnalyzedMove[]): ReviewSummary {
   const white = emptyCounts();
   const black = emptyCounts();
   const keyMoments: KeyMoment[] = [];
@@ -415,11 +146,11 @@ function buildSummary(
 
     if (c) {
       const counts = m.color === "w" ? white : black;
-      if (c in counts) (counts as unknown as Record<string, number>)[c]++;
+      counts[c]++;
     }
 
     const swing = Math.abs(m.deltaE);
-    if (swing >= 1.0 || c === "brilliant" || c === "great" || c === "blunder") {
+    if (swing >= 1.0 || c === "brilliant" || c === "great" || c === "mistake" || c === "blunder") {
       keyMoments.push({
         moveIdx: i,
         san: m.san,
@@ -433,21 +164,12 @@ function buildSummary(
     if (!bookPhaseEnded && c !== null && c !== "book") bookPhaseEnded = true;
   }
 
-  const phaseForMove = (m: AnalyzedMove, idx: number) =>
-    detectPhase(m.fenBefore, stillInBookAt[idx] ?? false, idx);
-
-  const phaseWhite: Record<
-    "opening" | "middlegame" | "endgame",
-    ClassificationCounts
-  > = {
+  const phaseWhite = {
     opening: emptyCounts(),
     middlegame: emptyCounts(),
     endgame: emptyCounts(),
   };
-  const phaseBlack: Record<
-    "opening" | "middlegame" | "endgame",
-    ClassificationCounts
-  > = {
+  const phaseBlack = {
     opening: emptyCounts(),
     middlegame: emptyCounts(),
     endgame: emptyCounts(),
@@ -457,9 +179,9 @@ function buildSummary(
     const m = moves[i];
     const c = m.classification;
     if (!c) continue;
-    const phase = phaseForMove(m, i);
+    const phase = detectPhase(m.fenBefore, stillInBookAt[i] ?? false, i);
     const bucket = m.color === "w" ? phaseWhite[phase] : phaseBlack[phase];
-    if (c in bucket) (bucket as unknown as Record<string, number>)[c]++;
+    bucket[c]++;
   }
 
   return {
@@ -484,24 +206,292 @@ function buildSummary(
       },
     },
     keyMoments,
+    coverage: buildCoverage(moves),
+    accuracyMeta: {
+      method: "classification_counts",
+      formulaVersion: "v2.0-consensus",
+    },
   };
 }
 
-function detectPhase(
-  fen: string,
-  stillInBook: boolean,
-  moveIdx: number
-): "opening" | "middlegame" | "endgame" {
-  if (stillInBook || moveIdx < 12) return "opening";
-  const board = fen.split(" ")[0];
-  let material = 0;
-  for (const ch of board) {
-    const lower = ch.toLowerCase();
-    if (lower === "q") material += 9;
-    else if (lower === "r") material += 5;
-    else if (lower === "b" || lower === "n") material += 3;
-    else if (lower === "p") material += 1;
+export async function analyzePgn(
+  pgn: string,
+  onProgress?: (done: number, total: number) => void,
+  depth = 16
+): Promise<ReviewResult> {
+  const startedAt = nowIso();
+  const runId = buildRunId(pgn);
+  const chess = new Chess();
+  chess.loadPgn(pgn);
+  const history = chess.history({ verbose: true });
+
+  const fensList: string[] = [];
+  const tmp = new Chess();
+  fensList.push(tmp.fen());
+  for (const m of history) {
+    tmp.move(m.san);
+    fensList.push(tmp.fen());
   }
-  if (material <= 24) return "endgame";
-  return "middlegame";
+
+  onProgress?.(2, 100);
+
+  const fastDepth = Math.max(10, Math.min(depth, 12));
+  const deepDepth = Math.max(fastDepth + 2, depth);
+  const maxDeepPositions = Math.max(24, Math.min(96, Math.floor(fensList.length * 0.45)));
+
+  const evalCache = new Map<string, EvalResult>();
+  const pass1 = await evaluateFensConsensus(
+    fensList,
+    {
+      requestedDepth: depth,
+      fastDepth,
+      deepDepth,
+      minVerifiedDepth: MIN_CLASSIFY_DEPTH,
+      maxDeepPositions,
+      disagreementCpForLowConfidence: 90,
+    },
+    (d, t) => {
+      if (t > 0) reportAnalysisProgress(onProgress, 0.04 + (d / t) * (PASS1_END - 0.04));
+    }
+  );
+  for (const [fen, e] of pass1.evals) evalCache.set(fen, e);
+  reportAnalysisProgress(onProgress, PASS1_END);
+
+  const extraFens: string[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const fenBefore = fensList[i];
+    const ev = evalCache.get(fenBefore);
+    const bestMove = ev?.bestMove;
+    if (!bestMove) continue;
+    const played = (history[i].from + history[i].to + (history[i].promotion ?? "")).slice(0, 4);
+    if (bestMove.slice(0, 4) === played) continue;
+    const bestFen = applyUci(fenBefore, bestMove);
+    if (bestFen && !evalCache.has(bestFen)) extraFens.push(bestFen);
+  }
+
+  if (extraFens.length > 0) {
+    const uniqueExtra = [...new Set(extraFens)];
+    const pass2 = await evaluateFensConsensus(
+      uniqueExtra,
+      {
+        requestedDepth: depth,
+        fastDepth: Math.max(fastDepth, 12),
+        deepDepth,
+        minVerifiedDepth: MIN_CLASSIFY_DEPTH,
+        maxDeepPositions: uniqueExtra.length,
+        disagreementCpForLowConfidence: 90,
+      },
+      (d, t) => {
+        if (t > 0) reportAnalysisProgress(onProgress, PASS1_END + (d / t) * (PASS2_END - PASS1_END));
+      }
+    );
+    for (const [fen, e] of pass2.evals) evalCache.set(fen, e);
+  }
+  reportAnalysisProgress(onProgress, PASS2_END);
+
+  const strictCp = new Map<string, number>();
+  for (const [fen, e] of evalCache) {
+    if (isUsableEval(e)) strictCp.set(fen, evalToCp(e));
+  }
+
+  let lastChartCp = 0;
+  const chartCpWhite = new Map<string, number>();
+  for (const fen of fensList) {
+    const e = evalCache.get(fen);
+    if (isUsableEval(e)) lastChartCp = evalToCp(e);
+    chartCpWhite.set(fen, lastChartCp);
+  }
+
+  const moves: AnalyzedMove[] = [];
+  let bookEnded = false;
+
+  for (let i = 0; i < history.length; i++) {
+    const move = history[i];
+    const fenBefore = fensList[i];
+    const fenAfter = fensList[i + 1];
+    const evalBefore =
+      evalCache.get(fenBefore) ??
+      ({
+        cp: 0,
+        depth: 0,
+        source: "local",
+        verified: false,
+        confidence: 0.2,
+        unverifiedReason: "missing_eval",
+      } satisfies EvalResult);
+    const evalAfter =
+      evalCache.get(fenAfter) ??
+      ({
+        cp: 0,
+        depth: 0,
+        source: "local",
+        verified: false,
+        confidence: 0.2,
+        unverifiedReason: "missing_eval",
+      } satisfies EvalResult);
+
+    const sign = move.color === "w" ? 1 : -1;
+    const cpBefore = sign * (strictCp.get(fenBefore) ?? 0);
+    const cpAfter = sign * (strictCp.get(fenAfter) ?? 0);
+    const clamp = (v: number) => Math.max(-1500, Math.min(1500, v));
+    const clampClass = (v: number) => Math.max(-600, Math.min(600, v));
+    const cpBeforeClamped = clamp(cpBefore);
+    const cpAfterClamped = clamp(cpAfter);
+    const deltaCP = clampClass(cpBefore) - clampClass(cpAfter);
+
+    const wpBeforePct = winPercentFromCp(cpBeforeClamped);
+    const wpAfterActualPct = winPercentFromCp(cpAfterClamped);
+
+    const bestMoveUci = evalBefore.bestMove;
+    let cpAfterBest = cpBeforeClamped;
+    let fenBest: string | null = null;
+    if (bestMoveUci) {
+      fenBest = applyUci(fenBefore, bestMoveUci);
+      if (fenBest && strictCp.has(fenBest)) {
+        cpAfterBest = sign * strictCp.get(fenBest)!;
+      }
+    }
+    const epLoss = expectedPointsLost(cpAfterBest, cpAfterClamped);
+    const hasBestLineEval = !bestMoveUci || (fenBest !== null && strictCp.has(fenBest));
+    const bothEvaluated = hasReliableEval(
+      evalBefore,
+      evalAfter,
+      strictCp.has(fenBefore),
+      strictCp.has(fenAfter),
+      hasBestLineEval
+    );
+    const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
+    const isTop = isEngineTopMove(epLoss, playerUci, bestMoveUci);
+
+    const prevWpForMoverPct = prevMoverWinPercent(
+      fensList,
+      i,
+      move.color,
+      chartCpWhite,
+      clamp,
+      winPercentFromCp
+    );
+
+    const couldBeBook = bothEvaluated
+      ? couldBeBookMove(i, bookEnded, epLoss, Math.abs(cpBeforeClamped), isTop)
+      : false;
+
+    const exchangeBal = exchangeBalanceAfterMove(fenBefore, playerUci, move.color);
+    const isSacrifice = detectVoluntarySacrifice(
+      fenBefore,
+      playerUci,
+      move.color,
+      history as ChessMove[],
+      i
+    );
+    const brilliantSac = qualifiesForBrilliant(
+      fenBefore,
+      playerUci,
+      move.color,
+      history as ChessMove[],
+      i,
+      exchangeBal
+    );
+    const hasMateScore = evalBefore.mate !== undefined || evalAfter.mate !== undefined;
+    const classification: MoveClassification = bothEvaluated
+      ? classifyMove({
+          epLoss,
+          isBook: couldBeBook,
+          qualifiesBrilliant: brilliantSac,
+          wpBeforePct,
+          wpAfterActualPct,
+          isTop,
+          prevWpForMoverPct,
+          hasMateScore,
+        })
+      : null;
+
+    const verified = !!(bothEvaluated && evalBefore.verified && evalAfter.verified);
+    const confidence = Math.min(evalBefore.confidence ?? 0.5, evalAfter.confidence ?? 0.5);
+    const unverifiedReason =
+      evalBefore.unverifiedReason ?? evalAfter.unverifiedReason ?? (verified ? undefined : "shallow_depth");
+
+    const inOpeningBook =
+      classification === "book" ||
+      couldBeBook ||
+      (!bookEnded &&
+        i < BOOK_MAX_PLY &&
+        bothEvaluated &&
+        epLoss <= EP_THRESHOLDS.inaccuracy);
+
+    if (classification !== "book" && classification !== null) bookEnded = true;
+
+    let bestMoveSan: string | undefined;
+    let pvLine: string[] | undefined;
+    if (bestMoveUci && bothEvaluated) {
+      try {
+        const tmpChess = new Chess(fenBefore);
+        const bm = tmpChess.move({
+          from: bestMoveUci.slice(0, 2),
+          to: bestMoveUci.slice(2, 4),
+          promotion: bestMoveUci[4] as "q" | "r" | "b" | "n" | undefined,
+        });
+        if (bm) {
+          bestMoveSan = bm.san;
+          pvLine = [];
+          for (const uciMove of (evalBefore.pv ?? []).slice(1, 6)) {
+            try {
+              const m = tmpChess.move({
+                from: uciMove.slice(0, 2),
+                to: uciMove.slice(2, 4),
+                promotion: uciMove[4] as "q" | "r" | "b" | "n" | undefined,
+              });
+              if (m) pvLine.push(m.san);
+              else break;
+            } catch {
+              break;
+            }
+          }
+        }
+      } catch {
+        // no-op: keep SAN hints empty on malformed PVs
+      }
+    }
+
+    moves.push({
+      moveNumber: Math.floor(i / 2) + 1,
+      color: move.color,
+      san: move.san,
+      uci: move.from + move.to + (move.promotion ?? ""),
+      fenBefore,
+      fenAfter,
+      evalBefore,
+      evalAfter,
+      eBest: cpAfterBest,
+      eActual: cpAfterClamped,
+      deltaE: deltaCP / 100,
+      epLoss,
+      classification,
+      inOpeningBook,
+      isSacrifice,
+      bestMove: bestMoveUci,
+      bestMoveSan,
+      pvLine,
+      verified,
+      confidence,
+      unverifiedReason,
+      reviewRunId: runId,
+    });
+  }
+
+  reportAnalysisProgress(onProgress, 1);
+  const summary = buildSummary(moves);
+  const run: ReviewRun = {
+    runId,
+    engineVersion: "stockfish-consensus-v1",
+    startedAt,
+    finishedAt: nowIso(),
+    requestedDepth: depth,
+    fastDepth,
+    deepDepth,
+    backendPolicy: "consensus",
+    pgnHash: hashText(pgn),
+  };
+
+  return { run, moves, summary };
 }

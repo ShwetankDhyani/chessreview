@@ -310,6 +310,139 @@ export async function evalWithLichessCloud(fen: string): Promise<EvalResult | nu
   }
 }
 
+export interface ConsensusEvalPolicy {
+  requestedDepth: number;
+  fastDepth: number;
+  deepDepth: number;
+  minVerifiedDepth: number;
+  maxDeepPositions: number;
+  disagreementCpForLowConfidence: number;
+}
+
+export interface ConsensusEvalMeta {
+  evaluated: number;
+  deepened: number;
+  verified: number;
+}
+
+export interface ConsensusEvalOutput {
+  evals: Map<string, EvalResult>;
+  meta: ConsensusEvalMeta;
+}
+
+function cpFromEvalForDisagreement(e: EvalResult | undefined): number | null {
+  if (!e) return null;
+  if (e.mate !== undefined) return e.mate > 0 ? 10000 : -10000;
+  if (e.cp === undefined) return null;
+  return e.cp;
+}
+
+function prioritizeForDeepening(
+  fens: string[],
+  fastMap: Map<string, EvalResult>,
+  policy: ConsensusEvalPolicy
+): string[] {
+  const scored = fens.map((fen) => {
+    const ev = fastMap.get(fen);
+    if (!ev) return { fen, score: 1_000_000 };
+    const cpAbs = Math.abs(ev.cp ?? 0);
+    const nearEqualityBoost = Math.max(0, 180 - cpAbs);
+    const shallowPenalty = Math.max(0, policy.minVerifiedDepth - (ev.depth ?? 0)) * 120;
+    const mateBoost = ev.mate !== undefined ? 200 : 0;
+    return { fen, score: nearEqualityBoost + shallowPenalty + mateBoost };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored
+    .slice(0, Math.min(policy.maxDeepPositions, scored.length))
+    .map((x) => x.fen);
+}
+
+function mergeConsensusEval(
+  fastEval: EvalResult | undefined,
+  deepEval: EvalResult | undefined,
+  policy: ConsensusEvalPolicy
+): EvalResult {
+  const base = deepEval ?? fastEval ?? { cp: 0, depth: 0, source: "local" as const };
+  const fastCp = cpFromEvalForDisagreement(fastEval);
+  const deepCp = cpFromEvalForDisagreement(deepEval);
+  const disagreementCp =
+    fastCp !== null && deepCp !== null ? Math.abs(fastCp - deepCp) : undefined;
+  const depth = base.depth ?? 0;
+  let verified = depth >= policy.minVerifiedDepth;
+  let confidence = verified ? 0.9 : 0.45;
+  let unverifiedReason: EvalResult["unverifiedReason"] | undefined;
+
+  if (!verified) {
+    unverifiedReason = "shallow_depth";
+  }
+  if (
+    disagreementCp !== undefined &&
+    disagreementCp > policy.disagreementCpForLowConfidence
+  ) {
+    verified = false;
+    confidence = 0.35;
+    unverifiedReason = "high_disagreement";
+  }
+  if (!fastEval && !deepEval) {
+    verified = false;
+    confidence = 0.2;
+    unverifiedReason = "missing_eval";
+  }
+
+  return {
+    ...base,
+    targetDepth: policy.requestedDepth,
+    verified,
+    confidence,
+    unverifiedReason,
+    disagreementCp,
+  };
+}
+
+export async function evaluateFensConsensus(
+  fens: string[],
+  policy: ConsensusEvalPolicy,
+  onProgress?: (done: number, total: number) => void
+): Promise<ConsensusEvalOutput> {
+  const unique = [...new Set(fens)];
+  const total = unique.length;
+  const fastMap = await evaluateFensBatch(unique, policy.fastDepth, onProgress);
+  if (fastMap.size < unique.length) {
+    for (const fen of unique) {
+      if (fastMap.has(fen)) continue;
+      const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
+      if (fallback) fastMap.set(fen, fallback);
+    }
+  }
+
+  const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
+  const deepMap = await evaluateFensBatch(deepenTargets, policy.deepDepth);
+  if (deepMap.size < deepenTargets.length) {
+    for (const fen of deepenTargets) {
+      if (deepMap.has(fen)) continue;
+      const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
+      if (fallback) deepMap.set(fen, fallback);
+    }
+  }
+
+  const merged = new Map<string, EvalResult>();
+  let verified = 0;
+  for (const fen of unique) {
+    const finalEval = mergeConsensusEval(fastMap.get(fen), deepMap.get(fen), policy);
+    if (finalEval.verified) verified++;
+    merged.set(fen, finalEval);
+  }
+
+  return {
+    evals: merged,
+    meta: {
+      evaluated: total,
+      deepened: deepenTargets.length,
+      verified,
+    },
+  };
+}
+
 export let cloudOnlyMode = false;
 
 export function setCloudOnlyMode(val: boolean) {

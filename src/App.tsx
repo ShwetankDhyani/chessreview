@@ -8,7 +8,13 @@ import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
-import type { AnalyzedMove, ReviewSummary, EvalResult, AnalysisState } from "./types";
+import type {
+  AnalyzedMove,
+  ReviewResult,
+  ReviewSummary,
+  EvalResult,
+  AnalysisState,
+} from "./types";
 import {
   setCloudOnlyMode,
   getEvalBackend,
@@ -107,6 +113,7 @@ export default function App() {
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
   const [gamePlyCount, setGamePlyCount] = useState(0);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
+  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const currentMoveIdxRef = useRef(-1);
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
@@ -507,6 +514,10 @@ export default function App() {
       const gen = ++analysisGenerationRef.current;
       abortRef.current = false;
       await recheckEngine();
+      setContinuationActive(false);
+      setContinuationFen(null);
+      setContinuationEval(null);
+      setContinuationArrow(null);
 
       const visible = options.visible;
       if (visible) {
@@ -515,6 +526,7 @@ export default function App() {
         setAnalysisState("analyzing");
         setMoves([]);
         setSummary(null);
+        setReviewResult(null);
         setCurrentMoveIdx(-1);
         setCurrentFen("start");
         setCurrentEval(null);
@@ -530,7 +542,7 @@ export default function App() {
       setAnalysisRunning(true);
 
       try {
-        const { moves: analyzedMoves, summary: reviewSummary } = await analyzePgn(
+        const result = await analyzePgn(
           pgnStr,
           (done, total) => {
             if (abortRef.current || gen !== analysisGenerationRef.current) return;
@@ -541,8 +553,9 @@ export default function App() {
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 
         setProgress({ done: 100, total: 100 });
-        setMoves(analyzedMoves);
-        setSummary(reviewSummary);
+        setMoves(result.moves);
+        setSummary(result.summary);
+        setReviewResult(result);
         const openReview = showAnalysisProgressRef.current;
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
@@ -606,6 +619,7 @@ export default function App() {
     setGamePlyCount(parsed.moveCount);
     setMoves([]);
     setSummary(null);
+    setReviewResult(null);
     setCurrentMoveIdx(-1);
     setCurrentFen("start");
     setCurrentEval(null);
@@ -1117,6 +1131,7 @@ export default function App() {
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
                     moves={moves}
+                    run={reviewResult?.run}
                     onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
                   />
                 ) : (
@@ -1343,6 +1358,7 @@ export default function App() {
                       move={currentMove}
                       moveIdx={currentMoveIdx}
                       moves={moves}
+                      runId={reviewResult?.run.runId}
                       onContinuationFen={handleContinuationFen}
                       onContinuationEval={handleContinuationEval}
                       onContinuationActive={handleContinuationActive}
@@ -1392,6 +1408,7 @@ export default function App() {
                     whiteName={playerNames.white}
                     blackName={playerNames.black}
                     moves={moves}
+                    run={reviewResult?.run}
                     onMoveClick={(idx) => {
                       navigateToMove(idx);
                       setTab("moves");
@@ -1502,6 +1519,7 @@ export default function App() {
                     move={currentMove}
                     moveIdx={currentMoveIdx}
                     moves={moves}
+                    runId={reviewResult?.run.runId}
                     onContinuationFen={handleContinuationFen}
                     onContinuationEval={handleContinuationEval}
                     onContinuationActive={handleContinuationActive}

@@ -11,6 +11,7 @@ export interface MoveReviewPanelProps {
   move: AnalyzedMove | null;
   moveIdx: number;
   moves?: AnalyzedMove[];
+  runId?: string;
   onContinuationFen?: (fen: string | null) => void;
   onContinuationEval?: (eval_: EvalResult | null) => void;
   onContinuationActive?: (active: boolean) => void;
@@ -327,6 +328,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   move,
   moveIdx,
   moves,
+  runId,
   onContinuationFen,
   onContinuationEval,
   onContinuationActive,
@@ -344,12 +346,17 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   }, [moves?.length]);
 
   useEffect(() => {
+    import("../utils/geminiCoach").then(({ clearCoachMemory }) => clearCoachMemory());
+    aiCommentCache.clear();
+  }, [runId]);
+
+  useEffect(() => {
     if (!move) {
       setAiComment(null);
       return;
     }
 
-    const cacheKey = `${moveIdx}:${move.san}:${move.classification}`;
+    const cacheKey = `${runId ?? "norun"}:${moveIdx}:${move.san}:${move.classification}:${move.bestMoveSan ?? ""}`;
 
     if (aiCommentCache.has(cacheKey)) {
       setAiComment(aiCommentCache.get(cacheKey)!);
@@ -410,7 +417,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [moveIdx, move, moves]);
+  }, [moveIdx, move, moves, runId]);
 
   if (!move) {
     return (
@@ -459,6 +466,11 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
               >
                 <ClassificationIcon type={move.classification!} size="sm" />
                 {meta.label}
+              </span>
+            )}
+            {!move.verified && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                Unverified
               </span>
             )}
           </div>

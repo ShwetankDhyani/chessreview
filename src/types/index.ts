@@ -18,6 +18,16 @@ export interface EvalResult {
   knodes?: number;
   bestMove?: string; // UCI e.g. "e2e4"
   pv?: string[];    // principal variation as UCI moves
+  /** Depth target requested for this position. */
+  targetDepth?: number;
+  /** Position was fully verified under run policy. */
+  verified?: boolean;
+  /** 0..1 confidence from consensus/disagreement checks. */
+  confidence?: number;
+  /** Why this eval could not be fully trusted. */
+  unverifiedReason?: "missing_eval" | "shallow_depth" | "high_disagreement";
+  /** Absolute cp disagreement between pass A/B (if available). */
+  disagreementCp?: number;
 }
 
 export interface AnalyzedMove {
@@ -41,6 +51,10 @@ export interface AnalyzedMove {
   bestMove?: string;   // engine best move UCI from fenBefore
   bestMoveSan?: string; // engine best move in SAN notation
   pvLine?: string[];   // follow-up principal variation in SAN
+  verified?: boolean;
+  confidence?: number;
+  unverifiedReason?: "missing_eval" | "shallow_depth" | "high_disagreement";
+  reviewRunId?: string;
 }
 
 export interface AccuracyStats {
@@ -69,6 +83,43 @@ export interface ReviewSummary {
   accuracy: AccuracyStats;
   phaseAccuracy?: PhaseAccuracy;
   keyMoments?: KeyMoment[];
+  coverage?: ReviewCoverage;
+  accuracyMeta?: AccuracyMeta;
+}
+
+export interface AccuracyMeta {
+  method: "classification_counts";
+  formulaVersion: string;
+}
+
+export interface ReviewCoverage {
+  totalPlies: number;
+  classifiedPlies: number;
+  verifiedPlies: number;
+  unverifiedPlies: number;
+  unverifiedReasons: {
+    missing_eval: number;
+    shallow_depth: number;
+    high_disagreement: number;
+  };
+}
+
+export interface ReviewRun {
+  runId: string;
+  engineVersion: string;
+  startedAt: string;
+  finishedAt: string;
+  requestedDepth: number;
+  fastDepth: number;
+  deepDepth: number;
+  backendPolicy: "consensus";
+  pgnHash: string;
+}
+
+export interface ReviewResult {
+  run: ReviewRun;
+  moves: AnalyzedMove[];
+  summary: ReviewSummary;
 }
 
 export interface ClassificationCounts {
