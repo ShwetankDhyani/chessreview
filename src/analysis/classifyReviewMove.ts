@@ -3,11 +3,14 @@ import type { MultiPvLine } from "./types";
 import { detectPieceSacrifice } from "./detectPieceSacrifice";
 import { checkOpeningBookSync } from "./openingBook";
 import {
+  BLUNDER_FORCE_EP,
   EP_CLASS_THRESHOLDS,
   GREAT_MIN_BEST_EP,
   GREAT_SECOND_LINE_GAP,
   BRILLIANT_MAX_WP_BEFORE,
   BRILLIANT_MIN_WP_AFTER,
+  STILL_WINNING_EP,
+  WAS_WINNING_EP,
 } from "./types";
 import { expectedPointsFromMoverCp, expectedPointsLoss } from "./expectedPoints";
 import { isDeliveredCheckmate } from "./mateDetection";
@@ -42,12 +45,33 @@ function isExactBestMove(input: ClassifyReviewInput): boolean {
   return input.playedUci.toLowerCase() === best.toLowerCase();
 }
 
-function classifyByEpLoss(eLoss: number): MoveClassification {
+/**
+ * In a won game, losing initiative (big ep drop) but staying ahead is a mistake, not a blunder.
+ * Real blunders throw away the advantage or need a catastrophic ep swing.
+ */
+export function isInitiativeSlipNotBlunder(
+  eBefore: number,
+  eAfter: number,
+  eLoss: number
+): boolean {
+  if (eLoss <= EP_CLASS_THRESHOLDS.mistake) return false;
+  if (eLoss >= BLUNDER_FORCE_EP) return false;
+  if (eBefore < WAS_WINNING_EP) return false;
+  if (eAfter < STILL_WINNING_EP) return false;
+  return true;
+}
+
+function classifyByEpLoss(
+  eLoss: number,
+  eBefore: number,
+  eAfter: number
+): MoveClassification {
   if (eLoss <= EP_CLASS_THRESHOLDS.best + 1e-9) return "best";
   if (eLoss <= EP_CLASS_THRESHOLDS.excellent) return "excellent";
   if (eLoss <= EP_CLASS_THRESHOLDS.good) return "good";
   if (eLoss <= EP_CLASS_THRESHOLDS.inaccuracy) return "inaccuracy";
   if (eLoss <= EP_CLASS_THRESHOLDS.mistake) return "mistake";
+  if (isInitiativeSlipNotBlunder(eBefore, eAfter, eLoss)) return "mistake";
   return "blunder";
 }
 
@@ -116,9 +140,9 @@ export function classifyReviewMove(input: ClassifyReviewInput): MoveClassificati
 
   if (detectMiss(input)) return "blunder";
 
-  let base = classifyByEpLoss(eLoss);
+  let base = classifyByEpLoss(eLoss, input.eBefore, input.eAfterPlayed);
   if (!isExactBestMove(input) && base === "best" && eLoss > 0) {
-    base = classifyByEpLoss(eLoss);
+    base = classifyByEpLoss(eLoss, input.eBefore, input.eAfterPlayed);
   }
   if (isExactBestMove(input) && eLoss <= EP_CLASS_THRESHOLDS.excellent) {
     base = "best";

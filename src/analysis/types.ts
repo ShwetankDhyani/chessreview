@@ -27,7 +27,16 @@ export const EP_CLASS_THRESHOLDS = {
   good: 0.05,
   inaccuracy: 0.1,
   mistake: 0.2,
+  /** Raw ep band — blunder also needs a real swing unless still clearly winning. */
+  blunder: 0.2,
 } as const;
+
+/** After the move, mover still has at least ~slight edge (not just equal). */
+export const STILL_WINNING_EP = 0.54;
+/** Before the move, mover was already better. */
+export const WAS_WINNING_EP = 0.52;
+/** Ep loss this large in a won game is still a blunder (e.g. 80% → 45%). */
+export const BLUNDER_FORCE_EP = 0.32;
 
 export const GREAT_MIN_BEST_EP = 0.6;
 export const GREAT_SECOND_LINE_GAP = 0.2;

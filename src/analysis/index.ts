@@ -20,6 +20,7 @@ export {
 
 export {
   classifyReviewMove,
+  isInitiativeSlipNotBlunder,
   detectGreatMove,
   detectMiss,
   detectBrilliantMove,
