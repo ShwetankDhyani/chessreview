@@ -1,7 +1,5 @@
 import {
   evaluateFensConsensus,
-  evalToCp,
-  isNativeEngineActive,
   refreshNativeEngineProbe,
 } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
@@ -106,30 +104,3 @@ export async function enrichGreatMoveCandidates(
   }
 }
 
-export function cpWhiteFromCache(
-  cache: Map<string, PositionAnalysis>,
-  fen: string
-): number {
-  const line = cache.get(fen)?.lines[0];
-  if (!line) return 0;
-  if (line.mate !== undefined) return line.mate > 0 ? 10000 : -10000;
-  return line.cp ?? 0;
-}
-
-export function strictCpMapFromCache(
-  cache: Map<string, PositionAnalysis>
-): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const [fen, analysis] of cache) {
-    const ev: EvalResult = {
-      cp: analysis.lines[0]?.cp,
-      mate: analysis.lines[0]?.mate,
-      depth: analysis.depth,
-      source: "local",
-    };
-    if (ev.depth >= MIN_VERIFY_DEPTH) out.set(fen, evalToCp(ev));
-  }
-  return out;
-}
-
-export { isNativeEngineActive };

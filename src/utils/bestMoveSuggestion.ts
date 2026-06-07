@@ -1,5 +1,5 @@
+import { EP_CLASS_THRESHOLDS } from "../analysis/types";
 import type { AnalyzedMove } from "../types";
-import { EP_THRESHOLDS } from "./moveClassification";
 
 function normalizeUci(uci: string): string {
   return uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
@@ -29,7 +29,7 @@ export function shouldSuggestBestMove(
   }
 
   const epLoss = move.epLoss ?? 1;
-  if (epLoss <= EP_THRESHOLDS.inaccuracy) {
+  if (epLoss <= EP_CLASS_THRESHOLDS.inaccuracy) {
     if (
       classification === "excellent" ||
       classification === "good" ||

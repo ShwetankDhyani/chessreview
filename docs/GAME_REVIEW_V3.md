@@ -9,7 +9,7 @@ Modular implementation under `src/analysis/`.
 | `expectedPoints.ts` | CP → win% → 0–1 expected points |
 | `classifyReviewMove.ts` | Thresholds + Book / Great / Miss / Brilliant |
 | `caps2Accuracy.ts` | CAPS2 exponential per-move + game accuracy |
-| `openingBook.ts` | `checkOpeningBook(fen)` stub |
+| `openingBook.ts` | `checkOpeningBookSync(fen, book)` |
 | `detectPieceSacrifice.ts` | `detectPieceSacrifice(...)` stub |
 | `stockfishReview.worker.ts` | Stockfish WASM + MultiPV |
 | `stockfishClient.ts` | Main-thread worker API |
@@ -47,4 +47,4 @@ Special overrides (before bands): Book, Great, Miss (failed capitalize → blund
 
 ## Opening book
 
-Implement `checkOpeningBook` / pass `openingBook: Set<fen>` into `analyzeGameReview`.
+Pass `openingBook: Set<fen>` (or `Map`) into `analyzeGameReview`; lookups use `checkOpeningBookSync`.

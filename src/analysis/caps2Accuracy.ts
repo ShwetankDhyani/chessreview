@@ -1,5 +1,4 @@
 import type { AnalyzedMove } from "../types";
-import { expectedPointsLoss, expectedPointsFromMoverCp } from "./expectedPoints";
 
 /** CAPS2 move-accuracy curve constants (Lichess / Chess.com). */
 export const CAPS2_A = 103.1668100711649;
@@ -47,12 +46,3 @@ export function caps2AccuracyForMoves(
   return caps2GameAccuracy(losses);
 }
 
-/** Average ep loss from before/after pair (diagnostics). */
-export function averageEpLoss(
-  eBefore: number,
-  eAfter: number
-): number {
-  return expectedPointsLoss(eBefore, eAfter);
-}
-
-export { expectedPointsFromMoverCp };

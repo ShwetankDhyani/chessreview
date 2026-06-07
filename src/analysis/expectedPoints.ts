@@ -50,9 +50,3 @@ export function evalToCpWhite(evalWhite: { cp?: number; mate?: number }): number
   return evalWhite.cp ?? 0;
 }
 
-export function cpToEvalWhite(cpWhite: number): { cp?: number; mate?: number } {
-  if (Math.abs(cpWhite) >= MATE_CP - 1) {
-    return { mate: cpWhite > 0 ? 1 : -1 };
-  }
-  return { cp: cpWhite };
-}

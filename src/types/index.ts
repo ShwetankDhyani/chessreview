@@ -62,33 +62,16 @@ export interface AccuracyStats {
   black: number;
 }
 
-export interface PhaseAccuracy {
-  opening: AccuracyStats;
-  middlegame: AccuracyStats;
-  endgame: AccuracyStats;
-}
-
-export interface KeyMoment {
-  moveIdx: number;
-  san: string;
-  moveNumber: number;
-  color: "w" | "b";
-  classification: MoveClassification;
-  swing: number; // eval swing in pawns
-}
-
 export interface ReviewSummary {
   white: ClassificationCounts;
   black: ClassificationCounts;
   accuracy: AccuracyStats;
-  phaseAccuracy?: PhaseAccuracy;
-  keyMoments?: KeyMoment[];
   coverage?: ReviewCoverage;
   accuracyMeta?: AccuracyMeta;
 }
 
 export interface AccuracyMeta {
-  method: "ep_loss_caps" | "classification_counts" | "chesscom_ep_v3";
+  method: "chesscom_ep_v3";
   formulaVersion: string;
 }
 

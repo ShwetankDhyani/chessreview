@@ -117,24 +117,20 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
 export interface GameReviewOptions extends ReviewEngineOptions {
   onProgress?: (done: number, total: number) => void;
   openingBook?: ReadonlySet<string>;
-  forceWasmMultiPv?: boolean;
 }
 
 async function buildAnalysisCache(
   fens: string[],
   depth: number,
   multiPv: number,
-  forceWasm: boolean,
   onProgress?: (done: number, total: number) => void
 ): Promise<{ cache: Map<string, PositionAnalysis>; engineTag: string }> {
-  if (!forceWasm) {
-    const batch = await buildBatchPositionCache(fens, depth, (done, total) => {
-      onProgress?.(Math.round((done / Math.max(total, 1)) * 88), 100);
-    });
-    if (batchCacheIsUsable(batch, fens)) {
-      onProgress?.(90, 100);
-      return { cache: batch, engineTag: "v3.1-hybrid-batch" };
-    }
+  const batch = await buildBatchPositionCache(fens, depth, (done, total) => {
+    onProgress?.(Math.round((done / Math.max(total, 1)) * 88), 100);
+  });
+  if (batchCacheIsUsable(batch, fens)) {
+    onProgress?.(90, 100);
+    return { cache: batch, engineTag: "v3.1-hybrid-batch" };
   }
 
   const cache = new Map<string, PositionAnalysis>();
@@ -231,14 +227,13 @@ export async function analyzeGameReview(
     [...new Set(fens)],
     depth,
     multiPv,
-    !!options.forceWasmMultiPv,
     options.onProgress
   );
 
   const usedBatchPath = engineTag === "v3.1-hybrid-batch";
 
   const extraBestFens = collectExtraBestFens(fens, history, analysisCache);
-  if (extraBestFens.length > 0 && !options.forceWasmMultiPv) {
+  if (extraBestFens.length > 0) {
     const extra = await buildBatchPositionCache(extraBestFens, depth, (d, t) => {
       options.onProgress?.(88 + Math.round((d / Math.max(t, 1)) * 6), 100);
     });
@@ -248,7 +243,7 @@ export async function analyzeGameReview(
   }
 
   // WASM MultiPV enrichment is slow; skip on fast batch path (Great labels optional).
-  if (!options.forceWasmMultiPv && !usedBatchPath) {
+  if (!usedBatchPath) {
     const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
     if (greatCandidates.length > 0) {
       await enrichGreatMoveCandidates(
@@ -469,4 +464,3 @@ export async function analyzeGameReview(
   };
 }
 
-export { analyzeGameReview as analyzePgnChessCom };

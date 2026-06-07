@@ -99,9 +99,3 @@ export function lineCpWhite(line: { cp?: number; mate?: number }): number {
   return evalToCpWhite(line);
 }
 
-export function terminateReviewWorker(): void {
-  worker?.terminate();
-  worker = null;
-  pending.clear();
-  multiPvConfigured = 0;
-}

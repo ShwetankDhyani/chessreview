@@ -38,10 +38,6 @@ export function clearCoachMemory() {
   clearCoachPhraseMemory();
 }
 
-export function getRecentCoachLines(): string[] {
-  return [...recentLines];
-}
-
 export interface MoveCommentContext {
   moveIdx?: number;
   recentPhrases?: string[];

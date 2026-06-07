@@ -14,15 +14,3 @@ export function isDeliveredCheckmate(fenAfter: string): boolean {
   return isCheckmatePosition(fenAfter);
 }
 
-/** True when `fen` has a decisive mate score for the side that just moved (mover). */
-export function isDecisiveWinForMover(
-  evalWhite: { cp?: number; mate?: number },
-  mover: "w" | "b",
-  fenAfter: string
-): boolean {
-  if (isDeliveredCheckmate(fenAfter)) return true;
-  if (evalWhite.mate === undefined) return false;
-  const whiteWinning = evalWhite.mate > 0;
-  const moverWinning = mover === "w" ? whiteWinning : !whiteWinning;
-  return moverWinning && Math.abs(evalWhite.mate) <= 3;
-}

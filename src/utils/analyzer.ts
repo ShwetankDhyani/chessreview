@@ -1,9 +1,7 @@
 import { analyzeGameReview } from "../analysis/gameReview";
 import type { ReviewResult } from "../types";
 
-/**
- * Analyze a PGN using Chess.com-style expected-points review (Stockfish WASM MultiPV).
- */
+/** Analyze a PGN via v3 expected-points review (native batch + WASM MultiPV fallback). */
 export async function analyzePgn(
   pgn: string,
   onProgress?: (done: number, total: number) => void,

@@ -199,15 +199,6 @@ function getWorker(): Worker {
   return workerInstance;
 }
 
-export function terminateWorker() {
-  if (workerInstance) {
-    workerInstance.terminate();
-    workerInstance = null;
-    pendingCallbacks.clear();
-    pendingFens.clear();
-  }
-}
-
 let idCounter = 0;
 
 function normalizeEvalToWhite(

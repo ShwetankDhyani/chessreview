@@ -29,12 +29,6 @@ const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
   "blunder",
 ];
 
-const PHASE_LABELS: Record<"opening" | "middlegame" | "endgame", string> = {
-  opening: "Opening",
-  middlegame: "Middlegame",
-  endgame: "Endgame",
-};
-
 const MOVE_GRID =
   "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)";
 
@@ -243,62 +237,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         </div>
       </ReviewSection>
 
-      {summary.phaseAccuracy && (
-        <ReviewSection title="Phase accuracy">
-          <div className="space-y-4">
-            {(["opening", "middlegame", "endgame"] as const).map((phase) => {
-              const pa = summary.phaseAccuracy![phase];
-              return (
-                <PhaseCompareRow
-                  key={phase}
-                  label={PHASE_LABELS[phase]}
-                  white={pa.white}
-                  black={pa.black}
-                />
-              );
-            })}
-          </div>
-        </ReviewSection>
-      )}
-
-      {summary.keyMoments && summary.keyMoments.length > 0 && onMoveClick && (
-        <ReviewSection title="Key moments">
-          <div className="flex flex-wrap gap-1.5">
-            {summary.keyMoments.map((km, i) => {
-              const meta = km.classification
-                ? CLASSIFICATION_META[
-                    km.classification as keyof typeof CLASSIFICATION_META
-                  ]
-                : null;
-              const color =
-                meta?.color ?? (km.swing >= 2 ? "#ca3c3c" : "#e6c84a");
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => onMoveClick(km.moveIdx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono transition-all hover:brightness-110"
-                  style={{
-                    backgroundColor: `${color}18`,
-                    color,
-                    border: `1px solid ${color}33`,
-                  }}
-                  title={`${km.moveNumber}${km.color === "w" ? "." : "..."} ${km.san} — ${km.classification ?? "critical"} (±${km.swing.toFixed(1)})`}
-                >
-                  {km.classification && (
-                    <ClassificationIcon type={km.classification} size="xs" />
-                  )}
-                  <span>
-                    {km.moveNumber}
-                    {km.color === "w" ? "." : "…"}
-                    {km.san}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </ReviewSection>
-      )}
     </div>
   );
 };
@@ -343,80 +281,6 @@ const ReviewPlayerStrip: React.FC<{
         {blackName}
       </span>
       <PieceIndicator side="black" />
-    </div>
-  </div>
-);
-
-const PhaseCompareRow: React.FC<{
-  label: string;
-  white: number;
-  black: number;
-}> = ({ label, white, black }) => {
-  const gap = Math.abs(white - black);
-  const leader: "white" | "black" | null =
-    gap < 1 ? null : white >= black ? "white" : "black";
-  const wColor = accuracyStrokeColor(white);
-  const bColor = accuracyStrokeColor(black);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-xs text-chess-subtext font-medium">{label}</span>
-        {leader ? (
-          <span className="inline-flex items-center gap-1 text-[10px] text-chess-muted tabular-nums">
-            +{gap.toFixed(0)}%
-            <PieceIndicator side={leader} className="h-2.5 w-2.5" />
-          </span>
-        ) : (
-          <span className="text-[10px] text-chess-muted">Even</span>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-0">
-        <PhaseSide
-          value={white}
-          color={wColor}
-          highlight={leader === "white"}
-        />
-        <PhaseSide
-          value={black}
-          color={bColor}
-          highlight={leader === "black"}
-          align="right"
-        />
-      </div>
-    </div>
-  );
-};
-
-const PhaseSide: React.FC<{
-  value: number;
-  color: string;
-  highlight?: boolean;
-  align?: "left" | "right";
-}> = ({ value, color, highlight, align = "left" }) => (
-  <div
-    className={`px-2 py-1 ${
-      align === "right" ? "text-right border-l" : "text-left border-r"
-    } border-chess-border/25`}
-  >
-    <span
-      className="text-sm font-bold tabular-nums block mb-1"
-      style={{ color: value > 0 ? color : "#555" }}
-    >
-      {value > 0 ? `${value.toFixed(0)}%` : "—"}
-    </span>
-    <div
-      className={`h-1.5 rounded-full bg-chess-border/40 overflow-hidden flex ${
-        align === "right" ? "justify-end" : ""
-      } ${highlight ? "ring-1 ring-chess-accent/30" : ""}`}
-    >
-      <div
-        className="h-full rounded-full transition-all duration-500"
-        style={{
-          width: `${Math.min(100, Math.max(0, value))}%`,
-          backgroundColor: color,
-        }}
-      />
     </div>
   </div>
 );

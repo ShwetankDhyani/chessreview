@@ -80,11 +80,3 @@ export function formatDate(unixTs: number): string {
   });
 }
 
-/** @deprecated Use TimeClassIcon component for consistent rendering */
-export function timeClassIcon(tc: string): string {
-  if (tc === "bullet") return "⚡";
-  if (tc === "blitz") return "🔥";
-  if (tc === "rapid") return "⏱";
-  if (tc === "daily") return "📅";
-  return "♟";
-}
