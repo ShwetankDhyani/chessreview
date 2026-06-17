@@ -343,6 +343,7 @@ const server = createServer(async (req, res) => {
         ramGb: Math.floor(RAM_GB),
         maxBatch: MAX_BATCH,
         movetimeMs: MOVETIME_MS > 0 ? MOVETIME_MS : null,
+        adminConfigured: adminSecret.length > 0,
       })
     );
     return;
