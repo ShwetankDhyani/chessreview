@@ -44,8 +44,9 @@ sudo nano /etc/chessreview/engine.env
 ```
 
 ```bash
+# Use plain password in .env — Node re-reads it (systemd mangles leading $).
 STATS_REVIEWS_BASELINE=120
-ADMIN_SECRET=your-real-password-here
+ADMIN_SECRET=your-password-here
 ```
 
 Also keep them in `~/chessreview/.env` if you run manually sometimes.

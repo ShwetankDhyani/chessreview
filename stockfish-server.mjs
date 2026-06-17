@@ -22,6 +22,24 @@ import {
   normalizeReviewPayload,
 } from "./server/reviewStats.mjs";
 
+/** Keys always re-read from .env so systemd does not mangle `$` in passwords. */
+const DOTENV_OVERRIDE = new Set([
+  "ADMIN_SECRET",
+  "STATS_READ_KEY",
+  "STATS_REVIEWS_BASELINE",
+]);
+
+function unquoteEnv(val) {
+  let v = val.trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    return v.slice(1, -1);
+  }
+  return v;
+}
+
 /** Load .env from cwd (npm run does not source it automatically). */
 function loadEnvFile() {
   const path = join(process.cwd(), ".env");
@@ -32,8 +50,10 @@ function loadEnvFile() {
     const eq = trimmed.indexOf("=");
     if (eq <= 0) continue;
     const key = trimmed.slice(0, eq).trim();
-    const val = trimmed.slice(eq + 1).trim();
-    if (process.env[key] === undefined) process.env[key] = val;
+    const val = unquoteEnv(trimmed.slice(eq + 1));
+    if (DOTENV_OVERRIDE.has(key) || process.env[key] === undefined) {
+      process.env[key] = val;
+    }
   }
 }
 loadEnvFile();
