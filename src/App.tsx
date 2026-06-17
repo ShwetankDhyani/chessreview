@@ -46,6 +46,7 @@ import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { KeyMomentNavButtons } from "./components/KeyMomentNavButtons";
+import { recordReviewCompleted } from "./utils/reviewStats";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -540,6 +541,7 @@ export default function App() {
       }
 
       setAnalysisRunning(true);
+      const analysisStartedAt = Date.now();
 
       try {
         const result = await analyzePgn(
@@ -567,6 +569,23 @@ export default function App() {
           setTab("review");
           navigateToMove(-1, false);
         }
+
+        const meta = extractGameMeta(pgnStr);
+        recordReviewCompleted({
+          runId: result.run.runId,
+          username: activeUser?.name ?? null,
+          reviewerPlatform: activeUser?.platform ?? null,
+          whitePlayer: meta.white,
+          blackPlayer: meta.black,
+          whiteRating: meta.whiteRating,
+          blackRating: meta.blackRating,
+          result: meta.result,
+          plies: result.moves.length,
+          depth,
+          durationMs: Math.max(0, Date.now() - analysisStartedAt),
+          source: activeUser?.platform ?? "pgn",
+        });
+        window.dispatchEvent(new CustomEvent("cr_review_logged"));
       } catch (e) {
         if (gen !== analysisGenerationRef.current) return;
         console.error(e);
@@ -576,7 +595,7 @@ export default function App() {
         setAnalysisState("error");
       }
     },
-    [navigateToMove, depth, recheckEngine]
+    [navigateToMove, depth, recheckEngine, activeUser]
   );
 
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
