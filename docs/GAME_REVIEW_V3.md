@@ -41,7 +41,9 @@ E_loss = E_before - E_after
 - Mistake: ≤ 0.20
 - Blunder: > 0.20 **and** not a “still winning” initiative slip (see below)
 
-**Winning-position cap:** If you were already better (`E_before ≥ 0.52`), still ahead after the move (`E_after ≥ 0.54`), and ep loss is below 0.32, a raw >0.20 band is labeled **mistake** (lost initiative, not the game). True blunders in won games need a bigger collapse (e.g. 85% → 48%).
+**Winning-position cap:** If you were clearly better (`E_before ≥ 0.55`), still at least equal after (`E_after ≥ 0.50`), and ep loss is below 0.32, a raw >0.20 band is labeled **mistake** (lost initiative, not the game). True blunders in won games need a bigger collapse (e.g. 85% → 45%).
+
+**Miss (failed punish):** After opponent mistake/inaccuracy, only counts when you return to equal or lose ≥20% ep. Small slips while still ahead stay inaccuracy/mistake — not blunder.
 
 Special overrides (before bands): Book, Great, Miss (failed capitalize → blunder), Brilliant.
 

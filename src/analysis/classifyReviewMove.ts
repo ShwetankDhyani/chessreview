@@ -11,6 +11,7 @@ import {
   BRILLIANT_MIN_WP_AFTER,
   STILL_WINNING_EP,
   WAS_WINNING_EP,
+  MISS_MIN_CHANCE_EP,
 } from "./types";
 import { expectedPointsFromMoverCp, expectedPointsLoss } from "./expectedPoints";
 import { isDeliveredCheckmate } from "./mateDetection";
@@ -61,6 +62,29 @@ export function isInitiativeSlipNotBlunder(
   return true;
 }
 
+/**
+ * Failed to punish opponent's mistake. Returns severity — never blunder when still clearly winning.
+ */
+export function detectMiss(input: ClassifyReviewInput): MoveClassification | null {
+  const opp = input.opponentPriorClass;
+  if (opp !== "mistake" && opp !== "blunder") return null;
+  if (input.opponentPriorEpLoss < EP_CLASS_THRESHOLDS.inaccuracy) return null;
+  if (input.eBefore < MISS_MIN_CHANCE_EP) return null;
+
+  const eLoss = expectedPointsLoss(input.eBefore, input.eAfterPlayed);
+  const failedToPunish =
+    input.eAfterPlayed <= STILL_WINNING_EP || eLoss >= EP_CLASS_THRESHOLDS.mistake;
+  if (!failedToPunish) return null;
+
+  if (isInitiativeSlipNotBlunder(input.eBefore, input.eAfterPlayed, eLoss)) {
+    return "mistake";
+  }
+  if (eLoss >= BLUNDER_FORCE_EP || input.eAfterPlayed <= 0.45) {
+    return "blunder";
+  }
+  return "mistake";
+}
+
 function classifyByEpLoss(
   eLoss: number,
   eBefore: number,
@@ -90,22 +114,6 @@ export function detectGreatMove(input: ClassifyReviewInput): boolean {
   if (e1 < GREAT_MIN_BEST_EP) return false;
   if (e1 - e2 < GREAT_SECOND_LINE_GAP) return false;
   return isExactBestMove(input);
-}
-
-/**
- * Miss: opponent just blundered/mistaked; user fails to capitalize (returns to ~equal or worse).
- */
-export function detectMiss(input: ClassifyReviewInput): boolean {
-  const opp = input.opponentPriorClass;
-  if (opp !== "mistake" && opp !== "blunder") return false;
-  if (input.opponentPriorEpLoss < EP_CLASS_THRESHOLDS.inaccuracy) return false;
-
-  const hadChance = input.eBefore >= 0.55;
-  const wasted =
-    input.eAfterPlayed <= 0.52 ||
-    expectedPointsLoss(input.eBefore, input.eAfterPlayed) >= EP_CLASS_THRESHOLDS.good;
-
-  return hadChance && wasted;
 }
 
 export function detectBrilliantMove(
@@ -138,7 +146,8 @@ export function classifyReviewMove(input: ClassifyReviewInput): MoveClassificati
 
   if (detectGreatMove(input)) return "great";
 
-  if (detectMiss(input)) return "blunder";
+  const miss = detectMiss(input);
+  if (miss) return miss;
 
   let base = classifyByEpLoss(eLoss, input.eBefore, input.eAfterPlayed);
   if (!isExactBestMove(input) && base === "best" && eLoss > 0) {

@@ -31,12 +31,14 @@ export const EP_CLASS_THRESHOLDS = {
   blunder: 0.2,
 } as const;
 
-/** After the move, mover still has at least ~slight edge (not just equal). */
-export const STILL_WINNING_EP = 0.54;
-/** Before the move, mover was already better. */
-export const WAS_WINNING_EP = 0.52;
+/** After the move, mover is still at least equal (did not throw away the game). */
+export const STILL_WINNING_EP = 0.5;
+/** Before the move, mover had a clear edge. */
+export const WAS_WINNING_EP = 0.55;
 /** Ep loss this large in a won game is still a blunder (e.g. 80% → 45%). */
 export const BLUNDER_FORCE_EP = 0.32;
+/** Minimum edge to treat a reply as failing to punish a prior mistake. */
+export const MISS_MIN_CHANCE_EP = 0.55;
 
 export const GREAT_MIN_BEST_EP = 0.6;
 export const GREAT_SECOND_LINE_GAP = 0.2;
