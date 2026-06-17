@@ -1,8 +1,7 @@
 import {
   geoFromHeaders,
-  insertReviewEvent,
-  isSupabaseConfigured,
   normalizeReviewPayload,
+  recordReviewEvent,
 } from "../server/reviewStats.mjs";
 
 export default async function handler(req, res) {
@@ -18,10 +17,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "POST only" });
   }
 
-  if (!isSupabaseConfigured()) {
-    return res.status(503).json({ ok: false, reason: "not_configured" });
-  }
-
   try {
     const body =
       typeof req.body === "string"
@@ -31,7 +26,10 @@ export default async function handler(req, res) {
     if (!row.run_id) {
       return res.status(400).json({ error: "Missing runId" });
     }
-    const result = await insertReviewEvent(row);
+    const result = await recordReviewEvent(row);
+    if (result?.ok === false && result.reason === "not_configured") {
+      return res.status(503).json(result);
+    }
     return res.status(200).json({ ok: true, ...result });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Invalid payload";

@@ -1,6 +1,29 @@
 /**
- * Supabase-backed review analytics (server-side only).
+ * Review analytics — engine file store (default) or optional Supabase.
  */
+
+export function engineStatsUrl() {
+  const raw =
+    process.env.EVAL_SERVER_URL?.trim() ||
+    process.env.VITE_EVAL_SERVER_URL?.trim() ||
+    "";
+  return raw.replace(/\/$/, "");
+}
+
+export function isEngineStatsConfigured() {
+  return !!engineStatsUrl();
+}
+
+async function fetchEngineJson(path, options = {}) {
+  const base = engineStatsUrl();
+  if (!base) return null;
+  const res = await fetch(`${base}${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
 
 export function isSupabaseConfigured() {
   return !!(
@@ -93,7 +116,11 @@ export function normalizeReviewPayload(body = {}, geo = {}) {
     timezone: clip(body.timezone, 64),
     locale: clip(body.locale, 16),
     source: clip(body.source, 24),
-    ...geo,
+    country_code: geo.country_code ?? clip(body.countryCode ?? body.country_code, 8),
+    region: geo.region ?? clip(body.region, 80),
+    city: geo.city ?? clip(body.city, 80),
+    latitude: geo.latitude ?? floatOrNull(body.latitude),
+    longitude: geo.longitude ?? floatOrNull(body.longitude),
   };
 }
 
@@ -118,7 +145,7 @@ export function reviewsBaseline() {
 }
 
 export function isStatsAvailable() {
-  return isSupabaseConfigured() || reviewsBaseline() > 0;
+  return isEngineStatsConfigured() || isSupabaseConfigured() || reviewsBaseline() > 0;
 }
 
 async function dbPublicStats() {
@@ -162,14 +189,75 @@ function withBaseline(stats) {
 }
 
 export async function getPublicStats() {
-  const stats = await dbPublicStats();
-  const merged = withBaseline(stats);
-  return { count: merged.reviewsServed ?? 0 };
+  const engine = await fetchEngineJson("/stats");
+  if (engine?.count != null) {
+    return { count: engine.count };
+  }
+
+  if (isSupabaseConfigured()) {
+    const stats = withBaseline(await dbPublicStats());
+    return { count: stats.reviewsServed ?? 0 };
+  }
+
+  return { count: reviewsBaseline() };
 }
 
 export async function getAdminStats() {
-  const stats = await dbAdminStats();
-  return withBaseline(stats);
+  const engine = await fetchEngineJson("/stats/admin", {
+    headers: {
+      "X-Admin-Key":
+        process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY ?? "",
+    },
+  });
+  if (engine) return engine;
+
+  if (isSupabaseConfigured()) {
+    return withBaseline(await dbAdminStats());
+  }
+
+  return {
+    configured: reviewsBaseline() > 0,
+    count: reviewsBaseline(),
+    reviewsServed: reviewsBaseline(),
+    countries: [],
+    countryCount: 0,
+    byDepth: [],
+    ratingSummary: { avgWhite: null, avgBlack: null, ratedGames: 0 },
+    recent: [],
+  };
+}
+
+export async function recordReviewEvent(row) {
+  const engine = await fetchEngineJson("/stats/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      runId: row.run_id,
+      username: row.username,
+      reviewerPlatform: row.reviewer_platform,
+      whitePlayer: row.white_player,
+      blackPlayer: row.black_player,
+      whiteRating: row.white_rating,
+      blackRating: row.black_rating,
+      result: row.result,
+      plies: row.plies,
+      depth: row.depth,
+      durationMs: row.duration_ms,
+      timezone: row.timezone,
+      locale: row.locale,
+      source: row.source,
+      countryCode: row.country_code,
+      region: row.region,
+      city: row.city,
+    }),
+  });
+  if (engine?.ok) return engine;
+
+  if (isSupabaseConfigured()) {
+    return insertReviewEvent(row);
+  }
+
+  return { ok: false, reason: "not_configured" };
 }
 
 function parseJsonBody(req) {
@@ -251,12 +339,6 @@ export function createReviewStatsMiddleware() {
         return;
       }
 
-      if (!isSupabaseConfigured()) {
-        res.statusCode = 503;
-        res.end(JSON.stringify({ ok: false, reason: "not_configured" }));
-        return;
-      }
-
       let body = "";
       req.on("data", (chunk) => {
         body += chunk;
@@ -270,7 +352,12 @@ export function createReviewStatsMiddleware() {
             res.end(JSON.stringify({ error: "Missing runId" }));
             return;
           }
-          const result = await insertReviewEvent(row);
+          const result = await recordReviewEvent(row);
+          if (result?.ok === false && result.reason === "not_configured") {
+            res.statusCode = 503;
+            res.end(JSON.stringify(result));
+            return;
+          }
           res.statusCode = 200;
           res.end(JSON.stringify({ ok: true, ...result }));
         } catch (e) {

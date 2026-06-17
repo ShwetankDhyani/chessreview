@@ -16,6 +16,11 @@ import { homedir } from "os";
 import { join } from "path";
 import { URL } from "url";
 import os from "os";
+import { handleEngineStatsRequest } from "./server/reviewStatsFile.mjs";
+import {
+  geoFromHeaders,
+  normalizeReviewPayload,
+} from "./server/reviewStats.mjs";
 
 /** Load .env from cwd (npm run does not source it automatically). */
 function loadEnvFile() {
@@ -294,7 +299,7 @@ const server = createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
+    "Content-Type, Authorization, X-Admin-Key"
   );
   res.setHeader("Content-Type", "application/json");
 
@@ -305,6 +310,18 @@ const server = createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${BIND}:${PORT}`);
+  const adminSecret = process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY ?? "";
+
+  if (
+    handleEngineStatsRequest(req, res, url, {
+      adminSecret,
+      readJsonBody,
+      geoFromHeaders,
+      normalizeReviewPayload,
+    })
+  ) {
+    return;
+  }
 
   if (url.pathname === "/health") {
     res.writeHead(200);

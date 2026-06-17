@@ -66,14 +66,24 @@ export function formatReviewsServed(n: number): string {
 }
 
 export async function fetchReviewCount(): Promise<number> {
-  try {
-    const res = await fetch("/api/stats/public");
-    if (!res.ok) return 0;
-    const data = await res.json();
-    return data.count ?? data.reviewsServed ?? 0;
-  } catch {
-    return 0;
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const sources = [
+    "/api/stats/public",
+    engineUrl ? `${engineUrl}/stats` : null,
+  ].filter(Boolean) as string[];
+
+  for (const url of sources) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const count = data.count ?? data.reviewsServed;
+      if (typeof count === "number") return count;
+    } catch {
+      /* try next source */
+    }
   }
+  return 0;
 }
 
 export async function fetchAdminStats(adminKey: string): Promise<AdminReviewStats> {
@@ -122,12 +132,18 @@ export function recordReviewCompleted(input: RecordReviewInput): void {
     source: input.source ?? null,
   };
 
-  void fetch("/api/review-events", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    keepalive: true,
-  }).catch(() => {
-    /* analytics must never block or surface errors */
-  });
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const targets = ["/api/review-events"];
+  if (engineUrl) targets.push(`${engineUrl}/stats/review`);
+
+  for (const url of targets) {
+    void fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {
+      /* analytics must never block or surface errors */
+    });
+  }
 }
