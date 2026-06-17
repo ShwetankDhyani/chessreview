@@ -27,26 +27,39 @@ cd ~/chessreview
 git pull
 ```
 
-### 2. Add to `~/chessreview/.env`
+### 2. Add to the env file **systemd actually loads**
+
+`~/chessreview/.env` is only read when you start the server manually. **systemd uses its own file.**
+
+Check which file:
 
 ```bash
-STATS_REVIEWS_BASELINE=120    # reviews before tracking (your guess)
-ADMIN_SECRET=pick-a-long-password
+sudo systemctl cat chessreview-engine | grep EnvironmentFile
 ```
 
-### 3. Restart the engine service
+Usually `/etc/chessreview/engine.env`. Add both lines there:
+
+```bash
+sudo nano /etc/chessreview/engine.env
+```
+
+```bash
+STATS_REVIEWS_BASELINE=120
+ADMIN_SECRET=your-real-password-here
+```
+
+Also keep them in `~/chessreview/.env` if you run manually sometimes.
+
+**No quotes** around the password. Restart (not Vercel redeploy):
 
 ```bash
 sudo systemctl restart chessreview-engine
 ```
 
-Stats are saved to `~/chessreview/data/review-stats.json` automatically.
-
-### 4. Quick test on the VM
+Test:
 
 ```bash
-curl -s http://127.0.0.1:8765/stats
-curl -s http://127.0.0.1:8765/health
+curl -s -H "X-Admin-Key: your-real-password-here" http://127.0.0.1:8765/stats/admin
 ```
 
 ---

@@ -310,7 +310,11 @@ const server = createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${BIND}:${PORT}`);
-  const adminSecret = process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY ?? "";
+  const adminSecret = (
+    process.env.ADMIN_SECRET ??
+    process.env.STATS_READ_KEY ??
+    ""
+  ).trim();
 
   if (
     handleEngineStatsRequest(req, res, url, {

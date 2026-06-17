@@ -172,7 +172,7 @@ export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonB
     const key =
       req.headers["x-admin-key"] ??
       String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
-    if (!adminSecret || key !== adminSecret) {
+    if (!adminSecret || key.trim() !== adminSecret) {
       res.writeHead(401);
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return true;
