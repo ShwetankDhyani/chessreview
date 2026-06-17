@@ -8,6 +8,7 @@ import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
+import { ReviewStatsTrigger } from "./components/ReviewStatsTrigger";
 import type {
   AnalyzedMove,
   ReviewResult,
@@ -833,7 +834,9 @@ export default function App() {
             </span>
           </span>
         </div>
-        <div className="flex-1 min-w-0" />
+        <div className="flex-1 min-w-0 flex justify-center">
+          <ReviewStatsTrigger variant="header" />
+        </div>
 
         <EngineDepthControls
           depth={depth}

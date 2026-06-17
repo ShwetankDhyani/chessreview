@@ -6,8 +6,11 @@ export interface CountryStat {
 export interface PublicReviewStats {
   configured: boolean;
   reviewsServed?: number;
+  liveReviews?: number;
+  baseline?: number;
   countryCount?: number;
   countries?: CountryStat[];
+  tracking?: "none" | "baseline_only" | "live" | "live+baseline";
 }
 
 export interface RecentReviewRow {

@@ -102,8 +102,8 @@ export function ReviewStatsModal({
           <p className="text-sm text-chess-muted py-8 text-center">Counting the boards…</p>
         ) : !stats?.configured ? (
           <p className="text-sm text-chess-subtext leading-relaxed">
-            Stats are warming up. Once the database is connected, you&apos;ll see how many reviews
-            have been served and where players are studying from.
+            Stats are warming up. Set <code className="text-chess-accent">STATS_REVIEWS_BASELINE</code> on
+            Vercel for a starting count, or connect Supabase for live tracking.
           </p>
         ) : served === 0 ? (
           <p className="text-sm text-chess-subtext leading-relaxed">
@@ -129,6 +129,15 @@ export function ReviewStatsModal({
                 </div>
               </div>
             </div>
+
+            {stats.baseline != null && stats.baseline > 0 && (
+              <p className="text-[11px] text-chess-muted text-center">
+                Includes {formatReviewsServed(stats.baseline)} reviews from before live tracking.
+                {(stats.liveReviews ?? 0) > 0
+                  ? ` ${formatReviewsServed(stats.liveReviews ?? 0)} logged since.`
+                  : null}
+              </p>
+            )}
 
             {countries.length > 0 && (
               <div>

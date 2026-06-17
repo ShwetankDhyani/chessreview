@@ -18,6 +18,7 @@ Stores **metadata only** when a review finishes (players, ratings, country, dept
 | `SUPABASE_URL` | Vercel → Project → Settings → Environment Variables |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same (server-only, never `VITE_`) |
 | `ADMIN_SECRET` | Same — your password for `/admin` |
+| `STATS_REVIEWS_BASELINE` | Optional — starting count (reviews before analytics). Footer shows baseline + new reviews. |
 
 Redeploy after adding vars.
 

@@ -111,12 +111,64 @@ export async function insertReviewEvent(row) {
   return { duplicate: false };
 }
 
-export async function getPublicStats() {
+export function reviewsBaseline() {
+  const raw = process.env.STATS_REVIEWS_BASELINE ?? "";
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+export function isStatsAvailable() {
+  return isSupabaseConfigured() || reviewsBaseline() > 0;
+}
+
+async function dbPublicStats() {
+  if (!isSupabaseConfigured()) {
+    return { reviewsServed: 0, countryCount: 0, countries: [] };
+  }
   return callRpc("get_public_review_stats");
 }
 
-export async function getAdminStats() {
+async function dbAdminStats() {
+  if (!isSupabaseConfigured()) {
+    return {
+      reviewsServed: 0,
+      countryCount: 0,
+      countries: [],
+      byDepth: [],
+      ratingSummary: { avgWhite: null, avgBlack: null, ratedGames: 0 },
+      recent: [],
+    };
+  }
   return callRpc("get_admin_review_stats");
+}
+
+function withBaseline(stats) {
+  const baseline = reviewsBaseline();
+  const live = stats.reviewsServed ?? 0;
+  return {
+    ...stats,
+    baseline,
+    liveReviews: live,
+    reviewsServed: live + baseline,
+    tracking: isSupabaseConfigured()
+      ? baseline > 0
+        ? "live+baseline"
+        : "live"
+      : baseline > 0
+        ? "baseline_only"
+        : "none",
+    configured: isStatsAvailable(),
+  };
+}
+
+export async function getPublicStats() {
+  const stats = await dbPublicStats();
+  return withBaseline(stats);
+}
+
+export async function getAdminStats() {
+  const stats = await dbAdminStats();
+  return withBaseline(stats);
 }
 
 function parseJsonBody(req) {
@@ -135,15 +187,10 @@ export function createReviewStatsMiddleware() {
       res.setHeader("Content-Type", "application/json");
       res.setHeader("Access-Control-Allow-Origin", "*");
       void (async () => {
-        if (!isSupabaseConfigured()) {
-          res.statusCode = 503;
-          res.end(JSON.stringify({ configured: false }));
-          return;
-        }
         try {
           const stats = await getPublicStats();
           res.statusCode = 200;
-          res.end(JSON.stringify({ configured: true, ...stats }));
+          res.end(JSON.stringify(stats));
         } catch (e) {
           res.statusCode = 500;
           res.end(
@@ -169,15 +216,10 @@ export function createReviewStatsMiddleware() {
           res.end(JSON.stringify({ error: "Unauthorized" }));
           return;
         }
-        if (!isSupabaseConfigured()) {
-          res.statusCode = 503;
-          res.end(JSON.stringify({ configured: false }));
-          return;
-        }
         try {
           const stats = await getAdminStats();
           res.statusCode = 200;
-          res.end(JSON.stringify({ configured: true, ...stats }));
+          res.end(JSON.stringify(stats));
         } catch (e) {
           res.statusCode = 500;
           res.end(
