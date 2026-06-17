@@ -87,16 +87,37 @@ export async function fetchReviewCount(): Promise<number> {
 }
 
 export async function fetchAdminStats(adminKey: string): Promise<AdminReviewStats> {
-  const res = await fetch("/api/stats/admin", {
-    headers: { "X-Admin-Key": adminKey },
-  });
-  if (res.status === 401) {
+  const trimmed = adminKey.trim();
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const sources: Array<{ url: string; label: string }> = [
+    { url: "/api/stats/admin", label: "vercel" },
+  ];
+  if (engineUrl) {
+    sources.push({ url: `${engineUrl}/stats/admin`, label: "engine" });
+  }
+
+  let sawUnauthorized = false;
+
+  for (const { url } of sources) {
+    try {
+      const res = await fetch(url, {
+        headers: { "X-Admin-Key": trimmed },
+      });
+      if (res.status === 401) {
+        sawUnauthorized = true;
+        continue;
+      }
+      if (!res.ok) continue;
+      return res.json();
+    } catch {
+      continue;
+    }
+  }
+
+  if (sawUnauthorized) {
     throw new Error("Invalid admin key");
   }
-  if (!res.ok) {
-    throw new Error("Could not load admin stats");
-  }
-  return res.json();
+  throw new Error("Could not load admin stats");
 }
 
 export interface RecordReviewInput {

@@ -81,9 +81,9 @@ export default function AdminPage() {
         >
           <div>
             <h1 className="text-lg font-bold">ChessReview admin</h1>
-            <p className="text-sm text-chess-muted mt-1">
-              Review analytics — metadata only, no games stored.
-            </p>
+          <p className="text-sm text-chess-muted mt-1">
+            Review analytics — checks your engine server directly. Same password as on the VM.
+          </p>
           </div>
           <input
             type="password"

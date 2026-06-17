@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     req.headers.authorization?.replace(/^Bearer\s+/i, "");
   const expected = process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY;
 
-  if (!expected || key !== expected) {
+  if (!expected || key.trim() !== expected.trim()) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

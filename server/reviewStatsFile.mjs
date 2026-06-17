@@ -169,10 +169,11 @@ export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonB
   }
 
   if (url.pathname === "/stats/admin" && req.method === "GET") {
-    const key =
+    const key = (
       req.headers["x-admin-key"] ??
-      String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
-    if (!adminSecret || key.trim() !== adminSecret) {
+      String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "")
+    ).trim();
+    if (!adminSecret || key !== adminSecret) {
       res.writeHead(401);
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return true;
