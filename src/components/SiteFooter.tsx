@@ -40,7 +40,17 @@ export function SiteFooter() {
 
   const served = stats?.reviewsServed ?? 0;
   const countries = stats?.countryCount ?? 0;
-  const showCounter = stats?.configured && served > 0;
+  const showCount = stats?.configured && served > 0;
+
+  let statsLabel = "Reviews served";
+  if (showCount) {
+    statsLabel = `${formatReviewsServed(served)} review${served === 1 ? "" : "s"} served`;
+    if (countries > 0) {
+      statsLabel += ` · ${countries} countr${countries === 1 ? "y" : "ies"}`;
+    }
+  } else if (stats?.configured) {
+    statsLabel = "Be among the first reviews served";
+  }
 
   return (
     <>
@@ -50,33 +60,17 @@ export function SiteFooter() {
           pb-[env(safe-area-inset-bottom,0px)]"
       >
         <div className="page-inline-pad flex items-center justify-center gap-3 sm:gap-4 min-h-[var(--site-footer)] flex-wrap py-1">
-          {showCounter ? (
-            <button
-              type="button"
-              onClick={() => setStatsOpen(true)}
-              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide text-center"
-              title="See where players are studying"
-            >
-              <span className="text-chess-subtext">
-                {formatReviewsServed(served)} review{served === 1 ? "" : "s"} served
-              </span>
-              {countries > 0 ? (
-                <span className="text-chess-muted">
-                  {" "}
-                  · {countries} countr{countries === 1 ? "y" : "ies"}
-                </span>
-              ) : null}
-            </button>
-          ) : stats?.configured ? (
-            <span className="text-[11px] text-chess-muted tracking-wide">
-              Be among the first reviews served
-            </span>
-          ) : null}
-          {showCounter ? (
-            <span className="text-chess-border/60 hidden sm:inline" aria-hidden>
-              ·
-            </span>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setStatsOpen(true)}
+            className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide text-center"
+            title="See where players are studying"
+          >
+            <span className={showCount ? "text-chess-subtext" : undefined}>{statsLabel}</span>
+          </button>
+          <span className="text-chess-border/60 hidden sm:inline" aria-hidden>
+            ·
+          </span>
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
