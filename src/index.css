@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --site-footer: 40px;
+  --site-footer: 32px;
   /* Mobile stack (bottom → top): footer, then Games/Moves/Review tabs */
   --mobile-footer-stack: calc(var(--site-footer) + env(safe-area-inset-bottom, 0px));
   --mobile-tab-bar-h: 56px;

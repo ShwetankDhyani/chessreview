@@ -65,12 +65,15 @@ export function formatReviewsServed(n: number): string {
   return n.toLocaleString();
 }
 
-export async function fetchPublicStats(): Promise<PublicReviewStats> {
-  const res = await fetch("/api/stats/public");
-  if (!res.ok) {
-    return { configured: false };
+export async function fetchReviewCount(): Promise<number> {
+  try {
+    const res = await fetch("/api/stats/public");
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return data.count ?? data.reviewsServed ?? 0;
+  } catch {
+    return 0;
   }
-  return res.json();
 }
 
 export async function fetchAdminStats(adminKey: string): Promise<AdminReviewStats> {

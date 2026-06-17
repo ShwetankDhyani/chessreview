@@ -163,7 +163,8 @@ function withBaseline(stats) {
 
 export async function getPublicStats() {
   const stats = await dbPublicStats();
-  return withBaseline(stats);
+  const merged = withBaseline(stats);
+  return { count: merged.reviewsServed ?? 0 };
 }
 
 export async function getAdminStats() {
