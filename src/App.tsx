@@ -45,8 +45,11 @@ import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
-import { KeyMomentNavButtons } from "./components/KeyMomentNavButtons";
+import { KeyMomentNavButtons, MobileKeyMomentBar } from "./components/KeyMomentNavButtons";
+import { WelcomeBanner } from "./components/WelcomeBanner";
+import { DEMO_GAME_PGN } from "./data/demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
+import { createShareLink, shareUrlForId } from "./utils/shareReview";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -522,6 +525,7 @@ export default function App() {
 
       const visible = options.visible;
       if (visible) {
+        setAnalysisError(null);
         showAnalysisProgressRef.current = true;
         setShowAnalysisProgress(true);
         setAnalysisState("analyzing");
@@ -593,6 +597,9 @@ export default function App() {
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisState("error");
+        setAnalysisError(
+          e instanceof Error ? e.message : "Analysis failed. Check engine connection and try again."
+        );
       }
     },
     [navigateToMove, depth, recheckEngine, activeUser]
@@ -625,9 +632,13 @@ export default function App() {
   const loadPgn = useCallback((pgnStr: string) => {
     const parsed = parseGameText(pgnStr);
     if (!parsed.ok) {
-      alert(parsed.error);
-      return;
+      setLoadError(parsed.error);
+      return false;
     }
+    setLoadError(null);
+    setAnalysisError(null);
+    setShareUrl(null);
+    setShareError(null);
     abortRef.current = true;
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);
@@ -654,7 +665,34 @@ export default function App() {
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
     setClocks(extractClocks(parsed.pgn));
+    return true;
   }, []);
+
+  const dismissWelcome = useCallback(() => {
+    localStorage.setItem("cr_welcome_dismissed", "1");
+    setShowWelcome(false);
+  }, []);
+
+  const handleShareReview = useCallback(async () => {
+    if (!pgn || !summary || moves.length === 0) return;
+    setSharing(true);
+    setShareError(null);
+    try {
+      const result = await createShareLink({
+        pgn,
+        whiteName: playerNames.white,
+        blackName: playerNames.black,
+        summary,
+        moves,
+        run: reviewResult?.run ?? null,
+      });
+      setShareUrl(shareUrlForId(result.id));
+    } catch (e) {
+      setShareError(e instanceof Error ? e.message : "Could not share");
+    } finally {
+      setSharing(false);
+    }
+  }, [pgn, summary, moves, playerNames, reviewResult]);
 
   const selectGame = useCallback(
     (pgnStr: string) => {
@@ -663,6 +701,11 @@ export default function App() {
     },
     [loadPgn, runAnalysis]
   );
+
+  const tryDemoGame = useCallback(() => {
+    dismissWelcome();
+    selectGame(DEMO_GAME_PGN);
+  }, [dismissWelcome, selectGame]);
 
   // Unlock Web Audio on first touch (required on iOS / Android Chrome)
   useEffect(() => {
@@ -766,6 +809,15 @@ export default function App() {
 
   const [showDepth, setShowDepth] = useState(false);
   const [desktopEvalGraphOpen, setDesktopEvalGraphOpen] = useState(false);
+  const [mobileEvalGraphOpen, setMobileEvalGraphOpen] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(
+    () => !localStorage.getItem("cr_welcome_dismissed")
+  );
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   const [viewport, setViewport] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 480,
@@ -985,6 +1037,22 @@ export default function App() {
         </div>
       </header>
 
+      {(loadError || analysisError) && (
+        <div className="flex-shrink-0 px-4 py-2 bg-red-950/50 border-b border-red-900/50 text-xs text-red-300 text-center">
+          {loadError ?? analysisError}
+          <button
+            type="button"
+            className="ml-2 underline hover:text-red-200"
+            onClick={() => {
+              setLoadError(null);
+              setAnalysisError(null);
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {isMobileLayout && isAnalyzing && (
         <MobileAnalysisStatus
           state={analysisState}
@@ -1066,11 +1134,18 @@ export default function App() {
 
           <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
             {tab === "games" && (
-              <GameList
-                username=""
-                onGameSelect={selectGame}
-                onLinkProfile={openProfilePanel}
-              />
+              <>
+                {showWelcome && !pgn && (
+                  <div className="px-3 pt-3">
+                    <WelcomeBanner onTryDemo={tryDemoGame} onDismiss={dismissWelcome} />
+                  </div>
+                )}
+                <GameList
+                  username=""
+                  onGameSelect={selectGame}
+                  onLinkProfile={openProfilePanel}
+                />
+              </>
             )}
 
             {tab === "moves" && (
@@ -1145,14 +1220,30 @@ export default function App() {
             {tab === "review" && (
               <div className="h-full overflow-y-auto min-h-0">
                 {summary ? (
-                  <ReviewSummaryPanel
-                    summary={summary}
-                    whiteName={playerNames.white}
-                    blackName={playerNames.black}
-                    moves={moves}
-                    run={reviewResult?.run}
-                    onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
-                  />
+                  <>
+                    <ReviewSummaryPanel
+                      summary={summary}
+                      whiteName={playerNames.white}
+                      blackName={playerNames.black}
+                      moves={moves}
+                      run={reviewResult?.run}
+                      onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
+                      onShare={() => void handleShareReview()}
+                      sharing={sharing}
+                      shareUrl={shareUrl}
+                      shareError={shareError}
+                    />
+                    <div className="border-t border-chess-border min-h-[280px]">
+                      <CoachPanel
+                        keyMomentsOnly
+                        moves={moves}
+                        summary={summary}
+                        currentMove={null}
+                        currentMoveIdx={-1}
+                        onJumpToMove={(idx) => { navigateToMove(idx); setTab("moves"); }}
+                      />
+                    </div>
+                  </>
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />
                 )}
@@ -1408,6 +1499,11 @@ export default function App() {
                 className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
+                {showWelcome && !pgn && (
+                  <div className="page-inline-pad pt-3 flex-shrink-0">
+                    <WelcomeBanner onTryDemo={tryDemoGame} onDismiss={dismissWelcome} />
+                  </div>
+                )}
                 <GameList
                   username=""
                   onGameSelect={selectGame}
@@ -1422,17 +1518,47 @@ export default function App() {
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 {summary ? (
-                  <ReviewSummaryPanel
-                    summary={summary}
-                    whiteName={playerNames.white}
-                    blackName={playerNames.black}
-                    moves={moves}
-                    run={reviewResult?.run}
-                    onMoveClick={(idx) => {
-                      navigateToMove(idx);
-                      setTab("moves");
-                    }}
-                  />
+                  <>
+                    <ReviewSummaryPanel
+                      summary={summary}
+                      whiteName={playerNames.white}
+                      blackName={playerNames.black}
+                      moves={moves}
+                      run={reviewResult?.run}
+                      onMoveClick={(idx) => {
+                        navigateToMove(idx);
+                        setTab("moves");
+                      }}
+                      onShare={() => void handleShareReview()}
+                      sharing={sharing}
+                      shareUrl={shareUrl}
+                      shareError={shareError}
+                    />
+                    <EvalChartPanel
+                      className="mt-4"
+                      moves={moves}
+                      currentMoveIndex={currentMoveIdx}
+                      onMoveSelect={(idx) => {
+                        navigateToMove(idx);
+                        setTab("moves");
+                      }}
+                      open={mobileEvalGraphOpen}
+                      onOpenChange={setMobileEvalGraphOpen}
+                    />
+                    <div className="mt-4 border-t border-chess-border">
+                      <CoachPanel
+                        keyMomentsOnly
+                        moves={moves}
+                        summary={summary}
+                        currentMove={null}
+                        currentMoveIdx={-1}
+                        onJumpToMove={(idx) => {
+                          navigateToMove(idx);
+                          setTab("moves");
+                        }}
+                      />
+                    </div>
+                  </>
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />
                 )}
@@ -1513,6 +1639,13 @@ export default function App() {
                     spinning={isAnalyzing}
                   />
                 </div>
+              )}
+              {moves.length > 0 && (
+                <MobileKeyMomentBar
+                  moves={moves}
+                  currentMoveIdx={currentMoveIdx}
+                  onGoToIndex={navigateToMove}
+                />
               )}
                 </>
               ) : (

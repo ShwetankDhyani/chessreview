@@ -15,6 +15,10 @@ interface ReviewSummaryProps {
   moves?: AnalyzedMove[];
   run?: ReviewRun | null;
   onMoveClick?: (idx: number) => void;
+  onShare?: () => void;
+  sharing?: boolean;
+  shareUrl?: string | null;
+  shareError?: string | null;
 }
 
 const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
@@ -67,6 +71,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   moves = [],
   run = null,
   onMoveClick,
+  onShare,
+  sharing = false,
+  shareUrl = null,
+  shareError = null,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (key: string) =>
@@ -114,6 +122,37 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         </div>
       )}
       <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />
+
+      {onShare && (
+        <div className="mt-3 mb-1 space-y-2">
+          <button
+            type="button"
+            onClick={onShare}
+            disabled={sharing}
+            className="w-full text-xs font-semibold py-2 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
+          >
+            {sharing ? "Creating link…" : "Share this review"}
+          </button>
+          {shareUrl && (
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 min-w-0 text-[11px] rounded-lg border border-chess-border bg-chess-bg px-2 py-1.5 text-chess-muted"
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                type="button"
+                className="text-[11px] px-2.5 rounded-lg bg-chess-accent text-chess-bg font-semibold"
+                onClick={() => void navigator.clipboard.writeText(shareUrl)}
+              >
+                Copy
+              </button>
+            </div>
+          )}
+          {shareError && <p className="text-[11px] text-red-400">{shareError}</p>}
+        </div>
+      )}
 
       <ReviewSection title="Overall accuracy" first>
         <div className="flex items-stretch gap-1">

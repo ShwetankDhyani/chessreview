@@ -270,8 +270,8 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           Load a game, run the analysis, and get clear notes on what to improve.
         </p>
         {!gemini && (
-          <p className="text-xs text-amber-500/70 leading-relaxed mt-1">
-            Add VITE_GEMINI_API_KEY to .env for AI coaching
+          <p className="text-xs text-chess-muted leading-relaxed mt-1">
+            Load a game and step through moves for coaching tips.
           </p>
         )}
       </div>

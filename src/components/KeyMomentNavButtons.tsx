@@ -88,3 +88,37 @@ export const KeyMomentNavButtons: React.FC<KeyMomentNavButtonsProps> = ({
     </>
   );
 };
+
+export function MobileKeyMomentBar({
+  moves,
+  currentMoveIdx,
+  onGoToIndex,
+}: KeyMomentNavButtonsProps) {
+  const indices = listKeyMomentIndices(moves);
+  const { prev, next, position, total } = keyMomentNavState(indices, currentMoveIdx);
+  if (total === 0) return null;
+
+  const label = position !== null ? `${position} / ${total}` : `${total} moments`;
+
+  return (
+    <div className="flex items-center justify-center gap-2 w-full pt-1">
+      <button
+        type="button"
+        disabled={prev === undefined}
+        onClick={() => prev !== undefined && onGoToIndex(prev)}
+        className="text-[10px] px-2.5 py-1 rounded-full border border-chess-border text-chess-muted disabled:opacity-40"
+      >
+        ← Key
+      </button>
+      <span className="text-[10px] text-chess-muted tabular-nums">{label}</span>
+      <button
+        type="button"
+        disabled={next === undefined}
+        onClick={() => next !== undefined && onGoToIndex(next)}
+        className="text-[10px] px-2.5 py-1 rounded-full border border-chess-border text-chess-muted disabled:opacity-40"
+      >
+        Key →
+      </button>
+    </div>
+  );
+}

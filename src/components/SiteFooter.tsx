@@ -22,13 +22,21 @@ export function SiteFooter() {
           pb-[env(safe-area-inset-bottom,0px)]"
       >
         <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
-          >
-            Help ChessReview.org
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+            >
+              Help ChessReview.org
+            </button>
+            <a
+              href="/privacy"
+              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors"
+            >
+              Privacy
+            </a>
+          </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
             <ReviewOdometer />
           </div>

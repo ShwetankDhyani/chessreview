@@ -3,12 +3,21 @@ import ReactDOM from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import App from "./App";
 import AdminPage from "./pages/AdminPage";
+import SharePage from "./pages/SharePage";
+import PrivacyPage from "./pages/PrivacyPage";
 import "./index.css";
 
 const root = document.getElementById("root")!;
 const path = window.location.pathname.replace(/\/$/, "") || "/";
 
-const Page = path === "/admin" ? AdminPage : App;
+function pickPage() {
+  if (path === "/admin") return AdminPage;
+  if (path === "/privacy") return PrivacyPage;
+  if (/^\/r\/[^/]+$/.test(path)) return SharePage;
+  return App;
+}
+
+const Page = pickPage();
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
