@@ -136,6 +136,10 @@ export interface RecordReviewInput {
 }
 
 export function recordReviewCompleted(input: RecordReviewInput): void {
+  void recordReviewCompletedAsync(input);
+}
+
+async function recordReviewCompletedAsync(input: RecordReviewInput): Promise<void> {
   const payload = {
     runId: input.runId,
     username: input.username ?? null,
@@ -153,18 +157,27 @@ export function recordReviewCompleted(input: RecordReviewInput): void {
     source: input.source ?? null,
   };
 
-  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
-  const targets = ["/api/review-events"];
-  if (engineUrl) targets.push(`${engineUrl}/stats/review`);
+  const postOpts: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  };
 
-  for (const url of targets) {
-    void fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-    }).catch(() => {
-      /* analytics must never block or surface errors */
-    });
+  // Vercel adds geo headers; forward to engine with country in body.
+  try {
+    const res = await fetch("/api/review-events", postOpts);
+    if (res.ok) return;
+  } catch {
+    /* fall through to engine */
+  }
+
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  if (!engineUrl) return;
+
+  try {
+    await fetch(`${engineUrl}/stats/review`, postOpts);
+  } catch {
+    /* analytics must never block or surface errors */
   }
 }

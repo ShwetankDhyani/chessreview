@@ -83,9 +83,11 @@ function floatOrNull(value) {
 export function geoFromHeaders(headers = {}) {
   const h = (k) => headers[k] ?? headers[k.toLowerCase()] ?? null;
   return {
-    country_code: clip(h("x-vercel-ip-country"), 8),
-    region: clip(h("x-vercel-ip-country-region"), 80),
-    city: clip(h("x-vercel-ip-city"), 80),
+    country_code:
+      clip(h("x-vercel-ip-country"), 8) ?? clip(h("cf-ipcountry"), 8),
+    region:
+      clip(h("x-vercel-ip-country-region"), 80) ?? clip(h("cf-region"), 80),
+    city: clip(h("x-vercel-ip-city"), 80) ?? clip(h("cf-ipcity"), 80),
     latitude: floatOrNull(h("x-vercel-ip-latitude")),
     longitude: floatOrNull(h("x-vercel-ip-longitude")),
   };

@@ -124,10 +124,32 @@ export function fileAdminStats() {
   };
 }
 
+const GEO_FIELDS = ["country_code", "region", "city", "latitude", "longitude"];
+
+function mergeGeoFields(existing, incoming) {
+  let updated = false;
+  for (const field of GEO_FIELDS) {
+    if (incoming[field] != null && incoming[field] !== "" && !existing[field]) {
+      existing[field] = incoming[field];
+      updated = true;
+    }
+  }
+  return updated;
+}
+
 export function fileLogReview(row) {
   const s = loadState();
-  if (row.run_id && s.events.some((e) => e.run_id === row.run_id)) {
-    return { duplicate: true, count: s.baseline + s.liveCount };
+  if (row.run_id) {
+    const existing = s.events.find((e) => e.run_id === row.run_id);
+    if (existing) {
+      const merged = mergeGeoFields(existing, row);
+      if (merged) saveState(s);
+      return {
+        duplicate: true,
+        merged,
+        count: s.baseline + s.liveCount,
+      };
+    }
   }
   const event = {
     ...row,
