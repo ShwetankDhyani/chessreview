@@ -1,7 +1,10 @@
 import React from "react";
 import { normalizeEval } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
-import { formatSignedMate, formatSignedPawnsFromCp } from "../utils/evalDisplay";
+import {
+  evalBarSegments,
+  formatEvalForBoard,
+} from "../utils/evalDisplay";
 
 interface EvalBarProps {
   evalResult: EvalResult | null;
@@ -11,30 +14,33 @@ interface EvalBarProps {
   compact?: boolean;
 }
 
+const LIGHT = "#f0eee5";
+const DARK = "#1f1d1b";
+
 export const EvalBar: React.FC<EvalBarProps> = ({
   evalResult,
   boardFlipped = false,
   barHeight,
   compact = false,
 }) => {
-  let displayText = "0.0";
   let whitePercent = 50;
 
   if (evalResult) {
     if (evalResult.mate !== undefined) {
-      displayText = formatSignedMate(evalResult.mate);
       whitePercent = evalResult.mate > 0 ? 95 : 5;
     } else {
       const cp = evalResult.cp ?? 0;
       const norm = normalizeEval(cp);
       whitePercent = 50 + norm / 2;
       whitePercent = Math.min(95, Math.max(5, whitePercent));
-      displayText = formatSignedPawnsFromCp(cp);
     }
   }
 
-  const blackHeight = boardFlipped ? whitePercent : 100 - whitePercent;
-  const whiteHeight = boardFlipped ? 100 - whitePercent : whitePercent;
+  const { text, favorable } = formatEvalForBoard(evalResult, boardFlipped);
+  const segments = evalBarSegments(whitePercent, boardFlipped);
+
+  const topColor = segments.topFavorable ? LIGHT : DARK;
+  const bottomColor = segments.bottomFavorable ? LIGHT : DARK;
 
   const h = barHeight ?? (compact ? 280 : undefined);
 
@@ -51,45 +57,24 @@ export const EvalBar: React.FC<EvalBarProps> = ({
         <div
           className="w-full transition-all duration-500 ease-in-out"
           style={{
-            height: `${100 - whiteHeight}%`,
-            backgroundColor: "#1f1d1b",
+            height: `${segments.topPct}%`,
+            backgroundColor: topColor,
           }}
         />
         <div
           className="w-full transition-all duration-500 ease-in-out"
           style={{
-            height: `${whiteHeight}%`,
-            backgroundColor: "#f0eee5",
+            height: `${segments.bottomPct}%`,
+            backgroundColor: bottomColor,
           }}
         />
       </div>
       <div
-        className={`mt-1 font-mono font-semibold text-chess-subtext text-center leading-tight tabular-nums ${
+        className={`mt-1 font-mono font-semibold text-center leading-tight tabular-nums ${
           compact ? "text-[9px]" : "text-[10px]"
         }`}
       >
-        {evalResult?.mate !== undefined ? (
-          <span
-            style={{
-              color: evalResult.mate > 0 ? "#81b64c" : "#e84855",
-            }}
-          >
-            {displayText}
-          </span>
-        ) : (
-          <span
-            style={{
-              color:
-                (evalResult?.cp ?? 0) > 0
-                  ? "#81b64c"
-                  : (evalResult?.cp ?? 0) < 0
-                    ? "#e84855"
-                    : undefined,
-            }}
-          >
-            {displayText}
-          </span>
-        )}
+        <span style={{ color: favorable ? "#81b64c" : "#e84855" }}>{text}</span>
       </div>
     </div>
   );

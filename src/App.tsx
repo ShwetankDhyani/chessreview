@@ -1461,6 +1461,7 @@ export default function App() {
                     <EvalBadge
                       evalResult={continuationEval ?? currentEval}
                       compact
+                      boardFlipped={boardFlipped}
                     />
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border/70 flex-shrink-0">

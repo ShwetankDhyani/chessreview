@@ -3,6 +3,8 @@ import {
   formatSignedMate,
   formatSignedPawnsFromCp,
   formatWinChanceLoss,
+  formatEvalForBoard,
+  evalBarSegments,
   winChanceLossPercent,
 } from "./evalDisplay";
 
@@ -22,5 +24,26 @@ describe("evalDisplay", () => {
   it("formats signed mate from white POV", () => {
     expect(formatSignedMate(3)).toBe("+M3");
     expect(formatSignedMate(-2)).toBe("−M2");
+  });
+
+  it("orients eval for the player at the bottom of the board", () => {
+    expect(formatEvalForBoard({ cp: 580 }, false)).toEqual({
+      text: "+5.8",
+      favorable: true,
+    });
+    expect(formatEvalForBoard({ cp: 580 }, true)).toEqual({
+      text: "-5.8",
+      favorable: false,
+    });
+  });
+
+  it("fills eval bar toward the side that is winning", () => {
+    const whiteWinning = evalBarSegments(74, false);
+    expect(whiteWinning.bottomPct).toBeCloseTo(74);
+    expect(whiteWinning.bottomFavorable).toBe(true);
+
+    const whiteWinningFlipped = evalBarSegments(74, true);
+    expect(whiteWinningFlipped.bottomPct).toBeCloseTo(26);
+    expect(whiteWinningFlipped.topFavorable).toBe(true);
   });
 });
