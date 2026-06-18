@@ -73,36 +73,36 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-chess-bg text-chess-text flex items-center justify-center p-6">
         <form
-          className="w-full max-w-sm rounded-2xl border border-chess-border bg-chess-panel p-6 space-y-4"
+          className="w-full max-w-xs space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
             void load(inputKey.trim());
           }}
         >
-          <div>
-            <h1 className="text-lg font-bold">ChessReview admin</h1>
-          <p className="text-sm text-chess-muted mt-1">
-            Review analytics — checks your engine server directly. Same password as on the VM.
-          </p>
-          </div>
           <input
             type="password"
             value={inputKey}
             onChange={(e) => setInputKey(e.target.value)}
-            placeholder="Admin key"
-            className="w-full rounded-lg border border-chess-border bg-chess-bg px-3 py-2 text-sm"
+            placeholder="Password"
+            className="w-full rounded-lg border border-chess-border bg-chess-panel px-3 py-2.5 text-sm"
             autoComplete="current-password"
+            autoFocus
           />
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && error !== "Invalid admin key" && (
+            <p className="text-xs text-red-400">{error}</p>
+          )}
+          {error === "Invalid admin key" && (
+            <p className="text-xs text-red-400">Wrong password</p>
+          )}
           <button
             type="submit"
             disabled={!inputKey.trim() || loading}
             className="w-full rounded-lg bg-chess-accent text-chess-bg font-semibold py-2 text-sm disabled:opacity-50"
           >
-            {loading ? "Opening…" : "Enter"}
+            {loading ? "…" : "Enter"}
           </button>
           <a href="/" className="block text-center text-xs text-chess-muted hover:text-chess-accent">
-            ← Back to ChessReview
+            ← Back
           </a>
         </form>
       </div>
@@ -113,10 +113,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-chess-bg text-chess-text overflow-y-auto">
       <header className="border-b border-chess-border bg-chess-panel/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-base font-bold">Review analytics</h1>
-            <p className="text-xs text-chess-muted">What&apos;s been studied — quietly, without hoarding games.</p>
-          </div>
+          <h1 className="text-base font-bold">Analytics</h1>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -137,11 +134,7 @@ export default function AdminPage() {
         {loading && !stats ? (
           <p className="text-sm text-chess-muted">Loading…</p>
         ) : !stats?.configured ? (
-          <p className="text-sm text-chess-subtext">
-            Supabase is not configured. Add <code className="text-chess-accent">SUPABASE_URL</code> and{" "}
-            <code className="text-chess-accent">SUPABASE_SERVICE_ROLE_KEY</code> on Vercel, then run{" "}
-            <code className="text-chess-accent">supabase/schema.sql</code>.
-          </p>
+          <p className="text-sm text-chess-muted">Could not load stats.</p>
         ) : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">

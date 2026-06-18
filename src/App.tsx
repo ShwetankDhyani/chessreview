@@ -8,7 +8,6 @@ import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
-import { ReviewClockCounter } from "./components/ReviewClockCounter";
 import type {
   AnalyzedMove,
   ReviewResult,
@@ -1555,7 +1554,6 @@ export default function App() {
       </div>
 
       <SiteFooter />
-      <ReviewClockCounter />
     </div>
   );
 }
