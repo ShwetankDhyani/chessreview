@@ -8,6 +8,10 @@ import {
   isGeminiConfigured,
   type CoachReport,
 } from "../utils/geminiCoach";
+import {
+  formatWinChanceLoss,
+  formatWinChanceLossShort,
+} from "../utils/evalDisplay";
 
 interface CoachPanelProps {
   moves: AnalyzedMove[];
@@ -332,10 +336,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
               const icon = isBrilliant ? "⭐" : isBlunder ? "💀" : "❗";
               const glyph = isBrilliant ? "!!" : isBlunder ? "??" : "?!";
               const glyphTitle = isBrilliant
-                ? `Brilliant! Creative sacrifice the engine loves. Eval: +${Math.abs(m.deltaE).toFixed(1)} pawns.`
+                ? `Brilliant! Creative sacrifice the engine loves.${m.bestMoveSan ? ` Engine line: ${m.bestMoveSan}.` : ""}`
                 : isBlunder
-                  ? `Blunder — major mistake. Eval loss: −${Math.abs(m.deltaE).toFixed(1)} pawns.${m.bestMoveSan ? ` Engine wanted ${m.bestMoveSan}.` : ""}`
-                  : `Mistake — advantage slipped. Eval loss: −${Math.abs(m.deltaE).toFixed(1)} pawns.${m.bestMoveSan ? ` Better: ${m.bestMoveSan}.` : ""}`;
+                  ? `Blunder — ${formatWinChanceLoss(m.deltaE) ?? "major mistake"}.${m.bestMoveSan ? ` Engine wanted ${m.bestMoveSan}.` : ""}`
+                  : `Mistake — ${formatWinChanceLoss(m.deltaE) ?? "advantage slipped"}.${m.bestMoveSan ? ` Better: ${m.bestMoveSan}.` : ""}`;
               return (
                 <button
                   key={i}
@@ -350,7 +354,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                     </div>
                     <div className="text-xs mt-0.5" style={{ color }}>
                       {isBrilliant ? "Brilliant move" : isBlunder ? "Blunder" : "Mistake"}
-                      {!isBrilliant && ` · −${Math.abs(m.deltaE).toFixed(1)}♟`}
+                      {!isBrilliant && m.deltaE > 0 && ` · ${formatWinChanceLossShort(m.deltaE)}`}
                     </div>
                   </div>
                   <span

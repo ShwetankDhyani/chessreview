@@ -230,8 +230,6 @@ export async function analyzeGameReview(
     options.onProgress
   );
 
-  const usedBatchPath = engineTag === "v3.1-hybrid-batch";
-
   const extraBestFens = collectExtraBestFens(fens, history, analysisCache);
   if (extraBestFens.length > 0) {
     const extra = await buildBatchPositionCache(extraBestFens, depth, (d, t) => {
@@ -242,23 +240,20 @@ export async function analyzeGameReview(
     options.onProgress?.(94, 100);
   }
 
-  // WASM MultiPV enrichment is slow; skip on fast batch path (Great labels optional).
-  if (!usedBatchPath) {
-    const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
-    if (greatCandidates.length > 0) {
-      await enrichGreatMoveCandidates(
-        analysisCache,
-        greatCandidates,
-        depth,
-        multiPv,
-        (d, t) => {
-          options.onProgress?.(
-            90 + Math.round((d / Math.max(t, 1)) * 8),
-            100
-          );
-        }
-      );
-    }
+  const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
+  if (greatCandidates.length > 0) {
+    await enrichGreatMoveCandidates(
+      analysisCache,
+      greatCandidates,
+      depth,
+      multiPv,
+      (d, t) => {
+        options.onProgress?.(
+          94 + Math.round((d / Math.max(t, 1)) * 4),
+          100
+        );
+      }
+    );
   }
 
   options.onProgress?.(98, 100);
@@ -352,9 +347,7 @@ export async function analyzeGameReview(
       epLoss = 0;
     }
 
-    const inBook =
-      checkOpeningBookSync(fenBefore, options.openingBook) ||
-      (!bookEnded && i < 16 && epLoss <= 0.1);
+    const inBook = checkOpeningBookSync(fenBefore, options.openingBook);
 
     const classification: MoveClassification = deliveredMate
       ? "best"
@@ -365,15 +358,6 @@ export async function analyzeGameReview(
         : null;
 
     if (classification !== "book" && classification !== null) bookEnded = true;
-
-    const cpBeforeMover = cpForMover(cpWhiteBefore, mover);
-    const cpAfterMover = cpForMover(cpWhiteAfter, mover);
-    const cpBestMover = cpForMover(
-      fenAfterBest && analysisCache.get(fenAfterBest)
-        ? lineCpWhite(analysisCache.get(fenAfterBest)!.lines[0] ?? {})
-        : cpWhiteBefore,
-      mover
-    );
 
     let bestMoveSan: string | undefined;
     let pvLine: string[] | undefined;
@@ -418,8 +402,8 @@ export async function analyzeGameReview(
       fenAfter,
       evalBefore,
       evalAfter,
-      eBest: cpBestMover / 100,
-      eActual: cpAfterMover / 100,
+      eBest: eAfterBest,
+      eActual: eAfterPlayed,
       deltaE: deliveredMate ? 0 : epLoss,
       epLoss,
       classification,

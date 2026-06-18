@@ -6,6 +6,7 @@ import {
   getPositionAwareMoveComment,
   playerCp,
 } from "./coachPositionContext";
+import { formatWinChanceLoss } from "./evalDisplay";
 import {
   clearCoachPhraseMemory,
   getUsedCoachPhraseTemplates,
@@ -65,7 +66,7 @@ export async function getMovComment(
   if (!client) return null;
 
   const loss = Math.abs(move.deltaE);
-  const lossText = loss >= 0.05 ? `${loss.toFixed(2)} pawns` : null;
+  const lossText = formatWinChanceLoss(loss);
   const moveNum = `${move.moveNumber}${move.color === "w" ? "." : "..."}`;
   const recent = allRecentForDedup(ctx).slice(-MAX_RECENT);
   const recentBlock =

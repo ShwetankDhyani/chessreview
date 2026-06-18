@@ -17,6 +17,7 @@ import {
   pickVariedLine,
   rememberCoachPhrase,
 } from "./coachVariety";
+import { formatWinChanceLoss } from "./evalDisplay";
 
 export { commentarySeed } from "./coachVariety";
 
@@ -139,7 +140,8 @@ export function getPositionAwareMoveComment(
   const seed = commentarySeed(move, moveIdx);
   const { san, bestMoveSan: best } = move;
   const loss = Math.abs(move.deltaE);
-  const lossBit = loss >= 0.15 ? ` (~${loss.toFixed(1)} pawns)` : "";
+  const lossBit =
+    formatWinChanceLoss(loss) != null ? ` (${formatWinChanceLoss(loss)})` : "";
   const before = getPositionOutlook(move, "before");
   const after = getPositionOutlook(move, "after");
   const lostBefore = isAlreadyLost(before);

@@ -67,7 +67,13 @@ export function isInitiativeSlipNotBlunder(
  */
 export function detectMiss(input: ClassifyReviewInput): MoveClassification | null {
   const opp = input.opponentPriorClass;
-  if (opp !== "mistake" && opp !== "blunder") return null;
+  if (
+    opp !== "inaccuracy" &&
+    opp !== "mistake" &&
+    opp !== "blunder"
+  ) {
+    return null;
+  }
   if (input.opponentPriorEpLoss < EP_CLASS_THRESHOLDS.inaccuracy) return null;
   if (input.eBefore < MISS_MIN_CHANCE_EP) return null;
 

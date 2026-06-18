@@ -1,6 +1,7 @@
 import React from "react";
 import { normalizeEval } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
+import { formatSignedMate, formatSignedPawnsFromCp } from "../utils/evalDisplay";
 
 interface EvalBarProps {
   evalResult: EvalResult | null;
@@ -21,16 +22,14 @@ export const EvalBar: React.FC<EvalBarProps> = ({
 
   if (evalResult) {
     if (evalResult.mate !== undefined) {
-      const m = evalResult.mate;
-      displayText = m > 0 ? `M${m}` : `M${Math.abs(m)}`;
-      whitePercent = m > 0 ? 95 : 5;
+      displayText = formatSignedMate(evalResult.mate);
+      whitePercent = evalResult.mate > 0 ? 95 : 5;
     } else {
       const cp = evalResult.cp ?? 0;
       const norm = normalizeEval(cp);
       whitePercent = 50 + norm / 2;
       whitePercent = Math.min(95, Math.max(5, whitePercent));
-      const abs = Math.abs(cp / 100);
-      displayText = abs.toFixed(1);
+      displayText = formatSignedPawnsFromCp(cp);
     }
   }
 
@@ -78,7 +77,18 @@ export const EvalBar: React.FC<EvalBarProps> = ({
             {displayText}
           </span>
         ) : (
-          displayText
+          <span
+            style={{
+              color:
+                (evalResult?.cp ?? 0) > 0
+                  ? "#81b64c"
+                  : (evalResult?.cp ?? 0) < 0
+                    ? "#e84855"
+                    : undefined,
+            }}
+          >
+            {displayText}
+          </span>
         )}
       </div>
     </div>

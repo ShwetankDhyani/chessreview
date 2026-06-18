@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "../utils/classificationMeta";
+import { formatWinChanceLoss } from "../utils/evalDisplay";
 import { ClassificationIcon } from "./ClassificationIcon";
 
 interface MoveListProps {
@@ -95,7 +96,15 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
       <button
         ref={ref}
         onClick={onClick}
-        title={meta ? `${meta.label}${move.deltaE !== undefined ? ` (${move.deltaE > 0 ? "-" : "+"}${Math.abs(move.deltaE * 100).toFixed(0)}cp)` : ""}` : undefined}
+        title={
+          meta
+            ? `${meta.label}${
+                move.deltaE !== undefined && move.deltaE > 0
+                  ? ` (${formatWinChanceLoss(move.deltaE) ?? ""})`
+                  : ""
+              }`
+            : undefined
+        }
         className={`
           flex-1 flex items-center gap-1 px-2 py-1 rounded text-sm font-mono
           transition-all duration-100 text-left

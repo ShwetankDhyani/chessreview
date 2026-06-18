@@ -12,6 +12,7 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
+  showEngineLineBanner?: boolean;
 }
 
 /** Chessboard + centered analyze / progress overlay */
@@ -23,6 +24,7 @@ export function AnalyzeBoardStack({
   whiteName = "White",
   blackName = "Black",
   onAnalyze,
+  showEngineLineBanner = false,
   boardWidth,
   boardOrientation,
   ...boardProps
@@ -37,6 +39,11 @@ export function AnalyzeBoardStack({
         boardOrientation={boardOrientation}
         {...boardProps}
       />
+      {showEngineLineBanner ? (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 px-2.5 py-1 rounded-full bg-black/80 border border-white/15 text-[10px] text-white/90 pointer-events-none whitespace-nowrap shadow-md">
+          Engine line — close continuation to return to the game
+        </div>
+      ) : null}
       {showGameEnd && gameEnd ? (
         <BoardGameEndOverlay
           end={gameEnd}

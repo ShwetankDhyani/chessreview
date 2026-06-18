@@ -5,6 +5,7 @@ import { getMeta } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { CoachIcon } from "./CoachIcon";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
+import { formatWinChanceLoss } from "../utils/evalDisplay";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
 
 export interface MoveReviewPanelProps {
@@ -433,9 +434,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const displayComment = aiComment;
 
   const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
-  const lossText = Math.abs(move.deltaE) >= 0.1
-    ? `${move.deltaE > 0 ? "-" : "+"}${Math.abs(move.deltaE).toFixed(2)} pawns`
-    : null;
+  const lossText = formatWinChanceLoss(move.deltaE);
 
   const suggestBest = shouldSuggestBestMove(move);
   const showContinuation = suggestBest && !!move.bestMoveSan;
@@ -516,7 +515,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
       {/* Eval change */}
       {lossText && isNegative && (
         <div className="flex items-center gap-1.5 text-xs text-chess-muted">
-          <span>Eval change:</span>
+          <span>Win chance lost:</span>
           <span className="font-semibold text-red-400">{lossText}</span>
         </div>
       )}

@@ -541,6 +541,7 @@ export default function App() {
         setGameMeta(meta);
         setClocks(extractClocks(pgnStr));
       } else {
+        setAnalysisState("analyzing");
         setProgress((p) => (p.total > 0 ? p : { done: 2, total: 100 }));
       }
 
@@ -739,9 +740,12 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
-        navigateToMove(Math.min(currentMoveIdx + 1, moves.length - 1), false);
+        navigateToMove(
+          Math.min(currentMoveIdxRef.current + 1, moves.length - 1),
+          false
+        );
       } else if (e.key === "ArrowLeft") {
-        navigateToMove(Math.max(currentMoveIdx - 1, -1), false);
+        navigateToMove(Math.max(currentMoveIdxRef.current - 1, -1), false);
       } else if (e.key === "ArrowUp") {
         navigateToMove(-1, false);
       } else if (e.key === "ArrowDown") {
@@ -750,7 +754,18 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentMoveIdx, moves.length, navigateToMove]);
+  }, [moves.length, navigateToMove]);
+
+  useEffect(() => {
+    if (!activeUser?.name?.trim() || !pgn) return;
+    const u = activeUser.name.trim().toLowerCase();
+    const w = playerNames.white.trim().toLowerCase();
+    const b = playerNames.black.trim().toLowerCase();
+    const matches = (tag: string) =>
+      tag.length > 0 && (tag === u || tag.includes(u) || u.includes(tag));
+    if (matches(b)) setBoardFlipped(true);
+    else if (matches(w)) setBoardFlipped(false);
+  }, [activeUser, pgn, playerNames.white, playerNames.black]);
 
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
 
@@ -845,7 +860,9 @@ export default function App() {
   const showBoardAnalyzeButton =
     !!pgn &&
     moves.length === 0 &&
-    (analysisState === "loading" || analysisState === "error") &&
+    (analysisState === "loading" ||
+      analysisState === "error" ||
+      analysisState === "analyzing") &&
     (!isMobileLayout || tab === "moves");
 
   // Only show the game-end verdict when:
@@ -1341,6 +1358,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
+                  showEngineLineBanner={continuationActive}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1612,6 +1630,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
+                  showEngineLineBanner={continuationActive}
                 />
               <PlayerTag
                 compact

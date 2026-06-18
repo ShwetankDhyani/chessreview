@@ -22,6 +22,7 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
+  showEngineLineBanner?: boolean;
 }
 
 function MoveTapZone({
@@ -107,6 +108,7 @@ export function MobileBoardShell({
   whiteName,
   blackName,
   onAnalyze,
+  showEngineLineBanner = false,
   ...boardProps
 }: MobileBoardShellProps) {
   const barHeight = boardWidth;
@@ -178,6 +180,7 @@ export function MobileBoardShell({
             whiteName={whiteName}
             blackName={blackName}
             onAnalyze={onAnalyze}
+            showEngineLineBanner={showEngineLineBanner}
           />
 
           {emphasizeZones && (
