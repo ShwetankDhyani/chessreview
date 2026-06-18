@@ -6,6 +6,11 @@ interface MobileAnalysisStatusProps {
   progressPercent: number;
   whiteName: string;
   blackName: string;
+  stageLabel: string;
+  currentSan?: string;
+  etaLabel?: string | null;
+  currentPly?: number;
+  totalPlies?: number;
 }
 
 export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
@@ -13,6 +18,11 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
   progressPercent,
   whiteName,
   blackName,
+  stageLabel,
+  currentSan,
+  etaLabel,
+  currentPly,
+  totalPlies,
 }) => {
   if (state !== "analyzing") return null;
 
@@ -31,10 +41,19 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
           <div className="min-w-0">
             <p className="text-xs font-semibold text-chess-text inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
-              Analyzing
+              {stageLabel}
             </p>
             <p className="text-[10px] text-chess-muted truncate mt-0.5">
               {whiteName} vs {blackName}
+              {currentPly !== undefined && totalPlies !== undefined && totalPlies > 0 ? (
+                <span className="text-chess-subtext">
+                  {" "}
+                  · move {Math.min(totalPlies, currentPly + 1)}/{totalPlies}
+                </span>
+              ) : null}
+              {currentSan ? (
+                <span className="font-mono text-chess-subtext"> · {currentSan}</span>
+              ) : null}
             </p>
           </div>
           <span className="text-base font-bold text-chess-accent tabular-nums flex-shrink-0">
@@ -47,6 +66,11 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
             style={{ width: `${Math.max(pct, 2)}%` }}
           />
         </div>
+        {etaLabel ? (
+          <p className="mt-1.5 text-[10px] text-chess-muted text-right tabular-nums">
+            {etaLabel}
+          </p>
+        ) : null}
       </div>
     </div>
   );

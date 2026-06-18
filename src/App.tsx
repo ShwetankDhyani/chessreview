@@ -44,6 +44,11 @@ import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
+import {
+  analysisStageLabel,
+  estimateAnalysisEtaSeconds,
+  formatEtaSeconds,
+} from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { KeyMomentNavButtons, MobileKeyMomentBar } from "./components/KeyMomentNavButtons";
 import { WelcomeBanner } from "./components/WelcomeBanner";
@@ -128,6 +133,8 @@ export default function App() {
   const showAnalysisProgressRef = useRef(false);
   const analysisGenerationRef = useRef(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
+  const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -547,6 +554,7 @@ export default function App() {
 
       setAnalysisRunning(true);
       const analysisStartedAt = Date.now();
+      setAnalysisStartedAt(analysisStartedAt);
 
       try {
         const result = await analyzePgn(
@@ -569,6 +577,7 @@ export default function App() {
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
+        setAnalysisStartedAt(null);
 
         if (openReview) {
           setTab("review");
@@ -597,6 +606,7 @@ export default function App() {
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
+        setAnalysisStartedAt(null);
         setAnalysisState("error");
         setAnalysisError(
           e instanceof Error ? e.message : "Analysis failed. Check engine connection and try again."
@@ -645,6 +655,7 @@ export default function App() {
     setAnalysisRunning(false);
     setShowAnalysisProgress(false);
     showAnalysisProgressRef.current = false;
+    setAnalysisStartedAt(null);
     setPgn(parsed.pgn);
     setReplayFrames(buildPgnReplayFrames(parsed.pgn));
     setGamePlyCount(parsed.moveCount);
@@ -792,11 +803,33 @@ export default function App() {
         ? (progress.done / progress.total) * 100
         : 0;
 
-  const isAnalyzing = showAnalysisProgress && analysisRunning;
+  const isAnalyzing = analysisRunning && analysisState === "analyzing";
 
   const progressPercent = useSmoothAnalysisProgress(
-    isAnalyzing ? "analyzing" : analysisState,
+    analysisState,
     rawProgressPercent
+  );
+
+  useEffect(() => {
+    if (!isAnalyzing || analysisStartedAt === null) {
+      setAnalysisElapsedMs(0);
+      return;
+    }
+    const tick = () => setAnalysisElapsedMs(Date.now() - analysisStartedAt);
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [isAnalyzing, analysisStartedAt]);
+
+  const analyzingReplayPly =
+    replayFrames.length > 0
+      ? progressToReplayPly(progress.done, progress.total, replayFrames.length)
+      : -1;
+  const analyzingMoveSan =
+    analyzingReplayPly >= 0 ? replayFrames[analyzingReplayPly]?.san : undefined;
+  const analysisStage = analysisStageLabel(progressPercent, depth);
+  const analysisEtaLabel = formatEtaSeconds(
+    estimateAnalysisEtaSeconds(progressPercent, analysisElapsedMs)
   );
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
@@ -857,13 +890,16 @@ export default function App() {
 
   const isMobileLayout = winWidth < 1024;
 
-  const showBoardAnalyzeButton =
+  const showBoardAnalyzeOverlay =
     !!pgn &&
     moves.length === 0 &&
     (analysisState === "loading" ||
       analysisState === "error" ||
-      analysisState === "analyzing") &&
+      (analysisState === "analyzing" && isMobileLayout)) &&
     (!isMobileLayout || tab === "moves");
+
+  const showBoardProgressOrb =
+    analysisState === "analyzing" && isAnalyzing && isMobileLayout;
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -876,7 +912,7 @@ export default function App() {
     atGameEnd &&
     analysisState === "done" &&
     !continuationFen &&
-    !showBoardAnalyzeButton;
+    !showBoardAnalyzeOverlay;
 
   const profileInitial = activeUser
     ? activeUser.name.trim().charAt(0).toUpperCase() || "?"
@@ -1076,6 +1112,11 @@ export default function App() {
           progressPercent={progressPercent}
           whiteName={playerNames.white}
           blackName={playerNames.black}
+          stageLabel={analysisStage}
+          currentSan={analyzingMoveSan}
+          etaLabel={analysisEtaLabel}
+          currentPly={analyzingReplayPly}
+          totalPlies={replayFrames.length}
         />
       )}
 
@@ -1287,21 +1328,9 @@ export default function App() {
                         ) + 1
                       }
                       totalPlies={replayFrames.length}
-                      currentSan={
-                        replayFrames[
-                          Math.min(
-                            replayFrames.length - 1,
-                            Math.max(
-                              0,
-                              progressToReplayPly(
-                                progress.done,
-                                progress.total,
-                                replayFrames.length
-                              )
-                            )
-                          )
-                        ]?.san
-                      }
+                      currentSan={analyzingMoveSan}
+                      stageLabel={analysisStage}
+                      etaLabel={analysisEtaLabel}
                     />
                   </div>
                 ) : (
@@ -1352,13 +1381,18 @@ export default function App() {
                   }
                   bestMove={currentMove?.bestMove}
                   analysisState={analysisState}
-                  showAnalyzeButton={showBoardAnalyzeButton}
+                  showAnalyzeButton={showBoardAnalyzeOverlay}
                   showGameEnd={showBoardGameEnd}
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                   showEngineLineBanner={continuationActive}
+                  progressPercent={progressPercent}
+                  analysisStageLabel={analysisStage}
+                  analyzingMoveSan={analyzingMoveSan}
+                  analysisEtaLabel={analysisEtaLabel}
+                  showProgressOrb={showBoardProgressOrb}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1625,13 +1659,18 @@ export default function App() {
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
                   analysisState={analysisState}
-                  showAnalyzeButton={showBoardAnalyzeButton}
+                  showAnalyzeButton={showBoardAnalyzeOverlay}
                   showGameEnd={showBoardGameEnd}
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                   showEngineLineBanner={continuationActive}
+                  progressPercent={progressPercent}
+                  analysisStageLabel={analysisStage}
+                  analyzingMoveSan={analyzingMoveSan}
+                  analysisEtaLabel={analysisEtaLabel}
+                  showProgressOrb={showBoardProgressOrb}
                 />
               <PlayerTag
                 compact
@@ -1678,6 +1717,17 @@ export default function App() {
                   blackRating={gameMeta?.blackRating}
                   hasGame={false}
                 />
+              )}
+              {isAnalyzing && moves.length === 0 && replayFrames.length > 0 && (
+                <div
+                  className="w-full max-w-md px-3 py-2 max-h-36 overflow-y-auto rounded-lg border border-chess-border bg-chess-panel/80"
+                  style={{ marginBottom: "var(--mobile-chrome-bottom)" }}
+                >
+                  <AnalyzingMoveList
+                    frames={replayFrames}
+                    currentPly={analyzingReplayPly}
+                  />
+                </div>
               )}
             </div>
 

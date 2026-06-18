@@ -13,6 +13,11 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   blackName?: string;
   onAnalyze?: () => void;
   showEngineLineBanner?: boolean;
+  progressPercent?: number;
+  analysisStageLabel?: string;
+  analyzingMoveSan?: string;
+  analysisEtaLabel?: string | null;
+  showProgressOrb?: boolean;
 }
 
 /** Chessboard + centered analyze / progress overlay */
@@ -25,6 +30,11 @@ export function AnalyzeBoardStack({
   blackName = "Black",
   onAnalyze,
   showEngineLineBanner = false,
+  progressPercent = 0,
+  analysisStageLabel,
+  analyzingMoveSan,
+  analysisEtaLabel,
+  showProgressOrb = false,
   boardWidth,
   boardOrientation,
   ...boardProps
@@ -55,6 +65,11 @@ export function AnalyzeBoardStack({
         <BoardAnalyzeOverlay
           state={analysisState}
           onAnalyze={onAnalyze}
+          progressPercent={progressPercent}
+          stageLabel={analysisStageLabel}
+          currentSan={analyzingMoveSan}
+          etaLabel={analysisEtaLabel}
+          showProgressOrb={showProgressOrb}
         />
       ) : null}
     </div>

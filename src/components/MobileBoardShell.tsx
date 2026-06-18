@@ -23,6 +23,11 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   blackName?: string;
   onAnalyze?: () => void;
   showEngineLineBanner?: boolean;
+  progressPercent?: number;
+  analysisStageLabel?: string;
+  analyzingMoveSan?: string;
+  analysisEtaLabel?: string | null;
+  showProgressOrb?: boolean;
 }
 
 function MoveTapZone({
@@ -109,6 +114,11 @@ export function MobileBoardShell({
   blackName,
   onAnalyze,
   showEngineLineBanner = false,
+  progressPercent = 0,
+  analysisStageLabel,
+  analyzingMoveSan,
+  analysisEtaLabel,
+  showProgressOrb = false,
   ...boardProps
 }: MobileBoardShellProps) {
   const barHeight = boardWidth;
@@ -181,6 +191,11 @@ export function MobileBoardShell({
             blackName={blackName}
             onAnalyze={onAnalyze}
             showEngineLineBanner={showEngineLineBanner}
+            progressPercent={progressPercent}
+            analysisStageLabel={analysisStageLabel}
+            analyzingMoveSan={analyzingMoveSan}
+            analysisEtaLabel={analysisEtaLabel}
+            showProgressOrb={showProgressOrb}
           />
 
           {emphasizeZones && (

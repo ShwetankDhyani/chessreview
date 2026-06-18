@@ -3,6 +3,8 @@ interface BoardAnalysisStripProps {
   currentPly: number;
   totalPlies: number;
   currentSan?: string;
+  stageLabel?: string;
+  etaLabel?: string | null;
   className?: string;
 }
 
@@ -15,6 +17,8 @@ export function BoardAnalysisStrip({
   currentPly,
   totalPlies,
   currentSan,
+  stageLabel,
+  etaLabel,
   className = "",
 }: BoardAnalysisStripProps) {
   const pct = Math.min(100, Math.max(0, Math.round(progressPercent)));
@@ -28,9 +32,9 @@ export function BoardAnalysisStrip({
       aria-label={`Analyzing, ${pct} percent`}
     >
       <div className="flex items-center gap-3 px-3 py-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-chess-accent flex-shrink-0">
-          <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
-          Analyzing
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-chess-accent flex-shrink-0 min-w-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse flex-shrink-0" />
+          <span className="truncate">{stageLabel ?? "Analyzing"}</span>
         </span>
         <span className="text-[11px] text-chess-subtext tabular-nums flex-shrink-0">
           Ply <span className="font-semibold text-chess-text">{ply}</span>
@@ -44,6 +48,11 @@ export function BoardAnalysisStrip({
         <span className="ml-auto text-xs font-bold text-chess-accent tabular-nums flex-shrink-0">
           {pct}%
         </span>
+        {etaLabel ? (
+          <span className="text-[10px] text-chess-muted tabular-nums flex-shrink-0 hidden sm:inline">
+            {etaLabel}
+          </span>
+        ) : null}
       </div>
       <div className="absolute inset-x-0 bottom-0 h-0.5 bg-chess-border/60 overflow-hidden">
         <div

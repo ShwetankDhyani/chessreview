@@ -1,16 +1,45 @@
 import type { AnalysisState } from "../types";
 import { AnalyzeNowButton } from "./AnalyzeNowButton";
+import { BoardAnalysisProgressOrb } from "./BoardAnalysisProgressOrb";
 
 interface BoardAnalyzeOverlayProps {
   state: AnalysisState;
   onAnalyze?: () => void;
+  progressPercent?: number;
+  stageLabel?: string;
+  currentSan?: string;
+  etaLabel?: string | null;
+  showProgressOrb?: boolean;
 }
 
 export function BoardAnalyzeOverlay({
   state,
   onAnalyze,
+  progressPercent = 0,
+  stageLabel = "Reviewing game…",
+  currentSan,
+  etaLabel,
+  showProgressOrb = false,
 }: BoardAnalyzeOverlayProps) {
   if (state === "analyzing") {
+    if (showProgressOrb) {
+      return (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-black/35 backdrop-blur-[1px]"
+          aria-live="polite"
+          aria-busy="true"
+          aria-label={`Analyzing, ${Math.round(progressPercent)} percent`}
+        >
+          <BoardAnalysisProgressOrb
+            percent={progressPercent}
+            stageLabel={stageLabel}
+            currentSan={currentSan}
+            etaLabel={etaLabel}
+          />
+        </div>
+      );
+    }
+
     return (
       <div
         className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
