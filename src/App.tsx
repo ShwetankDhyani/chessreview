@@ -47,7 +47,7 @@ import { progressToReplayPly } from "./utils/pgnReplay";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { KeyMomentNavButtons, MobileKeyMomentBar } from "./components/KeyMomentNavButtons";
 import { WelcomeBanner } from "./components/WelcomeBanner";
-import { DEMO_GAME_PGN } from "./data/demoGame";
+import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 
