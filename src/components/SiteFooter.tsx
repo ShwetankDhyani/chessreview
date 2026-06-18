@@ -21,7 +21,7 @@ export function SiteFooter() {
           fixed left-0 right-0 bottom-0 lg:static
           pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="page-inline-pad flex items-center justify-between gap-3 min-h-[var(--site-footer)]">
+        <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
@@ -29,7 +29,9 @@ export function SiteFooter() {
           >
             Help ChessReview.org
           </button>
-          <ReviewOdometer />
+          <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
+            <ReviewOdometer />
+          </div>
         </div>
       </footer>
 
