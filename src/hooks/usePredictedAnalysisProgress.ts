@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisState } from "../types";
+import { computePredictedProgress } from "../utils/analysisProgressUi";
 import {
-  computePredictedProgress,
-  estimateAnalysisDurationMs,
-} from "../utils/analysisProgressUi";
+  predictReviewDurationMs,
+  type ReviewTimingModel,
+} from "../utils/reviewTiming";
 
 export interface PredictedAnalysisProgress {
   percent: number;
@@ -11,30 +12,41 @@ export interface PredictedAnalysisProgress {
 }
 
 /**
- * Progress driven by predicted review duration, recalibrated against engine milestones.
+ * Progress driven by adaptive predicted review duration, recalibrated against engine milestones.
  */
 export function usePredictedAnalysisProgress(
   state: AnalysisState,
   rawPercent: number,
   startedAt: number | null,
   plies: number,
-  depth: number
+  depth: number,
+  timingModel: ReviewTimingModel | null
 ): PredictedAnalysisProgress {
   const [result, setResult] = useState<PredictedAnalysisProgress>({
     percent: 0,
     remainingMs: 0,
   });
   const displayRef = useRef(0);
-  const predictedMsRef = useRef(estimateAnalysisDurationMs(plies, depth));
+  const predictedMsRef = useRef(
+    predictReviewDurationMs(plies, depth, timingModel)
+  );
   const prevStateRef = useRef<AnalysisState>(state);
 
   useEffect(() => {
-    predictedMsRef.current = estimateAnalysisDurationMs(plies, depth);
-  }, [plies, depth]);
+    predictedMsRef.current = predictReviewDurationMs(
+      plies,
+      depth,
+      timingModel
+    );
+  }, [plies, depth, timingModel]);
 
   useEffect(() => {
     if (state === "analyzing" && prevStateRef.current !== "analyzing") {
-      predictedMsRef.current = estimateAnalysisDurationMs(plies, depth);
+      predictedMsRef.current = predictReviewDurationMs(
+        plies,
+        depth,
+        timingModel
+      );
       displayRef.current = 2;
       setResult({
         percent: 2,
@@ -78,7 +90,7 @@ export function usePredictedAnalysisProgress(
     tick();
     const id = window.setInterval(tick, 120);
     return () => window.clearInterval(id);
-  }, [state, rawPercent, startedAt, plies, depth]);
+  }, [state, rawPercent, startedAt, plies, depth, timingModel]);
 
   if (state === "done" || rawPercent >= 100) {
     return { percent: 100, remainingMs: 0 };

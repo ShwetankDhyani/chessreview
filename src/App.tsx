@@ -32,6 +32,7 @@ import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
+import { useReviewTimingModel } from "./hooks/useReviewTimingModel";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import {
@@ -152,6 +153,7 @@ export default function App() {
     const saved = localStorage.getItem("cr_depth");
     return parseInt(saved ?? "12", 10);
   });
+  const { timingModel, noteCompletedReview } = useReviewTimingModel();
 
   useEffect(() => {
     setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
@@ -584,6 +586,7 @@ export default function App() {
         }
 
         const meta = extractGameMeta(pgnStr);
+        const durationMs = Math.max(0, Date.now() - analysisStartedAt);
         recordReviewCompleted({
           runId: result.run.runId,
           username: activeUser?.name ?? null,
@@ -595,8 +598,13 @@ export default function App() {
           result: meta.result,
           plies: result.moves.length,
           depth,
-          durationMs: Math.max(0, Date.now() - analysisStartedAt),
+          durationMs,
           source: activeUser?.platform ?? "pgn",
+        });
+        noteCompletedReview({
+          plies: result.moves.length,
+          depth,
+          durationMs,
         });
         window.dispatchEvent(new CustomEvent("cr_review_logged"));
       } catch (e) {
@@ -612,7 +620,7 @@ export default function App() {
         );
       }
     },
-    [navigateToMove, depth, recheckEngine, activeUser]
+    [navigateToMove, depth, recheckEngine, activeUser, noteCompletedReview]
   );
 
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
@@ -812,7 +820,8 @@ export default function App() {
       rawProgressPercent,
       analysisStartedAt,
       analysisPlyCount,
-      depth
+      depth,
+      timingModel
     );
 
   const analyzingReplayPly =

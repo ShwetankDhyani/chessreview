@@ -204,6 +204,22 @@ export async function getPublicStats() {
   return { count: reviewsBaseline() };
 }
 
+export async function getTimingStats() {
+  const engine = await fetchEngineJson("/stats/timing");
+  if (engine && typeof engine.sampleCount === "number") {
+    return engine;
+  }
+
+  return {
+    windowSize: 120,
+    sampleCount: 0,
+    updatedAt: new Date().toISOString(),
+    global: null,
+    byDepth: [],
+    byDepthPly: [],
+  };
+}
+
 export async function getAdminStats() {
   const engine = await fetchEngineJson("/stats/admin", {
     headers: {
@@ -316,6 +332,28 @@ export function createReviewStatsMiddleware() {
           res.end(
             JSON.stringify({
               error: e instanceof Error ? e.message : "Stats failed",
+            })
+          );
+        }
+      })();
+      return;
+    }
+
+    if (url === "/api/stats/timing" && req.method === "GET") {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=30");
+      void (async () => {
+        try {
+          const stats = await getTimingStats();
+          res.statusCode = 200;
+          res.end(JSON.stringify(stats));
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(
+            JSON.stringify({
+              error: e instanceof Error ? e.message : "Timing stats failed",
+              sampleCount: 0,
             })
           );
         }

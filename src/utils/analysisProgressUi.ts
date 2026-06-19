@@ -1,17 +1,5 @@
-/** Predict total review runtime from game size and engine depth. */
-export function estimateAnalysisDurationMs(
-  plies: number,
-  depth: number
-): number {
-  const positions = Math.max(plies + 1, 10);
-  const depthScale = Math.pow(1.26, Math.max(0, depth - 14));
-  const msPerPosition = (110 + depth * 12) * depthScale;
-  const evalMs = positions * msPerPosition;
-  const tailMs = 3000 + plies * 40;
-  const connectMs = 1800;
-  const total = connectMs + evalMs + tailMs;
-  return Math.round(Math.min(240_000, Math.max(8_000, total)));
-}
+/** Predict total review runtime from game size, depth, and learned timing history. */
+export { predictReviewDurationMs as estimateAnalysisDurationMs } from "./reviewTiming";
 
 export interface PredictedProgressInput {
   elapsedMs: number;

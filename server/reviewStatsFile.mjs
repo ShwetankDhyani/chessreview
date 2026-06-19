@@ -12,6 +12,10 @@ import {
 } from "fs";
 import { join } from "path";
 
+import {
+  computeTimingModel,
+} from "./reviewTimingStats.mjs";
+
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
 const STATS_FILE = join(DATA_DIR, "review-stats.json");
 const MAX_EVENTS = 500;
@@ -162,10 +166,21 @@ export function fileLogReview(row) {
   return { duplicate: false, count: s.baseline + s.liveCount };
 }
 
+export function fileTimingStats() {
+  const s = loadState();
+  return computeTimingModel(s.events);
+}
+
 export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonBody, geoFromHeaders, normalizeReviewPayload }) {
   if (url.pathname === "/stats" && req.method === "GET") {
     res.writeHead(200);
     res.end(JSON.stringify(filePublicStats()));
+    return true;
+  }
+
+  if (url.pathname === "/stats/timing" && req.method === "GET") {
+    res.writeHead(200, { "Cache-Control": "public, max-age=30" });
+    res.end(JSON.stringify(fileTimingStats()));
     return true;
   }
 
