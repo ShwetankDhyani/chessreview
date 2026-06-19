@@ -21,7 +21,8 @@ export function BoardAnalysisStrip({
   etaLabel,
   className = "",
 }: BoardAnalysisStripProps) {
-  const pct = Math.min(100, Math.max(0, Math.round(progressPercent)));
+  const pct = Math.min(100, Math.max(0, progressPercent));
+  const pctLabel = Math.min(100, Math.max(0, Math.round(progressPercent)));
   const ply = Math.max(1, Math.min(totalPlies, currentPly));
 
   return (
@@ -29,7 +30,7 @@ export function BoardAnalysisStrip({
       className={`relative flex-shrink-0 overflow-hidden rounded-lg border border-chess-border bg-chess-panel shadow-sm ${className}`}
       role="status"
       aria-live="polite"
-      aria-label={`Analyzing, ${pct} percent`}
+      aria-label={`Analyzing, ${pctLabel} percent`}
     >
       <div className="flex items-center gap-3 px-3 py-2">
         <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-chess-accent flex-shrink-0 min-w-0">
@@ -46,7 +47,7 @@ export function BoardAnalysisStrip({
           </span>
         )}
         <span className="ml-auto text-xs font-bold text-chess-accent tabular-nums flex-shrink-0">
-          {pct}%
+          {pctLabel}%
         </span>
         {etaLabel ? (
           <span className="text-[10px] text-chess-muted tabular-nums flex-shrink-0 hidden sm:inline">

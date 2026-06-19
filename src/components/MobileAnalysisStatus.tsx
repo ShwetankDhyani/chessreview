@@ -26,7 +26,8 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
 }) => {
   if (state !== "analyzing") return null;
 
-  const pct = Math.min(100, Math.max(0, Math.round(progressPercent)));
+  const pct = Math.min(100, Math.max(0, progressPercent));
+  const pctLabel = Math.min(100, Math.max(0, Math.round(progressPercent)));
 
   return (
     <div
@@ -34,7 +35,7 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
       style={{ bottom: "var(--mobile-tab-bar)" }}
       role="status"
       aria-live="polite"
-      aria-label={`Analyzing game, ${pct} percent`}
+      aria-label={`Analyzing game, ${pctLabel} percent`}
     >
       <div className="mx-3 rounded-xl border border-chess-border bg-chess-panel shadow-lg px-3.5 py-2.5">
         <div className="flex items-center justify-between gap-3 mb-2">
@@ -57,7 +58,7 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
             </p>
           </div>
           <span className="text-base font-bold text-chess-accent tabular-nums flex-shrink-0">
-            {pct}%
+            {pctLabel}%
           </span>
         </div>
         <div className="h-1.5 rounded-full bg-chess-border/70 overflow-hidden">

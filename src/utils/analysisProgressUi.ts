@@ -14,7 +14,7 @@ export interface PredictedProgressResult {
 }
 
 /**
- * Time-based % capped by engine milestones — avoids racing to 99% while work continues.
+ * Progress follows predicted wall-clock time. Engine milestones only extend the estimate.
  */
 export function computePredictedProgress({
   elapsedMs,
@@ -28,38 +28,49 @@ export function computePredictedProgress({
     return { display: 100, predictedMs: predicted };
   }
 
-  // Engine ahead of schedule — extend estimate instead of jumping the bar.
-  if (rawPercent >= 8 && elapsedMs > 2500) {
-    const impliedTotal = elapsedMs / (rawPercent / 100);
-    if (impliedTotal > predicted * 1.12) {
-      predicted = Math.min(predicted * 2.8, impliedTotal * 1.08);
+  // Running past the guess — stretch the timeline so the bar keeps moving honestly.
+  if (elapsedMs > predicted * 0.9) {
+    const overrun = elapsedMs / Math.max(predicted, 1);
+    if (overrun > 1) {
+      predicted = Math.max(predicted, elapsedMs * 1.1);
+    } else {
+      predicted = Math.max(predicted, elapsedMs / 0.86);
     }
   }
 
-  // Post-batch / classify tail often takes longer than the batch itself.
+  // Engine still early vs elapsed — review is slower than history suggested.
+  if (rawPercent >= 6 && elapsedMs > 3000) {
+    const timeShare = elapsedMs / Math.max(predicted, 1);
+    const engineShare = rawPercent / 100;
+    if (engineShare < timeShare * 0.45) {
+      const impliedTotal = elapsedMs / Math.max(engineShare, 0.04);
+      if (impliedTotal > predicted * 1.08) {
+        predicted = Math.min(predicted * 2.6, impliedTotal * 1.06);
+      }
+    }
+  }
+
+  // Post-batch classify tail
   if (rawPercent >= 88) {
     const tailBudget =
-      rawPercent >= 98 ? 1200 : rawPercent >= 94 ? 2800 : 4500;
+      rawPercent >= 98 ? 1500 : rawPercent >= 94 ? 3200 : 5200;
     const needed = elapsedMs + tailBudget;
     if (predicted < needed) predicted = needed;
   }
 
-  const ratio = Math.min(1.02, elapsedMs / Math.max(predicted, 1));
-  const eased = 1 - Math.pow(1 - ratio, 2.15);
-  const timePct = eased * 95;
+  const ratio = Math.min(1, elapsedMs / Math.max(predicted, 1));
+  const eased = 1 - Math.pow(1 - ratio, 1.55);
+  const timePct = eased * 97;
 
-  const engineCap = Math.min(96, rawPercent + 1);
-  let display = Math.min(timePct, engineCap);
-  display = Math.max(display, prevDisplay);
+  let display = Math.max(prevDisplay, timePct);
 
-  // Gentle finish when engine is done but UI time curve lags.
-  if (rawPercent >= 99 && display < 98) {
-    display = Math.min(98, display + 0.08);
+  if (rawPercent >= 99 && display < 96) {
+    display = Math.min(97, display + 0.12);
   }
 
   return {
-    display: Math.min(98, Math.round(display)),
-    predictedMs: predicted,
+    display: Math.min(97, Math.round(display * 10) / 10),
+    predictedMs: Math.round(predicted),
   };
 }
 
@@ -75,17 +86,36 @@ export function analysisStageLabel(percent: number, depth: number): string {
   return "Finishing up…";
 }
 
-export function formatEtaSeconds(seconds: number | null): string | null {
+/** Coarse buckets so we don't imply false precision. */
+function bucketEtaSeconds(seconds: number): number {
+  if (seconds < 15) return 10;
+  if (seconds < 28) return 20;
+  if (seconds < 45) return 30;
+  if (seconds < 75) return 60;
+  if (seconds < 105) return 90;
+  if (seconds < 150) return 120;
+  return Math.round(seconds / 60) * 60;
+}
+
+/** Rough remaining time — always framed as an estimate. */
+export function formatEtaGuess(seconds: number | null): string | null {
   if (seconds === null) return null;
-  if (seconds < 5) return "A few seconds left";
-  if (seconds < 60) return `~${seconds}s left`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (s < 8) return `~${m} min left`;
-  return `~${m}m ${s}s left`;
+  if (seconds < 8) return "Almost done · estimate";
+  const bucket = bucketEtaSeconds(seconds);
+  if (bucket < 60) {
+    return `Roughly ${bucket}s left · estimate`;
+  }
+  const mins = Math.round(bucket / 60);
+  if (mins === 1) return "About 1 min left · estimate";
+  return `About ${mins} min left · estimate`;
+}
+
+/** @deprecated use formatEtaGuess */
+export function formatEtaSeconds(seconds: number | null): string | null {
+  return formatEtaGuess(seconds);
 }
 
 export function remainingEtaSeconds(remainingMs: number): number | null {
-  if (remainingMs < 1500) return null;
+  if (remainingMs < 2000) return null;
   return Math.max(1, Math.round(remainingMs / 1000));
 }

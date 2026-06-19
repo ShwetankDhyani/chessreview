@@ -47,7 +47,7 @@ import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
 import {
   analysisStageLabel,
-  formatEtaSeconds,
+  formatEtaGuess,
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
@@ -831,7 +831,7 @@ export default function App() {
   const analyzingMoveSan =
     analyzingReplayPly >= 0 ? replayFrames[analyzingReplayPly]?.san : undefined;
   const analysisStage = analysisStageLabel(progressPercent, depth);
-  const analysisEtaLabel = formatEtaSeconds(
+  const analysisEtaLabel = formatEtaGuess(
     remainingEtaSeconds(analysisRemainingMs)
   );
 
