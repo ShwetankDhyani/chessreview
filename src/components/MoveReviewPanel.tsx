@@ -251,7 +251,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   };
 
   return (
-    <div className="border border-chess-border rounded-lg bg-chess-panel flex flex-col gap-2 overflow-hidden">
+    <div className="border border-chess-border rounded-lg bg-chess-panel flex flex-col gap-2 overflow-hidden min-w-0">
       {/* Header */}
       <div className="flex items-center gap-1.5 px-2.5 pt-2 text-xs font-semibold uppercase tracking-wider text-chess-muted">
         <span>🔍</span>
@@ -440,7 +440,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const showContinuation = suggestBest && !!move.bestMoveSan;
 
   return (
-    <div className="flex flex-col gap-3 p-3 text-sm flex-1">
+    <div className="flex flex-col gap-3 p-3 sm:p-3 text-sm flex-1 min-w-0 overflow-x-hidden">
       {/* Move + classification */}
       <div className="flex items-start gap-2">
         <div
@@ -487,14 +487,14 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
       {/* Comment — AI or static fallback */}
       {displayComment && (
         <div
-          className="text-xs leading-relaxed rounded p-2 transition-opacity duration-300"
+          className="text-xs leading-relaxed rounded p-2 transition-opacity duration-300 break-words"
           style={{
             color: meta?.color ?? "#aaa",
             backgroundColor: meta ? `${meta.color}11` : "transparent",
             opacity: aiLoading ? 0.6 : 1,
           }}
         >
-          <p>{displayComment}</p>
+          <p className="break-words whitespace-normal">{displayComment}</p>
           {coachFromAi && (
             <span
               className="mt-1 inline-block text-chess-muted opacity-40"

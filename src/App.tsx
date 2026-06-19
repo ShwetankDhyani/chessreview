@@ -50,7 +50,7 @@ import {
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
-import { KeyMomentNavButtons, MobileKeyMomentBar } from "./components/KeyMomentNavButtons";
+import { KeyMomentNavButtons } from "./components/KeyMomentNavButtons";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -879,7 +879,13 @@ export default function App() {
   });
   const boardWidth =
     winWidth < 1024
-      ? Math.min(Math.floor(winWidth * 0.88), winWidth - 44)
+      ? Math.min(
+          Math.floor(
+            winWidth *
+              (moves.length > 0 && tab === "moves" ? 0.68 : 0.88)
+          ),
+          winWidth - 44
+        )
       : desktopBoardSize;
 
   const isMobileLayout = winWidth < 1024;
@@ -1603,8 +1609,8 @@ export default function App() {
             )}
 
             {tab === "moves" && (
-            <>
-            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-2 gap-1">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-1 gap-1">
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <>
               <PlayerTag
@@ -1674,22 +1680,6 @@ export default function App() {
                   />
                 }
               />
-              {canReanalyze && (
-                <div className="flex justify-center pt-1.5 w-full">
-                  <ReanalyzeButton
-                    onClick={requestReanalysis}
-                    disabled={isAnalyzing}
-                    spinning={isAnalyzing}
-                  />
-                </div>
-              )}
-              {moves.length > 0 && (
-                <MobileKeyMomentBar
-                  moves={moves}
-                  currentMoveIdx={currentMoveIdx}
-                  onGoToIndex={navigateToMove}
-                />
-              )}
                 </>
               ) : (
                 <MobileGameHero
@@ -1717,10 +1707,9 @@ export default function App() {
 
             {moves.length > 0 && (
             <div
-              className="flex-1 overflow-y-auto min-h-0 bg-chess-panel"
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-chess-panel border-t border-chess-border"
               style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
             >
-                <div className="border-t border-chess-border flex flex-col">
                   <MoveReviewPanel
                     move={currentMove}
                     moveIdx={currentMoveIdx}
@@ -1731,10 +1720,9 @@ export default function App() {
                     onContinuationActive={handleContinuationActive}
                     onContinuationArrow={handleContinuationArrow}
                   />
-                </div>
             </div>
             )}
-            </>
+            </div>
             )}
           </div>
         </main>
