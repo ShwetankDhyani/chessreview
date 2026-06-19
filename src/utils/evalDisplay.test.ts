@@ -40,10 +40,18 @@ describe("evalDisplay", () => {
   it("fills eval bar toward the side that is winning", () => {
     const whiteWinning = evalBarSegments(74, false);
     expect(whiteWinning.bottomPct).toBeCloseTo(74);
-    expect(whiteWinning.bottomFavorable).toBe(true);
+    expect(whiteWinning.bottomPlayer).toBe("w");
+    expect(whiteWinning.topPlayer).toBe("b");
+
+    const blackWinning = evalBarSegments(20, false);
+    expect(blackWinning.bottomPct).toBeCloseTo(20);
+    expect(blackWinning.topPct).toBeCloseTo(80);
+    expect(blackWinning.bottomPlayer).toBe("w");
+    expect(blackWinning.topPlayer).toBe("b");
 
     const whiteWinningFlipped = evalBarSegments(74, true);
     expect(whiteWinningFlipped.bottomPct).toBeCloseTo(26);
-    expect(whiteWinningFlipped.topFavorable).toBe(true);
+    expect(whiteWinningFlipped.bottomPlayer).toBe("b");
+    expect(whiteWinningFlipped.topPlayer).toBe("w");
   });
 });

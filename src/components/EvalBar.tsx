@@ -39,8 +39,8 @@ export const EvalBar: React.FC<EvalBarProps> = ({
   const { text, favorable } = formatEvalForBoard(evalResult, boardFlipped);
   const segments = evalBarSegments(whitePercent, boardFlipped);
 
-  const topColor = segments.topFavorable ? LIGHT : DARK;
-  const bottomColor = segments.bottomFavorable ? LIGHT : DARK;
+  const topColor = segments.topPlayer === "w" ? LIGHT : DARK;
+  const bottomColor = segments.bottomPlayer === "w" ? LIGHT : DARK;
 
   const h = barHeight ?? (compact ? 280 : undefined);
 

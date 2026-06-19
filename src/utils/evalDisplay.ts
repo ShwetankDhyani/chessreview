@@ -50,11 +50,16 @@ export function formatEvalForBoard(
   return { text: formatSignedPawnsFromCp(cp), favorable: cp >= 0 };
 }
 
-/** Bar segment heights (0–100): light = white advantage, dark = black advantage. */
+/** Bar segment heights (0–100). Colors are fixed per side: light = white, dark = black. */
 export function evalBarSegments(
   whitePercent: number,
   boardFlipped: boolean
-): { topPct: number; bottomPct: number; topFavorable: boolean; bottomFavorable: boolean } {
+): {
+  topPct: number;
+  bottomPct: number;
+  topPlayer: "w" | "b";
+  bottomPlayer: "w" | "b";
+} {
   const whiteShare = whitePercent / 100;
   const whiteAtBottom = !boardFlipped;
 
@@ -62,15 +67,15 @@ export function evalBarSegments(
     return {
       bottomPct: whiteShare * 100,
       topPct: (1 - whiteShare) * 100,
-      bottomFavorable: whiteShare >= 0.5,
-      topFavorable: whiteShare < 0.5,
+      bottomPlayer: "w",
+      topPlayer: "b",
     };
   }
   return {
     topPct: whiteShare * 100,
     bottomPct: (1 - whiteShare) * 100,
-    topFavorable: whiteShare >= 0.5,
-    bottomFavorable: whiteShare < 0.5,
+    topPlayer: "w",
+    bottomPlayer: "b",
   };
 }
 
