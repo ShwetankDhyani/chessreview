@@ -31,7 +31,7 @@ import { parseGameText } from "./utils/pgnParse";
 import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
-import { useSmoothAnalysisProgress } from "./hooks/useSmoothAnalysisProgress";
+import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import {
@@ -46,8 +46,8 @@ import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
 import {
   analysisStageLabel,
-  estimateAnalysisEtaSeconds,
   formatEtaSeconds,
+  remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { KeyMomentNavButtons, MobileKeyMomentBar } from "./components/KeyMomentNavButtons";
@@ -134,7 +134,6 @@ export default function App() {
   const analysisGenerationRef = useRef(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
-  const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -805,31 +804,26 @@ export default function App() {
 
   const isAnalyzing = analysisRunning && analysisState === "analyzing";
 
-  const progressPercent = useSmoothAnalysisProgress(
-    analysisState,
-    rawProgressPercent
-  );
+  const analysisPlyCount = gamePlyCount || replayFrames.length;
 
-  useEffect(() => {
-    if (!isAnalyzing || analysisStartedAt === null) {
-      setAnalysisElapsedMs(0);
-      return;
-    }
-    const tick = () => setAnalysisElapsedMs(Date.now() - analysisStartedAt);
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [isAnalyzing, analysisStartedAt]);
+  const { percent: progressPercent, remainingMs: analysisRemainingMs } =
+    usePredictedAnalysisProgress(
+      analysisState,
+      rawProgressPercent,
+      analysisStartedAt,
+      analysisPlyCount,
+      depth
+    );
 
   const analyzingReplayPly =
     replayFrames.length > 0
-      ? progressToReplayPly(progress.done, progress.total, replayFrames.length)
+      ? progressToReplayPly(progressPercent, 100, replayFrames.length)
       : -1;
   const analyzingMoveSan =
     analyzingReplayPly >= 0 ? replayFrames[analyzingReplayPly]?.san : undefined;
   const analysisStage = analysisStageLabel(progressPercent, depth);
   const analysisEtaLabel = formatEtaSeconds(
-    estimateAnalysisEtaSeconds(progressPercent, analysisElapsedMs)
+    remainingEtaSeconds(analysisRemainingMs)
   );
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
@@ -1239,11 +1233,7 @@ export default function App() {
                       ) : isAnalyzing ? (
                         <AnalyzingMoveList
                           frames={replayFrames}
-                          currentPly={progressToReplayPly(
-                            progress.done,
-                            progress.total,
-                            replayFrames.length
-                          )}
+                          currentPly={analyzingReplayPly}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
@@ -1320,13 +1310,7 @@ export default function App() {
                   <div className="pl-[34px]">
                     <BoardAnalysisStrip
                       progressPercent={progressPercent}
-                      currentPly={
-                        progressToReplayPly(
-                          progress.done,
-                          progress.total,
-                          replayFrames.length
-                        ) + 1
-                      }
+                      currentPly={analyzingReplayPly + 1}
                       totalPlies={replayFrames.length}
                       currentSan={analyzingMoveSan}
                       stageLabel={analysisStage}

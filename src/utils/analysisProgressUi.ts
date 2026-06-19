@@ -1,25 +1,90 @@
+/** Predict total review runtime from game size and engine depth. */
+export function estimateAnalysisDurationMs(
+  plies: number,
+  depth: number
+): number {
+  const positions = Math.max(plies + 1, 10);
+  const depthScale = Math.pow(1.26, Math.max(0, depth - 14));
+  const msPerPosition = (110 + depth * 12) * depthScale;
+  const evalMs = positions * msPerPosition;
+  const tailMs = 3000 + plies * 40;
+  const connectMs = 1800;
+  const total = connectMs + evalMs + tailMs;
+  return Math.round(Math.min(240_000, Math.max(8_000, total)));
+}
+
+export interface PredictedProgressInput {
+  elapsedMs: number;
+  predictedMs: number;
+  rawPercent: number;
+  prevDisplay: number;
+}
+
+export interface PredictedProgressResult {
+  display: number;
+  predictedMs: number;
+}
+
+/**
+ * Time-based % capped by engine milestones — avoids racing to 99% while work continues.
+ */
+export function computePredictedProgress({
+  elapsedMs,
+  predictedMs,
+  rawPercent,
+  prevDisplay,
+}: PredictedProgressInput): PredictedProgressResult {
+  let predicted = predictedMs;
+
+  if (rawPercent >= 100) {
+    return { display: 100, predictedMs: predicted };
+  }
+
+  // Engine ahead of schedule — extend estimate instead of jumping the bar.
+  if (rawPercent >= 8 && elapsedMs > 2500) {
+    const impliedTotal = elapsedMs / (rawPercent / 100);
+    if (impliedTotal > predicted * 1.12) {
+      predicted = Math.min(predicted * 2.8, impliedTotal * 1.08);
+    }
+  }
+
+  // Post-batch / classify tail often takes longer than the batch itself.
+  if (rawPercent >= 88) {
+    const tailBudget =
+      rawPercent >= 98 ? 1200 : rawPercent >= 94 ? 2800 : 4500;
+    const needed = elapsedMs + tailBudget;
+    if (predicted < needed) predicted = needed;
+  }
+
+  const ratio = Math.min(1.02, elapsedMs / Math.max(predicted, 1));
+  const eased = 1 - Math.pow(1 - ratio, 2.15);
+  const timePct = eased * 95;
+
+  const engineCap = Math.min(96, rawPercent + 1);
+  let display = Math.min(timePct, engineCap);
+  display = Math.max(display, prevDisplay);
+
+  // Gentle finish when engine is done but UI time curve lags.
+  if (rawPercent >= 99 && display < 98) {
+    display = Math.min(98, display + 0.08);
+  }
+
+  return {
+    display: Math.min(98, Math.round(display)),
+    predictedMs: predicted,
+  };
+}
+
 /** Human-readable stage for analysis progress (matches gameReview phases). */
 export function analysisStageLabel(percent: number, depth: number): string {
   const p = Math.max(0, Math.min(100, percent));
   if (p < 6) return "Connecting to engine…";
   if (p < 14) return "Reading your game…";
-  if (p < 88) return `Evaluating positions · depth ${depth}`;
-  if (p < 94) return "Checking best lines…";
-  if (p < 98) return "Spotting strong moves…";
+  if (p < 72) return `Evaluating positions · depth ${depth}`;
+  if (p < 84) return "Checking best lines…";
+  if (p < 92) return "Spotting strong moves…";
   if (p < 100) return "Grading every move…";
   return "Finishing up…";
-}
-
-/** Rough ETA from elapsed time and current %; null when too early to estimate. */
-export function estimateAnalysisEtaSeconds(
-  percent: number,
-  elapsedMs: number
-): number | null {
-  const p = Math.max(0, Math.min(99, percent));
-  if (p < 10 || elapsedMs < 2500) return null;
-  const totalMs = elapsedMs / (p / 100);
-  const remaining = Math.max(0, totalMs - elapsedMs);
-  return Math.round(remaining / 1000);
 }
 
 export function formatEtaSeconds(seconds: number | null): string | null {
@@ -30,4 +95,9 @@ export function formatEtaSeconds(seconds: number | null): string | null {
   const s = seconds % 60;
   if (s < 8) return `~${m} min left`;
   return `~${m}m ${s}s left`;
+}
+
+export function remainingEtaSeconds(remainingMs: number): number | null {
+  if (remainingMs < 1500) return null;
+  return Math.max(1, Math.round(remainingMs / 1000));
 }
