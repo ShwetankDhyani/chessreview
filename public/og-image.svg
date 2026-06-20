@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="ChessReview - Free chess game review">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f2c29"/>
+      <stop offset="100%" stop-color="#1a1816"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="48" y="48" width="1104" height="534" rx="24" fill="none" stroke="#96bc4b" stroke-opacity="0.35" stroke-width="2"/>
+  <text x="96" y="210" fill="#e8e6e3" font-family="system-ui, sans-serif" font-size="72" font-weight="700">ChessReview</text>
+  <text x="96" y="290" fill="#96bc4b" font-family="system-ui, sans-serif" font-size="34" font-weight="600">Free chess game review and analysis</text>
+  <text x="96" y="360" fill="#9a9590" font-family="system-ui, sans-serif" font-size="28">Lichess - Chess.com - Stockfish - Move ratings</text>
+  <text x="96" y="540" fill="#6daa6d" font-family="system-ui, sans-serif" font-size="26" font-weight="600">www.chessreview.org</text>
+  <g transform="translate(920, 120)" opacity="0.9">
+    <rect x="0" y="0" width="160" height="160" rx="8" fill="#769656" stroke="#486030" stroke-width="4"/>
+    <rect x="0" y="0" width="80" height="80" fill="#eeeed2"/>
+    <rect x="80" y="80" width="80" height="80" fill="#eeeed2"/>
+    <path d="M80 40c-8 0-14 6-14 14v8h28v-8c0-8-6-14-14-14zm-6 34v12h12v-12H74zm20 0v12h12v-12H94z" fill="#262421"/>
+  </g>
+</svg>

@@ -56,6 +56,8 @@ import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
+import { usePageSeo } from "./hooks/usePageSeo";
+import { homeJsonLd } from "./utils/seo";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -118,6 +120,8 @@ function useMediaQuery(query: string): boolean {
 }
 
 export default function App() {
+  usePageSeo({ path: "/", jsonLd: homeJsonLd() });
+
   const [tab, setTab] = useState<SidebarTab>("games");
   const [pgn, setPgn] = useState("");
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
@@ -929,6 +933,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+      <h1 className="sr-only">ChessReview — Free chess game review and engine analysis</h1>
       <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad px-4 sm:px-5 min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span

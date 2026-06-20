@@ -5,6 +5,8 @@ import { ReviewChessboard } from "../components/ReviewChessboard";
 import { EvalBar } from "../components/EvalBar";
 import { MoveList } from "../components/MoveList";
 import { fetchSharedReview } from "../utils/shareReview";
+import { usePageSeo } from "../hooks/usePageSeo";
+import { shareReviewJsonLd } from "../utils/seo";
 import type { AnalyzedMove } from "../types";
 
 function shareIdFromPath(): string {
@@ -29,6 +31,39 @@ export default function SharePage() {
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const [boardFlipped, setBoardFlipped] = useState(false);
   const [evalOpen, setEvalOpen] = useState(true);
+
+  const seoOptions = useMemo(() => {
+    const path = shareId ? `/r/${shareId}` : "/r";
+    if (loading || error || !summary) {
+      return {
+        title: "Shared Chess Review — ChessReview",
+        description: "View a shared chess game review with move ratings, accuracy, and eval chart.",
+        path,
+        ogType: "article" as const,
+      };
+    }
+    const wAcc = summary.accuracy?.white;
+    const bAcc = summary.accuracy?.black;
+    const accText =
+      typeof wAcc === "number" && typeof bAcc === "number"
+        ? ` Accuracy: ${Math.round(wAcc)}% vs ${Math.round(bAcc)}%.`
+        : "";
+    return {
+      title: `${whiteName} vs ${blackName} — ChessReview`,
+      description: `Shared chess game review.${accText} Move ratings, accuracy, and eval chart.`,
+      path,
+      ogType: "article" as const,
+      jsonLd: shareReviewJsonLd({
+        id: shareId,
+        whiteName,
+        blackName,
+        whiteAccuracy: wAcc,
+        blackAccuracy: bAcc,
+      }),
+    };
+  }, [shareId, loading, error, summary, whiteName, blackName]);
+
+  usePageSeo(seoOptions);
 
   useEffect(() => {
     void (async () => {
@@ -85,6 +120,9 @@ export default function SharePage() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div>
             <a href="/" className="text-sm font-bold text-chess-accent hover:underline">ChessReview</a>
+            <h1 className="text-base font-semibold mt-1">
+              {whiteName} vs {blackName}
+            </h1>
             <p className="text-xs text-chess-muted mt-0.5">Shared game review</p>
           </div>
           <a

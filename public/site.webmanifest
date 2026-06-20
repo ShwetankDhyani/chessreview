@@ -1,7 +1,10 @@
 {
-  "name": "ChessReview.org",
+  "name": "ChessReview — Free Chess Game Review",
   "short_name": "ChessReview",
-  "description": "Analyze your chess games with engine-powered move reviews.",
+  "description": "Free chess game review with move classifications, accuracy scores, and Stockfish engine analysis.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/favicon.svg",
@@ -14,9 +17,17 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "theme_color": "#312e2b",
   "background_color": "#262421",
-  "display": "standalone"
+  "display": "standalone",
+  "lang": "en",
+  "categories": ["games", "education"]
 }

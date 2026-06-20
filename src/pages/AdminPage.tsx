@@ -14,6 +14,7 @@ import {
   type AdminReviewStats,
   type RecentReviewRow,
 } from "../utils/reviewStats";
+import { usePageSeo } from "../hooks/usePageSeo";
 
 const KEY_STORAGE = "cr_admin_key";
 
@@ -42,6 +43,13 @@ function playersLabel(row: RecentReviewRow) {
 }
 
 export default function AdminPage() {
+  usePageSeo({
+    title: "Admin — ChessReview",
+    description: "ChessReview admin dashboard.",
+    path: "/admin",
+    noindex: true,
+  });
+
   const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem(KEY_STORAGE) ?? "");
   const [inputKey, setInputKey] = useState("");
   const [stats, setStats] = useState<AdminReviewStats | null>(null);

@@ -1,4 +1,13 @@
+import { usePageSeo } from "../hooks/usePageSeo";
+
 export default function PrivacyPage() {
+  usePageSeo({
+    title: "Privacy Policy — ChessReview",
+    description:
+      "How ChessReview handles your data, share links, third-party services, and anonymous usage stats.",
+    path: "/privacy",
+  });
+
   return (
     <div className="min-h-screen bg-chess-bg text-chess-text">
       <header className="border-b border-chess-border bg-chess-panel/80">
