@@ -40,26 +40,36 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <script type="application/ld+json">
+    <script id="cr-home-jsonld" type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "ChessReview",
-        "url": "https://www.chessreview.org/",
-        "description": "Free chess game review with engine analysis, move classifications, and accuracy scores.",
-        "inLanguage": "en"
-      }
-    </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "ChessReview",
-        "url": "https://www.chessreview.org/",
-        "applicationCategory": "GameApplication",
-        "operatingSystem": "Web",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "description": "Review chess games from Lichess and Chess.com with Stockfish-powered move analysis."
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.chessreview.org/#website",
+            "name": "ChessReview",
+            "url": "https://www.chessreview.org/",
+            "description": "Free chess game review with engine analysis, move classifications, and accuracy scores.",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://www.chessreview.org/#app",
+            "name": "ChessReview",
+            "url": "https://www.chessreview.org/",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Web",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "description": "Review chess games for free. Import from Lichess or Chess.com for move classifications, accuracy scores, eval charts, and Stockfish-powered analysis.",
+            "featureList": [
+              "Chess game review",
+              "Move classification",
+              "Accuracy scores",
+              "Stockfish engine analysis",
+              "Lichess and Chess.com import"
+            ]
+          }
+        ]
       }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

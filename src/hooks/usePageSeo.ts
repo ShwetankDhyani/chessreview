@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { applyPageSeo, DEFAULT_SEO, homeJsonLd, type PageSeoOptions } from "../utils/seo";
+import { applyPageSeo, DEFAULT_SEO, restoreHomeJsonLd, type PageSeoOptions } from "../utils/seo";
 
 /** Sync `<head>` tags when a route mounts or its SEO props change. */
 export function usePageSeo(options: PageSeoOptions) {
@@ -15,8 +15,8 @@ export function usePageSeo(options: PageSeoOptions) {
         title: DEFAULT_SEO.title,
         description: DEFAULT_SEO.description,
         path: "/",
-        jsonLd: homeJsonLd(),
       });
+      restoreHomeJsonLd();
     };
   }, [
     options.title,

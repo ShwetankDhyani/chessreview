@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, shareReviewJsonLd, SITE_ORIGIN } from "./seo";
+import { escapeHtml, homeJsonLdGraph, shareReviewJsonLd, SITE_ORIGIN } from "./seo";
 
 describe("seo", () => {
   it("escapes HTML for meta injection", () => {
     expect(escapeHtml(`a & b < "c"`)).toBe("a &amp; b &lt; &quot;c&quot;");
+  });
+
+  it("builds a single home JSON-LD graph", () => {
+    const graph = homeJsonLdGraph();
+    expect(graph["@graph"]).toHaveLength(2);
+    const types = (graph["@graph"] as Array<Record<string, unknown>>).map(
+      (node) => node["@type"]
+    );
+    expect(types).toEqual(["WebSite", "WebApplication"]);
   });
 
   it("builds share review JSON-LD with accuracy", () => {

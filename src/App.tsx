@@ -57,7 +57,6 @@ import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
-import { homeJsonLd } from "./utils/seo";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -120,7 +119,7 @@ function useMediaQuery(query: string): boolean {
 }
 
 export default function App() {
-  usePageSeo({ path: "/", jsonLd: homeJsonLd() });
+  usePageSeo({ path: "/" });
 
   const [tab, setTab] = useState<SidebarTab>("games");
   const [pgn, setPgn] = useState("");

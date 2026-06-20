@@ -46,6 +46,12 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
+function removeAllJsonLd() {
+  document
+    .querySelectorAll('script[type="application/ld+json"]')
+    .forEach((el) => el.remove());
+}
+
 function removePageJsonLd() {
   document
     .querySelectorAll('[id^="cr-page-jsonld"]')
@@ -58,6 +64,51 @@ function injectJsonLd(id: string, data: Record<string, unknown>) {
   script.type = "application/ld+json";
   script.textContent = JSON.stringify(data);
   document.head.appendChild(script);
+}
+
+/** Home-page structured data — keep in sync with index.html `#cr-home-jsonld`. */
+export function homeJsonLdGraph(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_ORIGIN}/#website`,
+        name: SITE_NAME,
+        url: `${SITE_ORIGIN}/`,
+        description:
+          "Free chess game review with engine analysis, move classifications, and accuracy scores.",
+        inLanguage: "en",
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${SITE_ORIGIN}/#app`,
+        name: SITE_NAME,
+        url: `${SITE_ORIGIN}/`,
+        applicationCategory: "GameApplication",
+        operatingSystem: "Web",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+        description: DEFAULT_SEO.description,
+        featureList: [
+          "Chess game review",
+          "Move classification",
+          "Accuracy scores",
+          "Stockfish engine analysis",
+          "Lichess and Chess.com import",
+        ],
+      },
+    ],
+  };
+}
+
+export function restoreHomeJsonLd(): void {
+  if (typeof document === "undefined") return;
+  removeAllJsonLd();
+  injectJsonLd("cr-home-jsonld", homeJsonLdGraph());
 }
 
 /** Update document title, meta, Open Graph, Twitter, and canonical URL. */
@@ -108,6 +159,7 @@ export function applyPageSeo(options: PageSeoOptions = {}): void {
 
   removePageJsonLd();
   if (options.jsonLd) {
+    removeAllJsonLd();
     const blocks = Array.isArray(options.jsonLd)
       ? options.jsonLd
       : [options.jsonLd];
@@ -118,37 +170,7 @@ export function applyPageSeo(options: PageSeoOptions = {}): void {
 }
 
 export function homeJsonLd(): Array<Record<string, unknown>> {
-  return [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      name: SITE_NAME,
-      url: SITE_ORIGIN,
-      description: DEFAULT_SEO.description,
-      inLanguage: "en",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      name: SITE_NAME,
-      url: SITE_ORIGIN,
-      applicationCategory: "GameApplication",
-      operatingSystem: "Web",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-      description: DEFAULT_SEO.description,
-      featureList: [
-        "Chess game review",
-        "Move classification",
-        "Accuracy scores",
-        "Stockfish engine analysis",
-        "Lichess and Chess.com import",
-      ],
-    },
-  ];
+  return [homeJsonLdGraph()];
 }
 
 export function shareReviewJsonLd(input: {
