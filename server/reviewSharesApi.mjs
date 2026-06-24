@@ -1,35 +1,93 @@
 /**
- * Share API — engine file store with optional in-memory fallback for dev.
+ * Share API — engine file store with optional local file fallback for dev.
  */
 
 import { engineStatsUrl } from "./reviewStats.mjs";
 import { fileCreateShare, fileGetShare } from "./reviewShares.mjs";
 
-async function fetchEngineJson(path, options = {}) {
+function isWritableShareStore() {
+  if (process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return false;
+  }
+  return true;
+}
+
+function validateSharePayload(body) {
+  if (!body?.pgn || !Array.isArray(body.moves) || !body.summary) {
+    throw new Error("Invalid share payload");
+  }
+}
+
+async function readEngineJson(path, options = {}) {
   const base = engineStatsUrl();
   if (!base) return null;
   const res = await fetch(`${base}${path}`, {
     ...options,
     signal: AbortSignal.timeout(12_000),
   });
-  if (!res.ok) return null;
-  return res.json();
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  if (!res.ok) {
+    const message =
+      (data && typeof data.error === "string" && data.error) ||
+      `Engine share failed (${res.status})`;
+    if (res.status === 404) {
+      throw new Error("Share is not enabled on the analysis server yet");
+    }
+    throw new Error(message);
+  }
+  return data;
 }
 
 export async function getShare(id) {
-  const engine = await fetchEngineJson(`/share/${encodeURIComponent(id)}`);
-  if (engine && engine.pgn) return engine;
+  const base = engineStatsUrl();
+  if (base) {
+    try {
+      const engine = await readEngineJson(`/share/${encodeURIComponent(id)}`);
+      if (engine?.pgn) return engine;
+    } catch (e) {
+      if (!isWritableShareStore()) throw e;
+    }
+  }
   return fileGetShare(id);
 }
 
 export async function createShare(body) {
-  const engine = await fetchEngineJson("/share", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (engine?.id) return engine;
-  return fileCreateShare(body);
+  validateSharePayload(body);
+  const normalized = {
+    pgn: String(body.pgn).slice(0, 120_000),
+    whiteName: body.whiteName ?? "White",
+    blackName: body.blackName ?? "Black",
+    summary: body.summary,
+    moves: body.moves,
+    run: body.run ?? null,
+  };
+
+  const base = engineStatsUrl();
+  if (base) {
+    try {
+      const engine = await readEngineJson("/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(normalized),
+      });
+      if (engine?.id) return engine;
+    } catch (e) {
+      if (!isWritableShareStore()) throw e;
+    }
+  }
+
+  if (!isWritableShareStore()) {
+    throw new Error(
+      "Share storage is unavailable. Set EVAL_SERVER_URL on Vercel and update the analysis server."
+    );
+  }
+
+  return fileCreateShare(normalized);
 }
 
 export function createShareMiddleware() {

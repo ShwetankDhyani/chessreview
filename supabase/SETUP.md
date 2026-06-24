@@ -79,7 +79,16 @@ Add the **same tunnel URL** you use for Stockfish:
 
 Redeploy after changing env vars.
 
----
+**Share links** also use the engine server (`POST /share`). After pulling code that adds sharing, restart the engine:
+
+```bash
+sudo systemctl restart chessreview-engine
+curl -s -X POST http://127.0.0.1:8765/share \
+  -H "Content-Type: application/json" \
+  -d '{"pgn":"1. e4","summary":{"accuracy":{"white":90,"black":90}},"moves":[]}'
+```
+
+You should get `{"ok":true,"id":"…","urlPath":"/r/…"}` — not `not found`.
 
 ## URLs
 
