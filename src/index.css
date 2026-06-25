@@ -100,8 +100,19 @@
 }
 
 @keyframes engineGlow {
-  0%, 100% { box-shadow: 0 0 0 4px #6daa6dcc, 0 0 20px 8px #6daa6d77, 0 0 50px 12px #6daa6d33, inset 0 0 30px 4px #6daa6d22; }
-  50%       { box-shadow: 0 0 0 4px #6daa6dff, 0 0 28px 14px #6daa6d99, 0 0 70px 18px #6daa6d55, inset 0 0 40px 6px #6daa6d33; }
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(109, 170, 109, 0.28),
+      0 0 10px 3px rgba(109, 170, 109, 0.12),
+      inset 0 0 12px 2px rgba(109, 170, 109, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(109, 170, 109, 0.38),
+      0 0 14px 5px rgba(109, 170, 109, 0.16),
+      inset 0 0 16px 3px rgba(109, 170, 109, 0.09);
+  }
 }
 
 @keyframes shake {
