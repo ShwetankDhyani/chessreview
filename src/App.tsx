@@ -60,6 +60,7 @@ import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
 import { InlineErrorNotice } from "./components/InlineErrorNotice";
+import { loadSavedReview, saveReview } from "./utils/reviewCache";
 import {
   normalizeAnalysisError,
   normalizeShareError,
@@ -656,6 +657,13 @@ export default function App() {
         setMoves(result.moves);
         setSummary(result.summary);
         setReviewResult(result);
+        saveReview(
+          activeUser
+            ? { name: activeUser.name, platform: activeUser.platform }
+            : null,
+          pgnStr,
+          result
+        );
         const openReview = showAnalysisProgressRef.current;
         setProgress({ done: 100, total: 100 });
         setAnalysisState("done");
@@ -830,9 +838,30 @@ export default function App() {
 
   const selectGame = useCallback(
     (pgnStr: string) => {
-      loadPgn(pgnStr);
+      const loaded = loadPgn(pgnStr);
+      if (!loaded) return;
+      const cached = loadSavedReview(
+        activeUser
+          ? { name: activeUser.name, platform: activeUser.platform }
+          : null,
+        pgnStr
+      );
+      if (!cached) return;
+      setMoves(cached.moves);
+      setSummary(cached.summary);
+      setReviewResult(cached);
+      setProgress({ done: 100, total: 100 });
+      setAnalysisState("done");
+      setReviewReady(true);
+      setAnalysisRunning(false);
+      setShowAnalysisProgress(false);
+      showAnalysisProgressRef.current = false;
+      setAnalysisStartedAt(null);
+      if (cached.moves.length > 0) {
+        navigateToMove(cached.moves.length - 1, false);
+      }
     },
-    [loadPgn]
+    [loadPgn, activeUser, navigateToMove]
   );
 
   const tryDemoGame = useCallback(() => {
