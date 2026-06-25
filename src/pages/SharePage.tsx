@@ -1,25 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
-import { EvalChartPanel } from "../components/EvalChartPanel";
-import { MobileBoardShell } from "../components/MobileBoardShell";
-import { BoardPlayerLabel, HeaderPlayerMatchup } from "../components/BoardPlayerLabel";
 import { MoveList } from "../components/MoveList";
-import { MoveReviewPanel } from "../components/MoveReviewPanel";
+import { ReviewSessionView } from "../components/ReviewSessionView";
 import { fetchSharedReview } from "../utils/shareReview";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { shareReviewJsonLd } from "../utils/seo";
-import { formatChessMoveCounter } from "../utils/pgnPlies";
-import type { AnalyzedMove } from "../types";
-import {
-  BOARD_START_FEN,
-  canAnimateBoardStep,
-  highlightFromUci,
-  resolveBoardNavStep,
-} from "../utils/boardPosition";
+import { useReviewBoardSession } from "../hooks/useReviewBoardSession";
+import type { AnalyzedMove, ReviewRun, ReviewSummary } from "../types";
 import { InlineErrorNotice } from "../components/InlineErrorNotice";
 import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
-
-const BOARD_PLAY_MOVE_MS = 380;
 
 type ShareTab = "game" | "stats";
 
@@ -27,11 +16,6 @@ function shareIdFromPath(): string {
   const path = window.location.pathname.replace(/\/$/, "");
   const match = path.match(/^\/r\/([^/]+)$/);
   return match?.[1] ?? "";
-}
-
-function lastMoveFromUci(uci: string | undefined) {
-  if (!uci || uci.length < 4) return null;
-  return { from: uci.slice(0, 2), to: uci.slice(2, 4) };
 }
 
 function useMediaQuery(query: string): boolean {
@@ -45,20 +29,6 @@ function useMediaQuery(query: string): boolean {
     return () => mql.removeEventListener("change", handler);
   }, [query]);
   return matches;
-}
-
-function useViewport() {
-  const [size, setSize] = useState(() => ({
-    w: typeof window !== "undefined" ? window.innerWidth : 390,
-    h: typeof window !== "undefined" ? window.innerHeight : 800,
-  }));
-  useEffect(() => {
-    const onResize = () =>
-      setSize({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return size;
 }
 
 function ShareTabBar({
@@ -99,77 +69,68 @@ function ShareTabBar({
   );
 }
 
+function DesktopSidebarTabs({
+  tab,
+  onTab,
+}: {
+  tab: ShareTab;
+  onTab: (t: ShareTab) => void;
+}) {
+  const items: Array<{ id: ShareTab; label: string }> = [
+    { id: "game", label: "Moves" },
+    { id: "stats", label: "Review" },
+  ];
+  return (
+    <div className="flex bg-chess-bg/40 border-b border-chess-border">
+      {items.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onTab(id)}
+          className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors ${
+            tab === id ? "text-chess-accent" : "text-chess-muted hover:text-chess-text"
+          }`}
+        >
+          {label}
+          {tab === id && (
+            <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-chess-accent" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SharePage() {
   const shareId = shareIdFromPath();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const viewport = useViewport();
   const [tab, setTab] = useState<ShareTab>("game");
+  const [desktopTab, setDesktopTab] = useState<ShareTab>("game");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
-  const [summary, setSummary] = useState<import("../types").ReviewSummary | null>(null);
+  const [summary, setSummary] = useState<ReviewSummary | null>(null);
+  const [pgn, setPgn] = useState("");
   const [whiteName, setWhiteName] = useState("White");
   const [blackName, setBlackName] = useState("Black");
-  const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
-  const [displayFen, setDisplayFen] = useState(BOARD_START_FEN);
-  const [boardPieceAnimMs, setBoardPieceAnimMs] = useState(0);
-  const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(
-    null
-  );
-  const [boardFlipped, setBoardFlipped] = useState(false);
-  const [evalOpen, setEvalOpen] = useState(true);
-  const boardSectionRef = useRef<HTMLElement>(null);
-  const currentMoveIdxRef = useRef(-1);
-  const lastRenderedFenRef = useRef(BOARD_START_FEN);
+  const [reviewRun, setReviewRun] = useState<ReviewRun | null>(null);
 
-  const scrollToBoard = useCallback(() => {
-    boardSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, []);
-
-  const applyMoveSelect = useCallback(
-    (idx: number, animate: boolean) => {
-      const clamped = Math.max(-1, Math.min(moves.length - 1, idx));
-      const fromIdx = currentMoveIdxRef.current;
-      const onePly = Math.abs(clamped - fromIdx) === 1;
-      const { fen, highlight } = resolveBoardNavStep(moves, fromIdx, clamped);
-      const safeToAnimate =
-        animate &&
-        onePly &&
-        canAnimateBoardStep(lastRenderedFenRef.current, fen, highlight);
-      setBoardPieceAnimMs(safeToAnimate ? BOARD_PLAY_MOVE_MS : 0);
-      const displayHighlight =
-        clamped >= 0
-          ? highlightFromUci(moves[clamped].uci)
-          : highlight;
-      setMoveAnim(displayHighlight);
-      setDisplayFen(fen);
-      setCurrentMoveIdx(clamped);
-      currentMoveIdxRef.current = clamped;
-    },
-    [moves]
-  );
-
-  const selectMove = useCallback(
-    (idx: number, scrollBoard = false, animate = true) => {
-      const clamped = Math.max(-1, Math.min(moves.length - 1, idx));
-      const fromIdx = currentMoveIdxRef.current;
-      const onePly = Math.abs(clamped - fromIdx) === 1;
-      applyMoveSelect(clamped, animate && onePly);
-      if (scrollBoard) {
-        if (!isDesktop) setTab("game");
-        scrollToBoard();
-      }
-    },
-    [moves.length, isDesktop, scrollToBoard, applyMoveSelect]
-  );
+  const session = useReviewBoardSession({
+    moves,
+    pgn,
+    whiteName,
+    blackName,
+    startAtLastMove: true,
+  });
 
   const seoOptions = useMemo(() => {
     const path = shareId ? `/r/${shareId}` : "/r";
     if (loading || error || !summary) {
       return {
         title: "Shared Chess Review — ChessReview",
-        description: "View a shared chess game review with move ratings, accuracy, and eval chart.",
+        description:
+          "View a shared chess game review with move ratings, accuracy, and eval chart.",
         path,
         ogType: "article" as const,
       };
@@ -212,15 +173,10 @@ export default function SharePage() {
         );
         setMoves(data.moves);
         setSummary(data.summary);
+        setPgn(data.pgn ?? "");
         setWhiteName(data.whiteName);
         setBlackName(data.blackName);
-        const startFen = data.moves[0]?.fenBefore ?? BOARD_START_FEN;
-        setCurrentMoveIdx(-1);
-        currentMoveIdxRef.current = -1;
-        setDisplayFen(startFen);
-        lastRenderedFenRef.current = startFen;
-        setBoardPieceAnimMs(0);
-        setMoveAnim(null);
+        setReviewRun(data.run ?? null);
       } catch (e) {
         const normalized = normalizeShareError(e);
         trackAppError({
@@ -235,53 +191,14 @@ export default function SharePage() {
     })();
   }, [shareId, reloadTick]);
 
-  const stepMove = useCallback(
-    (delta: number, animate = true) => {
-      selectMove(currentMoveIdxRef.current + delta, false, animate);
-    },
-    [selectMove]
-  );
+  const handleMoveSelect = (idx: number) => {
+    session.navigateToMove(idx);
+    if (!isDesktop) setTab("game");
+  };
 
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      lastRenderedFenRef.current = displayFen;
-    });
-    return () => cancelAnimationFrame(id);
-  }, [displayFen]);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") stepMove(1);
-      else if (e.key === "ArrowLeft") stepMove(-1);
-      else if (e.key === "Home") selectMove(-1);
-      else if (e.key === "End") selectMove(moves.length - 1);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [stepMove, selectMove, moves.length]);
-
-  const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
-  const currentEval = currentMove?.evalAfter ?? moves[0]?.evalBefore ?? null;
-  const lastMoveHighlight =
-    moveAnim ?? lastMoveFromUci(currentMove?.uci);
-
-  const boardWidth = useMemo(() => {
-    if (isDesktop) {
-      return Math.min(380, Math.max(280, Math.floor(viewport.w * 0.28)));
-    }
-    return Math.min(
-      400,
-      Math.max(240, Math.floor(viewport.w * 0.88) - 44)
-    );
-  }, [isDesktop, viewport.w]);
-
-  const topColor = boardFlipped ? "white" : "black";
-  const bottomColor = boardFlipped ? "black" : "white";
-  const topName = boardFlipped ? whiteName : blackName;
-  const bottomName = boardFlipped ? blackName : whiteName;
-  const moveLabel = formatChessMoveCounter(currentMoveIdx, moves.length);
   const showGame = isDesktop || tab === "game";
   const showStats = isDesktop || tab === "stats";
+  const vsLabel = `${session.playerNames.white} vs ${session.playerNames.black}`;
 
   if (loading) {
     return (
@@ -309,148 +226,126 @@ export default function SharePage() {
     );
   }
 
-  const gamePanel = (
-    <section
-      ref={boardSectionRef}
-      className={`rounded-xl border border-chess-border bg-chess-panel shadow-sm overflow-hidden ${
-        showGame ? "" : "hidden lg:block"
-      } lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:flex lg:flex-col`}
-      aria-label="Board and moves"
-    >
-      <div className="flex-shrink-0 px-3 pt-3 pb-2">
-        <div className="review-flow-stack">
-        <BoardPlayerLabel name={topName} color={topColor} />
-
-        <MobileBoardShell
-          evalResult={currentEval}
-          position={displayFen}
-          boardWidth={boardWidth}
-          boardOrientation={boardFlipped ? "black" : "white"}
-          animationDuration={boardPieceAnimMs}
-          dimmed={false}
-          continuationActive={false}
-          lastMoveHighlight={lastMoveHighlight}
-          continuationArrow={null}
-          showBestMoveArrow={false}
-          remountKey={0}
-          onPrev={(animate = true) => stepMove(-1, animate)}
-          onNext={(animate = true) => stepMove(1, animate)}
-          canPrev={currentMoveIdx > -1}
-          canNext={currentMoveIdx < moves.length - 1}
-        />
-
-        <BoardPlayerLabel name={bottomName} color={bottomColor} />
-
-        <div className="flex items-center justify-between gap-2 px-3 py-2">
-          <span className="text-[11px] text-chess-muted font-mono tabular-nums">
-            {moveLabel}
-          </span>
-          <button
-            type="button"
-            onClick={() => setBoardFlipped((f) => !f)}
-            className="text-[11px] px-2.5 py-1 rounded-md border border-chess-border/60 text-chess-subtext hover:bg-chess-hover transition-colors"
-          >
-            Flip board
-          </button>
-        </div>
-
-        {moves.length > 0 && (
-          <EvalChartPanel
-            moves={moves}
-            currentMoveIndex={currentMoveIdx}
-            onMoveSelect={(idx) => selectMove(idx, true)}
-            open={evalOpen}
-            onOpenChange={setEvalOpen}
-            docked
-          />
-        )}
-
-        {moves.length > 0 && (
-          <div className="review-flow-coach">
-            <MoveReviewPanel
-              move={currentMove}
-              moveIdx={currentMoveIdx}
-              moves={moves}
-              embedded
-            />
-          </div>
-        )}
-        </div>
-      </div>
-
-      <div className="border-t border-chess-border px-3 py-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain">
-        <h2 className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-2">
-          Moves
-        </h2>
-        <MoveList
-          moves={moves}
-          currentMoveIndex={currentMoveIdx}
-          onMoveSelect={(idx) => selectMove(idx, true)}
-          markGameEnd
-          scrollActiveIntoView={false}
-        />
-      </div>
-    </section>
-  );
-
-  const statsPanel = (
-    <section
-      className={`space-y-4 ${showStats ? "" : "hidden lg:block"}`}
-      aria-label="Review statistics"
-    >
-      <div className="rounded-xl border border-chess-border bg-chess-panel shadow-sm overflow-hidden">
-        <ReviewSummaryPanel
-          summary={summary}
-          whiteName={whiteName}
-          blackName={blackName}
-          moves={moves}
-          onMoveClick={(idx) => selectMove(idx, true)}
-        />
-      </div>
-
-      <p className="text-[11px] text-chess-muted text-center pb-2 lg:pb-0">
-        <a href="/" className="text-chess-accent hover:underline font-medium">
-          Review your own games on ChessReview
-        </a>
-      </p>
-    </section>
-  );
-
   return (
-    <div className="h-[100dvh] bg-chess-bg text-chess-text font-sans flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 border-b border-chess-border bg-chess-panel/95 backdrop-blur-sm z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <a
-              href="/"
-              className="text-xs font-bold text-chess-accent hover:underline"
-            >
-              ChessReview
-            </a>
-            <HeaderPlayerMatchup whiteName={whiteName} blackName={blackName} />
-            <p className="text-[11px] text-chess-muted mt-0.5">
-              Shared review · tap board edges to step moves
-            </p>
-          </div>
+    <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <a
             href="/"
-            className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            aria-label="ChessReview home"
           >
-            Analyze yours
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M5.5 21h13l-.7-3.4H6.2L5.5 21zM6.5 16h11l-.5-2H7L6.5 16zM7.2 12.6h9.6c-.3-1-1-2.4-2-3.4l1.7-1.7-1.4-1.4-1.7 1.7c-1-1-2.4-1.7-3.4-2L11 4l-1.6.4c-1 .3-2.4 1-3.4 2L4.3 4.7 2.9 6.1l1.7 1.7c-1 1-1.7 2.4-2 3.4l4.6 1.4zM12 3a1 1 0 0 1 1 1v1h-2V4a1 1 0 0 1 1-1z" />
+            </svg>
           </a>
+          <div className="min-w-0">
+            <span className="font-bold text-[17px] tracking-tight leading-none inline-flex items-baseline">
+              <span className="text-chess-subtext">Chess</span>
+              <span className="text-chess-accent">Review</span>
+            </span>
+            <p className="text-[11px] text-chess-muted truncate mt-0.5">{vsLabel}</p>
+          </div>
         </div>
+        <div className="flex-1 min-w-0" />
+        <a
+          href="/"
+          className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover transition-colors font-semibold"
+        >
+          Analyze yours
+        </a>
       </header>
 
       <ShareTabBar tab={tab} onTab={setTab} />
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll">
-        <div className="max-w-6xl mx-auto px-4 py-4 lg:py-6 pb-8">
-          <div className="lg:grid lg:grid-cols-[minmax(280px,400px)_minmax(0,1fr)] lg:gap-6 lg:items-start">
-            {gamePanel}
-            {statsPanel}
-          </div>
-        </div>
-      </main>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {isDesktop && (
+          <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex flex-col overflow-hidden">
+            <DesktopSidebarTabs tab={desktopTab} onTab={setDesktopTab} />
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+              {desktopTab === "game" ? (
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border flex-shrink-0 gap-2">
+                    <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider truncate min-w-0">
+                      {vsLabel}
+                    </span>
+                  </div>
+                  <div className="p-2">
+                    <MoveList
+                      moves={moves}
+                      currentMoveIndex={session.currentMoveIdx}
+                      onMoveSelect={handleMoveSelect}
+                      markGameEnd={!!session.gameEnd}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full overflow-y-auto min-h-0">
+                  <ReviewSummaryPanel
+                    summary={summary}
+                    whiteName={session.playerNames.white}
+                    blackName={session.playerNames.black}
+                    moves={moves}
+                    run={reviewRun}
+                    onMoveClick={handleMoveSelect}
+                  />
+                  <p className="text-[11px] text-chess-muted text-center py-4 px-3">
+                    <a
+                      href="/"
+                      className="text-chess-accent hover:underline font-medium"
+                    >
+                      Review your own games on ChessReview
+                    </a>
+                  </p>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+
+        <main className="flex-1 flex flex-col overflow-hidden min-h-0">
+          {isDesktop ? (
+            <ReviewSessionView
+              session={session}
+              runId={reviewRun?.runId}
+              layout="desktop"
+            />
+          ) : (
+            <>
+              {showGame && (
+                <ReviewSessionView
+                  session={session}
+                  runId={reviewRun?.runId}
+                  layout="mobile"
+                />
+              )}
+              {showStats && (
+                <div
+                  className="flex-1 overflow-y-auto min-h-0 mobile-review-scroll page-inline-pad pt-2"
+                  style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+                >
+                  <ReviewSummaryPanel
+                    summary={summary}
+                    whiteName={session.playerNames.white}
+                    blackName={session.playerNames.black}
+                    moves={moves}
+                    run={reviewRun}
+                    onMoveClick={handleMoveSelect}
+                  />
+                  <p className="text-[11px] text-chess-muted text-center py-4">
+                    <a
+                      href="/"
+                      className="text-chess-accent hover:underline font-medium"
+                    >
+                      Review your own games on ChessReview
+                    </a>
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
