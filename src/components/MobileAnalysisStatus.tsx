@@ -4,23 +4,18 @@ import type { AnalysisState } from "../types";
 interface MobileAnalysisStatusProps {
   state: AnalysisState;
   progressPercent: number;
-  whiteName: string;
-  blackName: string;
   stageLabel: string;
   currentSan?: string;
-  etaLabel?: string | null;
   currentPly?: number;
   totalPlies?: number;
 }
 
+/** Single slim bar above the tab bar — no duplicate board overlay. */
 export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
   state,
   progressPercent,
-  whiteName,
-  blackName,
   stageLabel,
   currentSan,
-  etaLabel,
   currentPly,
   totalPlies,
 }) => {
@@ -28,6 +23,10 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
 
   const pct = Math.min(100, Math.max(0, progressPercent));
   const pctLabel = Math.min(100, Math.max(0, Math.round(progressPercent)));
+  const plyNote =
+    currentPly !== undefined && totalPlies !== undefined && totalPlies > 0
+      ? `${Math.min(totalPlies, currentPly + 1)}/${totalPlies}`
+      : null;
 
   return (
     <div
@@ -35,43 +34,29 @@ export const MobileAnalysisStatus: React.FC<MobileAnalysisStatusProps> = ({
       style={{ bottom: "var(--mobile-tab-bar)" }}
       role="status"
       aria-live="polite"
-      aria-label={`Analyzing game, ${pctLabel} percent`}
+      aria-label={`Analyzing, ${pctLabel} percent`}
     >
-      <div className="mx-3 rounded-xl border border-chess-border bg-chess-panel shadow-lg px-3.5 py-2.5">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-chess-text inline-flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
-              {stageLabel}
-            </p>
-            <p className="text-[10px] text-chess-muted truncate mt-0.5">
-              {whiteName} vs {blackName}
-              {currentPly !== undefined && totalPlies !== undefined && totalPlies > 0 ? (
-                <span className="text-chess-subtext">
-                  {" "}
-                  · move {Math.min(totalPlies, currentPly + 1)}/{totalPlies}
-                </span>
-              ) : null}
-              {currentSan ? (
-                <span className="font-mono text-chess-subtext"> · {currentSan}</span>
-              ) : null}
-            </p>
-          </div>
-          <span className="text-base font-bold text-chess-accent tabular-nums flex-shrink-0">
+      <div className="mx-3 rounded-lg border border-chess-border/80 bg-chess-panel/95 px-3 py-2 shadow-md">
+        <div className="flex items-center gap-2 min-w-0 text-[11px]">
+          <span className="font-bold text-chess-accent tabular-nums flex-shrink-0">
             {pctLabel}%
           </span>
+          <span className="text-chess-muted truncate flex-shrink-0">{stageLabel}</span>
+          {currentSan ? (
+            <span className="font-mono text-chess-text truncate">{currentSan}</span>
+          ) : null}
+          {plyNote ? (
+            <span className="text-chess-muted tabular-nums ml-auto flex-shrink-0">
+              {plyNote}
+            </span>
+          ) : null}
         </div>
-        <div className="h-1.5 rounded-full bg-chess-border/70 overflow-hidden">
+        <div className="mt-1.5 h-0.5 rounded-full bg-chess-border/60 overflow-hidden">
           <div
             className="h-full bg-chess-accent transition-all duration-300"
             style={{ width: `${Math.max(pct, 2)}%` }}
           />
         </div>
-        {etaLabel ? (
-          <p className="mt-1.5 text-[10px] text-chess-muted text-right tabular-nums">
-            {etaLabel}
-          </p>
-        ) : null}
       </div>
     </div>
   );

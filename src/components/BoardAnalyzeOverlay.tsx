@@ -1,6 +1,5 @@
 import type { AnalysisState } from "../types";
 import { AnalyzeNowButton } from "./AnalyzeNowButton";
-import { BoardAnalysisProgressOrb } from "./BoardAnalysisProgressOrb";
 
 interface BoardAnalyzeOverlayProps {
   state: AnalysisState;
@@ -12,43 +11,33 @@ interface BoardAnalyzeOverlayProps {
   showProgressOrb?: boolean;
 }
 
+/** Minimal on-board status while analyzing — no heavy animation. */
 export function BoardAnalyzeOverlay({
   state,
   onAnalyze,
   progressPercent = 0,
   stageLabel = "Reviewing game…",
   currentSan,
-  etaLabel,
-  showProgressOrb = false,
 }: BoardAnalyzeOverlayProps) {
   if (state === "analyzing") {
-    if (showProgressOrb) {
-      return (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-black/35 backdrop-blur-[1px]"
-          aria-live="polite"
-          aria-busy="true"
-          aria-label={`Analyzing, ${Math.round(progressPercent)} percent`}
-        >
-          <BoardAnalysisProgressOrb
-            percent={progressPercent}
-            stageLabel={stageLabel}
-            currentSan={currentSan}
-            etaLabel={etaLabel}
-          />
-        </div>
-      );
-    }
-
+    const pct = Math.min(100, Math.max(0, Math.round(progressPercent)));
     return (
       <div
-        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+        className="absolute inset-x-2 top-2 z-20 pointer-events-none"
         aria-live="polite"
         aria-busy="true"
+        aria-label={`Analyzing, ${pct} percent`}
       >
-        <div className="px-4 py-2.5 rounded-lg bg-chess-panel/95 border border-chess-border shadow-md flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-chess-accent animate-pulse" />
-          <span className="text-sm text-chess-text font-medium">Reviewing game…</span>
+        <div className="rounded-md border border-chess-border/80 bg-chess-panel/92 px-2.5 py-1.5 shadow-sm flex items-center gap-2 min-w-0">
+          <span className="text-[11px] font-bold text-chess-accent tabular-nums flex-shrink-0">
+            {pct}%
+          </span>
+          <span className="text-[10px] text-chess-muted truncate">{stageLabel}</span>
+          {currentSan ? (
+            <span className="text-[10px] font-mono text-chess-text truncate ml-auto">
+              {currentSan}
+            </span>
+          ) : null}
         </div>
       </div>
     );

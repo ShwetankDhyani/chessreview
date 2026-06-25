@@ -903,13 +903,10 @@ export default function App() {
   const showBoardAnalyzeOverlay =
     !!pgn &&
     moves.length === 0 &&
-    (analysisState === "loading" ||
-      analysisState === "error" ||
-      (analysisState === "analyzing" && isMobileLayout)) &&
+    (analysisState === "loading" || analysisState === "error") &&
     (!isMobileLayout || tab === "moves");
 
-  const showBoardProgressOrb =
-    analysisState === "analyzing" && isAnalyzing && isMobileLayout;
+  const showBoardProgressOrb = false;
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -1117,15 +1114,12 @@ export default function App() {
         </div>
       )}
 
-      {isMobileLayout && isAnalyzing && (
+      {isMobileLayout && isAnalyzing && tab === "moves" && (
         <MobileAnalysisStatus
           state={analysisState}
           progressPercent={progressPercent}
-          whiteName={playerNames.white}
-          blackName={playerNames.black}
           stageLabel={analysisStage}
           currentSan={analyzingMoveSan}
-          etaLabel={analysisEtaLabel}
           currentPly={analyzingReplayPly}
           totalPlies={replayFrames.length}
         />
@@ -1357,9 +1351,7 @@ export default function App() {
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
                   remountKey={boardRemountKey}
-                  dimmed={
-                    (boardDimmed && !continuationFen) || isAnalyzing
-                  }
+                  dimmed={boardDimmed && !continuationFen && !isAnalyzing}
                   continuationActive={continuationActive}
                   lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
@@ -1611,9 +1603,7 @@ export default function App() {
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
                   remountKey={boardRemountKey}
-                  dimmed={
-                    (boardDimmed && !continuationFen) || isAnalyzing
-                  }
+                  dimmed={boardDimmed && !continuationFen && !isAnalyzing}
                   continuationActive={continuationActive}
                   lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
@@ -1673,17 +1663,6 @@ export default function App() {
                   blackRating={gameMeta?.blackRating}
                   hasGame={false}
                 />
-              )}
-              {isAnalyzing && moves.length === 0 && replayFrames.length > 0 && (
-                <div
-                  className="w-full max-w-md px-3 py-2 max-h-36 overflow-y-auto rounded-lg border border-chess-border bg-chess-panel/80"
-                  style={{ marginBottom: "var(--mobile-chrome-bottom)" }}
-                >
-                  <AnalyzingMoveList
-                    frames={replayFrames}
-                    currentPly={analyzingReplayPly}
-                  />
-                </div>
               )}
             </div>
 
