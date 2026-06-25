@@ -92,7 +92,7 @@ function MoveTapZone({
         className={`absolute top-0 bottom-0 w-[34%] z-30 touch-manipulation disabled:pointer-events-none ${
           isPrev ? "left-0" : "right-0"
         }`}
-        style={{ background: "transparent" }}
+        style={{ background: "transparent", touchAction: "manipulation" }}
         {...handlers}
       />
     </>

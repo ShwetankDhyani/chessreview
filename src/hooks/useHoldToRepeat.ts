@@ -30,7 +30,9 @@ export function useHoldToRepeat(
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled) return;
-      e.preventDefault();
+      if (e.pointerType !== "touch") {
+        e.preventDefault();
+      }
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       holdActiveRef.current = false;
       finishedRef.current = false;

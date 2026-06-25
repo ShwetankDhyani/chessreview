@@ -49,10 +49,8 @@ import {
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
-import {
-  type ContinuationNavHandlers,
-  stepBoardOrContinuation,
-} from "./utils/continuationNav";
+import { EngineLineNavBar } from "./components/EngineLineNavBar";
+import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -520,15 +518,13 @@ export default function App() {
 
   const stepBoardMove = useCallback(
     (delta: number, animate = true) => {
-      stepBoardOrContinuation(delta, continuationNav, (gameDelta) => {
-        const next = Math.max(
-          -1,
-          Math.min(moves.length - 1, currentMoveIdxRef.current + gameDelta)
-        );
-        navigateToMove(next, animate);
-      });
+      const next = Math.max(
+        -1,
+        Math.min(moves.length - 1, currentMoveIdxRef.current + delta)
+      );
+      navigateToMove(next, animate);
     },
-    [moves.length, navigateToMove, continuationNav]
+    [moves.length, navigateToMove]
   );
 
   useEffect(() => {
@@ -906,7 +902,7 @@ export default function App() {
     evalGraphOpen: desktopEvalGraphOpen,
     hasAnalyzedMoves: moves.length > 0,
   });
-  const mobileInlinePad = 40;
+  const mobileInlinePad = 12;
   const mobileEvalBar = 14;
   const boardWidth =
     winWidth < 1024
@@ -927,14 +923,9 @@ export default function App() {
 
   const showBoardProgressOrb = false;
 
-  const canStepLineBack = !!continuationNav?.canStepBack;
-  const canStepLineForward = !!continuationNav?.canStepForward;
-  const canStepGameBack = currentMoveIdx > -1;
-  const canStepGameForward = currentMoveIdx < moves.length - 1;
-  const canBoardStepBack = !isAnalyzing && (canStepLineBack || canStepGameBack);
+  const canBoardStepBack = !isAnalyzing && currentMoveIdx > -1;
   const canBoardStepForward =
-    !isAnalyzing && (canStepLineForward || canStepGameForward);
-  const showEngineLineTag = !!continuationNav;
+    !isAnalyzing && currentMoveIdx < moves.length - 1;
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -1387,7 +1378,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
-                  showEngineLineBanner={showEngineLineTag}
+                  showEngineLineBanner={continuationActive}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
@@ -1548,7 +1539,7 @@ export default function App() {
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 {showWelcome && !pgn && (
-                  <div className="page-inline-pad pt-2 flex-shrink-0 max-w-md mx-auto w-full">
+                  <div className="page-inline-pad pt-2 flex-shrink-0 w-full">
                     <WelcomeBanner onTryDemo={tryDemoGame} onDismiss={dismissWelcome} />
                   </div>
                 )}
@@ -1565,7 +1556,7 @@ export default function App() {
                 className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
-                <div className="mobile-surface max-w-md mx-auto w-full">
+                <div className="w-full">
                 {summary ? (
                   <ReviewSummaryPanel
                       summary={summary}
@@ -1583,9 +1574,7 @@ export default function App() {
                       shareError={shareError}
                   />
                 ) : (
-                  <div className="mobile-surface-section">
-                    <ReviewEmptyState onGoToGames={() => setTab("games")} />
-                  </div>
+                  <ReviewEmptyState onGoToGames={() => setTab("games")} />
                 )}
                 </div>
               </div>
@@ -1593,9 +1582,9 @@ export default function App() {
 
             {tab === "moves" && (
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain">
-            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-2 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
+            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-1.5 pb-1.5 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
-                <div className="review-flow-stack w-full max-w-md">
+                <div className="review-flow-stack w-full">
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.white : playerNames.black}
@@ -1634,7 +1623,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
-                  showEngineLineBanner={showEngineLineTag}
+                  showEngineLineBanner={false}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
@@ -1643,6 +1632,9 @@ export default function App() {
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
                 />
+              {continuationNav && (
+                <EngineLineNavBar nav={continuationNav} />
+              )}
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.black : playerNames.white}

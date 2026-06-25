@@ -302,7 +302,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         style={{ background: `${accentColor}0d` }}
       >
         {step === 0
-          ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine&apos;s best move here. Tap board <span className="font-semibold text-chess-text">▶</span> to walk the line.</>
+          ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine&apos;s best move here. Use the line controls above to step through.</>
           : <>After <span className="font-bold" style={{ color: accentColor }}>{allMoves[step - 1]}</span>, {
               step % 2 === 1
                 ? " continuing the best line."
