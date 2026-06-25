@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { AnalysisState, EvalResult } from "../types";
 import type { GameEndInfo } from "../utils/gameEnd";
 import { useHoldToRepeat } from "../hooks/useHoldToRepeat";
+import { MOBILE_LAYOUT } from "../utils/boardLayout";
 import { prepareChessAudio } from "../utils/chessSounds";
 import { AnalyzeBoardStack } from "./AnalyzeBoardStack";
 import { EvalBar } from "./EvalBar";
@@ -127,7 +128,7 @@ export function MobileBoardShell({
   analyzingTotalPlies,
   ...boardProps
 }: MobileBoardShellProps) {
-  const barWidth = 14;
+  const barWidth = MOBILE_LAYOUT.evalBar;
   const frameWidth = boardWidth + barWidth;
   const canNavigate = !!(onPrev && onNext && (canPrev || canNext));
 
@@ -185,7 +186,7 @@ export function MobileBoardShell({
           </div>
         ) : null}
         <div
-          className="flex items-stretch min-w-0"
+          className="flex items-stretch min-w-0 overflow-visible"
           style={{ height: boardWidth }}
         >
           <EvalBar
@@ -193,8 +194,9 @@ export function MobileBoardShell({
             boardFlipped={boardOrientation === "black"}
             barHeight={boardWidth}
             integrated
+            integratedWidth={barWidth}
           />
-          <div className="relative flex-1 min-w-0 h-full overflow-visible">
+          <div className="relative flex-1 min-w-0 h-full overflow-hidden">
             <AnalyzeBoardStack
               {...boardProps}
               boardWidth={boardWidth}

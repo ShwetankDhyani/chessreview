@@ -5,6 +5,7 @@ import {
   evalBarSegments,
   formatEvalForBoard,
 } from "../utils/evalDisplay";
+import { MOBILE_LAYOUT } from "../utils/boardLayout";
 
 interface EvalBarProps {
   evalResult: EvalResult | null;
@@ -12,8 +13,10 @@ interface EvalBarProps {
   /** Match board height on mobile */
   barHeight?: number;
   compact?: boolean;
-  /** Flush with board — score inside bar, no outer label */
+  /** Flush with board — score on the eval split line */
   integrated?: boolean;
+  /** Width when integrated (mobile); defaults to MOBILE_LAYOUT.evalBar */
+  integratedWidth?: number;
 }
 
 const LIGHT = "#f0eee5";
@@ -25,6 +28,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({
   barHeight,
   compact = false,
   integrated = false,
+  integratedWidth = MOBILE_LAYOUT.evalBar,
 }) => {
   let whitePercent = 50;
 
@@ -47,17 +51,18 @@ export const EvalBar: React.FC<EvalBarProps> = ({
 
   const h = barHeight ?? (compact ? 280 : undefined);
   const scoreColor = favorable ? "#81b64c" : "#e84855";
+  const splitFromBottom = segments.bottomPct;
 
   return (
     <div
-      className={`relative select-none flex-shrink-0 ${
+      className={`relative select-none flex-shrink-0 overflow-visible ${
         integrated
-          ? "w-3.5 h-full"
+          ? "h-full"
           : `flex flex-col items-center ${compact ? "w-5" : "w-7"}`
       }`}
       style={
         integrated
-          ? undefined
+          ? { width: integratedWidth, minWidth: integratedWidth }
           : h
             ? { height: h }
             : compact
@@ -68,7 +73,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({
       <div
         className={`w-full flex flex-col overflow-hidden ${
           integrated
-            ? "h-full"
+            ? "h-full rounded-sm border border-chess-border/80"
             : `flex-1 rounded-sm border border-chess-border/80 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.25)]`
         }`}
       >
@@ -89,15 +94,16 @@ export const EvalBar: React.FC<EvalBarProps> = ({
       </div>
       {integrated ? (
         <div
-          className="absolute inset-x-0 bottom-2 flex justify-center pointer-events-none"
+          className="absolute left-1/2 z-20 flex -translate-x-1/2 pointer-events-none"
+          style={{ bottom: `calc(${splitFromBottom}% - 0.55rem)` }}
           aria-hidden
         >
           <span
-            className="text-[7px] font-mono font-bold tabular-nums leading-none px-0.5 py-px rounded-sm"
+            className="text-[8px] font-mono font-bold tabular-nums leading-none whitespace-nowrap px-1 py-0.5 rounded-sm"
             style={{
               color: scoreColor,
-              background: "rgba(0,0,0,0.55)",
-              textShadow: "0 0 4px rgba(0,0,0,0.8)",
+              background: "rgba(0,0,0,0.72)",
+              boxShadow: "0 0 0 1px rgba(0,0,0,0.35)",
             }}
           >
             {text}

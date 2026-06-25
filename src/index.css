@@ -812,7 +812,7 @@
   display: flex;
   align-items: stretch;
   align-self: center;
-  overflow: hidden;
+  overflow: visible;
   background: #1a1816;
 }
 

@@ -32,7 +32,7 @@ import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
 import { useReviewTimingModel } from "./hooks/useReviewTimingModel";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
-import { computeDesktopBoardSize, computeMobileBoardSize } from "./utils/boardLayout";
+import { computeDesktopBoardSize, computeMobileBoardSize, MOBILE_LAYOUT } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
   canAnimateBoardStep,
@@ -1168,7 +1168,7 @@ export default function App() {
     hasAnalyzedMoves: moves.length > 0,
   });
   const mobileInlinePad = 12;
-  const mobileEvalBar = 14;
+  const mobileEvalBar = MOBILE_LAYOUT.evalBar;
   const mobileFullWidthBoard = Math.max(
     240,
     Math.floor(winWidth - mobileInlinePad - mobileEvalBar)

@@ -19,7 +19,7 @@ export const MOBILE_LAYOUT = {
   playerTags: 48,
   evalDockCollapsed: 36,
   evalDockOpen: 72,
-  evalBar: 14,
+  evalBar: 22,
   inlinePad: 12,
   /** Commentary should claim at least this share of the main column. */
   coachMinRatio: 0.4,
