@@ -83,13 +83,7 @@ export function ReviewChessboard({
       <div
         className="absolute inset-0 pointer-events-none z-10 board-continuation-ring"
         data-active={continuationActive ? "true" : "false"}
-        style={{
-          borderRadius: "2px",
-          boxShadow: continuationActive
-            ? "0 0 0 2px rgba(129, 182, 76, 0.65)"
-            : "none",
-          transition: "box-shadow 0.35s ease",
-        }}
+        style={{ borderRadius: "2px" }}
       />
       <div
         ref={boardHostRef}

@@ -176,16 +176,17 @@ export const GameList: React.FC<GameListProps> = ({
 
   const resultBadge = (result: "win" | "loss" | "draw") => {
     const map = {
-      win:  { label: "W", cls: "bg-move-best text-white" },
+      win: { label: "W", cls: "bg-move-best text-white" },
       loss: { label: "L", cls: "bg-move-blunder text-white" },
-      draw: { label: "D", cls: "bg-chess-muted text-white" },
+      draw: { label: "D", cls: "bg-chess-muted/80 text-white" },
     };
     const { label, cls } = map[result];
-    return <span className={`${cls} text-xs font-bold px-1.5 py-0.5 rounded leading-none flex-shrink-0`}>{label}</span>;
+    return (
+      <span className={`mobile-result-badge ${cls}`}>{label}</span>
+    );
   };
 
   const storedUser = localStorage.getItem(STORAGE_KEY_USER);
-  const showingCached = games.length > 0 && !loading && storedUser === inputVal.trim();
 
   // Derive filtered + sorted games
   const activeUser = storedUser ?? inputVal.trim();
@@ -212,224 +213,225 @@ export const GameList: React.FC<GameListProps> = ({
 
   return (
     <div className="flex flex-col h-full min-h-0 flex-1">
-      <div className="page-inline-pad flex-shrink-0 py-3 border-b border-chess-border/70">
-        <GameUrlImport onImported={onGameSelect} compact />
-      </div>
-      {/* ── Header (profile only) ── */}
-      {inputVal && (
-      <div className="page-inline-pad flex-shrink-0 border-b border-chess-border py-3 space-y-2.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="flex items-center gap-1.5 truncate text-sm font-bold text-chess-text">
-                <span className="leading-none text-chess-muted">
-                  {platform === "lichess" ? "♞" : "♟"}
-                </span>
-                <span className="truncate">{inputVal}</span>
-              </span>
-              {stats && (
-                <div className="mt-0.5 flex items-center gap-2.5 text-chess-muted">
-                  <RatingStat type="bullet" value={stats.bullet} />
-                  <RatingStat type="blitz" value={stats.blitz} />
-                  <RatingStat type="rapid" value={stats.rapid} />
+      {inputVal ? (
+        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-2 pb-2">
+          <div className="mobile-surface flex flex-col flex-1 min-h-0 max-w-md mx-auto w-full">
+            <div className="mobile-surface-section py-2">
+              <GameUrlImport onImported={onGameSelect} compact />
+            </div>
+
+            <div className="mobile-surface-section py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 truncate text-sm font-semibold text-chess-text">
+                    <span className="text-chess-muted leading-none">
+                      {platform === "lichess" ? "♞" : "♟"}
+                    </span>
+                    <span className="truncate">{inputVal}</span>
+                  </div>
+                  {stats && (
+                    <div className="mt-1 flex items-center gap-2 text-chess-muted">
+                      <RatingStat type="bullet" value={stats.bullet} />
+                      <RatingStat type="blitz" value={stats.blitz} />
+                      <RatingStat type="rapid" value={stats.rapid} />
+                    </div>
+                  )}
+                  {games.length > 0 && !loading && (
+                    <p className="mt-0.5 text-[10px] text-chess-muted">
+                      {filteredGames.length} of {games.length} games
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGo}
+                  disabled={loading}
+                  className="mobile-icon-btn"
+                  title="Fetch latest games"
+                  aria-label="Fetch latest games"
+                >
+                  {loading ? (
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-chess-muted border-t-transparent" />
+                  ) : (
+                    "↻"
+                  )}
+                </button>
+              </div>
+
+              {showSlowRetry && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-chess-border/60 bg-black/20 px-2 py-1.5 text-[11px] text-chess-subtext">
+                  <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
+                  <span className="flex-1 min-w-0">
+                    {loading ? "Still loading…" : "Couldn't refresh."}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGo}
+                    disabled={loading}
+                    className="flex-shrink-0 font-semibold text-chess-accent"
+                  >
+                    Retry
+                  </button>
                 </div>
               )}
-              {games.length > 0 && !loading && (
-                <span className="mt-0.5 text-[10px] italic text-chess-muted">
-                  Showing {filteredGames.length} of {games.length} cached games
-                </span>
-              )}
             </div>
-            <button
-              onClick={handleGo}
-              disabled={loading}
-              className="flex-shrink-0 rounded bg-chess-hover px-3 py-1.5 text-xs font-semibold text-chess-text transition-colors hover:bg-chess-border disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-chess-muted border-t-transparent" />
-              ) : (
-                "Fetch Latest"
-              )}
-            </button>
-          </div>
 
-        {showSlowRetry && (
-          <div className="flex items-center gap-2 rounded-lg border border-chess-border/80 bg-chess-bg/50 px-2.5 py-2 text-xs text-chess-subtext">
-            <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
-            <span className="flex-1 min-w-0">
-              {loading ? "Still loading games…" : "Couldn’t refresh right now."}
-            </span>
-            <button
-              type="button"
-              onClick={handleGo}
-              disabled={loading}
-              className="flex-shrink-0 font-semibold text-chess-accent hover:text-chess-accent-hover disabled:opacity-50"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {games.length > 0 && !loading && (
-          <div className="space-y-2 border-t border-chess-border/60 pt-2.5">
-            <input
-              type="text"
-              value={opponentSearch}
-              onChange={(e) => setOpponentSearch(e.target.value)}
-              placeholder="Search opponent…"
-              className="w-full rounded border border-chess-border bg-chess-bg px-2.5 py-1.5 text-xs text-chess-text placeholder-chess-muted transition-colors focus:border-move-best focus:outline-none"
-            />
-            <div className="flex gap-1.5">
-              <div className="flex flex-1 overflow-hidden rounded border border-chess-border text-xs">
-                {(["all", "win", "loss", "draw"] as ResultFilter[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setResultFilter(r)}
-                    className={`flex-1 py-1 font-semibold transition-colors ${
-                      resultFilter === r
-                        ? r === "win"
-                          ? "bg-move-best text-white"
-                          : r === "loss"
-                            ? "bg-move-blunder text-white"
-                            : r === "draw"
-                              ? "bg-chess-muted text-white"
-                              : "bg-chess-hover text-chess-text"
-                        : "bg-chess-bg text-chess-muted hover:text-chess-text"
-                    }`}
+            {games.length > 0 && !loading && (
+              <div className="mobile-surface-section py-2 space-y-1.5">
+                <input
+                  type="text"
+                  value={opponentSearch}
+                  onChange={(e) => setOpponentSearch(e.target.value)}
+                  placeholder="Search opponent…"
+                  className="mobile-field"
+                />
+                <div className="flex gap-1.5">
+                  <div className="mobile-segment">
+                    {(["all", "win", "loss", "draw"] as ResultFilter[]).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setResultFilter(r)}
+                        className={`mobile-segment-btn ${
+                          resultFilter === r
+                            ? `mobile-segment-btn--active mobile-segment-btn--${r}`
+                            : ""
+                        }`}
+                      >
+                        {r === "all" ? "All" : r === "win" ? "W" : r === "loss" ? "L" : "D"}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={ratingSort}
+                    onChange={(e) => setRatingSort(e.target.value as RatingSort)}
+                    className="mobile-field mobile-field--select"
+                    aria-label="Sort by opponent rating"
                   >
-                    {r === "all" ? "All" : r === "win" ? "W" : r === "loss" ? "L" : "D"}
-                  </button>
-                ))}
-              </div>
-              <select
-                value={ratingSort}
-                onChange={(e) => setRatingSort(e.target.value as RatingSort)}
-                className="rounded border border-chess-border bg-chess-bg px-1.5 py-1 text-xs text-chess-text focus:border-move-best focus:outline-none"
-              >
-                <option value="none">Rating ↕</option>
-                <option value="high">Rating ↓</option>
-                <option value="low">Rating ↑</option>
-              </select>
-            </div>
-            {availableFormats.length > 1 && (
-              <div className="flex flex-wrap gap-1">
-                {["all", ...availableFormats].map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setFormatFilter(f)}
-                    className={`rounded border px-2 py-0.5 text-xs capitalize transition-colors ${
-                      formatFilter === f
-                        ? "border-chess-accent/60 bg-chess-accent/10 text-chess-accent"
-                        : "border-chess-border bg-chess-bg text-chess-muted hover:text-chess-text"
-                    }`}
-                  >
-                    {f === "all" ? "All formats" : f}
-                  </button>
-                ))}
+                    <option value="none">Rating ↕</option>
+                    <option value="high">Rating ↓</option>
+                    <option value="low">Rating ↑</option>
+                  </select>
+                </div>
+                {availableFormats.length > 1 && (
+                  <div className="flex flex-wrap gap-1">
+                    {["all", ...availableFormats].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFormatFilter(f)}
+                        className={`mobile-chip ${formatFilter === f ? "mobile-chip--active" : ""}`}
+                      >
+                        {f === "all" ? "All" : f}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-      </div>
-      )}
 
-      {!inputVal && onLinkProfile && (
-        <div className="flex-1 min-h-0 flex flex-col max-w-md mx-auto w-full">
-          <AccountLinkPromo onConnect={onLinkProfile} />
-          <div className="page-inline-pad flex-1 min-h-0 flex flex-col py-3 pb-5">
-            <p className="text-[10px] text-chess-muted mb-2 text-center">
-              Or paste PGN / open a .pgn file
-            </p>
-            <PgnPastePanel onLoad={onGameSelect} compact className="flex-1 min-h-0" />
-          </div>
-        </div>
-      )}
-      {!inputVal && !onLinkProfile && (
-        <div className="page-inline-pad flex-1 min-h-0 flex flex-col py-4 max-w-md mx-auto w-full">
-          <PgnPastePanel onLoad={onGameSelect} compact />
-        </div>
-      )}
-
-      {/* ── Game list ── */}
-      {inputVal && (
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
-        {games.length === 0 && !loading && (
-          <div className="page-inline-pad py-4 flex flex-col gap-3 flex-shrink-0 border-b border-chess-border max-h-[50vh]">
-            <button
-              type="button"
-              onClick={handleGo}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-chess-hover text-chess-text hover:bg-chess-border transition-colors mx-auto"
-            >
-              Fetch games
-            </button>
-            <PgnPastePanel onLoad={onGameSelect} compact />
-          </div>
-        )}
-        {loading && showSlowRetry && games.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 text-chess-subtext text-xs gap-2 px-4 text-center">
-            <div className="w-4 h-4 border-2 border-chess-accent/40 border-t-chess-accent rounded-full animate-spin" />
-            <span>Still loading games…</span>
-            <button
-              type="button"
-              onClick={handleGo}
-              className="font-semibold text-chess-accent hover:text-chess-accent-hover"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-        {!loading && games.length > 0 && filteredGames.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-24 text-chess-muted text-xs gap-1">
-            <span>No games match filters</span>
-            <button onClick={() => { setOpponentSearch(""); setResultFilter("all"); setFormatFilter("all"); setRatingSort("none"); }} className="text-move-best hover:underline">Clear filters</button>
-          </div>
-        )}
-        {filteredGames.map((game) => {
-          const isWhite = game.white.toLowerCase() === activeUser.trim().toLowerCase();
-          const color = isWhite ? "white" : "black";
-          const opponent = isWhite ? game.black : game.white;
-          const oppRating = isWhite ? game.blackRating : game.whiteRating;
-          const result = getResultLabel(isWhite ? game.whiteResult : game.blackResult, color, game);
-
-          return (
-            <button
-              key={game.id}
-              onClick={() => onGameSelect(game.pgn)}
-              className={`page-inline-pad w-full text-left py-2.5 border-b border-chess-border transition-colors duration-100 flex items-center gap-3 ${
-                selectedGameId === game.id
-                  ? "bg-chess-hover border-l-2 border-l-move-best"
-                  : "hover:bg-chess-hover"
-              }`}
-            >
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-chess-border/80">
-                <TimeClassIcon timeClass={game.timeClass} size={14} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                    style={{
-                      backgroundColor: color === "white" ? "#e8e6e3" : "#3a3a3a",
-                      border: color === "black" ? "1px solid #888" : "1px solid #ccc",
+            <div className="mobile-surface-list">
+              {games.length === 0 && !loading && (
+                <div className="mobile-surface-section py-4 flex flex-col gap-2 items-center">
+                  <button type="button" onClick={handleGo} className="mobile-chip mobile-chip--active">
+                    Fetch games
+                  </button>
+                  <PgnPastePanel onLoad={onGameSelect} compact />
+                </div>
+              )}
+              {loading && showSlowRetry && games.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 text-chess-subtext text-xs gap-2 px-4 text-center">
+                  <div className="w-4 h-4 border-2 border-chess-accent/40 border-t-chess-accent rounded-full animate-spin" />
+                  <span>Still loading games…</span>
+                </div>
+              )}
+              {!loading && games.length > 0 && filteredGames.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-6 text-chess-muted text-xs gap-1">
+                  <span>No games match filters</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpponentSearch("");
+                      setResultFilter("all");
+                      setFormatFilter("all");
+                      setRatingSort("none");
                     }}
-                  />
-                  <span className="truncate text-sm font-medium text-chess-text">
-                    {opponent}
-                  </span>
-                  <span className="flex-shrink-0 text-xs text-chess-muted">
-                    ({oppRating})
-                  </span>
+                    className="text-chess-accent hover:underline"
+                  >
+                    Clear filters
+                  </button>
                 </div>
-                <div className="mt-0.5 text-xs capitalize text-chess-muted">
-                  {game.timeClass} · {formatDate(game.endTime)}
-                </div>
+              )}
+              {filteredGames.map((game) => {
+                const isWhite = game.white.toLowerCase() === activeUser.trim().toLowerCase();
+                const color = isWhite ? "white" : "black";
+                const opponent = isWhite ? game.black : game.white;
+                const oppRating = isWhite ? game.blackRating : game.whiteRating;
+                const result = getResultLabel(
+                  isWhite ? game.whiteResult : game.blackResult,
+                  color,
+                  game
+                );
+
+                return (
+                  <button
+                    key={game.id}
+                    type="button"
+                    onClick={() => onGameSelect(game.pgn)}
+                    className={`mobile-list-row ${
+                      selectedGameId === game.id ? "mobile-list-row--active" : ""
+                    }`}
+                  >
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/5">
+                      <TimeClassIcon timeClass={game.timeClass} size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <div
+                          className="h-2 w-2 flex-shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: color === "white" ? "#e8e6e3" : "#3a3a3a",
+                            border: color === "black" ? "1px solid #888" : "1px solid #ccc",
+                          }}
+                        />
+                        <span className="truncate text-[13px] font-medium text-chess-text">
+                          {opponent}
+                        </span>
+                        <span className="flex-shrink-0 text-[11px] text-chess-muted tabular-nums">
+                          {oppRating}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] capitalize text-chess-muted">
+                        {game.timeClass} · {formatDate(game.endTime)}
+                      </div>
+                    </div>
+                    {resultBadge(result)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-2 pb-2">
+          <div className="mobile-surface flex flex-col flex-1 min-h-0 max-w-md mx-auto w-full overflow-hidden">
+            {onLinkProfile && (
+              <div className="mobile-surface-section">
+                <AccountLinkPromo onConnect={onLinkProfile} embedded />
               </div>
-              {resultBadge(result)}
-            </button>
-          );
-        })}
-      </div>
+            )}
+            <div className="mobile-surface-section flex-1 min-h-0 flex flex-col py-3">
+              <p className="text-[10px] text-chess-muted mb-2 text-center">
+                Or paste PGN / open a .pgn file
+              </p>
+              <PgnPastePanel
+                onLoad={onGameSelect}
+                compact
+                className={onLinkProfile ? "flex-1 min-h-0" : undefined}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

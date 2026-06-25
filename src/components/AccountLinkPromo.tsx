@@ -4,6 +4,7 @@ type Platform = "chesscom" | "lichess";
 
 interface AccountLinkPromoProps {
   onConnect: (platform: Platform) => void;
+  embedded?: boolean;
 }
 
 /** Stylised chess.com pawn mark. */
@@ -34,7 +35,7 @@ function LichessMark({ className = "" }: { className?: string }) {
   );
 }
 
-export function AccountLinkPromo({ onConnect }: AccountLinkPromoProps) {
+export function AccountLinkPromo({ onConnect, embedded = false }: AccountLinkPromoProps) {
   const pick = (platform: Platform) => {
     hapticTap();
     onConnect(platform);
@@ -42,18 +43,22 @@ export function AccountLinkPromo({ onConnect }: AccountLinkPromoProps) {
 
   return (
     <section
-      className="page-inline-pad flex-shrink-0 py-5 border-b border-chess-border/50"
+      className={
+        embedded
+          ? ""
+          : "page-inline-pad flex-shrink-0 py-5 border-b border-chess-border/50"
+      }
       aria-label="Connect with Chess.com or Lichess"
     >
-      <p className="text-[10px] font-semibold tracking-[0.22em] uppercase text-chess-muted text-center mb-3">
+      <p className={`text-[10px] font-semibold tracking-[0.18em] uppercase text-chess-muted text-center ${embedded ? "mb-2" : "mb-3"}`}>
         Connect with
       </p>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         <button
           type="button"
           onClick={() => pick("chesscom")}
-          className="group flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border border-chess-border bg-chess-surface/60 hover:bg-chess-accent/10 hover:border-chess-accent/40 transition-colors"
+          className="group flex flex-col items-center gap-1 px-2.5 py-2.5 rounded-lg border border-chess-border/70 bg-black/15 hover:bg-chess-accent/10 hover:border-chess-accent/40 transition-colors"
         >
           <ChessComMark className="h-6 w-6 text-chess-subtext group-hover:text-chess-accent transition-colors" />
           <span className="text-xs font-semibold text-chess-text leading-none">
@@ -63,7 +68,7 @@ export function AccountLinkPromo({ onConnect }: AccountLinkPromoProps) {
         <button
           type="button"
           onClick={() => pick("lichess")}
-          className="group flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border border-chess-border bg-chess-surface/60 hover:bg-[#dddccd]/[0.06] hover:border-[#dddccd]/40 transition-colors"
+          className="group flex flex-col items-center gap-1 px-2.5 py-2.5 rounded-lg border border-chess-border/70 bg-black/15 hover:bg-[#dddccd]/[0.06] hover:border-[#dddccd]/40 transition-colors"
         >
           <LichessMark className="h-6 w-6 text-chess-subtext group-hover:text-[#dddccd] transition-colors" />
           <span className="text-xs font-semibold text-chess-text leading-none">

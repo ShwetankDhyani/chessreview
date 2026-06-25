@@ -906,14 +906,13 @@ export default function App() {
     evalGraphOpen: desktopEvalGraphOpen,
     hasAnalyzedMoves: moves.length > 0,
   });
+  const mobileInlinePad = 40;
+  const mobileEvalBar = 14;
   const boardWidth =
     winWidth < 1024
-      ? Math.min(
-          Math.floor(
-            winWidth *
-              (moves.length > 0 && tab === "moves" ? 0.68 : 0.88)
-          ),
-          winWidth - 44
+      ? Math.max(
+          240,
+          Math.floor(winWidth - mobileInlinePad - mobileEvalBar)
         )
       : desktopBoardSize;
 
@@ -957,7 +956,7 @@ export default function App() {
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
       <h1 className="sr-only">ChessReview — Free chess game review and engine analysis</h1>
-      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad px-4 sm:px-5 min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
@@ -1549,7 +1548,7 @@ export default function App() {
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 {showWelcome && !pgn && (
-                  <div className="page-inline-pad pt-3 flex-shrink-0">
+                  <div className="page-inline-pad pt-2 flex-shrink-0 max-w-md mx-auto w-full">
                     <WelcomeBanner onTryDemo={tryDemoGame} onDismiss={dismissWelcome} />
                   </div>
                 )}
@@ -1563,12 +1562,12 @@ export default function App() {
 
             {tab === "review" && (
               <div
-                className="flex-1 overflow-y-auto min-h-0 bg-chess-sidebar page-inline-pad"
+                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
+                <div className="mobile-surface max-w-md mx-auto w-full">
                 {summary ? (
-                  <>
-                    <ReviewSummaryPanel
+                  <ReviewSummaryPanel
                       summary={summary}
                       whiteName={playerNames.white}
                       blackName={playerNames.black}
@@ -1582,17 +1581,19 @@ export default function App() {
                       sharing={sharing}
                       shareUrl={shareUrl}
                       shareError={shareError}
-                    />
-                  </>
+                  />
                 ) : (
-                  <ReviewEmptyState onGoToGames={() => setTab("games")} />
+                  <div className="mobile-surface-section">
+                    <ReviewEmptyState onGoToGames={() => setTab("games")} />
+                  </div>
                 )}
+                </div>
               </div>
             )}
 
             {tab === "moves" && (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-1 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-2 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <div className="review-flow-stack w-full max-w-md">
               <PlayerTag

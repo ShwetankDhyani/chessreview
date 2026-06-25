@@ -29,10 +29,8 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
   };
 
   return (
-    <div
-      className={`flex flex-col gap-2 ${compact ? "" : "rounded-xl border border-chess-border/80 bg-chess-bg/40 p-3"}`}
-    >
-      <div className="flex gap-2">
+    <div className={`flex flex-col gap-1.5 ${compact ? "" : "mobile-surface-section"}`}>
+      <div className="flex gap-1.5">
         <input
           type="url"
           value={url}
@@ -45,7 +43,7 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
           }}
           placeholder="Paste game URL"
           aria-label="Paste game URL"
-          className="flex-1 min-w-0 h-10 px-3 rounded-xl bg-chess-bg/60 border border-chess-border/70 text-sm text-chess-text placeholder:text-chess-muted/50 focus:outline-none focus:border-chess-accent/50"
+          className="mobile-field flex-1 min-w-0"
           spellCheck={false}
           autoCapitalize="off"
           disabled={loading}
@@ -54,7 +52,7 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
           type="button"
           onClick={() => void handleImport()}
           disabled={loading || !url.trim()}
-          className="h-10 px-3 rounded-xl bg-chess-accent hover:bg-chess-accent-hover disabled:opacity-40 text-white text-sm font-semibold transition-colors flex-shrink-0"
+          className="mobile-icon-btn w-auto px-3 text-chess-accent border-chess-accent/30 bg-chess-accent/10 hover:bg-chess-accent/20 disabled:opacity-40"
         >
           {loading ? "…" : "Go"}
         </button>
