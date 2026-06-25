@@ -30,7 +30,6 @@ describe("buildMoveFactSheet", () => {
     expect(sheet!.classification).toBe("Excellent");
     expect(sheet!.engineRank).toMatch(/Outside top 3/);
     expect(sheet!.bestWas).toBe("d4");
-    expect(sheet!.evalChange).toMatch(/→/);
     expect(sheet!.winChange).toMatch(/%/);
     expect(sheet!.played).toBe("Be7");
   });

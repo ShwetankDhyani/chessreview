@@ -35,7 +35,7 @@ describe("getPositionAwareMoveComment", () => {
     expect(text).not.toMatch(/great job|right track|on the right track|keep fighting/i);
   });
 
-  it("notes eval swing when throwing away a win", () => {
+  it("notes win chance swing when throwing away a win", () => {
     const m = move({
       san: "Qf2",
       classification: "blunder",
@@ -47,6 +47,6 @@ describe("getPositionAwareMoveComment", () => {
     });
     const text = getPositionAwareMoveComment(m, 7);
     expect(text).toMatch(/Blunder/);
-    expect(text).toMatch(/Eval/);
+    expect(text).toMatch(/Win/);
   });
 });

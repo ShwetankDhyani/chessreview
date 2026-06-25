@@ -2,7 +2,6 @@ import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "./classificationMeta";
 import {
-  formatSignedPawnsFromCp,
   formatWinChanceLossShort,
   winChanceLossPercent,
 } from "./evalDisplay";
@@ -17,7 +16,6 @@ export interface MoveFactSheet {
   classificationColor: string;
   engineRank: string;
   bestWas: string;
-  evalChange: string;
   winChange: string;
   opening: string;
   played: string;
@@ -30,19 +28,6 @@ export interface MoveFactSheetOptions {
 }
 
 const EMPTY = "—";
-
-function playerCp(move: AnalyzedMove, when: "before" | "after"): number {
-  const e = when === "before" ? move.evalBefore : move.evalAfter;
-  if (!e) return 0;
-  if (e.mate !== undefined) {
-    const whiteWinning = e.mate > 0;
-    const playerWinning = move.color === "w" ? whiteWinning : !whiteWinning;
-    const sign = playerWinning ? 1 : -1;
-    return sign * (9000 - Math.min(Math.abs(e.mate), 20) * 400);
-  }
-  const cp = e.cp ?? 0;
-  return move.color === "w" ? cp : -cp;
-}
 
 function normalizeSan(san: string): string {
   return san.replace(/[+#]/g, "");
@@ -86,12 +71,6 @@ function winChangeLabel(move: AnalyzedMove): string {
   const pct = winChanceLossPercent(move.deltaE);
   if (pct < 1) return "0%";
   return formatWinChanceLossShort(move.deltaE);
-}
-
-function evalChangeLabel(move: AnalyzedMove): string {
-  const before = formatSignedPawnsFromCp(playerCp(move, "before"));
-  const after = formatSignedPawnsFromCp(playerCp(move, "after"));
-  return `${before} → ${after}`;
 }
 
 function openingLabel(
@@ -138,7 +117,6 @@ export function buildMoveFactSheet(
       classificationColor: "#e84855",
       engineRank: EMPTY,
       bestWas: EMPTY,
-      evalChange: evalChangeLabel(move),
       winChange: "0%",
       opening: openingLabel(move, options),
       played: move.san,
@@ -151,7 +129,6 @@ export function buildMoveFactSheet(
       classificationColor,
       engineRank: EMPTY,
       bestWas: EMPTY,
-      evalChange: evalChangeLabel(move),
       winChange: winChangeLabel(move),
       opening: openingLabel(move, options),
       played: move.san,
@@ -164,7 +141,6 @@ export function buildMoveFactSheet(
       classificationColor,
       engineRank: EMPTY,
       bestWas: EMPTY,
-      evalChange: evalChangeLabel(move),
       winChange: "0%",
       opening: openingLabel(move, options),
       played: move.san,
@@ -176,7 +152,6 @@ export function buildMoveFactSheet(
     classificationColor,
     engineRank: engineRankLabel(move),
     bestWas: bestWasLabel(move),
-    evalChange: evalChangeLabel(move),
     winChange: winChangeLabel(move),
     opening: openingLabel(move, options),
     played: move.san,
@@ -195,7 +170,6 @@ export function buildFactualMoveComment(
     sheet.engineRank !== EMPTY ? `Rank: ${sheet.engineRank}` : null,
     `Played ${sheet.played}`,
     sheet.bestWas !== EMPTY ? `Best: ${sheet.bestWas}` : null,
-    `Eval ${sheet.evalChange}`,
     `Win ${sheet.winChange}`,
   ]
     .filter(Boolean)

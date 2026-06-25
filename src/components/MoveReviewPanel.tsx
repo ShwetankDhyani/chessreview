@@ -320,6 +320,11 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
   const suggestBest = shouldSuggestBestMove(move);
   const showContinuation = suggestBest && !!move.bestMoveSan;
+  const showOpeningChapter =
+    !!chapter &&
+    (move.inOpeningBook ||
+      move.classification === "book" ||
+      chapter.leftBookIdx === moveIdx);
 
   return (
     <div
@@ -327,10 +332,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         embedded ? "gap-2.5 px-3 py-2.5" : "gap-3 p-3 sm:p-3"
       }`}
     >
-      {chapter &&
-        (move.inOpeningBook ||
-          move.classification === "book" ||
-          chapter.leftBookIdx === moveIdx) && (
+      {showOpeningChapter && (
           <OpeningChapter
             chapter={chapter}
             currentMoveIndex={moveIdx}
@@ -379,6 +381,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           sheet={factSheet}
           embedded={embedded}
           hideBestWas={showContinuation}
+          hideOpening={showOpeningChapter}
         />
       )}
 

@@ -5,6 +5,8 @@ interface MoveFactSheetPanelProps {
   embedded?: boolean;
   /** Hide when the continuation viewer already shows the best move. */
   hideBestWas?: boolean;
+  /** Hide when opening context is shown in the chapter box above. */
+  hideOpening?: boolean;
 }
 
 const ROWS: Array<{
@@ -14,7 +16,6 @@ const ROWS: Array<{
 }> = [
   { key: "engineRank", label: "Engine rank" },
   { key: "bestWas", label: "Best was", mono: true },
-  { key: "evalChange", label: "Eval change", mono: true },
   { key: "winChange", label: "Win chance" },
   { key: "opening", label: "Opening" },
 ];
@@ -23,9 +24,11 @@ export function MoveFactSheetPanel({
   sheet,
   embedded = false,
   hideBestWas = false,
+  hideOpening = false,
 }: MoveFactSheetPanelProps) {
   const visibleRows = ROWS.filter(({ key }) => {
     if (hideBestWas && key === "bestWas") return false;
+    if (hideOpening && key === "opening") return false;
     const value = sheet[key];
     return value !== "—";
   });
