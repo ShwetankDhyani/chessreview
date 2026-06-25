@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "../utils/classificationMeta";
 import { formatWinChanceLoss } from "../utils/evalDisplay";
+import { computeOpeningChapter } from "../utils/openingContext";
 import { ClassificationIcon } from "./ClassificationIcon";
+import { OpeningChapter } from "./OpeningChapter";
 
 interface MoveListProps {
   moves: AnalyzedMove[];
@@ -14,6 +16,12 @@ interface MoveListProps {
   scrollActiveIntoView?: boolean;
 }
 
+function formatMoveLabel(move: AnalyzedMove): string {
+  return move.color === "w"
+    ? `${move.moveNumber}. ${move.san}`
+    : `${move.moveNumber}...${move.san}`;
+}
+
 export const MoveList: React.FC<MoveListProps> = ({
   moves,
   currentMoveIndex,
@@ -22,6 +30,13 @@ export const MoveList: React.FC<MoveListProps> = ({
   scrollActiveIntoView = true,
 }) => {
   const activeRef = useRef<HTMLButtonElement>(null);
+  const chapter = useMemo(() => computeOpeningChapter(moves), [moves]);
+
+  const leftBookLabel = useMemo(() => {
+    if (chapter?.leftBookIdx == null) return undefined;
+    const m = moves[chapter.leftBookIdx];
+    return m ? formatMoveLabel(m) : undefined;
+  }, [chapter, moves]);
 
   useEffect(() => {
     if (!scrollActiveIntoView) return;
@@ -35,6 +50,16 @@ export const MoveList: React.FC<MoveListProps> = ({
 
   return (
     <div className="pr-1">
+      <OpeningChapter
+        chapter={chapter}
+        currentMoveIndex={currentMoveIndex}
+        leftBookLabel={leftBookLabel}
+        onJumpToLeftBook={
+          chapter?.leftBookIdx != null
+            ? () => onMoveSelect(chapter.leftBookIdx!)
+            : undefined
+        }
+      />
       <div className="space-y-0.5">
         {pairs.map((pair, pairIdx) => {
           const whiteMove = pair[0];
@@ -43,32 +68,40 @@ export const MoveList: React.FC<MoveListProps> = ({
           const blackMoveIdx = pairIdx * 2 + 1;
 
           return (
-            <div
-              key={pairIdx}
-              className="flex items-center gap-0.5 rounded-sm"
-            >
-              <span className="w-7 text-right text-xs text-chess-muted font-mono pr-1 flex-shrink-0">
-                {pairIdx + 1}.
-              </span>
+            <React.Fragment key={pairIdx}>
+              {chapter?.leftBookIdx === whiteMoveIdx && (
+                <LeftBookDivider label={leftBookLabel} />
+              )}
+              <div className="flex items-center gap-0.5 rounded-sm">
+                <span className="w-7 text-right text-xs text-chess-muted font-mono pr-1 flex-shrink-0">
+                  {pairIdx + 1}.
+                </span>
 
-              <MoveToken
-                move={whiteMove}
-                index={whiteMoveIdx}
-                isActive={currentMoveIndex === whiteMoveIdx}
-                isGameEnd={markGameEnd && whiteMoveIdx === moves.length - 1}
-                ref={currentMoveIndex === whiteMoveIdx ? activeRef : null}
-                onClick={() => onMoveSelect(whiteMoveIdx)}
-              />
+                <MoveToken
+                  move={whiteMove}
+                  index={whiteMoveIdx}
+                  isActive={currentMoveIndex === whiteMoveIdx}
+                  isGameEnd={markGameEnd && whiteMoveIdx === moves.length - 1}
+                  isLeftBook={chapter?.leftBookIdx === whiteMoveIdx}
+                  ref={currentMoveIndex === whiteMoveIdx ? activeRef : null}
+                  onClick={() => onMoveSelect(whiteMoveIdx)}
+                />
 
-              <MoveToken
-                move={blackMove}
-                index={blackMoveIdx}
-                isActive={currentMoveIndex === blackMoveIdx}
-                isGameEnd={markGameEnd && blackMoveIdx === moves.length - 1}
-                ref={currentMoveIndex === blackMoveIdx ? activeRef : null}
-                onClick={() => onMoveSelect(blackMoveIdx)}
-              />
-            </div>
+                {chapter?.leftBookIdx === blackMoveIdx && (
+                  <LeftBookDivider label={leftBookLabel} inline />
+                )}
+
+                <MoveToken
+                  move={blackMove}
+                  index={blackMoveIdx}
+                  isActive={currentMoveIndex === blackMoveIdx}
+                  isGameEnd={markGameEnd && blackMoveIdx === moves.length - 1}
+                  isLeftBook={chapter?.leftBookIdx === blackMoveIdx}
+                  ref={currentMoveIndex === blackMoveIdx ? activeRef : null}
+                  onClick={() => onMoveSelect(blackMoveIdx)}
+                />
+              </div>
+            </React.Fragment>
           );
         })}
       </div>
@@ -76,26 +109,64 @@ export const MoveList: React.FC<MoveListProps> = ({
   );
 };
 
+function LeftBookDivider({
+  label,
+  inline = false,
+}: {
+  label?: string;
+  inline?: boolean;
+}) {
+  if (inline) {
+    return (
+      <span
+        className="flex-shrink-0 px-0.5 text-[8px] font-bold uppercase tracking-wide text-[#b58863]/85"
+        title={label ? `Left book on ${label}` : "Left book"}
+        aria-hidden
+      >
+        ‖
+      </span>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 py-1 pl-7 pr-1"
+      aria-label={label ? `Left book on ${label}` : "Left book"}
+    >
+      <div className="flex-1 h-px bg-[#b58863]/35" />
+      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#b58863]/90 flex-shrink-0">
+        Left book{label ? ` · ${label}` : ""}
+      </span>
+      <div className="flex-1 h-px bg-[#b58863]/35" />
+    </div>
+  );
+}
+
 interface MoveTokenProps {
   move?: AnalyzedMove;
   index: number;
   isActive: boolean;
   isGameEnd?: boolean;
+  isLeftBook?: boolean;
   onClick: () => void;
 }
 
 const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
-  ({ move, isActive, isGameEnd, onClick }, ref) => {
+  ({ move, isActive, isGameEnd, isLeftBook, onClick }, ref) => {
     if (!move) {
       return <div className="flex-1" />;
     }
 
     const meta = getMeta(move.classification);
+    const inBook = move.inOpeningBook || move.classification === "book";
 
-    const isKeyMove = move.classification === "brilliant" ||
-      move.classification === "great" ||
-      move.classification === "blunder" ||
-      move.classification === "mistake";
+    const isKeyMove =
+      !inBook &&
+      (move.classification === "brilliant" ||
+        move.classification === "great" ||
+        move.classification === "blunder" ||
+        move.classification === "mistake");
+
     return (
       <button
         ref={ref}
@@ -103,7 +174,7 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
         title={
           meta
             ? `${meta.label}${
-                move.deltaE !== undefined && move.deltaE > 0
+                !inBook && move.deltaE !== undefined && move.deltaE > 0
                   ? ` (${formatWinChanceLoss(move.deltaE) ?? ""})`
                   : ""
               }`
@@ -114,20 +185,32 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
           transition-all duration-100 text-left
           ${isActive
             ? "bg-chess-hover text-chess-text font-semibold ring-1 ring-inset ring-white/10"
-            : isKeyMove
-              ? "hover:brightness-110"
-              : "text-chess-subtext hover:bg-chess-hover hover:text-chess-text"
+            : isLeftBook
+              ? "hover:bg-[#b58863]/20 ring-1 ring-inset ring-[#b58863]/30"
+              : inBook
+                ? "text-chess-muted hover:bg-[#b58863]/10 hover:text-chess-subtext"
+                : isKeyMove
+                  ? "hover:brightness-110"
+                  : "text-chess-subtext hover:bg-chess-hover hover:text-chess-text"
           }
         `}
         style={
           isActive && meta
             ? { backgroundColor: `${meta.color}22`, color: "#fff" }
-            : !isActive && isKeyMove && meta
-              ? { backgroundColor: `${meta.color}18` }
-              : undefined
+            : !isActive && isLeftBook
+              ? { backgroundColor: "#b5886318" }
+              : !isActive && inBook
+                ? { backgroundColor: "#b588630c" }
+                : !isActive && isKeyMove && meta
+                  ? { backgroundColor: `${meta.color}18` }
+                  : undefined
         }
       >
-        <span className={`truncate ${isActive ? "text-white" : isKeyMove ? "text-chess-text" : ""}`}>
+        <span
+          className={`truncate ${
+            isActive ? "text-white" : isKeyMove ? "text-chess-text" : ""
+          }`}
+        >
           {move.san}
         </span>
         {isGameEnd && (
@@ -138,10 +221,17 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
             End
           </span>
         )}
-        {meta && move.classification && (
+        {meta && move.classification && !inBook && (
           <ClassificationIcon
             type={move.classification}
             size={isKeyMove ? "md" : "sm"}
+          />
+        )}
+        {inBook && !isActive && (
+          <span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#b58863]/70"
+            title="Book move"
+            aria-hidden
           />
         )}
       </button>

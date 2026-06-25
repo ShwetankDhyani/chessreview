@@ -12,12 +12,22 @@ import {
   renderLine,
 } from "./coachPhraseBank";
 import {
+  buildBookPhraseContext,
+  pickBookCoachLine,
+  pickLeftBookCoachLine,
+} from "./coachStreamerPhrases";
+import {
   commentarySeed,
   pickSeededLine,
   pickVariedLine,
   rememberCoachPhrase,
 } from "./coachVariety";
 import { formatWinChanceLoss } from "./evalDisplay";
+import {
+  computeOpeningChapter,
+  isLeftBookMove,
+  openingHintForMove,
+} from "./openingContext";
 
 export { commentarySeed } from "./coachVariety";
 
@@ -128,13 +138,30 @@ export function getPositionAwareMoveComment(
   move: AnalyzedMove,
   moveIdx = 0,
   openingHint?: string,
-  trackUsage = true
+  trackUsage = true,
+  moves?: AnalyzedMove[]
 ): string | null {
   const c = move.classification;
   if (!c) return null;
 
   if (isDeliveredCheckmate(move.fenAfter)) {
     return `${move.san} — checkmate. The game is over.`;
+  }
+
+  const chapter = moves ? computeOpeningChapter(moves) : null;
+  const hint =
+    openingHint ?? (moves ? openingHintForMove(moveIdx, moves) : undefined);
+  const openingName = chapter?.openingName ?? "known theory";
+
+  if (moves && isLeftBookMove(moveIdx, moves)) {
+    const seed = commentarySeed(move, moveIdx);
+    const line = pickLeftBookCoachLine(
+      { san: move.san, openingName, moveIdx },
+      seed,
+      trackUsage
+    );
+    if (trackUsage) rememberCoachPhrase(line);
+    return line;
   }
 
   const seed = commentarySeed(move, moveIdx);
@@ -174,20 +201,11 @@ export function getPositionAwareMoveComment(
     case "good":
       return pick(goodLines(san, best));
     case "book": {
-      const bookLines = openingHint
-        ? [
-            `${san} — ${openingHint}`,
-            `${san} — still in known ${openingHint} territory.`,
-            `${san} — theory territory; both sides have seen this.`,
-          ]
-        : [
-            `${san} — still in known theory.`,
-            `${san} — a standard book move here.`,
-            `${san} — mainline stuff. Nothing surprising yet.`,
-          ];
-      const bookLine = trackUsage
-        ? pickVariedLine(seed, bookLines)
-        : pickSeededLine(seed, bookLines);
+      const bookLine = pickBookCoachLine(
+        buildBookPhraseContext(san, moveIdx, openingName, hint),
+        seed,
+        trackUsage
+      );
       if (trackUsage) rememberCoachPhrase(bookLine);
       return bookLine;
     }

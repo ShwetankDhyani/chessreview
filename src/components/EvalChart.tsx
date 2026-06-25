@@ -6,11 +6,13 @@ import {
   YAxis,
   Tooltip,
   ReferenceLine,
+  ReferenceArea,
   ResponsiveContainer,
 } from "recharts";
 import type { AnalyzedMove } from "../types";
 import { evalToCp } from "../engine/evaluationService";
 import { getMeta } from "../utils/classificationMeta";
+import { computeOpeningChapter } from "../utils/openingContext";
 
 interface EvalChartProps {
   moves: AnalyzedMove[];
@@ -67,6 +69,15 @@ export const EvalChart: React.FC<EvalChartProps> = ({
     }
     return points;
   }, [moves]);
+
+  const bookBand = useMemo(() => {
+    const chapter = computeOpeningChapter(moves);
+    if (!chapter || chapter.endIdx < 0) return null;
+    const start = data[1];
+    const end = data[chapter.endIdx + 1];
+    if (!start || !end) return null;
+    return { x1: start.label, x2: end.label };
+  }, [moves, data]);
 
   const CustomTooltip = ({
     active,
@@ -133,6 +144,16 @@ export const EvalChart: React.FC<EvalChartProps> = ({
           <YAxis domain={[-CLAMP, CLAMP]} hide />
           <Tooltip content={<CustomTooltip />} />
           <ReferenceLine y={0} stroke="#3a3a3a" strokeWidth={1} />
+          {bookBand && (
+            <ReferenceArea
+              x1={bookBand.x1}
+              x2={bookBand.x2}
+              fill="#b58863"
+              fillOpacity={0.14}
+              strokeOpacity={0}
+              ifOverflow="extendDomain"
+            />
+          )}
           <Area
             type="monotone"
             dataKey="clampedEval"
@@ -147,6 +168,7 @@ export const EvalChart: React.FC<EvalChartProps> = ({
               strokeWidth: 2,
             }}
             isAnimationActive={false}
+            strokeOpacity={bookBand ? 0.55 : 1}
           />
           {currentMoveIndex >= 0 && data[currentMoveIndex + 1] && (
             <ReferenceLine

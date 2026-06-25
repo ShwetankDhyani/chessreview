@@ -6,7 +6,9 @@ import {
   getPositionAwareMoveComment,
   playerCp,
 } from "./coachPositionContext";
+import { streamerCoachStyleNote } from "./coachStreamerPhrases";
 import { formatWinChanceLoss } from "./evalDisplay";
+import { isLeftBookMove } from "./openingContext";
 import {
   clearCoachPhraseMemory,
   getUsedCoachPhraseTemplates,
@@ -43,6 +45,7 @@ export interface MoveCommentContext {
   moveIdx?: number;
   recentPhrases?: string[];
   openingHint?: string;
+  moves?: AnalyzedMove[];
 }
 
 function playerEvalCp(move: AnalyzedMove, when: "before" | "after"): string {
@@ -74,6 +77,11 @@ export async function getMovComment(
       ? `Comments you already gave earlier in this review (do NOT reuse words, rhythm, or opener):\n${recent.map((l) => `- ${l}`).join("\n")}\n`
       : "";
 
+  const moveIdx = ctx.moveIdx ?? 0;
+  const leftBook =
+    ctx.moves != null && isLeftBookMove(moveIdx, ctx.moves);
+  const streamerNote = streamerCoachStyleNote(move.classification, leftBook);
+
   const prompt = `You are a warm, sharp chess coach speaking directly to your student during a live review.
 
 Move: ${moveNum}${move.san}
@@ -84,6 +92,7 @@ ${lossText ? `Eval swing: ~${lossText}` : ""}
 ${move.bestMoveSan && move.uci !== move.bestMove ? `Stronger try: ${move.bestMoveSan}` : ""}
 ${move.pvLine?.length ? `Engine line: ${move.pvLine.slice(0, 4).join(" ")}` : ""}
 ${ctx.openingHint ? `Opening context: ${ctx.openingHint}` : ""}
+${streamerNote ? `Voice note: ${streamerNote}` : ""}
 ${recentBlock}
 Position context (match tone to reality — do not cheer a lost game):
 ${describePositionForCoach(move)}
@@ -141,9 +150,10 @@ Style:
 export function getFallbackMoveComment(
   move: AnalyzedMove,
   openingHint?: string,
-  moveIdx = 0
+  moveIdx = 0,
+  moves?: AnalyzedMove[]
 ): string | null {
-  return getPositionAwareMoveComment(move, moveIdx, openingHint);
+  return getPositionAwareMoveComment(move, moveIdx, openingHint, true, moves);
 }
 
 // ─── Full game coaching report ────────────────────────────────────────────────
