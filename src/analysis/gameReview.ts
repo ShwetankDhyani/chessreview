@@ -109,7 +109,7 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
     },
     accuracyMeta: {
       method: "chesscom_ep_v3",
-      formulaVersion,
+      formulaVersion: `${formulaVersion}-caps2.2`,
     },
   };
 }

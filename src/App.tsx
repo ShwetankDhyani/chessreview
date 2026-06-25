@@ -1285,47 +1285,47 @@ export default function App() {
                 <div className="flex flex-col border-b border-chess-border max-h-48 overflow-y-auto">
                   <div className="text-xs font-semibold text-chess-muted px-3 py-2 bg-chess-bg">Your Profiles</div>
                   {profiles.map((p, i) => (
-                    <div
-                      key={`${p.platform}-${p.name}`}
-                      className={`flex items-center justify-between px-3 py-2 transition-colors ${
-                        i === activeProfileIdx ? "bg-move-best/15 border-l-2 border-move-best" : "hover:bg-chess-hover border-l-2 border-transparent"
-                      }`}
-                    >
-                      <button
-                        onClick={() => { switchProfile(i); setShowAddProfile(false); }}
-                        className="flex items-center gap-2 flex-1 text-left min-w-0"
+                    <div key={`${p.platform}-${p.name}`} className="flex flex-col">
+                      <div
+                        className={`flex items-center justify-between px-3 py-2 transition-colors ${
+                          i === activeProfileIdx ? "bg-move-best/15 border-l-2 border-move-best" : "hover:bg-chess-hover border-l-2 border-transparent"
+                        }`}
                       >
-                        <span className="text-sm leading-none">{p.platform === "lichess" ? "🏳" : "♟"}</span>
-                        <span className={`text-sm font-semibold truncate ${i === activeProfileIdx ? "text-move-best" : "text-chess-text"}`}>
-                          {p.name}
-                        </span>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeProfile(i); }}
-                        title="Remove profile"
-                        className="w-6 h-6 flex items-center justify-center rounded text-chess-muted hover:bg-move-blunder hover:text-white transition-colors"
-                      >
-                        ✕
-                      </button>
+                        <button
+                          onClick={() => { switchProfile(i); setShowAddProfile(false); }}
+                          className="flex items-center gap-2 flex-1 text-left min-w-0"
+                        >
+                          <span className="text-sm leading-none">{p.platform === "lichess" ? "🏳" : "♟"}</span>
+                          <span className={`text-sm font-semibold truncate ${i === activeProfileIdx ? "text-move-best" : "text-chess-text"}`}>
+                            {p.name}
+                          </span>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeProfile(i); }}
+                          title="Remove profile"
+                          className="w-6 h-6 flex items-center justify-center rounded text-chess-muted hover:bg-move-blunder hover:text-white transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {i === activeProfileIdx && activeUser && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSavedGamesModal(true);
+                            void refreshSavedReviews();
+                          }}
+                          className="flex items-center justify-between gap-2 pl-9 pr-3 py-2 text-left border-l-2 border-move-best/40 bg-black/15 hover:bg-chess-hover/60 transition-colors"
+                        >
+                          <span className="text-xs text-chess-subtext">Saved games</span>
+                          <span className="text-[10px] text-chess-muted tabular-nums">
+                            {savedReviewsLoading ? "…" : savedReviews.length}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
-              )}
-
-              {activeUser && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSavedGamesModal(true);
-                    void refreshSavedReviews();
-                  }}
-                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border text-left hover:bg-chess-hover transition-colors"
-                >
-                  <span className="text-sm font-semibold text-chess-text">Saved games</span>
-                  <span className="text-[11px] text-chess-muted tabular-nums">
-                    {savedReviewsLoading ? "…" : savedReviews.length}
-                  </span>
-                </button>
               )}
 
               {/* Add New Profile Section */}
