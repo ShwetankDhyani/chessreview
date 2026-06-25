@@ -88,7 +88,18 @@ curl -s -X POST http://127.0.0.1:8765/share \
   -d '{"pgn":"1. e4","summary":{"accuracy":{"white":90,"black":90}},"moves":[]}'
 ```
 
-You should get `{"ok":true,"id":"…","urlPath":"/r/…"}` — not `not found`.
+**Saved games** also use the engine server (`POST /saved-reviews`). After pulling code that adds saving, restart the engine:
+
+```bash
+sudo systemctl restart chessreview-engine
+curl -s -X POST http://127.0.0.1:8765/saved-reviews \
+  -H "Content-Type: application/json" \
+  -d '{"platform":"lichess","username":"test","pgn":"1. e4","summary":{"accuracy":{"white":90,"black":90}},"moves":[]}'
+```
+
+You should get `{"ok":true,"id":"…","savedAt":…}` — not `not found`.
+
+Optional: run `supabase/saved_reviews.sql` in Supabase and set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` on Vercel for cloud save without the engine file store.
 
 ## URLs
 

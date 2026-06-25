@@ -1,10 +1,16 @@
-import { engineStatsUrl } from "./reviewStats.mjs";
+import { engineStatsUrl, isSupabaseConfigured } from "./reviewStats.mjs";
 import {
   fileDeleteSavedReview,
   fileGetSavedReview,
   fileListSavedReviews,
   fileSaveReview,
 } from "./reviewSaves.mjs";
+import {
+  sbDeleteSavedReview,
+  sbGetSavedReview,
+  sbListSavedReviews,
+  sbSaveReview,
+} from "./reviewSavesSupabase.mjs";
 
 function isWritableStore() {
   if (process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
@@ -27,43 +33,47 @@ async function readEngineJson(path, init = {}) {
     data = null;
   }
   if (!res.ok) {
-    throw new Error(data?.error ?? `Saved review API failed (${res.status})`);
+    return null;
   }
   return data;
 }
 
-function savedReviewsUnavailableMessage() {
-  return "Saved review storage is unavailable. Configure EVAL_SERVER_URL with saved-reviews support.";
+function unavailableMessage() {
+  return "Cloud save is unavailable right now. Restart the analysis server or try again shortly.";
 }
 
 export async function listSavedReviews(platform, username) {
-  const base = engineStatsUrl();
-  if (base) {
-    const engine = await readEngineJson(
-      `/saved-reviews?platform=${encodeURIComponent(platform)}&username=${encodeURIComponent(
-        username
-      )}`
-    );
-    if (engine) return engine;
+  const engine = await readEngineJson(
+    `/saved-reviews?platform=${encodeURIComponent(platform)}&username=${encodeURIComponent(
+      username
+    )}`
+  );
+  if (engine?.items) return engine;
+
+  if (isSupabaseConfigured()) {
+    return sbListSavedReviews(platform, username);
   }
+
   if (!isWritableStore()) {
-    throw new Error(savedReviewsUnavailableMessage());
+    return { ok: true, items: [] };
   }
   return { ok: true, items: fileListSavedReviews(platform, username) };
 }
 
 export async function getSavedReview(id, platform, username) {
-  const base = engineStatsUrl();
-  if (base) {
-    const engine = await readEngineJson(
-      `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
-        platform
-      )}&username=${encodeURIComponent(username)}`
-    );
-    if (engine) return engine;
+  const engine = await readEngineJson(
+    `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
+      platform
+    )}&username=${encodeURIComponent(username)}`
+  );
+  if (engine?.review) return engine;
+
+  if (isSupabaseConfigured()) {
+    return sbGetSavedReview(id, platform, username);
   }
+
   if (!isWritableStore()) {
-    throw new Error(savedReviewsUnavailableMessage());
+    throw new Error(unavailableMessage());
   }
   const row = fileGetSavedReview(id, platform, username);
   if (!row) throw new Error("Not found");
@@ -71,35 +81,39 @@ export async function getSavedReview(id, platform, username) {
 }
 
 export async function saveSavedReview(payload) {
-  const base = engineStatsUrl();
-  if (base) {
-    const engine = await readEngineJson("/saved-reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (engine) return engine;
+  const engine = await readEngineJson("/saved-reviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (engine?.ok || engine?.id) return engine;
+
+  if (isSupabaseConfigured()) {
+    return sbSaveReview(payload);
   }
+
   if (!isWritableStore()) {
-    throw new Error(savedReviewsUnavailableMessage());
+    throw new Error(unavailableMessage());
   }
   const result = fileSaveReview(payload);
   return { ok: true, ...result };
 }
 
 export async function removeSavedReview(id, platform, username) {
-  const base = engineStatsUrl();
-  if (base) {
-    const engine = await readEngineJson(
-      `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
-        platform
-      )}&username=${encodeURIComponent(username)}`,
-      { method: "DELETE" }
-    );
-    if (engine) return engine;
+  const engine = await readEngineJson(
+    `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
+      platform
+    )}&username=${encodeURIComponent(username)}`,
+    { method: "DELETE" }
+  );
+  if (engine?.ok) return engine;
+
+  if (isSupabaseConfigured()) {
+    return sbDeleteSavedReview(id, platform, username);
   }
+
   if (!isWritableStore()) {
-    throw new Error(savedReviewsUnavailableMessage());
+    throw new Error(unavailableMessage());
   }
   const result = fileDeleteSavedReview(id, platform, username);
   if (!result.ok) throw new Error("Access denied");

@@ -60,6 +60,7 @@ import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
 import { InlineErrorNotice } from "./components/InlineErrorNotice";
+import { SavedGamesModal } from "./components/SavedGamesModal";
 import {
   deleteSavedReview,
   listSavedReviews,
@@ -325,6 +326,7 @@ export default function App() {
   const addProfileAbortRef = useRef<AbortController | null>(null);
   const [savedReviews, setSavedReviews] = useState<SavedReviewListItem[]>([]);
   const [savedReviewsLoading, setSavedReviewsLoading] = useState(false);
+  const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
   const [savingReview, setSavingReview] = useState(false);
   const [saveReviewMessage, setSaveReviewMessage] = useState<string | null>(null);
 
@@ -921,8 +923,8 @@ export default function App() {
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Could not save game";
       setSaveReviewMessage(
-        /not found/i.test(raw)
-          ? "Save service is unavailable right now. Please try again shortly."
+        /not found|unavailable/i.test(raw)
+          ? "Cloud save is unavailable right now. Try again shortly."
           : raw
       );
     } finally {
@@ -1312,50 +1314,19 @@ export default function App() {
               )}
 
               {activeUser && (
-                <div className="border-b border-chess-border bg-chess-panel">
-                  <div className="text-xs font-semibold text-chess-muted px-3 py-2 bg-chess-bg">
-                    Saved Games
-                  </div>
-                  <div className="max-h-36 overflow-y-auto">
-                    {savedReviewsLoading ? (
-                      <p className="px-3 py-2 text-[11px] text-chess-muted">Loading saved games…</p>
-                    ) : savedReviews.length === 0 ? (
-                      <p className="px-3 py-2 text-[11px] text-chess-muted">
-                        No saved games yet.
-                      </p>
-                    ) : (
-                      savedReviews.slice(0, 8).map((item) => (
-                        <div key={item.id} className="px-3 py-2 border-t border-chess-border/40 first:border-t-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void handleOpenSavedReview(item.id);
-                              setShowAddProfile(false);
-                              setTab("moves");
-                            }}
-                            className="w-full text-left"
-                          >
-                            <div className="truncate text-[12px] text-chess-text">
-                              {item.whiteName} vs {item.blackName}
-                            </div>
-                            <div className="text-[10px] text-chess-muted">
-                              {item.movesCount} moves
-                            </div>
-                          </button>
-                          <div className="mt-1 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteSavedReview(item.id)}
-                              className="text-[10px] text-chess-muted hover:text-red-300"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSavedGamesModal(true);
+                    void refreshSavedReviews();
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border text-left hover:bg-chess-hover transition-colors"
+                >
+                  <span className="text-sm font-semibold text-chess-text">Saved games</span>
+                  <span className="text-[11px] text-chess-muted tabular-nums">
+                    {savedReviewsLoading ? "…" : savedReviews.length}
+                  </span>
+                </button>
               )}
 
               {/* Add New Profile Section */}
@@ -2033,6 +2004,20 @@ export default function App() {
       </div>
 
       <SiteFooter />
+
+      <SavedGamesModal
+        open={showSavedGamesModal}
+        onClose={() => setShowSavedGamesModal(false)}
+        loading={savedReviewsLoading}
+        items={savedReviews}
+        onOpen={(id) => {
+          void handleOpenSavedReview(id);
+          setShowSavedGamesModal(false);
+          setShowAddProfile(false);
+          setTab("moves");
+        }}
+        onDelete={(id) => void handleDeleteSavedReview(id)}
+      />
     </div>
   );
 }
