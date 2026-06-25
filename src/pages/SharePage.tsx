@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { EvalChartPanel } from "../components/EvalChartPanel";
-import { EvalBadge } from "../components/EvalBadge";
 import { MobileBoardShell } from "../components/MobileBoardShell";
+import { BoardPlayerLabel, HeaderPlayerMatchup } from "../components/BoardPlayerLabel";
 import { MoveList } from "../components/MoveList";
 import { MoveReviewPanel } from "../components/MoveReviewPanel";
 import { fetchSharedReview } from "../utils/shareReview";
@@ -275,8 +275,10 @@ export default function SharePage() {
     );
   }, [isDesktop, viewport.w]);
 
-  const topPlayer = boardFlipped ? whiteName : blackName;
-  const bottomPlayer = boardFlipped ? blackName : whiteName;
+  const topColor = boardFlipped ? "white" : "black";
+  const bottomColor = boardFlipped ? "black" : "white";
+  const topName = boardFlipped ? whiteName : blackName;
+  const bottomName = boardFlipped ? blackName : whiteName;
   const moveLabel = formatChessMoveCounter(currentMoveIdx, moves.length);
   const showGame = isDesktop || tab === "game";
   const showStats = isDesktop || tab === "stats";
@@ -317,17 +319,7 @@ export default function SharePage() {
     >
       <div className="flex-shrink-0 px-3 pt-3 pb-2">
         <div className="review-flow-stack">
-        <div className="flex items-center justify-between gap-2 text-xs text-chess-muted px-3 py-2">
-          <span className="truncate font-medium text-chess-text">{topPlayer}</span>
-          <EvalBadge
-            evalResult={currentEval}
-            boardFlipped={boardFlipped}
-            compact
-          />
-          <span className="truncate text-right font-medium text-chess-text">
-            {bottomPlayer}
-          </span>
-        </div>
+        <BoardPlayerLabel name={topName} color={topColor} />
 
         <MobileBoardShell
           evalResult={currentEval}
@@ -346,6 +338,8 @@ export default function SharePage() {
           canPrev={currentMoveIdx > -1}
           canNext={currentMoveIdx < moves.length - 1}
         />
+
+        <BoardPlayerLabel name={bottomName} color={bottomColor} />
 
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <span className="text-[11px] text-chess-muted font-mono tabular-nums">
@@ -433,9 +427,7 @@ export default function SharePage() {
             >
               ChessReview
             </a>
-            <h1 className="text-base sm:text-lg font-semibold mt-0.5 truncate">
-              {whiteName} vs {blackName}
-            </h1>
+            <HeaderPlayerMatchup whiteName={whiteName} blackName={blackName} />
             <p className="text-[11px] text-chess-muted mt-0.5">
               Shared review · tap board edges to step moves
             </p>
