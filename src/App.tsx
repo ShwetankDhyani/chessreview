@@ -656,7 +656,7 @@ export default function App() {
             },
             depth
           ),
-          120000,
+          300000,
           "Analysis timeout"
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
@@ -1244,11 +1244,22 @@ export default function App() {
         </div>
       )}
       {analysisRunning && analysisElapsedSec >= 45 && !analysisSlowNoticeDismissed && (
-        <div className="flex-shrink-0 px-4 py-2 border-b border-amber-900/40">
-          <InlineErrorNotice
-            message="Review is slower than usual (high server/engine load). You can wait, lower depth, or retry."
-            onDismiss={() => setAnalysisSlowNoticeDismissed(true)}
-          />
+        <div className="flex-shrink-0 px-4 py-2 border-b border-chess-border/60 bg-chess-panel/70">
+          <div className="rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3 py-2 text-xs text-chess-subtext">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-chess-accent" />
+              <p className="flex-1 min-w-0">
+                Review is taking longer than usual today. Thanks for your patience.
+              </p>
+              <button
+                type="button"
+                onClick={() => setAnalysisSlowNoticeDismissed(true)}
+                className="font-semibold text-chess-muted hover:text-chess-text"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
