@@ -3,6 +3,7 @@ interface ReanalyzeButtonProps {
   disabled?: boolean;
   spinning?: boolean;
   className?: string;
+  compact?: boolean;
 }
 
 /** Re-run engine review on the loaded game (refresh icon). */
@@ -11,7 +12,11 @@ export function ReanalyzeButton({
   disabled,
   spinning = false,
   className = "",
+  compact = false,
 }: ReanalyzeButtonProps) {
+  const sizeClass = compact ? "h-8 w-8" : "h-9 w-9";
+  const iconSize = compact ? 15 : 18;
+
   return (
     <button
       type="button"
@@ -19,11 +24,11 @@ export function ReanalyzeButton({
       disabled={disabled || !onClick}
       aria-label="Re-analyze game"
       title="Re-analyze game with current depth"
-      className={`inline-flex items-center justify-center h-9 w-9 flex-shrink-0 rounded-lg border border-chess-border-strong bg-chess-surface text-chess-subtext hover:text-chess-accent hover:border-chess-accent/40 hover:bg-chess-hover transition-colors disabled:opacity-50 disabled:pointer-events-none ${className}`}
+      className={`inline-flex items-center justify-center ${sizeClass} flex-shrink-0 rounded-lg border border-chess-border-strong bg-chess-surface text-chess-subtext hover:text-chess-accent hover:border-chess-accent/40 hover:bg-chess-hover transition-colors disabled:opacity-50 disabled:pointer-events-none touch-manipulation ${className}`}
     >
       <svg
-        width="18"
-        height="18"
+        width={iconSize}
+        height={iconSize}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

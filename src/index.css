@@ -796,8 +796,8 @@
 }
 
 .mobile-coach-pane {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 40%;
+  min-height: 38dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

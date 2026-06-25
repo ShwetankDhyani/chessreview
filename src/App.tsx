@@ -32,7 +32,7 @@ import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
 import { useReviewTimingModel } from "./hooks/useReviewTimingModel";
 import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
-import { computeDesktopBoardSize } from "./utils/boardLayout";
+import { computeDesktopBoardSize, computeMobileBoardSize } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
   canAnimateBoardStep,
@@ -40,7 +40,7 @@ import {
   resolveBoardNavStep,
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
-import { ReanalyzeButton } from "./components/ReanalyzeButton";
+import { BoardReviewActions } from "./components/BoardReviewActions";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
@@ -1149,21 +1149,29 @@ export default function App() {
   }, []);
 
   const winWidth = viewport.w;
+  const isMobileLayout = winWidth < 1024;
   const desktopBoardSize = computeDesktopBoardSize(viewport.w, viewport.h, {
     evalGraphOpen: desktopEvalGraphOpen,
     hasAnalyzedMoves: moves.length > 0,
   });
   const mobileInlinePad = 12;
   const mobileEvalBar = 14;
+  const mobileFullWidthBoard = Math.max(
+    240,
+    Math.floor(winWidth - mobileInlinePad - mobileEvalBar)
+  );
+  const mobileReviewing =
+    isMobileLayout &&
+    tab === "moves" &&
+    (moves.length > 0 || (!!pgn && isAnalyzing));
   const boardWidth =
     winWidth < 1024
-      ? Math.max(
-          240,
-          Math.floor(winWidth - mobileInlinePad - mobileEvalBar)
-        )
+      ? mobileReviewing
+        ? computeMobileBoardSize(viewport.w, viewport.h, {
+            evalGraphOpen: mobileEvalGraphOpen && moves.length > 0,
+          })
+        : mobileFullWidthBoard
       : desktopBoardSize;
-
-  const isMobileLayout = winWidth < 1024;
 
   const showBoardAnalyzeOverlay =
     !!pgn &&
@@ -1681,36 +1689,16 @@ export default function App() {
                     side={boardFlipped ? "b" : "w"}
                   />
                 </div>
-                {(canReanalyze || canSaveCurrentReview || !!saveReviewMessage) && (
-                  <div className="pl-[34px] pt-1.5 flex flex-col items-center gap-1">
-                    <div className="flex items-center gap-1.5">
-                      {canReanalyze && (
-                        <ReanalyzeButton
-                          onClick={requestReanalysis}
-                          disabled={isAnalyzing}
-                          spinning={isAnalyzing}
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => void handleSaveReview()}
-                        disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
-                        aria-label="Save game"
-                        title={savingReview ? "Saving game…" : "Save game"}
-                        className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 rounded-lg border border-chess-border-strong bg-chess-surface text-chess-subtext hover:text-chess-accent hover:border-chess-accent/40 hover:bg-chess-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                          <path d="M17 21v-8H7v8" />
-                          <path d="M7 3v5h8" />
-                        </svg>
-                      </button>
-                    </div>
-                    {saveReviewMessage && (
-                      <p className="text-[11px] text-chess-subtext text-center">{saveReviewMessage}</p>
-                    )}
-                  </div>
-                )}
+                <BoardReviewActions
+                  canReanalyze={canReanalyze}
+                  canSave={canSaveCurrentReview}
+                  saving={savingReview}
+                  isAnalyzing={isAnalyzing}
+                  saveMessage={saveReviewMessage}
+                  onReanalyze={requestReanalysis}
+                  onSave={() => void handleSaveReview()}
+                  className="pl-[34px] pt-1.5"
+                />
               </div>
 
               <div className="flex flex-col items-stretch gap-1 w-11">
@@ -1947,6 +1935,20 @@ export default function App() {
                       gamePlyCount || moves.length || replayFrames.length
                     }
                     onFlip={() => setBoardFlipped((f) => !f)}
+                    leading={
+                      (canReanalyze || canSaveCurrentReview) ? (
+                        <BoardReviewActions
+                          inline
+                          canReanalyze={canReanalyze}
+                          canSave={canSaveCurrentReview}
+                          saving={savingReview}
+                          isAnalyzing={isAnalyzing}
+                          saveMessage={null}
+                          onReanalyze={requestReanalysis}
+                          onSave={() => void handleSaveReview()}
+                        />
+                      ) : undefined
+                    }
                   />
                 }
               />
@@ -1978,6 +1980,11 @@ export default function App() {
                 className="flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll mobile-coach-pane page-inline-pad border-t border-chess-border/40"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
+                {saveReviewMessage && (
+                  <p className="text-[10px] text-chess-subtext text-center pt-2 pb-1">
+                    {saveReviewMessage}
+                  </p>
+                )}
                 {continuationNav && (
                   <EngineLineNavBar nav={continuationNav} />
                 )}
@@ -2026,28 +2033,34 @@ function MobileBoardControls({
   moveIndex,
   moveCount,
   onFlip,
+  leading,
 }: {
   moveIndex: number;
   moveCount: number;
   onFlip: () => void;
+  leading?: React.ReactNode;
 }) {
   if (moveCount <= 0) {
     return (
-      <button
-        type="button"
-        onClick={onFlip}
-        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
-        aria-label="Flip board"
-      >
-        <FlipBoardIcon />
-      </button>
+      <div className="ml-auto flex items-center gap-1.5">
+        {leading}
+        <button
+          type="button"
+          onClick={onFlip}
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+          aria-label="Flip board"
+        >
+          <FlipBoardIcon />
+        </button>
+      </div>
     );
   }
 
   const label = formatChessMoveCounter(moveIndex, moveCount);
 
   return (
-    <div className="ml-auto flex flex-shrink-0 items-center gap-2">
+    <div className="ml-auto flex flex-shrink-0 items-center gap-1.5">
+      {leading}
       <span
         className="text-[11px] text-chess-muted font-mono tabular-nums"
         title="Full move number"
