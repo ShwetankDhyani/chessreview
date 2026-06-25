@@ -527,6 +527,12 @@ export const GameList: React.FC<GameListProps> = ({
                 <AccountLinkPromo onConnect={onLinkProfile} embedded />
               </div>
             )}
+            <div className="mobile-surface-section py-2">
+              <p className="text-[10px] text-chess-muted mb-2 text-center">
+                Open a game from link
+              </p>
+              <GameUrlImport onImported={onGameSelect} compact />
+            </div>
             <div className="mobile-surface-section flex-1 min-h-0 flex flex-col py-3">
               <p className="text-[10px] text-chess-muted mb-2 text-center">
                 Or paste PGN / open a .pgn file
