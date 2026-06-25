@@ -6,18 +6,18 @@ describe("caps2Accuracy", () => {
     expect(moveAccuracyFromEpLoss(0)).toBe(100);
   });
 
-  it("penalizes typical inaccuracies below low 80s", () => {
+  it("applies the +1 uncertainty bonus on imperfect moves", () => {
     const loss = moveAccuracyFromEpLoss(0.05);
-    expect(loss).toBeLessThan(82);
-    expect(loss).toBeGreaterThan(70);
+    expect(loss).toBeGreaterThan(80);
+    expect(loss).toBeLessThan(92);
   });
 
-  it("weights blunders heavily via harmonic blend", () => {
+  it("weights blunders via harmonic blend", () => {
     const clean = caps2GameAccuracy(Array(18).fill(0.01));
     const withBlunder = caps2GameAccuracy([
       ...Array(17).fill(0.01),
       0.25,
     ]);
-    expect(clean - withBlunder).toBeGreaterThan(8);
+    expect(clean - withBlunder).toBeGreaterThan(5);
   });
 });

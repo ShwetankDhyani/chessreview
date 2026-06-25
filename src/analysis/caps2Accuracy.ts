@@ -5,17 +5,12 @@ export const CAPS2_A = 103.1668100711649;
 export const CAPS2_B = -0.04354415386753951;
 export const CAPS2_C = -3.166924740191411;
 
-/** Slight win-% inflation so scores align closer with Chess.com / Lichess (~5–7%). */
-const WIN_DIFF_STRICTNESS = 1.06;
-/** Game score leans harmonic — blunders weigh more than a plain average. */
-const HARMONIC_BLEND = 0.65;
-
 /** Per-move score from expected-points loss (win-% points lost × 100). */
 export function moveAccuracyFromEpLoss(epLoss: number): number {
-  const winDiff = Math.max(0, epLoss * 100 * WIN_DIFF_STRICTNESS);
+  const winDiff = Math.max(0, epLoss * 100);
   if (winDiff <= 0) return 100;
   const raw = CAPS2_A * Math.exp(CAPS2_B * winDiff) + CAPS2_C;
-  return Math.min(100, Math.max(0, raw));
+  return Math.min(100, Math.max(0, raw + 1));
 }
 
 function harmonicMean(values: number[]): number {
@@ -35,7 +30,7 @@ export function caps2GameAccuracy(epLosses: number[]): number {
   const scores = epLosses.map(moveAccuracyFromEpLoss);
   const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
   const harmonic = harmonicMean(scores);
-  const raw = mean * (1 - HARMONIC_BLEND) + harmonic * HARMONIC_BLEND;
+  const raw = (mean + harmonic) / 2;
   return Math.round(Math.min(99.9, Math.max(0, raw)) * 10) / 10;
 }
 
@@ -50,4 +45,3 @@ export function caps2AccuracyForMoves(
   }
   return caps2GameAccuracy(losses);
 }
-
