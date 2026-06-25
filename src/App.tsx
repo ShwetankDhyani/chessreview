@@ -449,13 +449,6 @@ export default function App() {
 
   const handleContinuationActive = useCallback((active: boolean) => {
     setContinuationActive(active);
-    if (!active) {
-      setContinuationFen(null);
-      setContinuationEval(null);
-      setContinuationArrow(null);
-      // Do not clearBoardTimers here — ContinuationViewer mounts/unmounts on
-      // every move click and would cancel the main board navigation animation.
-    }
   }, []);
 
   const handleContinuationEval = useCallback((ev: EvalResult | null) => {
@@ -855,7 +848,16 @@ export default function App() {
   const boardPositionFen = continuationFen ?? currentFen;
 
   const boardLastMoveHighlight = useMemo(() => {
-    if (continuationFen || continuationActive) return null;
+    if (continuationActive) return null;
+    if (continuationFen) {
+      if (currentMoveIdx > 0) {
+        const prev = moves[currentMoveIdx - 1];
+        if (prev?.uci && prev.uci.length >= 4) {
+          return { from: prev.uci.slice(0, 2), to: prev.uci.slice(2, 4) };
+        }
+      }
+      return null;
+    }
     if (moveAnim) return moveAnim;
     if (currentMoveIdx < 0) return null;
     const m = moves[currentMoveIdx];

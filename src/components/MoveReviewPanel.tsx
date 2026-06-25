@@ -132,6 +132,8 @@ interface ContinuationViewerProps {
   firstMove: string;
   line: string[];
   startFen: string;
+  actualMoveSan?: string;
+  evalBefore?: EvalResult | null;
   accentColor?: string;
   label?: string;
   onFenChange?: (fen: string | null) => void;
@@ -156,11 +158,12 @@ function computeUcis(startFen: string, sans: string[]): string[] {
 }
 
 const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
-  firstMove, line, startFen, accentColor = "#6daa6d", label = "Best continuation",
+  firstMove, line, startFen, actualMoveSan, evalBefore, accentColor = "#6daa6d", label = "Best continuation",
   onFenChange, onEvalChange, onActiveChange, onArrowChange, onRegisterNav,
 }) => {
   const allMoves = [firstMove, ...line];
   const [step, setStep] = useState(0);
+  const hasBeenInLineRef = useRef(false);
   const evalCache = useRef<Map<string, EvalResult>>(new Map());
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFenChangeRef = useRef(onFenChange);
@@ -199,12 +202,12 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   // Pre-compute UCIs for arrow/highlight animation
   const stepUcis = useMemo(() => computeUcis(startFen, allMoves), [startFen, firstMove, line.join(",")]);
 
-  // stepFens[i] = FEN after allMoves[i] (0-indexed from first move)
-  // step 0 = no move played yet (show game position)
-  // step 1 = after allMoves[0] (firstMove), so use stepFens[step - 1]
+  // step 0 before entering line = game position after the move; after exiting line = branch (fenBefore)
   useEffect(() => {
-    if (step > 0 && stepFens[step - 1]) {
+    if (step > 0) {
+      hasBeenInLineRef.current = true;
       const fen = stepFens[step - 1];
+      if (!fen) return;
       onFenChangeRef.current?.(fen);
       const uci = stepUcis[step - 1];
       if (uci) {
@@ -219,7 +222,19 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
           onEvalChangeRef.current?.(ev);
         }).catch(() => {});
       }
-    } else if (step === 0) {
+    } else if (hasBeenInLineRef.current) {
+      onFenChangeRef.current?.(startFen);
+      onEvalChangeRef.current?.(evalBefore ?? null);
+      const firstUci = stepUcis[0];
+      if (firstUci) {
+        onArrowChangeRef.current?.({
+          from: firstUci.slice(0, 2),
+          to: firstUci.slice(2, 4),
+        });
+      } else {
+        onArrowChangeRef.current?.(null);
+      }
+    } else {
       onFenChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
       const firstUci = stepUcis[0];
@@ -233,11 +248,12 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       }
     }
     setContinuationActive(step > 0);
-  }, [step, stepFens, stepUcis]);
+  }, [step, stepFens, stepUcis, startFen, evalBefore, firstMove, line.join(",")]);
 
   // Reset when the line changes
   useEffect(() => {
     setStep(0);
+    hasBeenInLineRef.current = false;
     evalCache.current.clear();
     return () => {
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
@@ -301,9 +317,11 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         className="mx-2.5 mb-2 px-2 py-1.5 rounded text-xs text-chess-muted leading-relaxed"
         style={{ background: `${accentColor}0d` }}
       >
-        {step === 0
+        {step === 0 && !hasBeenInLineRef.current
           ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine&apos;s best move here. Use the line controls above to step through.</>
-          : <>After <span className="font-bold" style={{ color: accentColor }}>{allMoves[step - 1]}</span>, {
+          : step === 0
+            ? <>Back at the branch.{actualMoveSan ? <> You played <span className="font-bold text-chess-text">{actualMoveSan}</span>.</> : null} Engine suggests <span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> from here.</>
+            : <>After <span className="font-bold" style={{ color: accentColor }}>{allMoves[step - 1]}</span>, {
               step % 2 === 1
                 ? " continuing the best line."
                 : " this is the engine's response."
@@ -559,6 +577,8 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           firstMove={move.bestMoveSan}
           line={move.pvLine ?? []}
           startFen={move.fenBefore}
+          actualMoveSan={move.san}
+          evalBefore={move.evalBefore}
           accentColor={isNegative ? "#6daa6d" : meta?.color ?? "#6daa6d"}
           label={
             isNegative ? "Better line from here" : "Engine's top line from here"
