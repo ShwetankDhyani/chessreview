@@ -329,7 +329,9 @@ export const GameList: React.FC<GameListProps> = ({
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-chess-border/60 bg-black/20 px-2 py-1.5 text-[11px] text-chess-subtext">
                   <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
                   <span className="flex-1 min-w-0">
-                    {loading ? "Still loading…" : "Couldn't refresh."}
+                    {loading
+                      ? "Still loading games — provider response is slower than usual."
+                      : "Refresh did not complete."}
                   </span>
                   <button
                     type="button"
@@ -346,7 +348,13 @@ export const GameList: React.FC<GameListProps> = ({
                   message={gamesError.message}
                   onRetry={gamesError.retryable ? handleRetry : undefined}
                   onDismiss={() => setGamesError(null)}
-                />
+                >
+                  {platform === "lichess" ? (
+                    <p className="text-[11px] text-red-100/80">
+                      Sorry this load didn&apos;t come through. Worry not — Lichess has its own amazing free analysis tools, so you can still review there anytime.
+                    </p>
+                  ) : null}
+                </InlineErrorNotice>
               )}
             </div>
 
@@ -416,7 +424,20 @@ export const GameList: React.FC<GameListProps> = ({
               {loading && showSlowRetry && games.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 text-chess-subtext text-xs gap-2 px-4 text-center">
                   <div className="w-4 h-4 border-2 border-chess-accent/40 border-t-chess-accent rounded-full animate-spin" />
-                  <span>Still loading games…</span>
+                  <span>
+                    Still loading games. If this keeps waiting, cancel and retry, or paste PGN/game URL to continue.
+                  </span>
+                </div>
+              )}
+              {loading && !showSlowRetry && games.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 text-chess-subtext text-xs gap-2 px-4 text-center">
+                  <div className="w-4 h-4 border-2 border-chess-accent/40 border-t-chess-accent rounded-full animate-spin" />
+                  <span>
+                    Fetching games from {platform === "lichess" ? "Lichess" : "Chess.com"}…
+                  </span>
+                  <span className="text-[11px] text-chess-muted">
+                    Some profiles respond slowly under platform load. You can cancel anytime.
+                  </span>
                 </div>
               )}
               {!loading && games.length > 0 && filteredGames.length === 0 && (

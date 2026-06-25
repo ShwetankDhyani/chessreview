@@ -147,6 +147,8 @@ export default function App() {
   const analysisGenerationRef = useRef(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
+  const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
+  const [analysisSlowNoticeDismissed, setAnalysisSlowNoticeDismissed] = useState(false);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -542,6 +544,20 @@ export default function App() {
   useEffect(() => {
     showAnalysisProgressRef.current = showAnalysisProgress;
   }, [showAnalysisProgress]);
+
+  useEffect(() => {
+    if (!analysisRunning || !analysisStartedAt) {
+      setAnalysisElapsedSec(0);
+      setAnalysisSlowNoticeDismissed(false);
+      return;
+    }
+    const tick = () => {
+      setAnalysisElapsedSec(Math.max(0, Math.floor((Date.now() - analysisStartedAt) / 1000)));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [analysisRunning, analysisStartedAt]);
 
   const runAnalysis = useCallback(
     async (pgnStr: string, options: { visible: boolean }) => {
@@ -1167,6 +1183,18 @@ export default function App() {
               setAnalysisError(null);
             }}
           />
+        </div>
+      )}
+      {analysisRunning && analysisElapsedSec >= 45 && !analysisSlowNoticeDismissed && (
+        <div className="flex-shrink-0 px-4 py-2 border-b border-amber-900/40">
+          <InlineErrorNotice
+            message="Review is slower than usual right now (likely high server/engine load). Nothing is lost — you can keep waiting, lower depth for speed, or retry in a minute."
+            onDismiss={() => setAnalysisSlowNoticeDismissed(true)}
+          >
+            <p className="text-[11px] text-amber-100/85">
+              Tip: faster passes still help the system by reducing queue pressure for everyone.
+            </p>
+          </InlineErrorNotice>
         </div>
       )}
 

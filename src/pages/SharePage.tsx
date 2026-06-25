@@ -285,7 +285,9 @@ export default function SharePage() {
   if (loading) {
     return (
       <div className="h-[100dvh] bg-chess-bg text-chess-text flex items-center justify-center">
-        <p className="text-sm text-chess-muted">Loading review…</p>
+        <p className="text-sm text-chess-muted">
+          Loading shared review… if this is slow, the share server is likely busy.
+        </p>
       </div>
     );
   }

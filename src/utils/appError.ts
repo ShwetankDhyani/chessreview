@@ -25,27 +25,31 @@ export function normalizeGameLoadError(error: unknown): AppError {
   if (raw.includes("timeout")) {
     return {
       code: "GAME_FETCH_TIMEOUT",
-      message: "Game fetch timed out. Retry now or try again in a minute.",
+      message:
+        "This is taking longer than usual (likely provider/API delay). Please retry now, or paste PGN / import a game URL so you can keep reviewing.",
       retryable: true,
     };
   }
   if (raw.includes("not found") || raw.includes("invalid")) {
     return {
       code: "GAME_SOURCE_NOT_FOUND",
-      message: "Profile not found on the selected platform.",
+      message:
+        "I couldn't find that profile on the selected platform. Check spelling or paste a game PGN instead.",
       retryable: false,
     };
   }
   if (raw.includes("429") || raw.includes("rate")) {
     return {
       code: "GAME_RATE_LIMITED",
-      message: "Rate-limited by provider. Please retry in a few seconds.",
+      message:
+        "The game provider is rate-limiting requests right now. Please wait a few seconds and retry.",
       retryable: true,
     };
   }
   return {
     code: "GAME_LOAD_FAILED",
-    message: "Could not load games right now. Check connection and retry.",
+    message:
+      "I couldn't load profile games right now (network/provider issue). Retry, or use PGN/game URL import so you're not blocked.",
     retryable: true,
   };
 }
@@ -56,20 +60,22 @@ export function normalizeAnalysisError(error: unknown): AppError {
     return {
       code: "ANALYSIS_TIMEOUT",
       message:
-        "Analysis is taking too long. Retry or lower depth for faster results.",
+        "Review is slower than usual, likely due to engine/server load. Retry now or lower depth for a faster pass.",
       retryable: true,
     };
   }
   if (raw.includes("engine") || raw.includes("offline")) {
     return {
       code: "ANALYSIS_ENGINE_UNAVAILABLE",
-      message: "Engine is unavailable. Reconnect and retry analysis.",
+      message:
+        "The review engine is currently unavailable. Retry in a moment, or import and browse moves while it recovers.",
       retryable: true,
     };
   }
   return {
     code: "ANALYSIS_FAILED",
-    message: "Analysis failed. Please retry in a moment.",
+    message:
+      "Review couldn't finish this run. Please retry; if it keeps happening, try a lower depth for now.",
     retryable: true,
   };
 }
@@ -79,20 +85,23 @@ export function normalizeShareError(error: unknown): AppError {
   if (raw.includes("not found") || raw.includes("invalid")) {
     return {
       code: "SHARE_NOT_FOUND",
-      message: "This shared review link is invalid or no longer available.",
+      message:
+        "This share link looks invalid or expired. Ask for a fresh link or open the game and share again.",
       retryable: false,
     };
   }
   if (raw.includes("timeout")) {
     return {
       code: "SHARE_TIMEOUT",
-      message: "Share request timed out. Please try again.",
+      message:
+        "Sharing timed out (server took too long). Please retry in a moment.",
       retryable: true,
     };
   }
   return {
     code: "SHARE_FAILED",
-    message: "Could not complete sharing right now. Please retry.",
+    message:
+      "I couldn't complete sharing right now. Please retry; your review data is still safe here.",
     retryable: true,
   };
 }
@@ -103,20 +112,23 @@ export function normalizeImportError(error: unknown): AppError {
   if (raw.includes("invalid") || raw.includes("supported") || raw.includes("empty")) {
     return {
       code: "IMPORT_INVALID_INPUT",
-      message: "Invalid game input. Paste a valid PGN or supported game URL.",
+      message:
+        "That input doesn't look like a valid game yet. Paste a full PGN or a finished chess.com/lichess game URL.",
       retryable: false,
     };
   }
   if (raw.includes("not found")) {
     return {
       code: "IMPORT_GAME_NOT_FOUND",
-      message: "Game not found at that URL. Verify link and try again.",
+      message:
+        "I couldn't find a game at that URL. Double-check the link, or paste PGN directly.",
       retryable: true,
     };
   }
   return {
     code: "IMPORT_FAILED",
-    message: "Could not import game right now. Retry or paste PGN manually.",
+    message:
+      "Import didn't complete this time (usually network/provider related). Retry, or paste PGN manually to continue now.",
     retryable: true,
   };
 }
