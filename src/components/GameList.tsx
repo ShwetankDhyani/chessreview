@@ -19,7 +19,8 @@ type Platform = "chesscom" | "lichess";
 const STORAGE_KEY_USER    = "cr_username";
 const STORAGE_KEY_PLAT    = "cr_platform";
 const STORAGE_KEY_GAMES   = "cr_games";
-const GAME_FETCH_TIMEOUT_MS = 20000;
+const LICHESS_FETCH_TIMEOUT_MS = 5000;
+const CHESSCOM_FETCH_TIMEOUT_MS = 20000;
 
 interface GameListProps {
   username: string;
@@ -148,7 +149,7 @@ export const GameList: React.FC<GameListProps> = ({
         plat === "chesscom"
           ? fetchRecentGames(uname.trim())
           : fetchLichessGames(uname.trim()),
-        GAME_FETCH_TIMEOUT_MS,
+        plat === "lichess" ? LICHESS_FETCH_TIMEOUT_MS : CHESSCOM_FETCH_TIMEOUT_MS,
         "Game fetch timeout"
       );
       if (gen !== loadGenRef.current) return;
@@ -348,13 +349,7 @@ export const GameList: React.FC<GameListProps> = ({
                   message={gamesError.message}
                   onRetry={gamesError.retryable ? handleRetry : undefined}
                   onDismiss={() => setGamesError(null)}
-                >
-                  {platform === "lichess" ? (
-                    <p className="text-[11px] text-red-100/80">
-                      Sorry this load didn&apos;t come through. Worry not — Lichess has its own amazing free analysis tools, so you can still review there anytime.
-                    </p>
-                  ) : null}
-                </InlineErrorNotice>
+                />
               )}
             </div>
 

@@ -316,6 +316,8 @@ export default function App() {
   const [addProfileName, setAddProfileName] = useState("");
   const [addProfileLoading, setAddProfileLoading] = useState(false);
   const [addProfileError, setAddProfileError] = useState<string | null>(null);
+  const addProfileReqGenRef = useRef(0);
+  const addProfileAbortRef = useRef<AbortController | null>(null);
 
   const activeUser = profiles[activeProfileIdx] ?? null;
 
@@ -366,12 +368,16 @@ export default function App() {
     }
   };
 
-  const verifyUserExists = async (name: string, platform: "chesscom" | "lichess"): Promise<string | null> => {
+  const verifyUserExists = async (
+    name: string,
+    platform: "chesscom" | "lichess",
+    signal?: AbortSignal
+  ): Promise<string | "__aborted__" | null> => {
     try {
       const url = platform === "chesscom" 
         ? `https://api.chess.com/pub/player/${name.toLowerCase()}`
         : `https://lichess.org/api/user/${name.toLowerCase()}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal });
       if (res.status === 200) {
         const data = await res.json();
         if (platform === "chesscom" && data.url) {
@@ -383,10 +389,21 @@ export default function App() {
         return data.username || name;
       }
       return null;
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "__aborted__";
+      }
       return null;
     }
   };
+
+  const cancelAddProfile = useCallback(() => {
+    addProfileReqGenRef.current += 1;
+    addProfileAbortRef.current?.abort();
+    addProfileAbortRef.current = null;
+    setAddProfileLoading(false);
+    setAddProfileError(null);
+  }, []);
 
   const addProfile = async (name: string, platform: "chesscom" | "lichess", skipVerify = false) => {
     if (profiles.length >= 5) return;
@@ -399,10 +416,23 @@ export default function App() {
 
     let finalName = name;
     if (!skipVerify) {
+      const reqId = ++addProfileReqGenRef.current;
       setAddProfileLoading(true);
       setAddProfileError(null);
-      const officialName = await verifyUserExists(name, platform);
+      const controller = new AbortController();
+      addProfileAbortRef.current = controller;
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      const officialName = await verifyUserExists(name, platform, controller.signal);
+      window.clearTimeout(timeoutId);
+      if (reqId !== addProfileReqGenRef.current) return;
       setAddProfileLoading(false);
+      addProfileAbortRef.current = null;
+      if (officialName === "__aborted__") {
+        setAddProfileError(
+          "Profile check timed out after 5s. You can retry or paste PGN/game URL to keep reviewing."
+        );
+        return;
+      }
       if (!officialName) {
         setAddProfileError(`User not found on ${platform === "chesscom" ? "Chess.com" : "Lichess"}`);
         return;
@@ -1152,6 +1182,15 @@ export default function App() {
                         >
                           {addProfileLoading ? <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Add"}
                         </button>
+                        {addProfileLoading && (
+                          <button
+                            type="button"
+                            onClick={cancelAddProfile}
+                            className="px-2 py-1.5 text-[11px] font-semibold rounded border border-chess-border text-chess-muted hover:text-chess-text"
+                          >
+                            Cancel
+                          </button>
+                        )}
                       </div>
                       {addProfileError && (
                         <div className="text-[10px] text-move-blunder leading-tight px-1 font-semibold">{addProfileError}</div>
@@ -1188,13 +1227,9 @@ export default function App() {
       {analysisRunning && analysisElapsedSec >= 45 && !analysisSlowNoticeDismissed && (
         <div className="flex-shrink-0 px-4 py-2 border-b border-amber-900/40">
           <InlineErrorNotice
-            message="Review is slower than usual right now (likely high server/engine load). Nothing is lost — you can keep waiting, lower depth for speed, or retry in a minute."
+            message="Review is slower than usual (high server/engine load). You can wait, lower depth, or retry."
             onDismiss={() => setAnalysisSlowNoticeDismissed(true)}
-          >
-            <p className="text-[11px] text-amber-100/85">
-              Tip: faster passes still help the system by reducing queue pressure for everyone.
-            </p>
-          </InlineErrorNotice>
+          />
         </div>
       )}
 
