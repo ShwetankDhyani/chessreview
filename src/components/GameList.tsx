@@ -13,6 +13,7 @@ import {
   withTimeout,
   type AppError,
 } from "../utils/appError";
+import type { SavedReviewListItem } from "../utils/savedReviews";
 
 type Platform = "chesscom" | "lichess";
 
@@ -27,6 +28,10 @@ interface GameListProps {
   onGameSelect: (pgn: string) => void;
   onLinkProfile?: (platform: Platform) => void;
   selectedGameId?: string;
+  savedReviews?: SavedReviewListItem[];
+  loadingSavedReviews?: boolean;
+  onSavedReviewSelect?: (id: string) => void;
+  onSavedReviewDelete?: (id: string) => void;
 }
 
 type ResultFilter = "all" | "win" | "loss" | "draw";
@@ -36,6 +41,10 @@ export const GameList: React.FC<GameListProps> = ({
   onGameSelect,
   onLinkProfile,
   selectedGameId,
+  savedReviews = [],
+  loadingSavedReviews = false,
+  onSavedReviewSelect,
+  onSavedReviewDelete,
 }) => {
   const [platform, setPlatform] = useState<Platform>(
     () => (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom"
@@ -283,6 +292,55 @@ export const GameList: React.FC<GameListProps> = ({
             <div className="mobile-surface-section py-2">
               <GameUrlImport onImported={onGameSelect} compact />
             </div>
+
+            {(loadingSavedReviews || savedReviews.length > 0) && (
+              <div className="mobile-surface-section py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] uppercase tracking-wide text-chess-muted font-semibold">
+                    Saved reviews
+                  </p>
+                  {loadingSavedReviews && (
+                    <span className="text-[10px] text-chess-muted">Loading…</span>
+                  )}
+                </div>
+                {savedReviews.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-chess-muted">
+                    Save reviewed games to keep them on your account.
+                  </p>
+                ) : (
+                  <div className="mt-2 space-y-1.5">
+                    {savedReviews.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 rounded-lg border border-chess-border/50 bg-black/20 px-2 py-1.5"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => onSavedReviewSelect?.(item.id)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="truncate text-[12px] text-chess-text">
+                            {item.whiteName} vs {item.blackName}
+                          </div>
+                          <div className="text-[10px] text-chess-muted">
+                            {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSavedReviewDelete?.(item.id)}
+                          className="text-[11px] text-chess-muted hover:text-red-300"
+                          aria-label="Delete saved review"
+                          title="Delete saved review"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mobile-surface-section py-2">
               <div className="flex items-center gap-2 min-w-0">

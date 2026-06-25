@@ -60,7 +60,13 @@ import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
 import { InlineErrorNotice } from "./components/InlineErrorNotice";
-import { loadSavedReview, saveReview } from "./utils/reviewCache";
+import {
+  deleteSavedReview,
+  listSavedReviews,
+  loadSavedReviewById,
+  saveReviewToCloud,
+  type SavedReviewListItem,
+} from "./utils/savedReviews";
 import {
   normalizeAnalysisError,
   normalizeShareError,
@@ -317,6 +323,10 @@ export default function App() {
   const [addProfileError, setAddProfileError] = useState<string | null>(null);
   const addProfileReqGenRef = useRef(0);
   const addProfileAbortRef = useRef<AbortController | null>(null);
+  const [savedReviews, setSavedReviews] = useState<SavedReviewListItem[]>([]);
+  const [savedReviewsLoading, setSavedReviewsLoading] = useState(false);
+  const [savingReview, setSavingReview] = useState(false);
+  const [saveReviewMessage, setSaveReviewMessage] = useState<string | null>(null);
 
   const activeUser = profiles[activeProfileIdx] ?? null;
 
@@ -657,13 +667,7 @@ export default function App() {
         setMoves(result.moves);
         setSummary(result.summary);
         setReviewResult(result);
-        saveReview(
-          activeUser
-            ? { name: activeUser.name, platform: activeUser.platform }
-            : null,
-          pgnStr,
-          result
-        );
+        setSaveReviewMessage(null);
         const openReview = showAnalysisProgressRef.current;
         setProgress({ done: 100, total: 100 });
         setAnalysisState("done");
@@ -765,6 +769,26 @@ export default function App() {
 
   const canReanalyze = !!pgn.trim() && reviewReady;
 
+  const applyReviewResult = useCallback(
+    (result: ReviewResult) => {
+      setMoves(result.moves);
+      setSummary(result.summary);
+      setReviewResult(result);
+      setProgress({ done: 100, total: 100 });
+      setAnalysisState("done");
+      setReviewReady(true);
+      setAnalysisRunning(false);
+      setShowAnalysisProgress(false);
+      showAnalysisProgressRef.current = false;
+      setAnalysisStartedAt(null);
+      setSaveReviewMessage(null);
+      if (result.moves.length > 0) {
+        navigateToMove(result.moves.length - 1, false);
+      }
+    },
+    [navigateToMove]
+  );
+
   const loadPgn = useCallback((pgnStr: string) => {
     const parsed = parseGameText(pgnStr);
     if (!parsed.ok) {
@@ -840,28 +864,109 @@ export default function App() {
     (pgnStr: string) => {
       const loaded = loadPgn(pgnStr);
       if (!loaded) return;
-      const cached = loadSavedReview(
-        activeUser
-          ? { name: activeUser.name, platform: activeUser.platform }
-          : null,
-        pgnStr
-      );
-      if (!cached) return;
-      setMoves(cached.moves);
-      setSummary(cached.summary);
-      setReviewResult(cached);
-      setProgress({ done: 100, total: 100 });
-      setAnalysisState("done");
-      setReviewReady(true);
-      setAnalysisRunning(false);
-      setShowAnalysisProgress(false);
-      showAnalysisProgressRef.current = false;
-      setAnalysisStartedAt(null);
-      if (cached.moves.length > 0) {
-        navigateToMove(cached.moves.length - 1, false);
+      setSaveReviewMessage(null);
+    },
+    [loadPgn]
+  );
+
+  const refreshSavedReviews = useCallback(async () => {
+    if (!activeUser?.name) {
+      setSavedReviews([]);
+      return;
+    }
+    setSavedReviewsLoading(true);
+    try {
+      const items = await listSavedReviews({
+        platform: activeUser.platform,
+        username: activeUser.name,
+      });
+      setSavedReviews(items);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not load saved games";
+      setSaveReviewMessage(msg);
+    } finally {
+      setSavedReviewsLoading(false);
+    }
+  }, [activeUser]);
+
+  useEffect(() => {
+    void refreshSavedReviews();
+  }, [refreshSavedReviews]);
+
+  const handleSaveReview = useCallback(async () => {
+    if (!activeUser?.name || !pgn || !reviewResult || !summary || moves.length === 0) return;
+    setSavingReview(true);
+    setSaveReviewMessage(null);
+    try {
+      await saveReviewToCloud({
+        platform: activeUser.platform,
+        username: activeUser.name,
+        pgn,
+        whiteName: playerNames.white,
+        blackName: playerNames.black,
+        summary,
+        moves,
+        run: reviewResult.run ?? null,
+      });
+      setSaveReviewMessage("Saved to your account.");
+      await refreshSavedReviews();
+    } catch (e) {
+      setSaveReviewMessage(e instanceof Error ? e.message : "Could not save game");
+    } finally {
+      setSavingReview(false);
+    }
+  }, [activeUser, pgn, reviewResult, summary, moves, playerNames, refreshSavedReviews]);
+
+  const handleOpenSavedReview = useCallback(
+    async (id: string) => {
+      if (!activeUser?.name) return;
+      try {
+        const saved = await loadSavedReviewById({
+          id,
+          platform: activeUser.platform,
+          username: activeUser.name,
+        });
+        const loaded = loadPgn(saved.pgn);
+        if (!loaded) return;
+        const fallbackRun = {
+          runId: "saved-review",
+          engineVersion: "saved",
+          startedAt: new Date(saved.savedAt).toISOString(),
+          finishedAt: new Date(saved.savedAt).toISOString(),
+          requestedDepth: depth,
+          fastDepth: depth,
+          deepDepth: depth,
+          backendPolicy: "consensus" as const,
+          pgnHash: "saved",
+        };
+        const loadedResult: ReviewResult = {
+          moves: saved.moves,
+          summary: saved.summary,
+          run: saved.run ?? reviewResult?.run ?? fallbackRun,
+        };
+        applyReviewResult(loadedResult);
+      } catch (e) {
+        setSaveReviewMessage(e instanceof Error ? e.message : "Could not open saved game");
       }
     },
-    [loadPgn, activeUser, navigateToMove]
+    [activeUser, loadPgn, reviewResult, depth, applyReviewResult]
+  );
+
+  const handleDeleteSavedReview = useCallback(
+    async (id: string) => {
+      if (!activeUser?.name) return;
+      try {
+        await deleteSavedReview({
+          id,
+          platform: activeUser.platform,
+          username: activeUser.name,
+        });
+        await refreshSavedReviews();
+      } catch (e) {
+        setSaveReviewMessage(e instanceof Error ? e.message : "Could not delete saved game");
+      }
+    },
+    [activeUser, refreshSavedReviews]
   );
 
   const tryDemoGame = useCallback(() => {
@@ -1353,6 +1458,10 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
+                  savedReviews={savedReviews}
+                  loadingSavedReviews={savedReviewsLoading}
+                  onSavedReviewSelect={(id) => void handleOpenSavedReview(id)}
+                  onSavedReviewDelete={(id) => void handleDeleteSavedReview(id)}
                 />
               </>
             )}
@@ -1433,6 +1542,10 @@ export default function App() {
                       moves={moves}
                       run={reviewResult?.run}
                       onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
+                      onSaveReview={activeUser ? () => void handleSaveReview() : undefined}
+                      savingReview={savingReview}
+                      canSaveReview={!!activeUser && analysisState === "done" && moves.length > 0}
+                      saveReviewMessage={saveReviewMessage}
                       onShare={() => void handleShareReview()}
                       sharing={sharing}
                       shareUrl={shareUrl}
@@ -1690,6 +1803,10 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
+                  savedReviews={savedReviews}
+                  loadingSavedReviews={savedReviewsLoading}
+                  onSavedReviewSelect={(id) => void handleOpenSavedReview(id)}
+                  onSavedReviewDelete={(id) => void handleDeleteSavedReview(id)}
                 />
             </div>
 
@@ -1710,6 +1827,10 @@ export default function App() {
                         navigateToMove(idx);
                         setTab("moves");
                       }}
+                      onSaveReview={activeUser ? () => void handleSaveReview() : undefined}
+                      savingReview={savingReview}
+                      canSaveReview={!!activeUser && analysisState === "done" && moves.length > 0}
+                      saveReviewMessage={saveReviewMessage}
                       onShare={() => void handleShareReview()}
                       sharing={sharing}
                       shareUrl={shareUrl}

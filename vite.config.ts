@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { createGameImportMiddleware } from "./server/gameUrlImport.mjs";
 import { createReviewStatsMiddleware } from "./server/reviewStats.mjs";
 import { createShareMiddleware } from "./server/reviewSharesApi.mjs";
+import { createSavedReviewsMiddleware } from "./server/reviewSavesApi.mjs";
 
 export default defineConfig({
   plugins: [
@@ -13,6 +14,7 @@ export default defineConfig({
         server.middlewares.use(createGameImportMiddleware());
         server.middlewares.use(createReviewStatsMiddleware());
         server.middlewares.use(createShareMiddleware());
+        server.middlewares.use(createSavedReviewsMiddleware());
       },
     },
   ],

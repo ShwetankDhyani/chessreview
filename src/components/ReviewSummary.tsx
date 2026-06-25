@@ -21,6 +21,10 @@ interface ReviewSummaryProps {
   sharing?: boolean;
   shareUrl?: string | null;
   shareError?: string | null;
+  onSaveReview?: () => void;
+  savingReview?: boolean;
+  canSaveReview?: boolean;
+  saveReviewMessage?: string | null;
 }
 
 const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
@@ -123,6 +127,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   sharing = false,
   shareUrl = null,
   shareError = null,
+  onSaveReview,
+  savingReview = false,
+  canSaveReview = false,
+  saveReviewMessage = null,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (key: string) =>
@@ -154,6 +162,16 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
       {onShare && (
         <div className="mt-3 mb-1 space-y-2">
+          {onSaveReview && (
+            <button
+              type="button"
+              onClick={onSaveReview}
+              disabled={!canSaveReview || savingReview}
+              className="w-full text-xs font-semibold py-2 rounded-lg border border-chess-accent/50 text-chess-accent hover:bg-chess-hover disabled:opacity-50"
+            >
+              {savingReview ? "Saving game…" : "Save game"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onShare}
@@ -172,6 +190,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             />
           )}
           {shareError && <p className="text-[11px] text-red-400">{shareError}</p>}
+          {saveReviewMessage && <p className="text-[11px] text-chess-subtext">{saveReviewMessage}</p>}
         </div>
       )}
 
