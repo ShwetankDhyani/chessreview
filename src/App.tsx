@@ -73,7 +73,7 @@ import {
   trackAppError,
 } from "./utils/appError";
 
-type SidebarTab = "games" | "review" | "moves";
+type SidebarTab = "games" | "saved" | "review" | "moves";
 
 interface GameMeta {
   white: string;
@@ -329,6 +329,10 @@ export default function App() {
   const [saveReviewMessage, setSaveReviewMessage] = useState<string | null>(null);
 
   const activeUser = profiles[activeProfileIdx] ?? null;
+  const availableTabs = useMemo<SidebarTab[]>(
+    () => (activeUser ? ["games", "saved", "moves", "review"] : ["games", "moves", "review"]),
+    [activeUser]
+  );
 
   const saveProfiles = (ps: ChessProfile[], activeIdx?: number) => {
     setProfiles(ps);
@@ -893,6 +897,12 @@ export default function App() {
     void refreshSavedReviews();
   }, [refreshSavedReviews]);
 
+  useEffect(() => {
+    if (tab === "saved" && !activeUser) {
+      setTab("games");
+    }
+  }, [tab, activeUser]);
+
   const handleSaveReview = useCallback(async () => {
     if (!activeUser?.name || !pgn || !reviewResult || !summary || moves.length === 0) return;
     setSavingReview(true);
@@ -1383,15 +1393,28 @@ export default function App() {
           style={{ bottom: "var(--mobile-footer-stack)" }}
         >
           <div className="page-inline-pad flex min-h-[56px]">
-          {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
+          {availableTabs.map((t) => {
             const isActive = tab === t;
-            const label = t === "games" ? "Games" : t === "moves" ? "Moves" : "Review";
+            const label =
+              t === "games"
+                ? "Games"
+                : t === "saved"
+                  ? "Saved"
+                  : t === "moves"
+                    ? "Moves"
+                    : "Review";
             const icon =
               t === "games" ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="6" width="18" height="14" rx="2" />
                   <path d="M3 10h18" />
                   <path d="M8 6V4M16 6V4" />
+                </svg>
+              ) : t === "saved" ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <path d="M17 21v-8H7v8" />
+                  <path d="M7 3v5h8" />
                 </svg>
               ) : t === "moves" ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1428,7 +1451,7 @@ export default function App() {
         {isDesktop && (
         <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex flex-col overflow-hidden">
           <div className="flex bg-chess-bg/40 border-b border-chess-border">
-            {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
+            {availableTabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1438,7 +1461,7 @@ export default function App() {
                     : "text-chess-muted hover:text-chess-text"
                 }`}
               >
-                {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
+                {t === "games" ? "Games" : t === "saved" ? "Saved" : t === "moves" ? "Moves" : "Review"}
                 {tab === t && (
                   <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-chess-accent" />
                 )}
@@ -1458,12 +1481,51 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
-                  savedReviews={savedReviews}
-                  loadingSavedReviews={savedReviewsLoading}
-                  onSavedReviewSelect={(id) => void handleOpenSavedReview(id)}
-                  onSavedReviewDelete={(id) => void handleDeleteSavedReview(id)}
                 />
               </>
+            )}
+
+            {tab === "saved" && (
+              <div className="p-3 space-y-2">
+                {!activeUser ? (
+                  <p className="text-xs text-chess-muted">Link a profile to save games.</p>
+                ) : savedReviewsLoading ? (
+                  <p className="text-xs text-chess-muted">Loading saved games…</p>
+                ) : savedReviews.length === 0 ? (
+                  <p className="text-xs text-chess-muted">
+                    No saved games yet. Run analysis, then use Save game in the Review tab.
+                  </p>
+                ) : (
+                  savedReviews.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-lg border border-chess-border/50 bg-black/20 px-2.5 py-2"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => void handleOpenSavedReview(item.id)}
+                        className="w-full text-left"
+                      >
+                        <div className="truncate text-[12px] text-chess-text">
+                          {item.whiteName} vs {item.blackName}
+                        </div>
+                        <div className="text-[10px] text-chess-muted">
+                          {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
+                        </div>
+                      </button>
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteSavedReview(item.id)}
+                          className="text-[11px] text-chess-muted hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
 
             {tab === "moves" && (
@@ -1803,12 +1865,56 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
-                  savedReviews={savedReviews}
-                  loadingSavedReviews={savedReviewsLoading}
-                  onSavedReviewSelect={(id) => void handleOpenSavedReview(id)}
-                  onSavedReviewDelete={(id) => void handleDeleteSavedReview(id)}
                 />
             </div>
+
+            {tab === "saved" && (
+              <div
+                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll"
+                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+              >
+                {!activeUser ? (
+                  <p className="text-xs text-chess-muted">Link a profile to save games.</p>
+                ) : savedReviewsLoading ? (
+                  <p className="text-xs text-chess-muted">Loading saved games…</p>
+                ) : savedReviews.length === 0 ? (
+                  <p className="text-xs text-chess-muted">
+                    No saved games yet. Run analysis, then use Save game in the Review tab.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {savedReviews.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-chess-border/50 bg-black/20 px-2.5 py-2"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenSavedReview(item.id)}
+                          className="w-full text-left"
+                        >
+                          <div className="truncate text-[12px] text-chess-text">
+                            {item.whiteName} vs {item.blackName}
+                          </div>
+                          <div className="text-[10px] text-chess-muted">
+                            {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
+                          </div>
+                        </button>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteSavedReview(item.id)}
+                            className="text-[11px] text-chess-muted hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {tab === "review" && (
               <div
