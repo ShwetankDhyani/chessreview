@@ -18,6 +18,7 @@ export interface MoveReviewPanelProps {
   onContinuationActive?: (active: boolean) => void;
   onContinuationArrow?: (arrow: { from: string; to: string } | null) => void;
   embedded?: boolean;
+  onRegisterContinuationNav?: (nav: import("../utils/continuationNav").ContinuationNavHandlers | null) => void;
 }
 
 // ── Opening database with progressive names ──────────────────────────────────
@@ -137,6 +138,7 @@ interface ContinuationViewerProps {
   onEvalChange?: (eval_: EvalResult | null) => void;
   onActiveChange?: (active: boolean) => void;
   onArrowChange?: (arrow: { from: string; to: string } | null) => void;
+  onRegisterNav?: (nav: import("../utils/continuationNav").ContinuationNavHandlers | null) => void;
 }
 
 // Pre-compute UCIs from SANs given a starting FEN
@@ -155,7 +157,7 @@ function computeUcis(startFen: string, sans: string[]): string[] {
 
 const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   firstMove, line, startFen, accentColor = "#6daa6d", label = "Best continuation",
-  onFenChange, onEvalChange, onActiveChange, onArrowChange,
+  onFenChange, onEvalChange, onActiveChange, onArrowChange, onRegisterNav,
 }) => {
   const allMoves = [firstMove, ...line];
   const [step, setStep] = useState(0);
@@ -170,6 +172,9 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   onEvalChangeRef.current = onEvalChange;
   onArrowChangeRef.current = onArrowChange;
   onActiveChangeRef.current = onActiveChange;
+
+  const onRegisterNavRef = useRef(onRegisterNav);
+  onRegisterNavRef.current = onRegisterNav;
 
   const setContinuationActive = (active: boolean) => {
     if (continuationActiveRef.current === active) return;
@@ -243,13 +248,24 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     };
   }, [firstMove, line.join(",")])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Navigate to a step — no animation needed since stepping is sequential
   const goToStep = (nextStep: number) => {
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
     if (nextStep <= 0) { setStep(0); return; }
     if (nextStep > allMoves.length) return;
     setStep(nextStep);
   };
+
+  useEffect(() => {
+    const register = onRegisterNavRef.current;
+    if (!register) return;
+    register({
+      stepForward: () => goToStep(Math.min(allMoves.length, step + 1)),
+      stepBack: () => goToStep(Math.max(0, step - 1)),
+      canStepForward: step < allMoves.length,
+      canStepBack: step > 0,
+    });
+    return () => register(null);
+  }, [step, allMoves.length, firstMove, line.join(",")]);
 
   return (
     <div className="border border-chess-border rounded-lg bg-chess-panel flex flex-col gap-2 overflow-hidden min-w-0">
@@ -286,7 +302,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         style={{ background: `${accentColor}0d` }}
       >
         {step === 0
-          ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine's best move here.</>
+          ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine&apos;s best move here. Tap board <span className="font-semibold text-chess-text">▶</span> to walk the line.</>
           : <>After <span className="font-bold" style={{ color: accentColor }}>{allMoves[step - 1]}</span>, {
               step % 2 === 1
                 ? " continuing the best line."
@@ -336,6 +352,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   onContinuationActive,
   onContinuationArrow,
   embedded = false,
+  onRegisterContinuationNav,
 }) => {
   const [aiComment, setAiComment] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -550,6 +567,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           onEvalChange={onContinuationEval}
           onActiveChange={onContinuationActive}
           onArrowChange={onContinuationArrow}
+          onRegisterNav={onRegisterContinuationNav}
         />
       )}
     </div>

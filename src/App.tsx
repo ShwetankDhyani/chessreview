@@ -49,6 +49,10 @@ import {
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
+import {
+  type ContinuationNavHandlers,
+  stepBoardOrContinuation,
+} from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -197,6 +201,7 @@ export default function App() {
   const [continuationFen, setContinuationFen] = useState<string | null>(null);
   const [continuationEval, setContinuationEval] = useState<EvalResult | null>(null);
   const [continuationArrow, setContinuationArrow] = useState<{ from: string; to: string } | null>(null);
+  const [continuationNav, setContinuationNav] = useState<ContinuationNavHandlers | null>(null);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(null);
   const [boardDimmed, setBoardDimmed] = useState(false);
@@ -463,7 +468,15 @@ export default function App() {
     setContinuationArrow(arrow);
   }, []);
 
+  const handleRegisterContinuationNav = useCallback(
+    (nav: ContinuationNavHandlers | null) => {
+      setContinuationNav(nav);
+    },
+    []
+  );
+
   const navigateToMove = useCallback((idx: number, animate = true) => {
+    setContinuationNav(null);
     setContinuationActive(false);
     setContinuationFen(null);
     setContinuationEval(null);
@@ -507,13 +520,15 @@ export default function App() {
 
   const stepBoardMove = useCallback(
     (delta: number, animate = true) => {
-      const next = Math.max(
-        -1,
-        Math.min(moves.length - 1, currentMoveIdxRef.current + delta)
-      );
-      navigateToMove(next, animate);
+      stepBoardOrContinuation(delta, continuationNav, (gameDelta) => {
+        const next = Math.max(
+          -1,
+          Math.min(moves.length - 1, currentMoveIdxRef.current + gameDelta)
+        );
+        navigateToMove(next, animate);
+      });
     },
-    [moves.length, navigateToMove]
+    [moves.length, navigateToMove, continuationNav]
   );
 
   useEffect(() => {
@@ -766,12 +781,9 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
-        navigateToMove(
-          Math.min(currentMoveIdxRef.current + 1, moves.length - 1),
-          false
-        );
+        stepBoardMove(1, false);
       } else if (e.key === "ArrowLeft") {
-        navigateToMove(Math.max(currentMoveIdxRef.current - 1, -1), false);
+        stepBoardMove(-1, false);
       } else if (e.key === "ArrowUp") {
         navigateToMove(-1, false);
       } else if (e.key === "ArrowDown") {
@@ -780,7 +792,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [moves.length, navigateToMove]);
+  }, [moves.length, navigateToMove, stepBoardMove]);
 
   useEffect(() => {
     if (!activeUser?.name?.trim() || !pgn) return;
@@ -915,6 +927,15 @@ export default function App() {
         (analysisState === "loading" || analysisState === "error")));
 
   const showBoardProgressOrb = false;
+
+  const canStepLineBack = !!continuationNav?.canStepBack;
+  const canStepLineForward = !!continuationNav?.canStepForward;
+  const canStepGameBack = currentMoveIdx > -1;
+  const canStepGameForward = currentMoveIdx < moves.length - 1;
+  const canBoardStepBack = !isAnalyzing && (canStepLineBack || canStepGameBack);
+  const canBoardStepForward =
+    !isAnalyzing && (canStepLineForward || canStepGameForward);
+  const showEngineLineTag = !!continuationNav;
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -1367,7 +1388,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
-                  showEngineLineBanner={continuationActive}
+                  showEngineLineBanner={showEngineLineTag}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
@@ -1431,7 +1452,7 @@ export default function App() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM10 12l8-7v14z" /></svg>
                     </button>
                     <button
-                      onClick={() => navigateToMove(Math.max(currentMoveIdx - 1, -1))}
+                      onClick={() => stepBoardMove(-1)}
                       className="board-nav-btn"
                       title="Previous move"
                       aria-label="Previous move"
@@ -1439,7 +1460,7 @@ export default function App() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 5l-9 7 9 7z" /></svg>
                     </button>
                     <button
-                      onClick={() => navigateToMove(Math.min(currentMoveIdx + 1, moves.length - 1))}
+                      onClick={() => stepBoardMove(1)}
                       className="board-nav-btn board-nav-btn--primary"
                       title="Next move"
                       aria-label="Next move"
@@ -1500,6 +1521,7 @@ export default function App() {
                       onContinuationEval={handleContinuationEval}
                       onContinuationActive={handleContinuationActive}
                       onContinuationArrow={handleContinuationArrow}
+                      onRegisterContinuationNav={handleRegisterContinuationNav}
                     />
                   </div>
                 </div>
@@ -1600,10 +1622,8 @@ export default function App() {
                     shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
-                  canPrev={!isAnalyzing && currentMoveIdx > -1}
-                  canNext={
-                    !isAnalyzing && currentMoveIdx < moves.length - 1
-                  }
+                  canPrev={canBoardStepBack}
+                  canNext={canBoardStepForward}
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
                   analysisState={analysisState}
@@ -1613,7 +1633,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
-                  showEngineLineBanner={continuationActive}
+                  showEngineLineBanner={showEngineLineTag}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
@@ -1651,6 +1671,7 @@ export default function App() {
                     onContinuationEval={handleContinuationEval}
                     onContinuationActive={handleContinuationActive}
                     onContinuationArrow={handleContinuationArrow}
+                    onRegisterContinuationNav={handleRegisterContinuationNav}
                     embedded
                   />
                 </div>
