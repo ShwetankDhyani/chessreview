@@ -64,7 +64,6 @@ import {
   normalizeAnalysisError,
   normalizeShareError,
   trackAppError,
-  withTimeout,
 } from "./utils/appError";
 
 type SidebarTab = "games" | "review" | "moves";
@@ -148,7 +147,6 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
-  const [analysisSlowNoticeDismissed, setAnalysisSlowNoticeDismissed] = useState(false);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -598,7 +596,6 @@ export default function App() {
   useEffect(() => {
     if (!analysisRunning || !analysisStartedAt) {
       setAnalysisElapsedSec(0);
-      setAnalysisSlowNoticeDismissed(false);
       return;
     }
     const tick = () => {
@@ -622,7 +619,6 @@ export default function App() {
 
       const visible = options.visible;
       if (visible) {
-        setAnalysisError(null);
         showAnalysisProgressRef.current = true;
         setShowAnalysisProgress(true);
         setAnalysisState("analyzing");
@@ -647,17 +643,13 @@ export default function App() {
       setAnalysisStartedAt(analysisStartedAt);
 
       try {
-        const result = await withTimeout(
-          analyzePgn(
-            pgnStr,
-            (done, total) => {
-              if (abortRef.current || gen !== analysisGenerationRef.current) return;
-              setProgress({ done, total });
-            },
-            depth
-          ),
-          300000,
-          "Analysis timeout"
+        const result = await analyzePgn(
+          pgnStr,
+          (done, total) => {
+            if (abortRef.current || gen !== analysisGenerationRef.current) return;
+            setProgress({ done, total });
+          },
+          depth
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 
@@ -718,12 +710,25 @@ export default function App() {
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisStartedAt(null);
-        setAnalysisState("error");
-        setAnalysisError(normalized.message);
+        setAnalysisState("loading");
       }
     },
     [navigateToMove, depth, recheckEngine, activeUser, noteCompletedReview]
   );
+
+  const cancelAnalysis = useCallback(() => {
+    abortRef.current = true;
+    analysisGenerationRef.current += 1;
+    setAnalysisRunning(false);
+    setShowAnalysisProgress(false);
+    showAnalysisProgressRef.current = false;
+    setAnalysisStartedAt(null);
+    if (pgn.trim()) {
+      setAnalysisState("loading");
+    } else {
+      setAnalysisState("idle");
+    }
+  }, [pgn]);
 
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
@@ -759,7 +764,6 @@ export default function App() {
       return false;
     }
     setLoadError(null);
-    setAnalysisError(null);
     setShareUrl(null);
     setShareError(null);
     abortRef.current = true;
@@ -978,7 +982,6 @@ export default function App() {
   const [desktopEvalGraphOpen, setDesktopEvalGraphOpen] = useState(false);
   const [mobileEvalGraphOpen, setMobileEvalGraphOpen] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(
     () => !localStorage.getItem("cr_welcome_dismissed")
   );
@@ -1019,7 +1022,7 @@ export default function App() {
     (!isMobileLayout || tab === "moves") &&
     (isAnalyzing ||
       (moves.length === 0 &&
-        (analysisState === "loading" || analysisState === "error")));
+        analysisState === "loading"));
 
   const showBoardProgressOrb = false;
 
@@ -1227,39 +1230,14 @@ export default function App() {
         </div>
       </header>
 
-      {(loadError || analysisError) && (
+      {loadError && (
         <div className="flex-shrink-0 px-4 py-2 border-b border-red-900/40">
           <InlineErrorNotice
-            message={loadError ?? analysisError ?? "Something went wrong."}
-            onRetry={
-              analysisError && pgn.trim()
-                ? () => void requestAnalysisUi()
-                : undefined
-            }
+            message={loadError}
             onDismiss={() => {
               setLoadError(null);
-              setAnalysisError(null);
             }}
           />
-        </div>
-      )}
-      {analysisRunning && analysisElapsedSec >= 45 && !analysisSlowNoticeDismissed && (
-        <div className="flex-shrink-0 px-4 py-2 border-b border-chess-border/60 bg-chess-panel/70">
-          <div className="rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3 py-2 text-xs text-chess-subtext">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-chess-accent" />
-              <p className="flex-1 min-w-0">
-                Review is taking longer than usual today. Thanks for your patience.
-              </p>
-              <button
-                type="button"
-                onClick={() => setAnalysisSlowNoticeDismissed(true)}
-                className="font-semibold text-chess-muted hover:text-chess-text"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1510,12 +1488,14 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
+                  onCancelAnalysis={isAnalyzing ? () => cancelAnalysis() : undefined}
                   showEngineLineBanner={continuationActive}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
                   showProgressOrb={showBoardProgressOrb}
+                  analysisElapsedSec={analysisElapsedSec}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1753,6 +1733,7 @@ export default function App() {
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
+                  onCancelAnalysis={isAnalyzing ? () => cancelAnalysis() : undefined}
                   showEngineLineBanner={false}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
@@ -1761,6 +1742,7 @@ export default function App() {
                   showProgressOrb={showBoardProgressOrb}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
+                  analysisElapsedSec={analysisElapsedSec}
                 />
               {moves.length > 0 && (
                 <GameMoveNavBar

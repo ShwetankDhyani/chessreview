@@ -4,6 +4,7 @@ import { AnalyzeNowButton } from "./AnalyzeNowButton";
 interface BoardAnalyzeOverlayProps {
   state: AnalysisState;
   onAnalyze?: () => void;
+  onCancel?: () => void;
   progressPercent?: number;
   stageLabel?: string;
   currentSan?: string;
@@ -11,6 +12,7 @@ interface BoardAnalyzeOverlayProps {
   showProgressOrb?: boolean;
   currentPly?: number;
   totalPlies?: number;
+  elapsedSec?: number;
 }
 
 const RING_R = 34;
@@ -20,11 +22,13 @@ const RING_C = 2 * Math.PI * RING_R;
 export function BoardAnalyzeOverlay({
   state,
   onAnalyze,
+  onCancel,
   progressPercent = 0,
   stageLabel = "Reviewing game…",
   currentSan,
   currentPly,
   totalPlies,
+  elapsedSec = 0,
 }: BoardAnalyzeOverlayProps) {
   if (state === "analyzing") {
     const pct = Math.min(100, Math.max(0, progressPercent));
@@ -80,6 +84,20 @@ export function BoardAnalyzeOverlay({
           {plyNote ? (
             <p className="board-analysis-plies">{plyNote}</p>
           ) : null}
+          {elapsedSec >= 45 ? (
+            <p className="board-analysis-plies">
+              Taking longer than usual today. Thanks for your patience.
+            </p>
+          ) : null}
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="mt-2 px-2.5 py-1 rounded border border-white/15 text-[11px] font-semibold text-white/85 hover:text-white hover:border-white/35 transition-colors"
+            >
+              Cancel
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -92,20 +110,6 @@ export function BoardAnalyzeOverlay({
         aria-live="polite"
       >
         <AnalyzeNowButton onClick={onAnalyze} variant="board" />
-      </div>
-    );
-  }
-
-  if (state === "error") {
-    return (
-      <div
-        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-        aria-live="polite"
-      >
-        <div className="pointer-events-auto flex flex-col items-center gap-2 px-4 py-3 rounded-lg bg-chess-panel border border-chess-border shadow-md">
-          <p className="text-sm text-red-300">Analysis failed</p>
-          <AnalyzeNowButton onClick={onAnalyze} variant="compact" />
-        </div>
       </div>
     );
   }

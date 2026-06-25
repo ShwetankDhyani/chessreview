@@ -13,6 +13,7 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
+  onCancelAnalysis?: () => void;
   showEngineLineBanner?: boolean;
   progressPercent?: number;
   analysisStageLabel?: string;
@@ -21,6 +22,7 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   showProgressOrb?: boolean;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
+  analysisElapsedSec?: number;
 }
 
 /** Board + slim eval bar — move navigation uses explicit buttons outside this shell. */
@@ -35,6 +37,7 @@ export function MobileBoardShell({
   whiteName,
   blackName,
   onAnalyze,
+  onCancelAnalysis,
   showEngineLineBanner = false,
   progressPercent = 0,
   analysisStageLabel,
@@ -43,6 +46,7 @@ export function MobileBoardShell({
   showProgressOrb = false,
   analyzingPly,
   analyzingTotalPlies,
+  analysisElapsedSec = 0,
   ...boardProps
 }: MobileBoardShellProps) {
   const barWidth = 14;
@@ -84,6 +88,7 @@ export function MobileBoardShell({
               whiteName={whiteName}
               blackName={blackName}
               onAnalyze={onAnalyze}
+              onCancelAnalysis={onCancelAnalysis}
               showEngineLineBanner={false}
               progressPercent={progressPercent}
               analysisStageLabel={analysisStageLabel}
@@ -92,6 +97,7 @@ export function MobileBoardShell({
               showProgressOrb={showProgressOrb}
               analyzingPly={analyzingPly}
               analyzingTotalPlies={analyzingTotalPlies}
+              analysisElapsedSec={analysisElapsedSec}
             />
           </div>
         </div>
