@@ -45,7 +45,7 @@ export function BoardAnalyzeOverlay({
         aria-label={`Analyzing, ${pctLabel} percent`}
       >
         <div className="board-analysis-glow" aria-hidden />
-        <div className="board-analysis-center">
+        <div className="board-analysis-center pointer-events-auto">
           <div className="board-analysis-ring-wrap">
             <svg
               className="board-analysis-ring"
