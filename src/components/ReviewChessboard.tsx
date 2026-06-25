@@ -62,11 +62,20 @@ export function ReviewChessboard({
     return () => ro.disconnect();
   }, [boardWidth]);
 
-  const arrow =
-    continuationArrow ??
-    (showBestMoveArrow && bestMove && bestMove.length >= 4
-      ? { from: bestMove.slice(0, 2), to: bestMove.slice(2, 4) }
-      : null);
+  const playedArrow = lastMoveHighlight
+    ? ({ ...lastMoveHighlight, variant: "played" as const })
+    : null;
+  const hintArrow =
+    showBestMoveArrow && bestMove && bestMove.length >= 4
+      ? ({
+          from: bestMove.slice(0, 2),
+          to: bestMove.slice(2, 4),
+          variant: "hint" as const,
+        })
+      : null;
+  const arrow = continuationArrow
+    ? { ...continuationArrow, variant: "continuation" as const }
+    : playedArrow ?? hintArrow;
 
   const squareStyles = lastMoveHighlight
     ? {
@@ -108,7 +117,7 @@ export function ReviewChessboard({
             to={arrow.to}
             boardWidth={renderedWidth}
             boardOrientation={boardOrientation}
-            variant={continuationArrow ? "continuation" : "hint"}
+            variant={arrow.variant}
           />
         ) : null}
       </div>

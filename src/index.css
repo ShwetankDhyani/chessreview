@@ -164,6 +164,7 @@
   border-radius: 4px;
   overflow: visible;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  touch-action: pan-y;
 }
 
 .board-viewport--dimmed {
@@ -195,6 +196,24 @@
 
 .board-nav-btn:active {
   transform: scale(0.96);
+}
+
+.board-nav-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+  transform: none;
+}
+
+.board-nav-btn:disabled:hover {
+  background-color: #3a3633;
+  border-color: #3f3c39;
+  color: #e8e6e3;
+}
+
+.board-nav-btn--primary:disabled:hover {
+  background-color: #81b64c;
+  border-color: #81b64c;
+  color: #ffffff;
 }
 
 .board-nav-btn--primary {
@@ -472,6 +491,23 @@
 }
 
 /* Mobile board — subtle side tap zones */
+.mobile-tap-edge--disabled[data-side="prev"],
+.mobile-tap-edge--disabled[data-side="next"] {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.06) 0%,
+    transparent 72%
+  );
+}
+
+.mobile-tap-edge--disabled[data-side="next"] {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.06) 0%,
+    transparent 72%
+  );
+}
+
 .mobile-tap-edge--idle[data-side="prev"] {
   background: linear-gradient(
     to right,
@@ -582,6 +618,19 @@
 
 .engine-line-nav {
   background: rgba(129, 182, 76, 0.06);
+}
+
+.game-move-nav {
+  background: #2a2724;
+}
+
+.mobile-review-scroll {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-board-shell {
+  touch-action: pan-y;
 }
 
 .mobile-icon-btn--accent {

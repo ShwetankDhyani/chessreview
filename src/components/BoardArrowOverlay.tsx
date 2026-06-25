@@ -6,7 +6,7 @@ interface BoardArrowOverlayProps {
   boardWidth: number;
   boardOrientation: "white" | "black";
   /** Best-move hint on the board; continuation line stays a bit stronger. */
-  variant?: "hint" | "continuation";
+  variant?: "hint" | "continuation" | "played";
   color?: string;
 }
 
@@ -22,6 +22,12 @@ const ARROW_STYLES = {
     strokeOpacity: 0.78,
     fillOpacity: 0.82,
     strokeScale: 40,
+  },
+  played: {
+    color: "#f7c948",
+    strokeOpacity: 0.82,
+    fillOpacity: 0.88,
+    strokeScale: 42,
   },
 } as const;
 

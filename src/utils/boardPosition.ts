@@ -65,3 +65,57 @@ export function canAnimateOneStep(
     return false;
   }
 }
+
+/** True when `highlight` is the single ply between `targetFen` and `prevFen` (undo). */
+export function canAnimateUndoStep(
+  prevFen: string,
+  targetFen: string,
+  highlight: { from: string; to: string }
+): boolean {
+  return canAnimateOneStep(targetFen, prevFen, highlight);
+}
+
+export function canAnimateBoardStep(
+  renderedFen: string,
+  targetFen: string,
+  highlight: { from: string; to: string } | null
+): boolean {
+  if (!highlight) return false;
+  return (
+    canAnimateOneStep(renderedFen, targetFen, highlight) ||
+    canAnimateUndoStep(renderedFen, targetFen, highlight)
+  );
+}
+
+export function highlightFromUci(
+  uci: string | undefined
+): { from: string; to: string } | null {
+  if (!uci || uci.length < 4) return null;
+  return { from: uci.slice(0, 2), to: uci.slice(2, 4) };
+}
+
+/** FEN + last-move highlight for a one-ply board step (forward or back). */
+export function resolveBoardNavStep(
+  moves: AnalyzedMove[],
+  fromIdx: number,
+  toIdx: number
+): {
+  fen: string;
+  highlight: { from: string; to: string } | null;
+} {
+  if (toIdx < 0) {
+    return {
+      fen: BOARD_START_FEN,
+      highlight: fromIdx === 0 ? highlightFromUci(moves[0]?.uci) : null,
+    };
+  }
+  const target = moves[toIdx];
+  const targetHighlight = highlightFromUci(target.uci);
+  if (fromIdx === toIdx + 1 && fromIdx < moves.length) {
+    return {
+      fen: target.fenAfter,
+      highlight: highlightFromUci(moves[fromIdx].uci),
+    };
+  }
+  return { fen: target.fenAfter, highlight: targetHighlight };
+}

@@ -35,7 +35,9 @@ import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSoun
 import { computeDesktopBoardSize } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
-  canAnimateOneStep,
+  canAnimateBoardStep,
+  highlightFromUci,
+  resolveBoardNavStep,
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { ReanalyzeButton } from "./components/ReanalyzeButton";
@@ -50,6 +52,7 @@ import {
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
+import { GameMoveNavBar } from "./components/GameMoveNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
@@ -251,8 +254,7 @@ export default function App() {
 
       const safeToAnimate =
         animate &&
-        !!highlight &&
-        canAnimateOneStep(lastRenderedFenRef.current, fen, highlight);
+        canAnimateBoardStep(lastRenderedFenRef.current, fen, highlight);
 
       currentFenRef.current = fen;
 
@@ -474,31 +476,32 @@ export default function App() {
     setContinuationArrow(null);
     clearBoardTimers();
     setMoveAnim(null);
+    if (idx >= moves.length) return;
+
+    const fromIdx = currentMoveIdxRef.current;
+    const onePly = Math.abs(idx - fromIdx) === 1;
+    const { fen, highlight } = resolveBoardNavStep(moves, fromIdx, idx);
+
     if (idx < 0) {
       setCurrentMoveIdx(-1);
       currentMoveIdxRef.current = -1;
       setCurrentEval(null);
-      setBoardToFen(BOARD_START_FEN, null, false);
+      setBoardToFen(fen, highlight, animate && onePly);
       return;
     }
-    if (idx >= moves.length) return;
-    const m = moves[idx];
-    const fromSq = m.uci?.slice(0, 2);
-    const toSq = m.uci?.slice(2, 4);
-    const highlight =
-      fromSq && toSq ? { from: fromSq, to: toSq } : null;
 
+    const m = moves[idx];
     setCurrentMoveIdx(idx);
     currentMoveIdxRef.current = idx;
     setCurrentEval(m.evalAfter);
 
+    const moveHighlight = highlightFromUci(m.uci);
     if (animate && m.san) {
       playMoveFeedback(m.san);
     }
 
-    // `setBoardToFen` internally checks whether the *rendered* board is one
-    // ply behind and only animates in that case; otherwise it snaps cleanly.
-    setBoardToFen(m.fenAfter, highlight, animate);
+    setBoardToFen(fen, highlight, animate && onePly);
+    setMoveAnim(moveHighlight);
   }, [moves, setBoardToFen]);
 
   useEffect(() => {
@@ -925,9 +928,10 @@ export default function App() {
 
   const showBoardProgressOrb = false;
 
-  const canBoardStepBack = !isAnalyzing && currentMoveIdx > -1;
+  const showBoardMoveNav = !isAnalyzing && moves.length > 0;
+  const canBoardStepBack = showBoardMoveNav && currentMoveIdx > -1;
   const canBoardStepForward =
-    !isAnalyzing && currentMoveIdx < moves.length - 1;
+    showBoardMoveNav && currentMoveIdx < moves.length - 1;
 
   // Only show the game-end verdict when:
   //  - PGN actually has a result
@@ -1445,6 +1449,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => stepBoardMove(-1)}
+                      disabled={currentMoveIdx <= -1 || isAnalyzing}
                       className="board-nav-btn"
                       title="Previous move"
                       aria-label="Previous move"
@@ -1453,6 +1458,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => stepBoardMove(1)}
+                      disabled={currentMoveIdx >= moves.length - 1 || isAnalyzing}
                       className="board-nav-btn board-nav-btn--primary"
                       title="Next move"
                       aria-label="Next move"
@@ -1555,7 +1561,7 @@ export default function App() {
 
             {tab === "review" && (
               <div
-                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2"
+                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll"
                 style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
               >
                 <div className="w-full">
@@ -1583,7 +1589,7 @@ export default function App() {
             )}
 
             {tab === "moves" && (
-            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll">
             <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-1.5 pb-1.5 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <div className="review-flow-stack w-full">
@@ -1614,10 +1620,6 @@ export default function App() {
                     shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
-                  canPrev={canBoardStepBack}
-                  canNext={canBoardStepForward}
-                  onPrev={(animate = true) => stepBoardMove(-1, animate)}
-                  onNext={(animate = true) => stepBoardMove(1, animate)}
                   analysisState={analysisState}
                   showAnalyzeButton={showBoardAnalyzeOverlay}
                   showGameEnd={showBoardGameEnd}
@@ -1634,6 +1636,14 @@ export default function App() {
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
                 />
+              {moves.length > 0 && (
+                <GameMoveNavBar
+                  canPrev={canBoardStepBack}
+                  canNext={canBoardStepForward}
+                  onPrev={(animate = true) => stepBoardMove(-1, animate)}
+                  onNext={(animate = true) => stepBoardMove(1, animate)}
+                />
+              )}
               {continuationNav && (
                 <EngineLineNavBar nav={continuationNav} />
               )}

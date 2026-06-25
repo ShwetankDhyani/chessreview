@@ -3,6 +3,7 @@ import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { EvalChartPanel } from "../components/EvalChartPanel";
 import { EvalBadge } from "../components/EvalBadge";
 import { MobileBoardShell } from "../components/MobileBoardShell";
+import { GameMoveNavBar } from "../components/GameMoveNavBar";
 import { MoveList } from "../components/MoveList";
 import { MoveReviewPanel } from "../components/MoveReviewPanel";
 import { fetchSharedReview } from "../utils/shareReview";
@@ -10,6 +11,14 @@ import { usePageSeo } from "../hooks/usePageSeo";
 import { shareReviewJsonLd } from "../utils/seo";
 import { formatChessMoveCounter } from "../utils/pgnPlies";
 import type { AnalyzedMove } from "../types";
+import {
+  BOARD_START_FEN,
+  canAnimateBoardStep,
+  highlightFromUci,
+  resolveBoardNavStep,
+} from "../utils/boardPosition";
+
+const BOARD_PLAY_MOVE_MS = 380;
 
 type ShareTab = "game" | "stats";
 
@@ -101,23 +110,56 @@ export default function SharePage() {
   const [whiteName, setWhiteName] = useState("White");
   const [blackName, setBlackName] = useState("Black");
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
+  const [displayFen, setDisplayFen] = useState(BOARD_START_FEN);
+  const [boardPieceAnimMs, setBoardPieceAnimMs] = useState(0);
+  const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(
+    null
+  );
   const [boardFlipped, setBoardFlipped] = useState(false);
   const [evalOpen, setEvalOpen] = useState(true);
   const boardSectionRef = useRef<HTMLElement>(null);
+  const currentMoveIdxRef = useRef(-1);
+  const lastRenderedFenRef = useRef(BOARD_START_FEN);
 
   const scrollToBoard = useCallback(() => {
     boardSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, []);
 
+  const applyMoveSelect = useCallback(
+    (idx: number, animate: boolean) => {
+      const clamped = Math.max(-1, Math.min(moves.length - 1, idx));
+      const fromIdx = currentMoveIdxRef.current;
+      const onePly = Math.abs(clamped - fromIdx) === 1;
+      const { fen, highlight } = resolveBoardNavStep(moves, fromIdx, clamped);
+      const safeToAnimate =
+        animate &&
+        onePly &&
+        canAnimateBoardStep(lastRenderedFenRef.current, fen, highlight);
+      setBoardPieceAnimMs(safeToAnimate ? BOARD_PLAY_MOVE_MS : 0);
+      const displayHighlight =
+        clamped >= 0
+          ? highlightFromUci(moves[clamped].uci)
+          : highlight;
+      setMoveAnim(displayHighlight);
+      setDisplayFen(fen);
+      setCurrentMoveIdx(clamped);
+      currentMoveIdxRef.current = clamped;
+    },
+    [moves]
+  );
+
   const selectMove = useCallback(
-    (idx: number, scrollBoard = false) => {
-      setCurrentMoveIdx(Math.max(-1, Math.min(moves.length - 1, idx)));
+    (idx: number, scrollBoard = false, animate = true) => {
+      const clamped = Math.max(-1, Math.min(moves.length - 1, idx));
+      const fromIdx = currentMoveIdxRef.current;
+      const onePly = Math.abs(clamped - fromIdx) === 1;
+      applyMoveSelect(clamped, animate && onePly);
       if (scrollBoard) {
         if (!isDesktop) setTab("game");
         scrollToBoard();
       }
     },
-    [moves.length, isDesktop, scrollToBoard]
+    [moves.length, isDesktop, scrollToBoard, applyMoveSelect]
   );
 
   const seoOptions = useMemo(() => {
@@ -166,7 +208,13 @@ export default function SharePage() {
         setSummary(data.summary);
         setWhiteName(data.whiteName);
         setBlackName(data.blackName);
-        setCurrentMoveIdx(data.moves.length > 0 ? data.moves.length - 1 : -1);
+        const startFen = data.moves[0]?.fenBefore ?? BOARD_START_FEN;
+        setCurrentMoveIdx(-1);
+        currentMoveIdxRef.current = -1;
+        setDisplayFen(startFen);
+        lastRenderedFenRef.current = startFen;
+        setBoardPieceAnimMs(0);
+        setMoveAnim(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -176,11 +224,18 @@ export default function SharePage() {
   }, [shareId]);
 
   const stepMove = useCallback(
-    (delta: number, _animate?: boolean) => {
-      selectMove(currentMoveIdx + delta);
+    (delta: number, animate = true) => {
+      selectMove(currentMoveIdxRef.current + delta, false, animate);
     },
-    [currentMoveIdx, selectMove]
+    [selectMove]
   );
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      lastRenderedFenRef.current = displayFen;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [displayFen]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -194,14 +249,9 @@ export default function SharePage() {
   }, [stepMove, selectMove, moves.length]);
 
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
-  const boardFen = useMemo(() => {
-    if (currentMove) return currentMove.fenAfter;
-    if (moves[0]) return moves[0].fenBefore;
-    return "start";
-  }, [currentMove, moves]);
-
   const currentEval = currentMove?.evalAfter ?? moves[0]?.evalBefore ?? null;
-  const lastMoveHighlight = lastMoveFromUci(currentMove?.uci);
+  const lastMoveHighlight =
+    moveAnim ?? lastMoveFromUci(currentMove?.uci);
 
   const boardWidth = useMemo(() => {
     if (isDesktop) {
@@ -262,21 +312,25 @@ export default function SharePage() {
 
         <MobileBoardShell
           evalResult={currentEval}
-          position={boardFen}
+          position={displayFen}
           boardWidth={boardWidth}
           boardOrientation={boardFlipped ? "black" : "white"}
-          animationDuration={0}
+          animationDuration={boardPieceAnimMs}
           dimmed={false}
           continuationActive={false}
           lastMoveHighlight={lastMoveHighlight}
           continuationArrow={null}
           showBestMoveArrow={false}
           remountKey={0}
-          canPrev={currentMoveIdx > -1}
-          canNext={currentMoveIdx < moves.length - 1}
-          onPrev={() => stepMove(-1)}
-          onNext={() => stepMove(1)}
         />
+        {moves.length > 0 && (
+          <GameMoveNavBar
+            canPrev={currentMoveIdx > -1}
+            canNext={currentMoveIdx < moves.length - 1}
+            onPrev={(animate = true) => stepMove(-1, animate)}
+            onNext={(animate = true) => stepMove(1, animate)}
+          />
+        )}
 
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <span className="text-[11px] text-chess-muted font-mono tabular-nums">
@@ -380,7 +434,7 @@ export default function SharePage() {
 
       <ShareTabBar tab={tab} onTab={setTab} />
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll">
         <div className="max-w-6xl mx-auto px-4 py-4 lg:py-6 pb-8">
           <div className="lg:grid lg:grid-cols-[minmax(280px,400px)_minmax(0,1fr)] lg:gap-6 lg:items-start">
             {gamePanel}
