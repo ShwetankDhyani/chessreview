@@ -1564,17 +1564,6 @@ export default function App() {
                       shareUrl={shareUrl}
                       shareError={shareError}
                     />
-                    <EvalChartPanel
-                      className="mt-4"
-                      moves={moves}
-                      currentMoveIndex={currentMoveIdx}
-                      onMoveSelect={(idx) => {
-                        navigateToMove(idx);
-                        setTab("moves");
-                      }}
-                      open={mobileEvalGraphOpen}
-                      onOpenChange={setMobileEvalGraphOpen}
-                    />
                   </>
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />
@@ -1652,6 +1641,16 @@ export default function App() {
                   />
                 }
               />
+              {moves.length > 0 && (
+                <EvalChartPanel
+                  className="w-full max-w-md"
+                  moves={moves}
+                  currentMoveIndex={currentMoveIdx}
+                  onMoveSelect={navigateToMove}
+                  open={mobileEvalGraphOpen}
+                  onOpenChange={setMobileEvalGraphOpen}
+                />
+              )}
                 </>
               ) : (
                 <MobileGameHero

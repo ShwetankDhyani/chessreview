@@ -10,6 +10,8 @@ interface MoveListProps {
   onMoveSelect: (index: number) => void;
   /** Show "Game end" marker on the last move */
   markGameEnd?: boolean;
+  /** When false, stepping moves does not scroll the list (e.g. shared review board nav). */
+  scrollActiveIntoView?: boolean;
 }
 
 export const MoveList: React.FC<MoveListProps> = ({
@@ -17,12 +19,14 @@ export const MoveList: React.FC<MoveListProps> = ({
   currentMoveIndex,
   onMoveSelect,
   markGameEnd = false,
+  scrollActiveIntoView = true,
 }) => {
   const activeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!scrollActiveIntoView) return;
     activeRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [currentMoveIndex]);
+  }, [currentMoveIndex, scrollActiveIntoView]);
 
   const pairs: Array<[AnalyzedMove | undefined, AnalyzedMove | undefined]> = [];
   for (let i = 0; i < moves.length; i += 2) {

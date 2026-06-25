@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { EvalChartPanel } from "../components/EvalChartPanel";
 import { EvalBadge } from "../components/EvalBadge";
@@ -101,7 +101,23 @@ export default function SharePage() {
   const [blackName, setBlackName] = useState("Black");
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const [boardFlipped, setBoardFlipped] = useState(false);
-  const [evalOpen, setEvalOpen] = useState(false);
+  const [evalOpen, setEvalOpen] = useState(true);
+  const boardSectionRef = useRef<HTMLElement>(null);
+
+  const scrollToBoard = useCallback(() => {
+    boardSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, []);
+
+  const selectMove = useCallback(
+    (idx: number, scrollBoard = false) => {
+      setCurrentMoveIdx(Math.max(-1, Math.min(moves.length - 1, idx)));
+      if (scrollBoard) {
+        if (!isDesktop) setTab("game");
+        scrollToBoard();
+      }
+    },
+    [moves.length, isDesktop, scrollToBoard]
+  );
 
   const seoOptions = useMemo(() => {
     const path = shareId ? `/r/${shareId}` : "/r";
@@ -158,30 +174,23 @@ export default function SharePage() {
     })();
   }, [shareId]);
 
-  const goToMove = useCallback(
-    (idx: number) => {
-      setCurrentMoveIdx(Math.max(-1, Math.min(moves.length - 1, idx)));
-    },
-    [moves.length]
-  );
-
   const stepMove = useCallback(
     (delta: number, _animate?: boolean) => {
-      goToMove(currentMoveIdx + delta);
+      selectMove(currentMoveIdx + delta);
     },
-    [currentMoveIdx, goToMove]
+    [currentMoveIdx, selectMove]
   );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") stepMove(1);
       else if (e.key === "ArrowLeft") stepMove(-1);
-      else if (e.key === "Home") goToMove(-1);
-      else if (e.key === "End") goToMove(moves.length - 1);
+      else if (e.key === "Home") selectMove(-1);
+      else if (e.key === "End") selectMove(moves.length - 1);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [stepMove, goToMove, moves.length]);
+  }, [stepMove, selectMove, moves.length]);
 
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
   const boardFen = useMemo(() => {
@@ -230,6 +239,7 @@ export default function SharePage() {
 
   const gamePanel = (
     <section
+      ref={boardSectionRef}
       className={`rounded-xl border border-chess-border bg-chess-panel shadow-sm overflow-hidden ${
         showGame ? "" : "hidden lg:block"
       } lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:flex lg:flex-col`}
@@ -278,6 +288,15 @@ export default function SharePage() {
             Flip board
           </button>
         </div>
+
+        <EvalChartPanel
+          moves={moves}
+          currentMoveIndex={currentMoveIdx}
+          onMoveSelect={(idx) => selectMove(idx, true)}
+          open={evalOpen}
+          onOpenChange={setEvalOpen}
+          className="border-t border-chess-border mt-0"
+        />
       </div>
 
       <div className="border-t border-chess-border px-3 py-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain">
@@ -287,8 +306,9 @@ export default function SharePage() {
         <MoveList
           moves={moves}
           currentMoveIndex={currentMoveIdx}
-          onMoveSelect={goToMove}
+          onMoveSelect={(idx) => selectMove(idx, true)}
           markGameEnd
+          scrollActiveIntoView={false}
         />
       </div>
     </section>
@@ -305,21 +325,7 @@ export default function SharePage() {
           whiteName={whiteName}
           blackName={blackName}
           moves={moves}
-          onMoveClick={(idx) => {
-            goToMove(idx);
-            if (!isDesktop) setTab("game");
-          }}
-        />
-        <EvalChartPanel
-          moves={moves}
-          currentMoveIndex={currentMoveIdx}
-          onMoveSelect={(idx) => {
-            goToMove(idx);
-            if (!isDesktop) setTab("game");
-          }}
-          open={evalOpen}
-          onOpenChange={setEvalOpen}
-          className="border-t border-chess-border mt-0"
+          onMoveClick={(idx) => selectMove(idx, true)}
         />
       </div>
 
