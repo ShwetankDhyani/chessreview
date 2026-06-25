@@ -44,6 +44,7 @@ export const GameList: React.FC<GameListProps> = ({
   const [showSlowRetry, setShowSlowRetry] = useState(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSucceededRef = useRef(false);
+  const loadGenRef = useRef(0);
   const gamesRef = useRef(games);
   gamesRef.current = games;
 
@@ -98,16 +99,25 @@ export const GameList: React.FC<GameListProps> = ({
     const onSwitch = (e: Event) => {
       const detail = (e as CustomEvent).detail as { name: string; platform: Platform } | null;
       if (detail?.name) {
+        loadGenRef.current += 1;
         setInputVal(detail.name);
         setPlatform(detail.platform);
         setGames([]);
         gamesRef.current = [];
         setStats(null);
+        setLoading(false);
+        setShowSlowRetry(false);
+        clearSlowTimer();
         loadGames(detail.name, detail.platform);
       } else {
+        loadGenRef.current += 1;
         setInputVal("");
         setGames([]);
+        gamesRef.current = [];
         setStats(null);
+        setLoading(false);
+        setShowSlowRetry(false);
+        clearSlowTimer();
       }
     };
     window.addEventListener("cr_profile_switch", onSwitch);
@@ -117,6 +127,7 @@ export const GameList: React.FC<GameListProps> = ({
 
   const loadGames = async (uname: string, plat: Platform) => {
     if (!uname.trim()) return;
+    const gen = ++loadGenRef.current;
     const hadCachedGames = gamesRef.current.length > 0;
     setLoading(true);
     startSlowTimer();
@@ -124,7 +135,10 @@ export const GameList: React.FC<GameListProps> = ({
       const list = plat === "chesscom"
         ? await fetchRecentGames(uname.trim())
         : await fetchLichessGames(uname.trim());
+      if (gen !== loadGenRef.current) return;
+
       setGames(list);
+      gamesRef.current = list;
       loadSucceededRef.current = true;
       clearSlowTimer();
       setShowSlowRetry(false);
@@ -155,19 +169,25 @@ export const GameList: React.FC<GameListProps> = ({
         }
       } catch { /* ignore stats error */ }
 
+      if (gen !== loadGenRef.current) return;
+
       setStats(newStats);
       if (newStats) localStorage.setItem("cr_stats", JSON.stringify(newStats));
       else localStorage.removeItem("cr_stats");
 
       localStorage.setItem(STORAGE_KEY_USER, uname.trim());
+      localStorage.setItem(STORAGE_KEY_PLAT, plat);
       localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
     } catch {
+      if (gen !== loadGenRef.current) return;
       if (hadCachedGames) {
         clearSlowTimer();
         setShowSlowRetry(false);
       }
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) {
+        setLoading(false);
+      }
     }
   };
 

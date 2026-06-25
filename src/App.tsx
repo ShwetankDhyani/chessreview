@@ -1188,8 +1188,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sidebar — hidden on mobile, visible on md+ */}
-        <aside className="hidden lg:flex w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex-col overflow-hidden">
+        {/* Sidebar — desktop only (avoid duplicate GameList fetch on mobile) */}
+        {isDesktop && (
+        <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex flex-col overflow-hidden">
           <div className="flex bg-chess-bg/40 border-b border-chess-border">
             {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
               <button
@@ -1314,6 +1315,7 @@ export default function App() {
             )}
           </div>
         </aside>
+        )}
 
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* ── Desktop board area ── */}
@@ -1541,11 +1543,12 @@ export default function App() {
 
           {/* ── Mobile: one shell for Games / Moves / Review (shared header padding) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            {tab === "games" && (
-              <div
-                className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
-                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
-              >
+            <div
+              className={`flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar ${
+                tab === "games" ? "" : "hidden"
+              }`}
+              style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+            >
                 {showWelcome && !pgn && (
                   <div className="page-inline-pad pt-2 flex-shrink-0 w-full">
                     <WelcomeBanner onTryDemo={tryDemoGame} onDismiss={dismissWelcome} />
@@ -1556,8 +1559,7 @@ export default function App() {
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
                 />
-              </div>
-            )}
+            </div>
 
             {tab === "review" && (
               <div
