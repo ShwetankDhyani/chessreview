@@ -4,6 +4,7 @@ import { EvalChartPanel } from "../components/EvalChartPanel";
 import { EvalBadge } from "../components/EvalBadge";
 import { MobileBoardShell } from "../components/MobileBoardShell";
 import { MoveList } from "../components/MoveList";
+import { MoveReviewPanel } from "../components/MoveReviewPanel";
 import { fetchSharedReview } from "../utils/shareReview";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { shareReviewJsonLd } from "../utils/seo";
@@ -245,8 +246,9 @@ export default function SharePage() {
       } lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:flex lg:flex-col`}
       aria-label="Board and moves"
     >
-      <div className="flex-shrink-0 px-3 pt-3 pb-2 space-y-2">
-        <div className="flex items-center justify-between gap-2 text-xs text-chess-muted">
+      <div className="flex-shrink-0 px-3 pt-3 pb-2">
+        <div className="review-flow-stack">
+        <div className="flex items-center justify-between gap-2 text-xs text-chess-muted px-3 py-2">
           <span className="truncate font-medium text-chess-text">{topPlayer}</span>
           <EvalBadge
             evalResult={currentEval}
@@ -276,18 +278,29 @@ export default function SharePage() {
           onNext={() => stepMove(1)}
         />
 
-        <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
           <span className="text-[11px] text-chess-muted font-mono tabular-nums">
             {moveLabel}
           </span>
           <button
             type="button"
             onClick={() => setBoardFlipped((f) => !f)}
-            className="text-[11px] px-2.5 py-1 rounded-md border border-chess-border text-chess-subtext hover:bg-chess-hover transition-colors"
+            className="text-[11px] px-2.5 py-1 rounded-md border border-chess-border/60 text-chess-subtext hover:bg-chess-hover transition-colors"
           >
             Flip board
           </button>
         </div>
+
+        {moves.length > 0 && (
+          <div className="review-flow-coach">
+            <MoveReviewPanel
+              move={currentMove}
+              moveIdx={currentMoveIdx}
+              moves={moves}
+              embedded
+            />
+          </div>
+        )}
 
         <EvalChartPanel
           moves={moves}
@@ -295,8 +308,9 @@ export default function SharePage() {
           onMoveSelect={(idx) => selectMove(idx, true)}
           open={evalOpen}
           onOpenChange={setEvalOpen}
-          className="border-t border-chess-border mt-0"
+          integrated
         />
+        </div>
       </div>
 
       <div className="border-t border-chess-border px-3 py-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain">

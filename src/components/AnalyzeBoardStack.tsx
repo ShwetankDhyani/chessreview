@@ -18,6 +18,8 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   analyzingMoveSan?: string;
   analysisEtaLabel?: string | null;
   showProgressOrb?: boolean;
+  analyzingPly?: number;
+  analyzingTotalPlies?: number;
 }
 
 /** Chessboard + centered analyze / progress overlay */
@@ -35,6 +37,8 @@ export function AnalyzeBoardStack({
   analyzingMoveSan,
   analysisEtaLabel,
   showProgressOrb = false,
+  analyzingPly,
+  analyzingTotalPlies,
   boardWidth,
   boardOrientation,
   ...boardProps
@@ -70,6 +74,8 @@ export function AnalyzeBoardStack({
           currentSan={analyzingMoveSan}
           etaLabel={analysisEtaLabel}
           showProgressOrb={showProgressOrb}
+          currentPly={analyzingPly}
+          totalPlies={analyzingTotalPlies}
         />
       ) : null}
     </div>

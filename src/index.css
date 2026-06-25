@@ -535,6 +535,157 @@
   animation: mobileTapHintIn 0.45s ease-out;
 }
 
+/* Unified mobile review stack — board, coach, eval chart as one surface */
+.review-flow-stack {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(
+    165deg,
+    rgba(32, 32, 32, 0.98) 0%,
+    rgba(24, 24, 24, 0.99) 100%
+  );
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.review-flow-stack > * + * {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.review-flow-coach {
+  max-height: min(38vh, 300px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.game-board-frame {
+  display: flex;
+  align-items: stretch;
+  align-self: center;
+  overflow: hidden;
+  background: #1a1816;
+}
+
+/* On-board analysis veil — uses board space during review */
+.board-analysis-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 85% 85% at 50% 50%,
+    rgba(12, 14, 12, 0.72) 0%,
+    rgba(8, 10, 8, 0.45) 55%,
+    transparent 100%
+  );
+  animation: boardAnalysisVeilIn 0.5s ease-out forwards;
+}
+
+.board-analysis-glow {
+  position: absolute;
+  width: 55%;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(129, 182, 76, 0.12) 0%,
+    transparent 70%
+  );
+  animation: boardAnalysisGlow 3s ease-in-out infinite;
+}
+
+.board-analysis-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.board-analysis-ring-wrap {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.board-analysis-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.board-analysis-ring-track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.board-analysis-ring-progress {
+  stroke: #81b64c;
+  filter: drop-shadow(0 0 6px rgba(129, 182, 76, 0.45));
+  transition: stroke-dashoffset 0.35s ease-out;
+}
+
+.board-analysis-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.board-analysis-stage {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.board-analysis-move {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.board-analysis-plies {
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@keyframes boardAnalysisVeilIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes boardAnalysisGlow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
 @keyframes mobileTapHintIn {
   from {
     opacity: 0;

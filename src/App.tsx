@@ -22,7 +22,6 @@ import {
 } from "./engine/evaluationService";
 import { MoveReviewPanel } from "./components/MoveReviewPanel";
 import { EvalBadge } from "./components/EvalBadge";
-import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
@@ -582,8 +581,13 @@ export default function App() {
         setAnalysisStartedAt(null);
 
         if (openReview) {
-          setTab("review");
-          navigateToMove(-1, false);
+          setTab("moves");
+          navigateToMove(
+            result.moves.length > 0 ? result.moves.length - 1 : -1,
+            false
+          );
+        } else if (result.moves.length > 0 && currentMoveIdxRef.current < 0) {
+          navigateToMove(result.moves.length - 1, false);
         }
 
         const meta = extractGameMeta(pgnStr);
@@ -628,7 +632,10 @@ export default function App() {
   const requestAnalysisUi = useCallback(() => {
     if (!pgn.trim()) return;
     if (analysisState === "done" && moves.length > 0) {
-      setTab("review");
+      setTab("moves");
+      if (currentMoveIdxRef.current < 0) {
+        navigateToMove(moves.length - 1, false);
+      }
       return;
     }
     if (analysisRunning) {
@@ -638,7 +645,7 @@ export default function App() {
       return;
     }
     void runAnalysis(pgn, { visible: true });
-  }, [pgn, analysisState, moves.length, analysisRunning, runAnalysis]);
+  }, [pgn, analysisState, moves.length, analysisRunning, runAnalysis, navigateToMove]);
 
   /** Re-run full analysis (e.g. after depth change or accuracy formula update). */
   const requestReanalysis = useCallback(() => {
@@ -902,9 +909,10 @@ export default function App() {
 
   const showBoardAnalyzeOverlay =
     !!pgn &&
-    moves.length === 0 &&
-    (analysisState === "loading" || analysisState === "error") &&
-    (!isMobileLayout || tab === "moves");
+    (!isMobileLayout || tab === "moves") &&
+    ((isMobileLayout && isAnalyzing) ||
+      (moves.length === 0 &&
+        (analysisState === "loading" || analysisState === "error")));
 
   const showBoardProgressOrb = false;
 
@@ -1112,17 +1120,6 @@ export default function App() {
             Dismiss
           </button>
         </div>
-      )}
-
-      {isMobileLayout && isAnalyzing && tab === "moves" && (
-        <MobileAnalysisStatus
-          state={analysisState}
-          progressPercent={progressPercent}
-          stageLabel={analysisStage}
-          currentSan={analyzingMoveSan}
-          currentPly={analyzingReplayPly}
-          totalPlies={replayFrames.length}
-        />
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -1573,9 +1570,9 @@ export default function App() {
 
             {tab === "moves" && (
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-1 gap-1">
+            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-2 pb-1 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
-                <>
+                <div className="review-flow-stack w-full max-w-md">
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.white : playerNames.black}
@@ -1622,6 +1619,8 @@ export default function App() {
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
                   showProgressOrb={showBoardProgressOrb}
+                  analyzingPly={analyzingReplayPly}
+                  analyzingTotalPlies={replayFrames.length}
                 />
               <PlayerTag
                 compact
@@ -1642,16 +1641,31 @@ export default function App() {
                 }
               />
               {moves.length > 0 && (
+                <div className="review-flow-coach">
+                  <MoveReviewPanel
+                    move={currentMove}
+                    moveIdx={currentMoveIdx}
+                    moves={moves}
+                    runId={reviewResult?.run.runId}
+                    onContinuationFen={handleContinuationFen}
+                    onContinuationEval={handleContinuationEval}
+                    onContinuationActive={handleContinuationActive}
+                    onContinuationArrow={handleContinuationArrow}
+                    embedded
+                  />
+                </div>
+              )}
+              {moves.length > 0 && (
                 <EvalChartPanel
-                  className="w-full max-w-md"
                   moves={moves}
                   currentMoveIndex={currentMoveIdx}
                   onMoveSelect={navigateToMove}
                   open={mobileEvalGraphOpen}
                   onOpenChange={setMobileEvalGraphOpen}
+                  integrated
                 />
               )}
-                </>
+                </div>
               ) : (
                 <MobileGameHero
                   boardWidth={boardWidth}
@@ -1664,24 +1678,6 @@ export default function App() {
                 />
               )}
             </div>
-
-            {moves.length > 0 && (
-            <div
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-chess-panel border-t border-chess-border"
-              style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
-            >
-                  <MoveReviewPanel
-                    move={currentMove}
-                    moveIdx={currentMoveIdx}
-                    moves={moves}
-                    runId={reviewResult?.run.runId}
-                    onContinuationFen={handleContinuationFen}
-                    onContinuationEval={handleContinuationEval}
-                    onContinuationActive={handleContinuationActive}
-                    onContinuationArrow={handleContinuationArrow}
-                  />
-            </div>
-            )}
             </div>
             )}
           </div>

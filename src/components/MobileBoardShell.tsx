@@ -28,6 +28,8 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   analyzingMoveSan?: string;
   analysisEtaLabel?: string | null;
   showProgressOrb?: boolean;
+  analyzingPly?: number;
+  analyzingTotalPlies?: number;
 }
 
 function MoveTapZone({
@@ -119,9 +121,12 @@ export function MobileBoardShell({
   analyzingMoveSan,
   analysisEtaLabel,
   showProgressOrb = false,
+  analyzingPly,
+  analyzingTotalPlies,
   ...boardProps
 }: MobileBoardShellProps) {
-  const barHeight = boardWidth;
+  const barWidth = 14;
+  const frameWidth = boardWidth + barWidth;
   const canNavigate = canPrev || canNext;
 
   const [showTapHint, setShowTapHint] = useState(false);
@@ -166,18 +171,17 @@ export function MobileBoardShell({
   return (
     <div className="relative w-full flex justify-center">
       <div
-        className="flex items-stretch gap-1.5"
-        style={{ maxWidth: boardWidth + 28 }}
+        className="game-board-frame"
+        style={{ width: frameWidth, height: boardWidth }}
       >
         <EvalBar
           evalResult={evalResult}
           boardFlipped={boardOrientation === "black"}
-          barHeight={barHeight}
-          compact
+          barHeight={boardWidth}
+          integrated
         />
         <div
-          className="relative flex-shrink-0 overflow-visible"
-          style={{ width: boardWidth, height: boardWidth }}
+          className="relative flex-1 min-w-0 h-full overflow-visible"
         >
           <AnalyzeBoardStack
             {...boardProps}
@@ -196,6 +200,8 @@ export function MobileBoardShell({
             analyzingMoveSan={analyzingMoveSan}
             analysisEtaLabel={analysisEtaLabel}
             showProgressOrb={showProgressOrb}
+            analyzingPly={analyzingPly}
+            analyzingTotalPlies={analyzingTotalPlies}
           />
 
           {emphasizeZones && (

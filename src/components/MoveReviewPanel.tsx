@@ -17,6 +17,7 @@ export interface MoveReviewPanelProps {
   onContinuationEval?: (eval_: EvalResult | null) => void;
   onContinuationActive?: (active: boolean) => void;
   onContinuationArrow?: (arrow: { from: string; to: string } | null) => void;
+  embedded?: boolean;
 }
 
 // ── Opening database with progressive names ──────────────────────────────────
@@ -334,6 +335,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   onContinuationEval,
   onContinuationActive,
   onContinuationArrow,
+  embedded = false,
 }) => {
   const [aiComment, setAiComment] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -440,7 +442,11 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const showContinuation = suggestBest && !!move.bestMoveSan;
 
   return (
-    <div className="flex flex-col gap-3 p-3 sm:p-3 text-sm flex-1 min-w-0 overflow-x-hidden">
+    <div
+      className={`flex flex-col text-sm flex-1 min-w-0 overflow-x-hidden ${
+        embedded ? "gap-2.5 px-3 py-2.5" : "gap-3 p-3 sm:p-3"
+      }`}
+    >
       {/* Move + classification */}
       <div className="flex items-start gap-2">
         <div
@@ -487,10 +493,19 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
       {/* Comment — AI or static fallback */}
       {displayComment && (
         <div
-          className="text-xs leading-relaxed rounded p-2 transition-opacity duration-300 break-words"
+          className={`text-xs leading-relaxed transition-opacity duration-300 break-words ${
+            embedded
+              ? "border-l-2 pl-2.5 py-0.5"
+              : "rounded p-2"
+          }`}
           style={{
             color: meta?.color ?? "#aaa",
-            backgroundColor: meta ? `${meta.color}11` : "transparent",
+            backgroundColor: embedded
+              ? "transparent"
+              : meta
+                ? `${meta.color}11`
+                : "transparent",
+            borderColor: embedded ? (meta?.color ?? "#6daa6d") : undefined,
             opacity: aiLoading ? 0.6 : 1,
           }}
         >
