@@ -10,6 +10,7 @@ import { InlineErrorNotice } from "./InlineErrorNotice";
 import {
   normalizeGameLoadError,
   trackAppError,
+  withTimeout,
   type AppError,
 } from "../utils/appError";
 
@@ -18,6 +19,7 @@ type Platform = "chesscom" | "lichess";
 const STORAGE_KEY_USER    = "cr_username";
 const STORAGE_KEY_PLAT    = "cr_platform";
 const STORAGE_KEY_GAMES   = "cr_games";
+const GAME_FETCH_TIMEOUT_MS = 20000;
 
 interface GameListProps {
   username: string;
@@ -142,9 +144,13 @@ export const GameList: React.FC<GameListProps> = ({
     setGamesError(null);
     startSlowTimer();
     try {
-      const list = plat === "chesscom"
-        ? await fetchRecentGames(uname.trim())
-        : await fetchLichessGames(uname.trim());
+      const list = await withTimeout(
+        plat === "chesscom"
+          ? fetchRecentGames(uname.trim())
+          : fetchLichessGames(uname.trim()),
+        GAME_FETCH_TIMEOUT_MS,
+        "Game fetch timeout"
+      );
       if (gen !== loadGenRef.current) return;
 
       setGames(list);
@@ -209,6 +215,14 @@ export const GameList: React.FC<GameListProps> = ({
   };
 
   const handleGo = () => loadGames(inputVal, platform);
+  const handleRetry = () => {
+    // Allow retry to take over even if a prior request is still pending.
+    loadGenRef.current += 1;
+    setLoading(false);
+    clearSlowTimer();
+    setShowSlowRetry(false);
+    void loadGames(inputVal, platform);
+  };
 
 
   const resultBadge = (result: "win" | "loss" | "draw") => {
@@ -303,8 +317,7 @@ export const GameList: React.FC<GameListProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={handleGo}
-                    disabled={loading}
+                    onClick={handleRetry}
                     className="flex-shrink-0 font-semibold text-chess-accent"
                   >
                     Retry
@@ -315,7 +328,7 @@ export const GameList: React.FC<GameListProps> = ({
                 <InlineErrorNotice
                   className="mt-2"
                   message={gamesError.message}
-                  onRetry={gamesError.retryable ? handleGo : undefined}
+                  onRetry={gamesError.retryable ? handleRetry : undefined}
                   onDismiss={() => setGamesError(null)}
                 />
               )}

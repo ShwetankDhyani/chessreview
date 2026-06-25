@@ -22,6 +22,13 @@ function extractMessage(error: unknown): string | null {
 
 export function normalizeGameLoadError(error: unknown): AppError {
   const raw = (extractMessage(error) ?? "").toLowerCase();
+  if (raw.includes("timeout")) {
+    return {
+      code: "GAME_FETCH_TIMEOUT",
+      message: "Game fetch timed out. Retry now or try again in a minute.",
+      retryable: true,
+    };
+  }
   if (raw.includes("not found") || raw.includes("invalid")) {
     return {
       code: "GAME_SOURCE_NOT_FOUND",
