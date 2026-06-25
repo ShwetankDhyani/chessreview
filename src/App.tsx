@@ -52,7 +52,6 @@ import {
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
-import { GameMoveNavBar } from "./components/GameMoveNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
@@ -1129,7 +1128,7 @@ export default function App() {
 
   const [showDepth, setShowDepth] = useState(false);
   const [desktopEvalGraphOpen, setDesktopEvalGraphOpen] = useState(false);
-  const [mobileEvalGraphOpen, setMobileEvalGraphOpen] = useState(true);
+  const [mobileEvalGraphOpen, setMobileEvalGraphOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(
     () => !localStorage.getItem("cr_welcome_dismissed")
@@ -1881,8 +1880,8 @@ export default function App() {
             )}
 
             {tab === "moves" && (
-            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll">
-            <div className="flex-shrink-0 flex flex-col items-center page-inline-pad pt-1.5 pb-1.5 gap-1.5" style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}>
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-shrink-0 page-inline-pad pt-1.5 pb-0">
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <div className="review-flow-stack w-full">
               <PlayerTag
@@ -1928,18 +1927,11 @@ export default function App() {
                   showProgressOrb={showBoardProgressOrb}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
-                />
-              {moves.length > 0 && (
-                <GameMoveNavBar
-                  canPrev={canBoardStepBack}
-                  canNext={canBoardStepForward}
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
+                  canPrev={canBoardStepBack}
+                  canNext={canBoardStepForward}
                 />
-              )}
-              {continuationNav && (
-                <EngineLineNavBar nav={continuationNav} />
-              )}
               <PlayerTag
                 compact
                 name={boardFlipped ? playerNames.black : playerNames.white}
@@ -1959,29 +1951,13 @@ export default function App() {
                 }
               />
               {moves.length > 0 && (
-                <div className="review-flow-coach">
-                  <MoveReviewPanel
-                    move={currentMove}
-                    moveIdx={currentMoveIdx}
-                    moves={moves}
-                    runId={reviewResult?.run.runId}
-                    onContinuationFen={handleContinuationFen}
-                    onContinuationEval={handleContinuationEval}
-                    onContinuationActive={handleContinuationActive}
-                    onContinuationArrow={handleContinuationArrow}
-                    onRegisterContinuationNav={handleRegisterContinuationNav}
-                    embedded
-                  />
-                </div>
-              )}
-              {moves.length > 0 && (
                 <EvalChartPanel
                   moves={moves}
                   currentMoveIndex={currentMoveIdx}
                   onMoveSelect={navigateToMove}
                   open={mobileEvalGraphOpen}
                   onOpenChange={setMobileEvalGraphOpen}
-                  integrated
+                  docked
                 />
               )}
                 </div>
@@ -1997,6 +1973,30 @@ export default function App() {
                 />
               )}
             </div>
+            {moves.length > 0 && (
+              <div
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain mobile-review-scroll mobile-coach-pane page-inline-pad border-t border-chess-border/40"
+                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+              >
+                {continuationNav && (
+                  <EngineLineNavBar nav={continuationNav} />
+                )}
+                <div className="review-flow-coach">
+                  <MoveReviewPanel
+                    move={currentMove}
+                    moveIdx={currentMoveIdx}
+                    moves={moves}
+                    runId={reviewResult?.run.runId}
+                    onContinuationFen={handleContinuationFen}
+                    onContinuationEval={handleContinuationEval}
+                    onContinuationActive={handleContinuationActive}
+                    onContinuationArrow={handleContinuationArrow}
+                    onRegisterContinuationNav={handleRegisterContinuationNav}
+                    embedded
+                  />
+                </div>
+              </div>
+            )}
             </div>
             )}
           </div>

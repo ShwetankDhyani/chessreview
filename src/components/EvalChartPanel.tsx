@@ -9,11 +9,13 @@ interface EvalChartPanelProps {
   className?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Docked below board on mobile — fixed toggle row, chart expands in place */
+  docked?: boolean;
   /** No header label — flows as part of the review stack */
   integrated?: boolean;
 }
 
-/** Collapsible eval graph — integrated mode is label-free with a subtle expand control */
+/** Collapsible eval graph — docked mode keeps a fixed slot below the board */
 export function EvalChartPanel({
   moves,
   currentMoveIndex,
@@ -21,6 +23,7 @@ export function EvalChartPanel({
   className = "",
   open: openProp,
   onOpenChange,
+  docked = false,
   integrated = false,
 }: EvalChartPanelProps) {
   const [openInternal, setOpenInternal] = useState(false);
@@ -31,24 +34,27 @@ export function EvalChartPanel({
     onOpenChange?.(next);
   };
 
-  if (integrated) {
+  if (docked || integrated) {
     return (
-      <div className={`relative flex-shrink-0 ${className}`}>
+      <div
+        className={`flex-shrink-0 border-t border-chess-border/50 bg-chess-panel/90 ${className}`}
+      >
         <button
           type="button"
           onClick={toggle}
-          className="absolute right-2 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-chess-bg/70 text-chess-muted hover:text-chess-text hover:bg-chess-hover/80 transition-colors"
+          className="w-full flex items-center justify-between gap-2 px-3 h-9 text-left hover:bg-chess-hover/40 transition-colors"
           aria-expanded={open}
-          aria-label={open ? "Collapse eval chart" : "Expand eval chart"}
         >
-          <span className="text-[9px] leading-none" aria-hidden>
-            {open ? "▾" : "▴"}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+            Eval graph
+          </span>
+          <span className="text-[10px] text-chess-muted tabular-nums">
+            {open ? "Hide ▾" : "Show ▸"}
           </span>
         </button>
         <div
-          className={`overflow-hidden transition-[height] duration-300 ease-out ${
-            open ? "h-[4.5rem]" : "h-9"
-          }`}
+          className="overflow-hidden transition-[height] duration-200 ease-out"
+          style={{ height: open ? "4.5rem" : "0px" }}
         >
           <EvalChart
             moves={moves}

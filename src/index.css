@@ -795,6 +795,19 @@
   overscroll-behavior: contain;
 }
 
+.mobile-coach-pane {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-coach-pane .review-flow-coach {
+  max-height: none;
+  overflow: visible;
+}
+
 .game-board-frame {
   display: flex;
   align-items: stretch;

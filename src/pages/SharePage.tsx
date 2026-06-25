@@ -3,7 +3,6 @@ import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { EvalChartPanel } from "../components/EvalChartPanel";
 import { EvalBadge } from "../components/EvalBadge";
 import { MobileBoardShell } from "../components/MobileBoardShell";
-import { GameMoveNavBar } from "../components/GameMoveNavBar";
 import { MoveList } from "../components/MoveList";
 import { MoveReviewPanel } from "../components/MoveReviewPanel";
 import { fetchSharedReview } from "../utils/shareReview";
@@ -342,15 +341,11 @@ export default function SharePage() {
           continuationArrow={null}
           showBestMoveArrow={false}
           remountKey={0}
+          onPrev={(animate = true) => stepMove(-1, animate)}
+          onNext={(animate = true) => stepMove(1, animate)}
+          canPrev={currentMoveIdx > -1}
+          canNext={currentMoveIdx < moves.length - 1}
         />
-        {moves.length > 0 && (
-          <GameMoveNavBar
-            canPrev={currentMoveIdx > -1}
-            canNext={currentMoveIdx < moves.length - 1}
-            onPrev={(animate = true) => stepMove(-1, animate)}
-            onNext={(animate = true) => stepMove(1, animate)}
-          />
-        )}
 
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <span className="text-[11px] text-chess-muted font-mono tabular-nums">
@@ -366,6 +361,17 @@ export default function SharePage() {
         </div>
 
         {moves.length > 0 && (
+          <EvalChartPanel
+            moves={moves}
+            currentMoveIndex={currentMoveIdx}
+            onMoveSelect={(idx) => selectMove(idx, true)}
+            open={evalOpen}
+            onOpenChange={setEvalOpen}
+            docked
+          />
+        )}
+
+        {moves.length > 0 && (
           <div className="review-flow-coach">
             <MoveReviewPanel
               move={currentMove}
@@ -375,15 +381,6 @@ export default function SharePage() {
             />
           </div>
         )}
-
-        <EvalChartPanel
-          moves={moves}
-          currentMoveIndex={currentMoveIdx}
-          onMoveSelect={(idx) => selectMove(idx, true)}
-          open={evalOpen}
-          onOpenChange={setEvalOpen}
-          integrated
-        />
         </div>
       </div>
 
