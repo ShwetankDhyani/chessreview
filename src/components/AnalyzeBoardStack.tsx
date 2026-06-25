@@ -21,7 +21,6 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   showProgressOrb?: boolean;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
-  analysisElapsedSec?: number;
 }
 
 /** Chessboard + centered analyze / progress overlay */
@@ -42,7 +41,6 @@ export function AnalyzeBoardStack({
   showProgressOrb = false,
   analyzingPly,
   analyzingTotalPlies,
-  analysisElapsedSec = 0,
   boardWidth,
   boardOrientation,
   ...boardProps
@@ -84,7 +82,6 @@ export function AnalyzeBoardStack({
           showProgressOrb={showProgressOrb}
           currentPly={analyzingPly}
           totalPlies={analyzingTotalPlies}
-          elapsedSec={analysisElapsedSec}
           onCancel={onCancelAnalysis}
         />
       ) : null}

@@ -1495,7 +1495,6 @@ export default function App() {
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
                   showProgressOrb={showBoardProgressOrb}
-                  analysisElapsedSec={analysisElapsedSec}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1742,7 +1741,6 @@ export default function App() {
                   showProgressOrb={showBoardProgressOrb}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
-                  analysisElapsedSec={analysisElapsedSec}
                 />
               {moves.length > 0 && (
                 <GameMoveNavBar

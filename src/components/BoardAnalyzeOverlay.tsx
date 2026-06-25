@@ -12,7 +12,6 @@ interface BoardAnalyzeOverlayProps {
   showProgressOrb?: boolean;
   currentPly?: number;
   totalPlies?: number;
-  elapsedSec?: number;
 }
 
 const RING_R = 34;
@@ -28,7 +27,6 @@ export function BoardAnalyzeOverlay({
   currentSan,
   currentPly,
   totalPlies,
-  elapsedSec = 0,
 }: BoardAnalyzeOverlayProps) {
   if (state === "analyzing") {
     const pct = Math.min(100, Math.max(0, progressPercent));
@@ -83,11 +81,6 @@ export function BoardAnalyzeOverlay({
           ) : null}
           {plyNote ? (
             <p className="board-analysis-plies">{plyNote}</p>
-          ) : null}
-          {elapsedSec >= 45 ? (
-            <p className="board-analysis-plies">
-              Taking longer than usual today. Thanks for your patience.
-            </p>
           ) : null}
           {onCancel ? (
             <button

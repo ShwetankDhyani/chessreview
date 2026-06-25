@@ -22,7 +22,6 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   showProgressOrb?: boolean;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
-  analysisElapsedSec?: number;
 }
 
 /** Board + slim eval bar — move navigation uses explicit buttons outside this shell. */
@@ -46,7 +45,6 @@ export function MobileBoardShell({
   showProgressOrb = false,
   analyzingPly,
   analyzingTotalPlies,
-  analysisElapsedSec = 0,
   ...boardProps
 }: MobileBoardShellProps) {
   const barWidth = 14;
@@ -97,7 +95,6 @@ export function MobileBoardShell({
               showProgressOrb={showProgressOrb}
               analyzingPly={analyzingPly}
               analyzingTotalPlies={analyzingTotalPlies}
-              analysisElapsedSec={analysisElapsedSec}
             />
           </div>
         </div>
