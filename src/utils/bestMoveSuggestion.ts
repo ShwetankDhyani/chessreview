@@ -5,7 +5,7 @@ function normalizeUci(uci: string): string {
   return uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
 }
 
-/** Green board arrow — every non-book ply with a stored engine best move. */
+/** @deprecated Use coachShowsBestWas from moveFactSheet — kept for continuation panel. */
 export function shouldShowBestMoveArrow(
   move: AnalyzedMove | null | undefined
 ): boolean {

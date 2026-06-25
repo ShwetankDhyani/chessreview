@@ -75,7 +75,7 @@ export function ReviewChessboard({
       : null;
   const arrow = continuationArrow
     ? { ...continuationArrow, variant: "continuation" as const }
-    : playedArrow ?? hintArrow;
+    : hintArrow ?? playedArrow;
 
   const squareStyles = lastMoveHighlight
     ? {

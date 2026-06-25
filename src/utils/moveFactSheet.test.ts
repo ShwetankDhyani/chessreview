@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
-import { buildMoveFactSheet } from "./moveFactSheet";
+import { buildMoveFactSheet, coachShowsBestWas } from "./moveFactSheet";
 
 function move(
   partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "san" | "classification">
@@ -72,5 +72,27 @@ describe("buildMoveFactSheet", () => {
     const sheet = buildMoveFactSheet(moves[2], { moveIdx: 2, moves });
     expect(sheet!.classification).toBe("Book");
     expect(sheet!.opening).toMatch(/Queen's Gambit/i);
+  });
+
+  it("coachShowsBestWas matches the Best was row", () => {
+    expect(
+      coachShowsBestWas(
+        move({ san: "Nf3", classification: "excellent", uci: "g1f3", bestMove: "d2d4" })
+      )
+    ).toBe(true);
+    expect(
+      coachShowsBestWas(
+        move({
+          san: "d4",
+          classification: "best",
+          uci: "d2d4",
+          bestMove: "d2d4",
+          bestMoveSan: "d4",
+        })
+      )
+    ).toBe(false);
+    expect(coachShowsBestWas(move({ san: "e4", classification: "book", uci: "e2e4" }))).toBe(
+      false
+    );
   });
 });

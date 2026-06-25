@@ -85,6 +85,14 @@ function bestWasLabel(move: AnalyzedMove): string {
   return san;
 }
 
+/** True when the coach fact sheet would show a Best was row. */
+export function coachShowsBestWas(move: AnalyzedMove | null | undefined): boolean {
+  if (!move?.classification) return false;
+  if (move.classification === "book" || move.inOpeningBook || move.forced) return false;
+  if (isDeliveredCheckmate(move.fenAfter)) return false;
+  return bestWasLabel(move) !== EMPTY;
+}
+
 function winChangeLabel(move: AnalyzedMove): string {
   const pct = winChanceLossPercent(move.deltaE);
   if (pct < 1) return "0%";
