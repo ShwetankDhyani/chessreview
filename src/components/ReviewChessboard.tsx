@@ -81,14 +81,14 @@ export function ReviewChessboard({
       style={{ width: boardWidth, maxWidth: "100%" }}
     >
       <div
-        className="absolute inset-0 pointer-events-none z-10"
+        className="absolute inset-0 pointer-events-none z-10 board-continuation-ring"
+        data-active={continuationActive ? "true" : "false"}
         style={{
           borderRadius: "2px",
           boxShadow: continuationActive
-            ? "0 0 0 3px #81b64ccc, 0 0 18px 6px #81b64c55, inset 0 0 24px 3px #81b64c1f"
+            ? "0 0 0 2px rgba(129, 182, 76, 0.65)"
             : "none",
           transition: "box-shadow 0.35s ease",
-          animation: continuationActive ? "engineGlow 2.4s ease-in-out infinite" : "none",
         }}
       />
       <div

@@ -45,19 +45,23 @@ export function AnalyzeBoardStack({
 }: AnalyzeBoardStackProps) {
   return (
     <div
-      className="relative flex-shrink-0 overflow-visible"
-      style={{ width: boardWidth, height: boardWidth + 2 }}
+      className="flex flex-col flex-shrink-0 overflow-visible"
+      style={{ width: boardWidth }}
     >
+      {showEngineLineBanner ? (
+        <div className="engine-line-tag-row" aria-live="polite">
+          <span className="engine-line-tag">Engine line</span>
+        </div>
+      ) : null}
+      <div
+        className="relative flex-shrink-0 overflow-visible"
+        style={{ width: boardWidth, height: boardWidth + 2 }}
+      >
       <ReviewChessboard
         boardWidth={boardWidth}
         boardOrientation={boardOrientation}
         {...boardProps}
       />
-      {showEngineLineBanner ? (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 px-2.5 py-1 rounded-full bg-black/80 border border-white/15 text-[10px] text-white/90 pointer-events-none whitespace-nowrap shadow-md">
-          Engine line — close continuation to return to the game
-        </div>
-      ) : null}
       {showGameEnd && gameEnd ? (
         <BoardGameEndOverlay
           end={gameEnd}
@@ -78,6 +82,7 @@ export function AnalyzeBoardStack({
           totalPlies={analyzingTotalPlies}
         />
       ) : null}
+      </div>
     </div>
   );
 }

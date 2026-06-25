@@ -171,67 +171,78 @@ export function MobileBoardShell({
   return (
     <div className="relative w-full flex justify-center">
       <div
-        className="game-board-frame"
-        style={{ width: frameWidth, height: boardWidth }}
+        className={`game-board-frame${showEngineLineBanner ? " game-board-frame--tagged" : ""}`}
+        style={{
+          width: frameWidth,
+          height: showEngineLineBanner ? undefined : boardWidth,
+        }}
       >
-        <EvalBar
-          evalResult={evalResult}
-          boardFlipped={boardOrientation === "black"}
-          barHeight={boardWidth}
-          integrated
-        />
+        {showEngineLineBanner ? (
+          <div className="engine-line-tag-row" aria-live="polite">
+            <span className="engine-line-tag">Engine line</span>
+          </div>
+        ) : null}
         <div
-          className="relative flex-1 min-w-0 h-full overflow-visible"
+          className="flex items-stretch min-w-0"
+          style={{ height: boardWidth }}
         >
-          <AnalyzeBoardStack
-            {...boardProps}
-            boardWidth={boardWidth}
-            boardOrientation={boardOrientation}
-            analysisState={analysisState}
-            showAnalyzeButton={showAnalyzeButton}
-            showGameEnd={showGameEnd}
-            gameEnd={gameEnd}
-            whiteName={whiteName}
-            blackName={blackName}
-            onAnalyze={onAnalyze}
-            showEngineLineBanner={showEngineLineBanner}
-            progressPercent={progressPercent}
-            analysisStageLabel={analysisStageLabel}
-            analyzingMoveSan={analyzingMoveSan}
-            analysisEtaLabel={analysisEtaLabel}
-            showProgressOrb={showProgressOrb}
-            analyzingPly={analyzingPly}
-            analyzingTotalPlies={analyzingTotalPlies}
+          <EvalBar
+            evalResult={evalResult}
+            boardFlipped={boardOrientation === "black"}
+            barHeight={boardWidth}
+            integrated
           />
+          <div className="relative flex-1 min-w-0 h-full overflow-visible">
+            <AnalyzeBoardStack
+              {...boardProps}
+              boardWidth={boardWidth}
+              boardOrientation={boardOrientation}
+              analysisState={analysisState}
+              showAnalyzeButton={showAnalyzeButton}
+              showGameEnd={showGameEnd}
+              gameEnd={gameEnd}
+              whiteName={whiteName}
+              blackName={blackName}
+              onAnalyze={onAnalyze}
+              showEngineLineBanner={false}
+              progressPercent={progressPercent}
+              analysisStageLabel={analysisStageLabel}
+              analyzingMoveSan={analyzingMoveSan}
+              analysisEtaLabel={analysisEtaLabel}
+              showProgressOrb={showProgressOrb}
+              analyzingPly={analyzingPly}
+              analyzingTotalPlies={analyzingTotalPlies}
+            />
 
-          {emphasizeZones && (
-            <div
-              className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none px-3"
-              role="status"
-              aria-live="polite"
-            >
-              <p className="mobile-tap-hint-pill text-[10px] font-medium text-white/90 tracking-wide">
-                Tap board edges to browse moves
-              </p>
-            </div>
-          )}
+            {emphasizeZones && (
+              <div
+                className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none px-3"
+                role="status"
+                aria-live="polite"
+              >
+                <p className="mobile-tap-hint-pill text-[10px] font-medium text-white/90 tracking-wide">
+                  Tap board edges to browse moves
+                </p>
+              </div>
+            )}
 
-          <MoveTapZone
-            side="prev"
-            enabled={canPrev}
-            emphasize={emphasizeZones && canPrev}
-            onTap={() => onPrev(true)}
-            onHoldStep={() => onPrev(false)}
-            onInteract={dismissTapHint}
-          />
-          <MoveTapZone
-            side="next"
-            enabled={canNext}
-            emphasize={emphasizeZones && canNext}
-            onTap={() => onNext(true)}
-            onHoldStep={() => onNext(false)}
-            onInteract={dismissTapHint}
-          />
+            <MoveTapZone
+              side="prev"
+              enabled={canPrev}
+              emphasize={emphasizeZones && canPrev}
+              onTap={() => onPrev(true)}
+              onHoldStep={() => onPrev(false)}
+              onInteract={dismissTapHint}
+            />
+            <MoveTapZone
+              side="next"
+              enabled={canNext}
+              emphasize={emphasizeZones && canNext}
+              onTap={() => onNext(true)}
+              onHoldStep={() => onNext(false)}
+              onInteract={dismissTapHint}
+            />
+          </div>
         </div>
       </div>
     </div>
