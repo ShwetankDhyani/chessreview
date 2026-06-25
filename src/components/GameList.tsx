@@ -215,12 +215,17 @@ export const GameList: React.FC<GameListProps> = ({
   };
 
   const handleGo = () => loadGames(inputVal, platform);
-  const handleRetry = () => {
-    // Allow retry to take over even if a prior request is still pending.
+  const cancelLoad = useCallback(() => {
     loadGenRef.current += 1;
     setLoading(false);
     clearSlowTimer();
     setShowSlowRetry(false);
+    setGamesError(null);
+  }, [clearSlowTimer]);
+
+  const handleRetry = () => {
+    // Allow retry to take over even if a prior request is still pending.
+    cancelLoad();
     void loadGames(inputVal, platform);
   };
 
@@ -307,6 +312,17 @@ export const GameList: React.FC<GameListProps> = ({
                     "↻"
                   )}
                 </button>
+                {loading && (
+                  <button
+                    type="button"
+                    onClick={cancelLoad}
+                    className="mobile-chip"
+                    title="Cancel loading"
+                    aria-label="Cancel loading"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
 
               {showSlowRetry && (

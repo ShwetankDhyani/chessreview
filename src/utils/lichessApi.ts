@@ -35,8 +35,16 @@ export async function fetchLichessGames(username: string): Promise<GameListItem[
   }
 
   const text = await res.text();
-  const lines = text.trim().split("\n").filter(Boolean);
-  const games: LichessGame[] = lines.map(l => JSON.parse(l));
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
+  const games: LichessGame[] = [];
+  for (const line of lines) {
+    try {
+      games.push(JSON.parse(line) as LichessGame);
+    } catch {
+      // Lichess NDJSON responses can occasionally be truncated/noisy on flaky
+      // networks. Keep valid entries instead of failing the whole import.
+    }
+  }
 
   return games
     .filter(g => g.pgn)

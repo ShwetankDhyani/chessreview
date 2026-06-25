@@ -408,6 +408,15 @@ export default function App() {
       finalName = officialName;
     }
 
+    // Re-check duplicates after normalization/verification (e.g. casing changes).
+    const normalizedExists = profiles.some(
+      (p) => p.platform === platform && p.name.toLowerCase() === finalName.toLowerCase()
+    );
+    if (normalizedExists) {
+      setAddProfileError("Profile already added");
+      return;
+    }
+
     const updated = [...profiles, { name: finalName, platform }];
     saveProfiles(updated, updated.length - 1);
     setShowAddProfile(false);
