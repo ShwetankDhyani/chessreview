@@ -14,7 +14,6 @@ const ROWS: Array<{
   label: string;
   mono?: boolean;
 }> = [
-  { key: "engineRank", label: "Engine rank" },
   { key: "bestWas", label: "Best was", mono: true },
   { key: "winChange", label: "Win chance" },
   { key: "opening", label: "Opening" },

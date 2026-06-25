@@ -63,7 +63,7 @@ function engineRankLabel(move: AnalyzedMove): string {
 
 function bestWasLabel(move: AnalyzedMove): string {
   if (!move.bestMoveSan) return EMPTY;
-  if (playedMatchesBest(move)) return "Same as played";
+  if (playedMatchesBest(move)) return EMPTY;
   return move.bestMoveSan;
 }
 
@@ -167,7 +167,6 @@ export function buildFactualMoveComment(
   if (!sheet) return null;
   return [
     sheet.classification,
-    sheet.engineRank !== EMPTY ? `Rank: ${sheet.engineRank}` : null,
     `Played ${sheet.played}`,
     sheet.bestWas !== EMPTY ? `Best: ${sheet.bestWas}` : null,
     `Win ${sheet.winChange}`,

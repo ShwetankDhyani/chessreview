@@ -28,7 +28,6 @@ describe("buildMoveFactSheet", () => {
     );
     expect(sheet).not.toBeNull();
     expect(sheet!.classification).toBe("Excellent");
-    expect(sheet!.engineRank).toMatch(/Outside top 3/);
     expect(sheet!.bestWas).toBe("d4");
     expect(sheet!.winChange).toMatch(/%/);
     expect(sheet!.played).toBe("Be7");
@@ -46,8 +45,7 @@ describe("buildMoveFactSheet", () => {
         deltaE: 0,
       })
     );
-    expect(sheet!.engineRank).toBe("1st of 3");
-    expect(sheet!.bestWas).toBe("Same as played");
+    expect(sheet!.bestWas).toBe("—");
     expect(sheet!.winChange).toBe("0%");
   });
 
@@ -60,6 +58,5 @@ describe("buildMoveFactSheet", () => {
     const sheet = buildMoveFactSheet(moves[2], { moveIdx: 2, moves });
     expect(sheet!.classification).toBe("Book");
     expect(sheet!.opening).toMatch(/Queen's Gambit/i);
-    expect(sheet!.engineRank).toBe("—");
   });
 });
