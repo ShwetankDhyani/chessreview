@@ -59,6 +59,13 @@ import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
+import { InlineErrorNotice } from "./components/InlineErrorNotice";
+import {
+  normalizeAnalysisError,
+  normalizeShareError,
+  trackAppError,
+  withTimeout,
+} from "./utils/appError";
 
 type SidebarTab = "games" | "review" | "moves";
 
@@ -565,13 +572,17 @@ export default function App() {
       setAnalysisStartedAt(analysisStartedAt);
 
       try {
-        const result = await analyzePgn(
-          pgnStr,
-          (done, total) => {
-            if (abortRef.current || gen !== analysisGenerationRef.current) return;
-            setProgress({ done, total });
-          },
-          depth
+        const result = await withTimeout(
+          analyzePgn(
+            pgnStr,
+            (done, total) => {
+              if (abortRef.current || gen !== analysisGenerationRef.current) return;
+              setProgress({ done, total });
+            },
+            depth
+          ),
+          120000,
+          "Analysis timeout"
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 
@@ -622,14 +633,18 @@ export default function App() {
       } catch (e) {
         if (gen !== analysisGenerationRef.current) return;
         console.error(e);
+        const normalized = normalizeAnalysisError(e);
+        trackAppError({
+          code: normalized.code,
+          message: normalized.message,
+          context: { depth, phase: "run-analysis" },
+        });
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisStartedAt(null);
         setAnalysisState("error");
-        setAnalysisError(
-          e instanceof Error ? e.message : "Analysis failed. Check engine connection and try again."
-        );
+        setAnalysisError(normalized.message);
       }
     },
     [navigateToMove, depth, recheckEngine, activeUser, noteCompletedReview]
@@ -722,7 +737,13 @@ export default function App() {
       });
       setShareUrl(shareUrlForId(result.id));
     } catch (e) {
-      setShareError(e instanceof Error ? e.message : "Could not share");
+      const normalized = normalizeShareError(e);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { phase: "share-create" },
+      });
+      setShareError(normalized.message);
     } finally {
       setSharing(false);
     }
@@ -1124,18 +1145,19 @@ export default function App() {
       </header>
 
       {(loadError || analysisError) && (
-        <div className="flex-shrink-0 px-4 py-2 bg-red-950/50 border-b border-red-900/50 text-xs text-red-300 text-center">
-          {loadError ?? analysisError}
-          <button
-            type="button"
-            className="ml-2 underline hover:text-red-200"
-            onClick={() => {
+        <div className="flex-shrink-0 px-4 py-2 border-b border-red-900/40">
+          <InlineErrorNotice
+            message={loadError ?? analysisError ?? "Something went wrong."}
+            onRetry={
+              analysisError && pgn.trim()
+                ? () => void requestAnalysisUi()
+                : undefined
+            }
+            onDismiss={() => {
               setLoadError(null);
               setAnalysisError(null);
             }}
-          >
-            Dismiss
-          </button>
+          />
         </div>
       )}
 

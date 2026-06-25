@@ -6,6 +6,12 @@ import { fetchLichessGames } from "../utils/lichessApi";
 import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
 import { GameUrlImport } from "./GameUrlImport";
+import { InlineErrorNotice } from "./InlineErrorNotice";
+import {
+  normalizeGameLoadError,
+  trackAppError,
+  type AppError,
+} from "../utils/appError";
 
 type Platform = "chesscom" | "lichess";
 
@@ -42,6 +48,7 @@ export const GameList: React.FC<GameListProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [showSlowRetry, setShowSlowRetry] = useState(false);
+  const [gamesError, setGamesError] = useState<AppError | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSucceededRef = useRef(false);
   const loadGenRef = useRef(0);
@@ -107,6 +114,7 @@ export const GameList: React.FC<GameListProps> = ({
         setStats(null);
         setLoading(false);
         setShowSlowRetry(false);
+        setGamesError(null);
         clearSlowTimer();
         loadGames(detail.name, detail.platform);
       } else {
@@ -117,6 +125,7 @@ export const GameList: React.FC<GameListProps> = ({
         setStats(null);
         setLoading(false);
         setShowSlowRetry(false);
+        setGamesError(null);
         clearSlowTimer();
       }
     };
@@ -130,6 +139,7 @@ export const GameList: React.FC<GameListProps> = ({
     const gen = ++loadGenRef.current;
     const hadCachedGames = gamesRef.current.length > 0;
     setLoading(true);
+    setGamesError(null);
     startSlowTimer();
     try {
       const list = plat === "chesscom"
@@ -178,8 +188,15 @@ export const GameList: React.FC<GameListProps> = ({
       localStorage.setItem(STORAGE_KEY_USER, uname.trim());
       localStorage.setItem(STORAGE_KEY_PLAT, plat);
       localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
-    } catch {
+    } catch (error) {
       if (gen !== loadGenRef.current) return;
+      const normalized = normalizeGameLoadError(error);
+      setGamesError(normalized);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { platform: plat, username: uname.trim(), source: "game-list" },
+      });
       if (hadCachedGames) {
         clearSlowTimer();
         setShowSlowRetry(false);
@@ -293,6 +310,14 @@ export const GameList: React.FC<GameListProps> = ({
                     Retry
                   </button>
                 </div>
+              )}
+              {gamesError && (
+                <InlineErrorNotice
+                  className="mt-2"
+                  message={gamesError.message}
+                  onRetry={gamesError.retryable ? handleGo : undefined}
+                  onDismiss={() => setGamesError(null)}
+                />
               )}
             </div>
 

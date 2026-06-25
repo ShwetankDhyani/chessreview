@@ -7,6 +7,8 @@ import { CoachIcon } from "./CoachIcon";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
 import { formatWinChanceLoss } from "../utils/evalDisplay";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
+import { InlineErrorNotice } from "./InlineErrorNotice";
+import { trackAppError } from "../utils/appError";
 
 export interface MoveReviewPanelProps {
   move: AnalyzedMove | null;
@@ -163,6 +165,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
 }) => {
   const allMoves = [firstMove, ...line];
   const [step, setStep] = useState(0);
+  const [evalWarning, setEvalWarning] = useState<string | null>(null);
   const hasBeenInLineRef = useRef(false);
   const evalCache = useRef<Map<string, EvalResult>>(new Map());
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,16 +218,26 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       }
       const cached = evalCache.current.get(fen);
       if (cached) {
+        setEvalWarning(null);
         onEvalChangeRef.current?.(cached);
       } else {
         evaluateFen(fen, isNativeEngineActive() ? 10 : 12).then((ev) => {
           evalCache.current.set(fen, ev);
+          setEvalWarning(null);
           onEvalChangeRef.current?.(ev);
-        }).catch(() => {});
+        }).catch((error) => {
+          setEvalWarning("Live continuation eval unavailable.");
+          trackAppError({
+            code: "CONTINUATION_EVAL_FAILED",
+            message: "Could not evaluate continuation position.",
+            context: { step, error: error instanceof Error ? error.message : "unknown" },
+          });
+        });
       }
     } else if (hasBeenInLineRef.current) {
       onFenChangeRef.current?.(startFen);
       onEvalChangeRef.current?.(evalBefore ?? null);
+      setEvalWarning(null);
       const firstUci = stepUcis[0];
       if (firstUci) {
         onArrowChangeRef.current?.({
@@ -237,6 +250,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     } else {
       onFenChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
+      setEvalWarning(null);
       const firstUci = stepUcis[0];
       if (firstUci) {
         onArrowChangeRef.current?.({
@@ -328,6 +342,14 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
             }</>
         }
       </div>
+      {evalWarning && (
+        <div className="mx-2.5 mb-2">
+          <InlineErrorNotice
+            message={evalWarning}
+            onDismiss={() => setEvalWarning(null)}
+          />
+        </div>
+      )}
 
       {/* Prev / Next controls */}
       <div className="flex border-t border-chess-border">

@@ -8,6 +8,8 @@ import {
   telegramShareUrl,
   whatsAppShareUrl,
 } from "../utils/socialShare";
+import { InlineErrorNotice } from "./InlineErrorNotice";
+import { trackAppError } from "../utils/appError";
 
 interface ShareReviewActionsProps {
   url: string;
@@ -49,6 +51,7 @@ export function ShareReviewActions({
   blackAccuracy,
 }: ShareReviewActionsProps) {
   const [copied, setCopied] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const nativeShare = canUseNativeShare();
 
   const shareText = useMemo(
@@ -72,8 +75,14 @@ export function ShareReviewActions({
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      setActionError(null);
     } catch {
-      /* ignore */
+      setActionError("Could not copy link. You can still select and copy it manually.");
+      trackAppError({
+        code: "SHARE_COPY_FAILED",
+        message: "Clipboard copy failed.",
+        context: { source: "share-actions" },
+      });
     }
   }, [url]);
 
@@ -82,12 +91,32 @@ export function ShareReviewActions({
   }, []);
 
   const handleInstagram = useCallback(async () => {
-    await copyShareText(url, shareText);
-    openShare(instagramShareUrl());
+    try {
+      await copyShareText(url, shareText);
+      setActionError(null);
+      openShare(instagramShareUrl());
+    } catch {
+      setActionError("Could not prepare Instagram share. Try copy link instead.");
+      trackAppError({
+        code: "SHARE_INSTAGRAM_FAILED",
+        message: "Instagram share prep failed.",
+        context: { source: "share-actions" },
+      });
+    }
   }, [url, shareText, openShare]);
 
   const handleNativeShare = useCallback(async () => {
-    await shareViaNativeSheet(url, shareText);
+    try {
+      await shareViaNativeSheet(url, shareText);
+      setActionError(null);
+    } catch {
+      setActionError("Sharing was cancelled or unavailable on this device.");
+      trackAppError({
+        code: "SHARE_NATIVE_FAILED",
+        message: "Native share unavailable or cancelled.",
+        context: { source: "share-actions" },
+      });
+    }
   }, [url, shareText]);
 
   return (
@@ -142,6 +171,12 @@ export function ShareReviewActions({
           </IconButton>
         ) : null}
       </div>
+      {actionError && (
+        <InlineErrorNotice
+          message={actionError}
+          onDismiss={() => setActionError(null)}
+        />
+      )}
     </div>
   );
 }

@@ -17,6 +17,8 @@ import {
   highlightFromUci,
   resolveBoardNavStep,
 } from "../utils/boardPosition";
+import { InlineErrorNotice } from "../components/InlineErrorNotice";
+import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
 
 const BOARD_PLAY_MOVE_MS = 380;
 
@@ -105,6 +107,7 @@ export default function SharePage() {
   const [tab, setTab] = useState<ShareTab>("game");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
   const [summary, setSummary] = useState<import("../types").ReviewSummary | null>(null);
   const [whiteName, setWhiteName] = useState("White");
@@ -203,7 +206,11 @@ export default function SharePage() {
         return;
       }
       try {
-        const data = await fetchSharedReview(shareId);
+        const data = await withTimeout(
+          fetchSharedReview(shareId),
+          20000,
+          "Share timeout"
+        );
         setMoves(data.moves);
         setSummary(data.summary);
         setWhiteName(data.whiteName);
@@ -216,12 +223,18 @@ export default function SharePage() {
         setBoardPieceAnimMs(0);
         setMoveAnim(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
+        const normalized = normalizeShareError(e);
+        trackAppError({
+          code: normalized.code,
+          message: normalized.message,
+          context: { phase: "share-load", shareId },
+        });
+        setError(normalized.message);
       } finally {
         setLoading(false);
       }
     })();
-  }, [shareId]);
+  }, [shareId, reloadTick]);
 
   const stepMove = useCallback(
     (delta: number, animate = true) => {
@@ -280,7 +293,14 @@ export default function SharePage() {
   if (error || !summary) {
     return (
       <div className="h-[100dvh] bg-chess-bg text-chess-text flex flex-col items-center justify-center gap-3 p-6">
-        <p className="text-sm text-chess-muted">{error ?? "Review not found"}</p>
+        <InlineErrorNotice
+          message={error ?? "Review not found"}
+          onRetry={() => {
+            setLoading(true);
+            setError(null);
+            setReloadTick((v) => v + 1);
+          }}
+        />
         <a href="/" className="text-sm text-chess-accent hover:underline">
           Go to ChessReview
         </a>

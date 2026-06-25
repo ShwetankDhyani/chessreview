@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { fetchPgnFromGameUrl } from "../utils/gameUrlImport";
 import { hapticTapStrong } from "../utils/chessSounds";
+import { InlineErrorNotice } from "./InlineErrorNotice";
+import {
+  normalizeImportError,
+  trackAppError,
+  type AppError,
+} from "../utils/appError";
 
 interface GameUrlImportProps {
   onImported: (pgn: string) => void;
@@ -10,7 +16,7 @@ interface GameUrlImportProps {
 export function GameUrlImport({ onImported, compact = false }: GameUrlImportProps) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
 
   const handleImport = async () => {
     if (!url.trim()) return;
@@ -21,8 +27,15 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
       const { pgn } = await fetchPgnFromGameUrl(url.trim());
       onImported(pgn);
       setUrl("");
+      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load game");
+      const normalized = normalizeImportError(e);
+      setError(normalized);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { source: "game-url-import" },
+      });
     } finally {
       setLoading(false);
     }
@@ -58,9 +71,11 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
         </button>
       </div>
       {error && (
-        <p className="text-[11px] text-move-blunder leading-snug" role="alert">
-          {error}
-        </p>
+        <InlineErrorNotice
+          message={error.message}
+          onRetry={error.retryable ? () => void handleImport() : undefined}
+          onDismiss={() => setError(null)}
+        />
       )}
       {!compact && !error && (
         <p className="text-[10px] text-chess-muted/80 leading-snug">

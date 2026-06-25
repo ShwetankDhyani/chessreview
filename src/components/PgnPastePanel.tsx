@@ -1,6 +1,12 @@
 import React, { useRef, useState } from "react";
 import { hapticTap, hapticTapStrong } from "../utils/chessSounds";
 import { parseGameText } from "../utils/pgnParse";
+import { InlineErrorNotice } from "./InlineErrorNotice";
+import {
+  normalizeImportError,
+  trackAppError,
+  type AppError,
+} from "../utils/appError";
 
 interface PgnPastePanelProps {
   onLoad: (pgn: string) => void;
@@ -17,14 +23,20 @@ export function PgnPastePanel({
   compact = false,
 }: PgnPastePanelProps) {
   const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleLoad = () => {
     hapticTapStrong();
     const result = parseGameText(text);
     if (!result.ok) {
-      setError(result.error);
+      const normalized = normalizeImportError(result.error);
+      setError(normalized);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { source: "pgn-paste-review" },
+      });
       return;
     }
     setError(null);
@@ -39,14 +51,26 @@ export function PgnPastePanel({
       setText(raw);
       const result = parseGameText(raw);
       if (!result.ok) {
-        setError(result.error);
+        const normalized = normalizeImportError(result.error);
+        setError(normalized);
+        trackAppError({
+          code: normalized.code,
+          message: normalized.message,
+          context: { source: "pgn-file-review" },
+        });
         return;
       }
       setError(null);
       hapticTapStrong();
       onLoad(result.pgn);
     } catch {
-      setError("Invalid file");
+      const normalized = normalizeImportError("Invalid file");
+      setError(normalized);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { source: "pgn-file-read" },
+      });
     }
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -61,7 +85,13 @@ export function PgnPastePanel({
         hapticTapStrong();
       }
     } catch {
-      setError("Paste manually");
+      const normalized = normalizeImportError("Paste manually");
+      setError(normalized);
+      trackAppError({
+        code: normalized.code,
+        message: normalized.message,
+        context: { source: "pgn-clipboard" },
+      });
     }
   };
 
@@ -87,7 +117,11 @@ export function PgnPastePanel({
       />
 
       {error && (
-        <p className="text-[11px] text-move-blunder text-center -mt-1">{error}</p>
+        <InlineErrorNotice
+          className="-mt-1"
+          message={error.message}
+          onDismiss={() => setError(null)}
+        />
       )}
 
       <div className="flex items-center gap-2 flex-shrink-0">
