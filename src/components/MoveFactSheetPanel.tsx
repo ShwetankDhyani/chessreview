@@ -3,6 +3,8 @@ import type { MoveFactSheet } from "../utils/moveFactSheet";
 interface MoveFactSheetPanelProps {
   sheet: MoveFactSheet;
   embedded?: boolean;
+  /** Hide when top engine moves panel shows rank instead. */
+  hideEngineRank?: boolean;
   /** Hide when the continuation viewer already shows the best move. */
   hideBestWas?: boolean;
   /** Hide when opening context is shown in the chapter box above. */
@@ -23,10 +25,12 @@ const ROWS: Array<{
 export function MoveFactSheetPanel({
   sheet,
   embedded = false,
+  hideEngineRank = false,
   hideBestWas = false,
   hideOpening = false,
 }: MoveFactSheetPanelProps) {
   const visibleRows = ROWS.filter(({ key }) => {
+    if (hideEngineRank && key === "engineRank") return false;
     if (hideBestWas && key === "bestWas") return false;
     if (hideOpening && key === "opening") return false;
     const value = sheet[key];

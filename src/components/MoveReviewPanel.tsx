@@ -10,6 +10,7 @@ import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
 import { buildMoveFactSheet } from "../utils/moveFactSheet";
 import { MoveFactSheetPanel } from "./MoveFactSheetPanel";
+import { EngineTopMovesPanel } from "./EngineTopMovesPanel";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
 
@@ -380,10 +381,13 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         <MoveFactSheetPanel
           sheet={factSheet}
           embedded={embedded}
+          hideEngineRank
           hideBestWas={showContinuation}
           hideOpening={showOpeningChapter}
         />
       )}
+
+      <EngineTopMovesPanel move={move} embedded={embedded} />
 
       {/* Interactive continuation */}
       {showContinuation && move.bestMoveSan && (
