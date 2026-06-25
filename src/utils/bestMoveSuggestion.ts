@@ -5,6 +5,15 @@ function normalizeUci(uci: string): string {
   return uci.replace(/[^a-h0-9]/gi, "").slice(0, 4);
 }
 
+/** Green board arrow — every non-book ply with a stored engine best move. */
+export function shouldShowBestMoveArrow(
+  move: AnalyzedMove | null | undefined
+): boolean {
+  if (!move?.bestMove || move.bestMove.length < 4) return false;
+  if (move.inOpeningBook || move.classification === "book") return false;
+  return true;
+}
+
 /** Show engine best-move hint unless the played move is book or already engine-best. */
 export function shouldSuggestBestMove(
   move: AnalyzedMove | null | undefined

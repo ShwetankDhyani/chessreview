@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
-import { shouldSuggestBestMove } from "./bestMoveSuggestion";
+import { shouldShowBestMoveArrow, shouldSuggestBestMove } from "./bestMoveSuggestion";
 
 function move(
   partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "classification" | "uci">
@@ -95,6 +95,29 @@ describe("shouldSuggestBestMove", () => {
     ).toBe(true);
     expect(
       shouldSuggestBestMove(
+        move({ classification: "excellent", uci: "b1c3", bestMove: "d2d4" })
+      )
+    ).toBe(true);
+  });
+});
+
+describe("shouldShowBestMoveArrow", () => {
+  it("returns false only for book moves", () => {
+    expect(shouldShowBestMoveArrow(move({ classification: "book", uci: "e2e4" }))).toBe(
+      false
+    );
+    expect(
+      shouldShowBestMoveArrow(
+        move({ classification: "best", uci: "e2e4", bestMove: "e2e4" })
+      )
+    ).toBe(true);
+    expect(
+      shouldShowBestMoveArrow(
+        move({ classification: "excellent", uci: "g1f3", bestMove: "g1f3" })
+      )
+    ).toBe(true);
+    expect(
+      shouldShowBestMoveArrow(
         move({ classification: "excellent", uci: "b1c3", bestMove: "d2d4" })
       )
     ).toBe(true);
