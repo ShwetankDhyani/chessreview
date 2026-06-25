@@ -3,6 +3,8 @@ export interface MultiPvLine {
   multipv: number;
   cp?: number;
   mate?: number;
+  /** Native Stockfish WDL (per-mille, white-oriented). */
+  wdl?: { w: number; d: number; l: number };
   depth: number;
   pv: string[];
   bestMove?: string;

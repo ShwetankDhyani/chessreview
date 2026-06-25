@@ -4,7 +4,7 @@ import type { AnalyzeResponse } from "./stockfishReview.worker";
 import { evalToCpWhite } from "./expectedPoints";
 
 const DEFAULT_DEPTH = 18;
-const DEFAULT_MULTIPV = 2;
+const DEFAULT_MULTIPV = 3;
 
 let worker: Worker | null = null;
 let multiPvConfigured = 0;
@@ -58,6 +58,7 @@ export async function analyzePositionMultiPv(
           multipv: line.multipv,
           cp: norm.cp,
           mate: norm.mate,
+          wdl: line.wdl,
           depth: line.depth,
           pv: line.pv,
           bestMove: line.bestMove ?? line.pv[0],
@@ -86,6 +87,7 @@ export function positionAnalysisToEvalResult(
   return {
     cp: line.cp,
     mate: line.mate,
+    wdl: line.wdl,
     depth: line.depth,
     source: "local",
     bestMove: line.bestMove,

@@ -13,6 +13,8 @@ export type MoveClassification =
 export interface EvalResult {
   cp?: number;
   mate?: number;
+  /** Native Stockfish WDL (per-mille, white-oriented). */
+  wdl?: { w: number; d: number; l: number };
   depth: number;
   source: "cloud" | "local";
   knodes?: number;
@@ -47,6 +49,8 @@ export interface AnalyzedMove {
   inOpeningBook?: boolean;
   /** Expected points lost vs engine best (0–1), CAPS2 input */
   epLoss?: number;
+  /** Only one legal move — excluded from accuracy */
+  forced?: boolean;
   isSacrifice?: boolean;
   bestMove?: string;   // engine best move UCI from fenBefore
   bestMoveSan?: string; // engine best move in SAN notation
@@ -71,7 +75,7 @@ export interface ReviewSummary {
 }
 
 export interface AccuracyMeta {
-  method: "chesscom_ep_v3";
+  method: "chesscom_ep_v3" | "chesscom_wdl_v4";
   formulaVersion: string;
 }
 

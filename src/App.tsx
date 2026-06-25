@@ -661,7 +661,11 @@ export default function App() {
             if (abortRef.current || gen !== analysisGenerationRef.current) return;
             setProgress({ done, total });
           },
-          depth
+          depth,
+          {
+            whiteRating: gameMeta?.whiteRating ?? null,
+            blackRating: gameMeta?.blackRating ?? null,
+          }
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 

@@ -92,7 +92,8 @@ describe("detectGreatMove", () => {
       detectGreatMove(
         base({
           eBefore: 0.65,
-          eAfterPlayed: 0.66,
+          eAfterPlayed: 0.92,
+          playerRating: 1500,
           multipvLines: [
             { multipv: 1, cp: 400, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
             { multipv: 2, cp: 0, depth: 18, pv: ["d2d4"], bestMove: "d2d4" },

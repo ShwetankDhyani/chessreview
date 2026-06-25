@@ -163,6 +163,7 @@ async function init() {
   send(`setoption name Threads value ${THREADS}`);
   send(`setoption name Hash value ${HASH_MB}`);
   send("setoption name MultiPV value 1");
+  send("setoption name UCI_ShowWDL value true");
   send("ucinewgame");
   send("isready");
   await waitForLine((l) => l === "readyok");
@@ -229,6 +230,7 @@ async function _evaluate(fen, depth) {
   if (!ready) throw new Error("engine not ready");
 
   let bestCp, bestMate, bestDepth = 0, bestPv = [];
+  let bestWdl = null;
 
   send(`position fen ${fen}`);
   if (MOVETIME_MS > 0) {
@@ -248,6 +250,7 @@ async function _evaluate(fen, depth) {
         depth: bestDepth,
         pv: bestPv,
         bestMove: bm,
+        wdl: bestWdl,
       });
     }, EVAL_TIMEOUT_MS);
 
@@ -256,6 +259,7 @@ async function _evaluate(fen, depth) {
         const d = line.match(/depth (\d+)/);
         const cp = line.match(/score cp (-?\d+)/);
         const mate = line.match(/score mate (-?\d+)/);
+        const wdl = line.match(/\bwdl (\d+) (\d+) (\d+)/);
         const pvMatch = line.match(/ pv (.+)$/);
         const curDepth = d ? parseInt(d[1]) : 0;
         if (curDepth >= bestDepth) {
@@ -267,6 +271,13 @@ async function _evaluate(fen, depth) {
           if (mate) {
             bestMate = parseInt(mate[1]);
             bestCp = undefined;
+          }
+          if (wdl) {
+            bestWdl = {
+              w: parseInt(wdl[1], 10),
+              d: parseInt(wdl[2], 10),
+              l: parseInt(wdl[3], 10),
+            };
           }
           if (pvMatch) bestPv = pvMatch[1].trim().split(/\s+/).slice(0, 8);
         }
@@ -281,6 +292,7 @@ async function _evaluate(fen, depth) {
           depth: bestDepth,
           pv: bestPv,
           bestMove: bmMatch?.[1] ?? bestPv[0],
+          wdl: bestWdl,
         });
       }
     };
@@ -294,13 +306,16 @@ function isBlackToMove(fen) {
 function flipForWhite(fen, result) {
   let cp = result.cp;
   let mate = result.mate;
+  let wdl = result.wdl;
   if (isBlackToMove(fen)) {
     if (cp !== undefined) cp = -cp;
     if (mate !== undefined) mate = -mate;
+    if (wdl) wdl = { w: wdl.l, d: wdl.d, l: wdl.w };
   }
   return {
     cp,
     mate,
+    wdl,
     depth: result.depth,
     bestMove: result.bestMove,
     pv: result.pv,

@@ -70,11 +70,13 @@ function rawToEvalResult(data: {
   depth?: number;
   bestMove?: string;
   pv?: string[];
+  wdl?: { w: number; d: number; l: number };
 }): EvalResult | null {
   if (!data?.depth || data.depth <= 0) return null;
   return {
     cp: data.cp,
     mate: data.mate,
+    wdl: data.wdl,
     depth: data.depth,
     source: "local",
     bestMove: data.bestMove,
@@ -119,6 +121,7 @@ export async function evaluateFensBatch(
         depth?: number;
         bestMove?: string;
         pv?: string[];
+        wdl?: { w: number; d: number; l: number };
         error?: string;
       }> = data?.results ?? [];
       for (let j = 0; j < chunk.length; j++) {

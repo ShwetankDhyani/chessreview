@@ -1,8 +1,10 @@
 /**
- * Stockfish WASM worker (public/stockfish.js) with MultiPV support.
- * Upgrade binary to SF 16.1 by replacing /public/stockfish.js when available.
+ * Stockfish WASM worker (public/stockfish.js) with MultiPV + WDL when available.
  */
 declare function importScripts(...urls: string[]): void;
+
+import { parseInfoLine } from "./uciParser";
+import { wdlToWhitePerspective } from "./wdl";
 
 export interface AnalyzeRequest {
   id: string;
@@ -15,6 +17,7 @@ export interface PvLineOut {
   multipv: number;
   cp?: number;
   mate?: number;
+  wdl?: { w: number; d: number; l: number };
   depth: number;
   pv: string[];
   bestMove?: string;
@@ -37,12 +40,26 @@ const queue = new Map<
 >();
 
 let currentId: string | null = null;
-let currentMultiPv = 2;
+let currentFen = "";
+let currentMultiPv = 3;
 let engineReady = false;
 let loaded = false;
 let sendToEngine: (cmd: string) => void = () => {};
 
-const lineState = new Map<number, { cp?: number; mate?: number; depth: number; pv: string[] }>();
+const lineState = new Map<
+  number,
+  {
+    cp?: number;
+    mate?: number;
+    wdl?: { w: number; d: number; l: number };
+    depth: number;
+    pv: string[];
+  }
+>();
+
+function blackToMove(fen: string): boolean {
+  return fen.split(" ")[1] === "b";
+}
 
 function resetLineState(multiPv: number) {
   lineState.clear();
@@ -59,28 +76,29 @@ function handleOutput(line: string) {
   }
   if (!currentId) return;
 
-  if (line.startsWith("info") && line.includes(" depth ") && line.includes(" multipv ")) {
-    const depthM = line.match(/\bdepth (\d+)/);
-    const mpvM = line.match(/\bmultipv (\d+)/);
-    const cpM = line.match(/\bscore cp (-?\d+)/);
-    const mateM = line.match(/\bscore mate (-?\d+)/);
-    const pvM = line.match(/\bpv (.+)$/);
-    if (!depthM || !mpvM) return;
+  if (line.startsWith("info")) {
+    const parsed = parseInfoLine(line);
+    if (!parsed || !line.includes(" multipv ")) return;
 
-    const multipv = parseInt(mpvM[1], 10);
-    const depth = parseInt(depthM[1], 10);
-    const prev = lineState.get(multipv) ?? { depth: 0, pv: [] };
-    if (depth >= prev.depth) {
-      const next = { ...prev, depth };
-      if (cpM) {
-        next.cp = parseInt(cpM[1], 10);
+    const prev = lineState.get(parsed.multipv) ?? { depth: 0, pv: [] };
+    if (parsed.depth >= prev.depth) {
+      const next = { ...prev, depth: parsed.depth, pv: parsed.pv };
+      if (parsed.scoreType === "cp" && parsed.scoreValue !== null) {
+        next.cp = parsed.scoreValue;
         next.mate = undefined;
-      } else if (mateM) {
-        next.mate = parseInt(mateM[1], 10);
+      } else if (parsed.scoreType === "mate" && parsed.scoreValue !== null) {
+        next.mate = parsed.scoreValue;
         next.cp = undefined;
       }
-      if (pvM) next.pv = pvM[1].trim().split(/\s+/).slice(0, 12);
-      lineState.set(multipv, next);
+      if (parsed.wdl) {
+        next.wdl = wdlToWhitePerspective(
+          parsed.wdl.w,
+          parsed.wdl.d,
+          parsed.wdl.l,
+          blackToMove(currentFen)
+        );
+      }
+      lineState.set(parsed.multipv, next);
     }
     return;
   }
@@ -97,6 +115,7 @@ function handleOutput(line: string) {
         multipv: mpv,
         cp: st.cp,
         mate: st.mate,
+        wdl: st.wdl,
         depth: st.depth,
         pv: st.pv,
         bestMove: st.pv[0],
@@ -121,9 +140,11 @@ function flush() {
     { resolve: (r: AnalyzeResponse) => void; depth: number; multiPv: number; fen: string },
   ];
   currentId = id;
+  currentFen = req.fen;
   currentMultiPv = req.multiPv;
   resetLineState(req.multiPv);
   sendToEngine(`setoption name MultiPV value ${req.multiPv}`);
+  sendToEngine(`setoption name UCI_ShowWDL value true`);
   sendToEngine(`position fen ${req.fen}`);
   sendToEngine(`go depth ${req.depth}`);
 }
@@ -159,7 +180,8 @@ function loadStockfish() {
   };
 
   sendToEngine("uci");
-  sendToEngine("setoption name MultiPV value 2");
+  sendToEngine("setoption name MultiPV value 3");
+  sendToEngine("setoption name UCI_ShowWDL value true");
   sendToEngine("isready");
 }
 

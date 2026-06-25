@@ -14,13 +14,14 @@ import {
   epLossFromPlayed,
   type ClassifyReviewInput,
 } from "./classifyReviewMove";
-import { expectedPointsFromEval } from "./expectedPoints";
+import { expectedPointsFromEval, expectedPointsFromLine } from "./expectedPoints";
 import { checkOpeningBookSync } from "./openingBook";
 import {
   analyzePositionMultiPv,
   lineCpWhite,
   positionAnalysisToEvalResult,
 } from "./stockfishClient";
+import { DEFAULT_PLAYER_RATING } from "./ratingThresholds";
 import {
   batchCacheIsUsable,
   buildBatchPositionCache,
@@ -33,7 +34,7 @@ import { GREAT_MIN_BEST_EP } from "./types";
 
 const DEFAULT_DEPTH = 16;
 const WASM_FALLBACK_MIN_DEPTH = 14;
-const DEFAULT_MULTIPV = 2;
+const DEFAULT_MULTIPV = 3;
 const MIN_VERIFY_DEPTH = 10;
 
 function hashText(value: string): string {
@@ -108,8 +109,8 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
       },
     },
     accuracyMeta: {
-      method: "chesscom_ep_v3",
-      formulaVersion,
+      method: "chesscom_wdl_v4",
+      formulaVersion: `v3.2-${formulaVersion}`,
     },
   };
 }
@@ -117,6 +118,8 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
 export interface GameReviewOptions extends ReviewEngineOptions {
   onProgress?: (done: number, total: number) => void;
   openingBook?: ReadonlySet<string>;
+  whiteRating?: number | null;
+  blackRating?: number | null;
 }
 
 async function buildAnalysisCache(
@@ -130,7 +133,7 @@ async function buildAnalysisCache(
   });
   if (batchCacheIsUsable(batch, fens)) {
     onProgress?.(90, 100);
-    return { cache: batch, engineTag: "v3.1-hybrid-batch" };
+    return { cache: batch, engineTag: "v3.2-wdl-hybrid-batch" };
   }
 
   const cache = new Map<string, PositionAnalysis>();
@@ -144,7 +147,7 @@ async function buildAnalysisCache(
     done++;
     onProgress?.(Math.round((done / fens.length) * 88), 100);
   }
-  return { cache, engineTag: "v3.1-wasm-multipv" };
+  return { cache, engineTag: "v3.2-wasm-multipv" };
 }
 
 function collectExtraBestFens(
@@ -182,10 +185,7 @@ function collectGreatCandidates(
     const line = before?.lines[0];
     if (!line) continue;
     const mover = history[i].color;
-    const eBefore = expectedPointsFromEval(
-      { cp: lineCpWhite(line), mate: line.mate },
-      mover
-    );
+    const eBefore = expectedPointsFromLine(line, mover, fenBefore);
     const bestUci = line.bestMove ?? line.pv[0];
     const played = (
       history[i].from +
@@ -262,6 +262,7 @@ export async function analyzeGameReview(
   let priorClass: MoveClassification | null = null;
   let priorEpLoss = 0;
   let bookEnded = false;
+  const lastEpByColor: Record<"w" | "b", number> = { w: 0.5, b: 0.5 };
 
   for (let i = 0; i < history.length; i++) {
     const move = history[i];
@@ -287,6 +288,9 @@ export async function analyzeGameReview(
       ? lineCpWhite(afterAnalysis.lines[0] ?? {})
       : 0;
 
+    const lineBefore = beforeAnalysis?.lines[0];
+    const lineAfter = afterAnalysis?.lines[0];
+
     const deliveredMate = isDeliveredCheckmate(fenAfter);
     if (deliveredMate) {
       evalAfter = {
@@ -297,13 +301,22 @@ export async function analyzeGameReview(
     }
 
     const eBefore = expectedPointsFromEval(
-      { cp: cpWhiteBefore, mate: beforeAnalysis?.lines[0]?.mate },
-      mover
+      {
+        cp: cpWhiteBefore,
+        mate: lineBefore?.mate,
+        wdl: lineBefore?.wdl,
+      },
+      mover,
+      { fen: fenBefore }
     );
     const eAfterPlayed = expectedPointsFromEval(
-      { cp: cpWhiteAfter, mate: afterAnalysis?.lines[0]?.mate },
+      {
+        cp: cpWhiteAfter,
+        mate: lineAfter?.mate,
+        wdl: lineAfter?.wdl,
+      },
       mover,
-      { afterDeliveredCheckmate: deliveredMate }
+      { afterDeliveredCheckmate: deliveredMate, fen: fenAfter }
     );
 
     const bestUci =
@@ -315,13 +328,22 @@ export async function analyzeGameReview(
       fenAfterBest = applyUci(fenBefore, bestUci);
       const bestAnalysis = fenAfterBest ? analysisCache.get(fenAfterBest) : undefined;
       if (bestAnalysis?.lines[0]) {
-        const cpBest = lineCpWhite(bestAnalysis.lines[0]);
-        eAfterBest = expectedPointsFromEval(
-          { cp: cpBest, mate: bestAnalysis.lines[0].mate },
-          mover
-        );
+        const bestLine = bestAnalysis.lines[0];
+        eAfterBest = expectedPointsFromLine(bestLine, mover, fenAfterBest ?? undefined);
       }
     }
+
+    let forced = false;
+    try {
+      forced = new Chess(fenBefore).moves().length === 1;
+    } catch {
+      forced = false;
+    }
+
+    const playerRating =
+      mover === "w"
+        ? options.whiteRating ?? DEFAULT_PLAYER_RATING
+        : options.blackRating ?? DEFAULT_PLAYER_RATING;
 
     const playerUci = (move.from + move.to + (move.promotion ?? "")).toLowerCase();
 
@@ -338,6 +360,10 @@ export async function analyzeGameReview(
       openingBook: options.openingBook,
       opponentPriorClass: priorClass,
       opponentPriorEpLoss: priorEpLoss,
+      epBeforeOpponentMove: lastEpByColor[mover],
+      postOpponentEP: eBefore,
+      playerRating,
+      forced,
     };
 
     let epLoss = epLossFromPlayed(classifyInput);
@@ -408,6 +434,7 @@ export async function analyzeGameReview(
       epLoss,
       classification,
       inOpeningBook: classification === "book",
+      forced,
       isSacrifice: detectPieceSacrifice(fenBefore, fenAfter, beforeAnalysis?.lines[0]?.pv),
       bestMove: bestUci,
       bestMoveSan,
@@ -420,6 +447,7 @@ export async function analyzeGameReview(
 
     priorClass = classification;
     priorEpLoss = epLoss;
+    lastEpByColor[mover] = deliveredMate ? 1 : eAfterPlayed;
 
     if (history.length > 0 && (i + 1) % 4 === 0) {
       const classifyPct = 98 + Math.round(((i + 1) / history.length) * 1.5);

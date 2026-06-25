@@ -17,6 +17,7 @@ export function evalResultToPositionAnalysis(
     multipv: 1,
     cp: ev.cp,
     mate: ev.mate,
+    wdl: ev.wdl,
     depth: ev.depth,
     pv: ev.pv ?? [],
     bestMove: ev.bestMove ?? ev.pv?.[0],
@@ -83,7 +84,7 @@ export async function enrichGreatMoveCandidates(
   cache: Map<string, PositionAnalysis>,
   candidates: string[],
   depth: number,
-  multiPv = 2,
+  multiPv = 3,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   const unique = [...new Set(candidates)].slice(0, MAX_MULTIPV_GREAT_PLIES);

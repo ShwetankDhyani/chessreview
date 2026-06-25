@@ -1,20 +1,25 @@
 import type { MoveClassification } from "../types";
 import type { MultiPvLine } from "./types";
-import { detectPieceSacrifice } from "./detectPieceSacrifice";
+import { computeMaterialDelta } from "./material";
 import { checkOpeningBookSync } from "./openingBook";
 import {
   BLUNDER_FORCE_EP,
   EP_CLASS_THRESHOLDS,
-  GREAT_MIN_BEST_EP,
-  GREAT_SECOND_LINE_GAP,
-  BRILLIANT_MAX_WP_BEFORE,
-  BRILLIANT_MIN_WP_AFTER,
   STILL_WINNING_EP,
   WAS_WINNING_EP,
-  MISS_MIN_CHANCE_EP,
 } from "./types";
-import { expectedPointsFromMoverCp, expectedPointsLoss } from "./expectedPoints";
+import {
+  expectedPointsFromLine,
+  expectedPointsLoss,
+} from "./expectedPoints";
 import { isDeliveredCheckmate } from "./mateDetection";
+import {
+  DEFAULT_PLAYER_RATING,
+  getGreatMinBestEp,
+  getGreatMoveThreshold,
+  getSacThreshold,
+  getWinningThreshold,
+} from "./ratingThresholds";
 
 export interface ClassifyReviewInput {
   fenBefore: string;
@@ -22,18 +27,19 @@ export interface ClassifyReviewInput {
   fenAfterBest: string | null;
   mover: "w" | "b";
   playedUci: string;
-  /** Expected points (0–1) before the move for mover. */
   eBefore: number;
-  /** Expected points after played move for mover. */
   eAfterPlayed: number;
-  /** Expected points after engine best for mover. */
   eAfterBest: number;
   multipvLines: MultiPvLine[];
   openingBook?: ReadonlySet<string>;
-  /** Opponent's prior classification (for Miss). */
   opponentPriorClass: MoveClassification | null;
-  /** Opponent ep loss on prior move (how much they blundered). */
   opponentPriorEpLoss: number;
+  /** Mover's EP before opponent's last move (for Miss). */
+  epBeforeOpponentMove?: number;
+  /** Mover's EP after opponent's last move (= eBefore when opponent just blundered). */
+  postOpponentEP?: number;
+  playerRating?: number;
+  forced?: boolean;
 }
 
 function epLossFromPlayed(input: ClassifyReviewInput): number {
@@ -46,10 +52,6 @@ function isExactBestMove(input: ClassifyReviewInput): boolean {
   return input.playedUci.toLowerCase() === best.toLowerCase();
 }
 
-/**
- * In a won game, losing initiative (big ep drop) but staying ahead is a mistake, not a blunder.
- * Real blunders throw away the advantage or need a catastrophic ep swing.
- */
 export function isInitiativeSlipNotBlunder(
   eBefore: number,
   eAfter: number,
@@ -62,84 +64,103 @@ export function isInitiativeSlipNotBlunder(
   return true;
 }
 
+function epAfterLineForMover(
+  line: MultiPvLine,
+  mover: "w" | "b",
+  fen: string
+): number {
+  return expectedPointsFromLine(line, mover, fen);
+}
+
 /**
- * Failed to punish opponent's mistake. Returns severity — never blunder when still clearly winning.
+ * Failed to capitalize on opponent's mistake (rating-adjusted winning threshold).
  */
 export function detectMiss(input: ClassifyReviewInput): MoveClassification | null {
+  const rating = input.playerRating ?? DEFAULT_PLAYER_RATING;
+  const winThreshold = getWinningThreshold(rating);
+
+  const epBeforeOpp = input.epBeforeOpponentMove;
+  const epAfterOpp = input.postOpponentEP ?? input.eBefore;
+  const epAfterPlay = input.eAfterPlayed;
+
+  if (epBeforeOpp !== undefined) {
+    if (epBeforeOpp > winThreshold) return null;
+    if (epAfterOpp < winThreshold) return null;
+    if (epAfterPlay >= winThreshold) return null;
+    const eLoss = expectedPointsLoss(input.eBefore, epAfterPlay);
+    if (isInitiativeSlipNotBlunder(input.eBefore, epAfterPlay, eLoss)) {
+      return "mistake";
+    }
+    if (eLoss >= BLUNDER_FORCE_EP || epAfterPlay <= 0.45) return "blunder";
+    return "mistake";
+  }
+
   const opp = input.opponentPriorClass;
-  if (
-    opp !== "inaccuracy" &&
-    opp !== "mistake" &&
-    opp !== "blunder"
-  ) {
+  if (opp !== "inaccuracy" && opp !== "mistake" && opp !== "blunder") {
     return null;
   }
   if (input.opponentPriorEpLoss < EP_CLASS_THRESHOLDS.inaccuracy) return null;
-  if (input.eBefore < MISS_MIN_CHANCE_EP) return null;
+  if (input.eBefore < winThreshold - 0.1) return null;
 
-  const eLoss = expectedPointsLoss(input.eBefore, input.eAfterPlayed);
+  const eLoss = expectedPointsLoss(input.eBefore, epAfterPlay);
   const failedToPunish =
-    input.eAfterPlayed <= STILL_WINNING_EP || eLoss >= EP_CLASS_THRESHOLDS.mistake;
+    epAfterPlay <= STILL_WINNING_EP || eLoss >= EP_CLASS_THRESHOLDS.mistake;
   if (!failedToPunish) return null;
 
-  if (isInitiativeSlipNotBlunder(input.eBefore, input.eAfterPlayed, eLoss)) {
+  if (isInitiativeSlipNotBlunder(input.eBefore, epAfterPlay, eLoss)) {
     return "mistake";
   }
-  if (eLoss >= BLUNDER_FORCE_EP || input.eAfterPlayed <= 0.45) {
-    return "blunder";
-  }
+  if (eLoss >= BLUNDER_FORCE_EP || epAfterPlay <= 0.45) return "blunder";
   return "mistake";
 }
 
 function classifyByEpLoss(
   eLoss: number,
+  isEngineBest: boolean,
   eBefore: number,
   eAfter: number
 ): MoveClassification {
-  if (eLoss <= EP_CLASS_THRESHOLDS.best + 1e-9) return "best";
+  if (isEngineBest && eLoss < 0.01) return "best";
+  if (eLoss < 0.01) return "excellent";
   if (eLoss <= EP_CLASS_THRESHOLDS.excellent) return "excellent";
   if (eLoss <= EP_CLASS_THRESHOLDS.good) return "good";
   if (eLoss <= EP_CLASS_THRESHOLDS.inaccuracy) return "inaccuracy";
   if (eLoss <= EP_CLASS_THRESHOLDS.mistake) return "mistake";
+  if (eBefore < 0.15 && eLoss < 0.05) return "best";
   if (isInitiativeSlipNotBlunder(eBefore, eAfter, eLoss)) return "mistake";
   return "blunder";
 }
 
-function epAfterLineForMover(line: MultiPvLine, mover: "w" | "b"): number {
-  const cpWhite = line.mate !== undefined ? (line.mate > 0 ? 10000 : -10000) : (line.cp ?? 0);
-  const signed = mover === "w" ? cpWhite : -cpWhite;
-  return expectedPointsFromMoverCp(signed);
-}
-
-/** Great: only good move — best line keeps advantage, 2nd line drops ≥0.20 ep, user plays best. */
 export function detectGreatMove(input: ClassifyReviewInput): boolean {
   if (input.multipvLines.length < 2) return false;
+  const rating = input.playerRating ?? DEFAULT_PLAYER_RATING;
   const [first, second] = input.multipvLines;
-  const e1 = epAfterLineForMover(first, input.mover);
-  const e2 = epAfterLineForMover(second, input.mover);
-  if (e1 < GREAT_MIN_BEST_EP) return false;
-  if (e1 - e2 < GREAT_SECOND_LINE_GAP) return false;
+  const e1 = epAfterLineForMover(first, input.mover, input.fenBefore);
+  const e2 = epAfterLineForMover(second, input.mover, input.fenBefore);
+  const playedEP = input.eAfterPlayed;
+
+  if (e1 - playedEP > 0.02) return false;
+  if (e1 < getGreatMinBestEp(rating)) return false;
+  if (e1 - e2 < getGreatMoveThreshold(rating)) return false;
+  if (input.eBefore < 0.05 || input.eBefore > 0.95) return false;
+
   return isExactBestMove(input);
 }
 
-export function detectBrilliantMove(
-  input: ClassifyReviewInput,
-  baseLabel: MoveClassification
-): boolean {
-  if (baseLabel !== "best" && baseLabel !== "excellent") return false;
-  if (input.eBefore >= BRILLIANT_MAX_WP_BEFORE) return false;
-  if (input.eAfterPlayed < BRILLIANT_MIN_WP_AFTER) return false;
-  return detectPieceSacrifice(
-    input.fenBefore,
-    input.fenAfter,
-    input.multipvLines[0]?.pv
-  );
+export function detectBrilliantMove(input: ClassifyReviewInput): boolean {
+  const rating = input.playerRating ?? DEFAULT_PLAYER_RATING;
+  const eLoss = epLossFromPlayed(input);
+  if (eLoss > 0.02) return false;
+  if (input.eBefore >= 0.9) return false;
+  if (input.eAfterPlayed < 0.45) return false;
+
+  const materialDelta = computeMaterialDelta(input.fenBefore, input.fenAfter);
+  return materialDelta <= getSacThreshold(rating);
 }
 
-/**
- * Chess.com-style review classification (expected-points + special overrides).
- */
 export function classifyReviewMove(input: ClassifyReviewInput): MoveClassification {
+  if (input.forced) return "best";
+
   if (checkOpeningBookSync(input.fenBefore, input.openingBook)) {
     return "book";
   }
@@ -149,21 +170,21 @@ export function classifyReviewMove(input: ClassifyReviewInput): MoveClassificati
   }
 
   const eLoss = epLossFromPlayed(input);
+  const engineBest = isExactBestMove(input);
 
   if (detectGreatMove(input)) return "great";
 
   const miss = detectMiss(input);
   if (miss) return miss;
 
-  let base = classifyByEpLoss(eLoss, input.eBefore, input.eAfterPlayed);
-  if (!isExactBestMove(input) && base === "best" && eLoss > 0) {
-    base = classifyByEpLoss(eLoss, input.eBefore, input.eAfterPlayed);
-  }
-  if (isExactBestMove(input) && eLoss <= EP_CLASS_THRESHOLDS.excellent) {
-    base = "best";
-  }
+  let base = classifyByEpLoss(
+    eLoss,
+    engineBest,
+    input.eBefore,
+    input.eAfterPlayed
+  );
 
-  if (detectBrilliantMove(input, base)) return "brilliant";
+  if (detectBrilliantMove(input)) return "brilliant";
 
   return base;
 }
