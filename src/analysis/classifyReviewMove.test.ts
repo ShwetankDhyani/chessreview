@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyReviewMove, detectGreatMove } from "./classifyReviewMove";
+import {
+  classifyReviewMove,
+  detectGreatMove,
+  engineRankFromMultipv,
+} from "./classifyReviewMove";
 import type { ClassifyReviewInput } from "./classifyReviewMove";
 
 function base(overrides: Partial<ClassifyReviewInput>): ClassifyReviewInput {
@@ -102,5 +106,27 @@ describe("detectGreatMove", () => {
         })
       )
     ).toBe(true);
+  });
+});
+
+describe("engineRankFromMultipv", () => {
+  it("returns 1-based rank when played move matches a line", () => {
+    const rank = engineRankFromMultipv(
+      [
+        { multipv: 1, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
+        { multipv: 2, depth: 18, pv: ["d2d4"], bestMove: "d2d4" },
+        { multipv: 3, depth: 18, pv: ["c2c4"], bestMove: "c2c4" },
+      ],
+      "d2d4"
+    );
+    expect(rank).toBe(2);
+  });
+
+  it("returns null when played move is outside MultiPV", () => {
+    const rank = engineRankFromMultipv(
+      [{ multipv: 1, depth: 18, pv: ["e2e4"], bestMove: "e2e4" }],
+      "a2a3"
+    );
+    expect(rank).toBeNull();
   });
 });

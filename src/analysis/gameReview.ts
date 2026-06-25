@@ -11,6 +11,7 @@ import type {
 import { caps2AccuracyForMoves } from "./caps2Accuracy";
 import {
   classifyReviewMove,
+  engineRankFromMultipv,
   epLossFromPlayed,
   type ClassifyReviewInput,
 } from "./classifyReviewMove";
@@ -417,6 +418,11 @@ export async function analyzeGameReview(
     }
 
     const verified = (beforeAnalysis?.depth ?? 0) >= MIN_VERIFY_DEPTH;
+    const multipvLines = beforeAnalysis?.lines ?? [];
+    const engineRank =
+      classification === "book" || forced
+        ? undefined
+        : engineRankFromMultipv(multipvLines, playerUci);
 
     moves.push({
       moveNumber: Math.floor(i / 2) + 1,
@@ -437,6 +443,8 @@ export async function analyzeGameReview(
       isSacrifice: detectPieceSacrifice(fenBefore, fenAfter, beforeAnalysis?.lines[0]?.pv),
       bestMove: bestUci,
       bestMoveSan,
+      engineRank,
+      engineLineCount: multipvLines.length > 0 ? multipvLines.length : undefined,
       pvLine,
       verified,
       confidence: verified ? 0.95 : 0.4,

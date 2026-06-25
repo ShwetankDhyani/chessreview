@@ -1,79 +1,52 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
-import { clearCoachPhraseMemory } from "./coachVariety";
-import {
-  getPositionAwareMoveComment,
-  getPositionOutlook,
-  playerCp,
-} from "./coachPositionContext";
-import { beforeEach } from "vitest";
+import { getPositionAwareMoveComment } from "./coachPositionContext";
 
-function move(partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "san" | "classification">): AnalyzedMove {
+function move(
+  partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "san" | "classification">
+): AnalyzedMove {
   return {
     moveNumber: 10,
     color: "w",
     fenAfter: "",
     uci: "e2e4",
-    bestMove: "e2e4",
+    bestMove: "d2d4",
+    bestMoveSan: "d4",
     deltaE: 0,
     ...partial,
   } as AnalyzedMove;
 }
 
-describe("playerCp", () => {
-  it("flips eval for black", () => {
-    const m = move({
-      san: "Nf6",
-      classification: "best",
-      color: "b",
-      evalAfter: { cp: 200 },
-    });
-    expect(playerCp(m, "after")).toBe(-200);
-  });
-});
-
 describe("getPositionAwareMoveComment", () => {
-  beforeEach(() => clearCoachPhraseMemory());
-
-  it("praises brilliance but notes lateness when still losing", () => {
-    const m = move({
-      san: "Qh7+",
-      classification: "brilliant",
-      color: "w",
-      evalBefore: { cp: -500, depth: 12, source: "server" },
-      evalAfter: { cp: -450, depth: 12, source: "server" },
-      isSacrifice: true,
-    });
-    expect(getPositionOutlook(m, "before")).toBe("desperate");
-    const text = getPositionAwareMoveComment(m, 3);
-    expect(text).toMatch(/late|already|still losing|long shot|clock|wish|scoreboard|ago|against you/i);
-  });
-
-  it("does not cheer a blunder when already lost", () => {
+  it("returns factual blunder copy without false encouragement", () => {
     const m = move({
       san: "Ke2",
       classification: "blunder",
       color: "w",
-      evalBefore: { cp: -600, depth: 12, source: "server" },
-      evalAfter: { cp: -900, depth: 12, source: "server" },
-      deltaE: -3,
-      bestMoveSan: "Kd1",
+      evalBefore: { cp: -600, depth: 12, source: "local" },
+      evalAfter: { cp: -900, depth: 12, source: "local" },
+      deltaE: 0.25,
+      engineLineCount: 3,
+      engineRank: null,
     });
     const text = getPositionAwareMoveComment(m, 5);
-    expect(text).toMatch(/already|grim|seals|little left|sugarcoat|buried|shovel/i);
-    expect(text).not.toMatch(/great job|keep fighting|you got this/i);
+    expect(text).toMatch(/Blunder/);
+    expect(text).toMatch(/Best was d4/);
+    expect(text).not.toMatch(/great job|right track|on the right track|keep fighting/i);
   });
 
-  it("notes throwing away a win when blundering from ahead", () => {
+  it("notes eval swing when throwing away a win", () => {
     const m = move({
       san: "Qf2",
       classification: "blunder",
       color: "w",
-      evalBefore: { cp: 500, depth: 12, source: "server" },
-      evalAfter: { cp: 100, depth: 12, source: "server" },
-      deltaE: -4,
+      evalBefore: { cp: 500, depth: 12, source: "local" },
+      evalAfter: { cp: 100, depth: 12, source: "local" },
+      deltaE: 0.2,
+      engineLineCount: 3,
     });
     const text = getPositionAwareMoveComment(m, 7);
-    expect(text).toMatch(/winning|comfortable|let them back|throws away/i);
+    expect(text).toMatch(/Blunder/);
+    expect(text).toMatch(/Eval/);
   });
 });

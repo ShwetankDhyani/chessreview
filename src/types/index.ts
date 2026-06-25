@@ -54,6 +54,10 @@ export interface AnalyzedMove {
   isSacrifice?: boolean;
   bestMove?: string;   // engine best move UCI from fenBefore
   bestMoveSan?: string; // engine best move in SAN notation
+  /** 1-based MultiPV rank when the played move appears in engine lines. */
+  engineRank?: number | null;
+  /** MultiPV line count used for this position (typically 3). */
+  engineLineCount?: number;
   pvLine?: string[];   // follow-up principal variation in SAN
   verified?: boolean;
   confidence?: number;

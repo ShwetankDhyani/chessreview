@@ -189,4 +189,19 @@ export function classifyReviewMove(input: ClassifyReviewInput): MoveClassificati
   return base;
 }
 
+/** 1-based MultiPV rank of the played move, or null if outside the searched lines. */
+export function engineRankFromMultipv(
+  multipvLines: MultiPvLine[],
+  playedUci: string
+): number | null {
+  const played = playedUci.toLowerCase();
+  for (let i = 0; i < multipvLines.length; i++) {
+    const uci = (
+      multipvLines[i].bestMove ?? multipvLines[i].pv[0]
+    )?.toLowerCase();
+    if (uci && uci === played) return i + 1;
+  }
+  return null;
+}
+
 export { epLossFromPlayed };

@@ -1,33 +1,6 @@
 import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
-import {
-  bestLines,
-  blunderLines,
-  brilliantLines,
-  excellentLines,
-  goodLines,
-  greatLines,
-  inaccuracyLines,
-  mistakeLines,
-  renderLine,
-} from "./coachPhraseBank";
-import {
-  buildBookPhraseContext,
-  pickBookCoachLine,
-  pickLeftBookCoachLine,
-} from "./coachStreamerPhrases";
-import {
-  commentarySeed,
-  pickSeededLine,
-  pickVariedLine,
-  rememberCoachPhrase,
-} from "./coachVariety";
-import { formatWinChanceLoss } from "./evalDisplay";
-import {
-  computeOpeningChapter,
-  isLeftBookMove,
-  openingHintForMove,
-} from "./openingContext";
+import { buildFactualMoveComment } from "./factualMoveComment";
 
 export { commentarySeed } from "./coachVariety";
 
@@ -80,20 +53,20 @@ function isAlreadyLost(outlook: PositionOutlook): boolean {
   return outlook === "trouble" || outlook === "desperate" || outlook === "losing_mate";
 }
 
-function isAlreadyWinning(outlook: PositionOutlook): boolean {
-  return (
-    outlook === "crushing" ||
-    outlook === "comfortable" ||
-    outlook === "winning_mate"
-  );
-}
-
 function stillLosingAfter(outlook: PositionOutlook): boolean {
   return (
     outlook === "slight_down" ||
     outlook === "trouble" ||
     outlook === "desperate" ||
     outlook === "losing_mate"
+  );
+}
+
+function isAlreadyWinning(outlook: PositionOutlook): boolean {
+  return (
+    outlook === "crushing" ||
+    outlook === "comfortable" ||
+    outlook === "winning_mate"
   );
 }
 
@@ -108,114 +81,30 @@ export function describePositionForCoach(move: AnalyzedMove): string {
   ];
 
   if (move.classification === "brilliant" && stillLosingAfter(after)) {
-    lines.push(
-      "Tone: admire the idea, but do not pretend the game is fine — e.g. brilliance that may be too late."
-    );
+    lines.push("Student is still losing after this move.");
   } else if (move.classification === "blunder" && isAlreadyLost(before)) {
-    lines.push(
-      "Tone: matter-of-fact; the game was already bad — no false hope or melodrama."
-    );
+    lines.push("Position was already losing before this move.");
   } else if (
     (move.classification === "best" || move.classification === "excellent") &&
     isAlreadyWinning(before)
   ) {
-    lines.push("Tone: calm satisfaction — converting a good position, not over-celebrating.");
-  } else if (move.classification === "mistake" && isAlreadyLost(before)) {
-    lines.push(
-      "Tone: the position was already difficult; this move makes recovery harder — stay honest."
-    );
+    lines.push("Student was already winning.");
   }
-
-  lines.push(
-    "Banned clichés (never use): clean and precise, accurate and well timed, timely and precise, solid technique, exactly what the position demanded, engine's top choice."
-  );
 
   return lines.join("\n");
 }
 
-/** Position-aware fallback when Gemini is off or fails */
+/** Factual per-move commentary for the coach panel. */
 export function getPositionAwareMoveComment(
   move: AnalyzedMove,
   moveIdx = 0,
   openingHint?: string,
-  trackUsage = true,
+  _trackUsage = true,
   moves?: AnalyzedMove[]
 ): string | null {
-  const c = move.classification;
-  if (!c) return null;
-
+  if (!move.classification) return null;
   if (isDeliveredCheckmate(move.fenAfter)) {
-    return `${move.san} — checkmate. The game is over.`;
+    return "Checkmate. Game over.";
   }
-
-  const chapter = moves ? computeOpeningChapter(moves) : null;
-  const hint =
-    openingHint ?? (moves ? openingHintForMove(moveIdx, moves) : undefined);
-  const openingName = chapter?.openingName ?? "known theory";
-
-  if (moves && isLeftBookMove(moveIdx, moves)) {
-    const seed = commentarySeed(move, moveIdx);
-    const line = pickLeftBookCoachLine(
-      { san: move.san, openingName, moveIdx },
-      seed,
-      trackUsage
-    );
-    if (trackUsage) rememberCoachPhrase(line);
-    return line;
-  }
-
-  const seed = commentarySeed(move, moveIdx);
-  const { san, bestMoveSan: best } = move;
-  const loss = Math.abs(move.deltaE);
-  const lossBit =
-    formatWinChanceLoss(loss) != null ? ` (${formatWinChanceLoss(loss)})` : "";
-  const before = getPositionOutlook(move, "before");
-  const after = getPositionOutlook(move, "after");
-  const lostBefore = isAlreadyLost(before);
-  const wonBefore = isAlreadyWinning(before);
-  const losingAfter = stillLosingAfter(after);
-
-  const pick = (builders: ReturnType<typeof brilliantLines>) => {
-    const rendered = builders.map((b) => renderLine(b, san, best));
-    const line = trackUsage
-      ? pickVariedLine(seed, rendered)
-      : pickSeededLine(seed, rendered);
-    if (trackUsage) rememberCoachPhrase(line);
-    return line;
-  };
-
-  switch (c) {
-    case "brilliant":
-      return pick(
-        brilliantLines(move, {
-          late: losingAfter && (lostBefore || before === "slight_down"),
-          winning: wonBefore,
-        })
-      );
-    case "great":
-      return pick(greatLines({ late: losingAfter && lostBefore }));
-    case "best":
-      return pick(bestLines({ winning: wonBefore }));
-    case "excellent":
-      return pick(excellentLines(san, best));
-    case "good":
-      return pick(goodLines(san, best));
-    case "book": {
-      const bookLine = pickBookCoachLine(
-        buildBookPhraseContext(san, moveIdx, openingName, hint),
-        seed,
-        trackUsage
-      );
-      if (trackUsage) rememberCoachPhrase(bookLine);
-      return bookLine;
-    }
-    case "inaccuracy":
-      return pick(inaccuracyLines(san, best, lossBit, lostBefore));
-    case "mistake":
-      return pick(mistakeLines(san, best, lossBit, lostBefore));
-    case "blunder":
-      return pick(blunderLines(san, best, lossBit, lostBefore, wonBefore));
-    default:
-      return null;
-  }
+  return buildFactualMoveComment(move, { openingHint, moveIdx, moves });
 }

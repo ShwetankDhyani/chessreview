@@ -5,11 +5,10 @@ import { getMeta } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { CoachIcon } from "./CoachIcon";
 import { OpeningChapter } from "./OpeningChapter";
-import { computeOpeningChapter } from "../utils/openingContext";
+import { openingHintForMove, computeOpeningChapter } from "../utils/openingContext";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
-import { formatWinChanceLoss } from "../utils/evalDisplay";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
-import { openingHintForMove } from "../utils/openingContext";
+import { buildFactualMoveComment } from "../utils/factualMoveComment";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
 
@@ -272,18 +271,11 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-// Cache AI comments so we don't re-fetch when clicking back to the same move
-const aiCommentCache = new Map<string, string>();
-
-function recentPhrasesFromCache(): string[] {
-  return Array.from(aiCommentCache.values());
-}
-
 export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   move,
   moveIdx,
   moves,
-  runId,
+  runId: _runId,
   onContinuationFen,
   onContinuationEval,
   onContinuationActive,
@@ -291,10 +283,6 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   embedded = false,
   onRegisterContinuationNav,
 }) => {
-  const [aiComment, setAiComment] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [coachFromAi, setCoachFromAi] = useState(false);
-
   const chapter = useMemo(
     () => (moves?.length ? computeOpeningChapter(moves) : null),
     [moves]
@@ -309,87 +297,11 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
       : `${m.moveNumber}...${m.san}`;
   }, [chapter, moves]);
 
-  useEffect(() => {
-    if (!moves?.length) {
-      import("../utils/geminiCoach").then(({ clearCoachMemory }) => clearCoachMemory());
-      aiCommentCache.clear();
-    }
-  }, [moves?.length]);
-
-  useEffect(() => {
-    import("../utils/geminiCoach").then(({ clearCoachMemory }) => clearCoachMemory());
-    aiCommentCache.clear();
-  }, [runId]);
-
-  useEffect(() => {
-    if (!move) {
-      setAiComment(null);
-      return;
-    }
-
-    const cacheKey = `${runId ?? "norun"}:${moveIdx}:${move.san}:${move.classification}:${move.bestMoveSan ?? ""}`;
-
-    if (aiCommentCache.has(cacheKey)) {
-      setAiComment(aiCommentCache.get(cacheKey)!);
-      setAiLoading(false);
-      return;
-    }
-
-    if (!move.classification) {
-      setAiComment(null);
-      setAiLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setAiComment(null);
-    setAiLoading(true);
-
+  const displayComment = useMemo(() => {
+    if (!move?.classification) return null;
     const hint = openingHintForMove(moveIdx, moves);
-
-    import("../utils/geminiCoach").then(
-      ({ getMovComment, isGeminiConfigured, getFallbackMoveComment }) => {
-        if (cancelled) return;
-
-        if (!isGeminiConfigured()) {
-          const fallback = getFallbackMoveComment(move, hint, moveIdx, moves);
-          if (fallback) aiCommentCache.set(cacheKey, fallback);
-          setAiComment(fallback);
-          setCoachFromAi(false);
-          setAiLoading(false);
-          return;
-        }
-
-        getMovComment(move, {
-          moveIdx,
-          recentPhrases: recentPhrasesFromCache(),
-          openingHint: hint,
-          moves,
-        })
-          .then((result) => {
-            if (cancelled) return;
-            const fromAi = !!result;
-            const text = result ?? getFallbackMoveComment(move, hint, moveIdx, moves);
-            if (text) aiCommentCache.set(cacheKey, text);
-            setAiComment(text);
-            setCoachFromAi(fromAi);
-            setAiLoading(false);
-          })
-          .catch(() => {
-            if (cancelled) return;
-            const fallback = getFallbackMoveComment(move, hint, moveIdx, moves);
-            if (fallback) aiCommentCache.set(cacheKey, fallback);
-            setAiComment(fallback);
-            setCoachFromAi(false);
-            setAiLoading(false);
-          });
-      }
-    );
-
-    return () => {
-      cancelled = true;
-    };
-  }, [moveIdx, move, moves, runId]);
+    return buildFactualMoveComment(move, { openingHint: hint, moveIdx, moves });
+  }, [move, moveIdx, moves]);
 
   if (!move) {
     return (
@@ -402,10 +314,8 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
   const meta = move.classification ? getMeta(move.classification) : null;
   const accent = meta?.color ?? "#6daa6d";
-  const displayComment = aiComment;
 
   const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
-  const lossText = formatWinChanceLoss(move.deltaE);
 
   const suggestBest = shouldSuggestBestMove(move);
   const showContinuation = suggestBest && !!move.bestMoveSan;
@@ -459,21 +369,13 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
               </span>
             )}
           </div>
-          {move.bestMoveSan && suggestBest && (
-            <p className="text-[11px] text-chess-muted mt-1">
-              Engine suggests{" "}
-              <span className="font-mono font-semibold text-chess-accent">
-                {move.bestMoveSan}
-              </span>
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Comment — AI or static fallback */}
+      {/* Factual move summary */}
       {displayComment && (
         <div
-          className={`text-xs leading-relaxed transition-opacity duration-300 break-words ${
+          className={`text-xs leading-relaxed break-words ${
             embedded
               ? "border-l-2 pl-2.5 py-0.5"
               : "rounded p-2"
@@ -486,32 +388,9 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
                 ? `${meta.color}11`
                 : "transparent",
             borderColor: embedded ? (meta?.color ?? "#6daa6d") : undefined,
-            opacity: aiLoading ? 0.6 : 1,
           }}
         >
           <p className="break-words whitespace-normal">{displayComment}</p>
-          {coachFromAi && (
-            <span
-              className="mt-1 inline-block text-chess-muted opacity-40"
-              style={{ fontSize: "9px" }}
-            >
-              AI coach
-            </span>
-          )}
-        </div>
-      )}
-      {aiLoading && !displayComment && (
-        <div className="text-xs text-chess-muted px-2 py-1 flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full bg-chess-muted animate-pulse" />
-          Thinking...
-        </div>
-      )}
-
-      {/* Eval change */}
-      {lossText && isNegative && (
-        <div className="flex items-center gap-1.5 text-xs text-chess-muted">
-          <span>Win chance lost:</span>
-          <span className="font-semibold text-red-400">{lossText}</span>
         </div>
       )}
 
