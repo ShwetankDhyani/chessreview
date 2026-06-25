@@ -204,6 +204,13 @@ export const GameList: React.FC<GameListProps> = ({
         message: normalized.message,
         context: { platform: plat, username: uname.trim(), source: "game-list" },
       });
+      if (normalized.code === "GAME_SOURCE_NOT_FOUND") {
+        window.dispatchEvent(
+          new CustomEvent("cr_profile_invalid", {
+            detail: { name: uname.trim(), platform: plat },
+          })
+        );
+      }
       if (hadCachedGames) {
         clearSlowTimer();
         setShowSlowRetry(false);
@@ -328,7 +335,11 @@ export const GameList: React.FC<GameListProps> = ({
 
               {showSlowRetry && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-chess-border/60 bg-black/20 px-2 py-1.5 text-[11px] text-chess-subtext">
-                  <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
+                  {loading ? (
+                    <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
+                  ) : (
+                    <span className="inline-block h-3 w-3 flex-shrink-0 rounded-full bg-amber-400/80" />
+                  )}
                   <span className="flex-1 min-w-0">
                     {loading
                       ? "Still loading games — provider response is slower than usual."

@@ -480,6 +480,26 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const onInvalidProfile = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        name?: string;
+        platform?: "chesscom" | "lichess";
+      } | null;
+      if (!detail?.name || !detail.platform) return;
+      const idx = profiles.findIndex(
+        (p) =>
+          p.platform === detail.platform &&
+          p.name.toLowerCase() === detail.name!.toLowerCase()
+      );
+      if (idx >= 0) {
+        removeProfile(idx);
+      }
+    };
+    window.addEventListener("cr_profile_invalid", onInvalidProfile);
+    return () => window.removeEventListener("cr_profile_invalid", onInvalidProfile);
+  }, [profiles, removeProfile]);
+
   const handleDepthChange = useCallback((d: number) => {
     setDepth(d);
     localStorage.setItem("cr_depth", String(d));
@@ -807,9 +827,8 @@ export default function App() {
   const selectGame = useCallback(
     (pgnStr: string) => {
       loadPgn(pgnStr);
-      void runAnalysis(pgnStr, { visible: false });
     },
-    [loadPgn, runAnalysis]
+    [loadPgn]
   );
 
   const tryDemoGame = useCallback(() => {
@@ -998,7 +1017,7 @@ export default function App() {
   const showBoardAnalyzeOverlay =
     !!pgn &&
     (!isMobileLayout || tab === "moves") &&
-    ((isMobileLayout && isAnalyzing) ||
+    (isAnalyzing ||
       (moves.length === 0 &&
         (analysisState === "loading" || analysisState === "error")));
 
