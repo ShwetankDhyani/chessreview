@@ -21,7 +21,6 @@ import {
   refreshNativeEngineProbe,
 } from "./engine/evaluationService";
 import { MoveReviewPanel } from "./components/MoveReviewPanel";
-import { CoachPanel } from "./components/CoachPanel";
 import { EvalBadge } from "./components/EvalBadge";
 import { MobileAnalysisStatus } from "./components/MobileAnalysisStatus";
 import { MobileBoardShell } from "./components/MobileBoardShell";
@@ -51,7 +50,6 @@ import {
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
-import { KeyMomentNavButtons } from "./components/KeyMomentNavButtons";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -1300,16 +1298,6 @@ export default function App() {
                       shareUrl={shareUrl}
                       shareError={shareError}
                     />
-                    <div className="border-t border-chess-border min-h-[280px]">
-                      <CoachPanel
-                        keyMomentsOnly
-                        moves={moves}
-                        summary={summary}
-                        currentMove={null}
-                        currentMoveIdx={-1}
-                        onJumpToMove={(idx) => { navigateToMove(idx); setTab("moves"); }}
-                      />
-                    </div>
                   </>
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />
@@ -1477,12 +1465,6 @@ export default function App() {
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM6 5l8 7-8 7z" /></svg>
                     </button>
-                    <div className="h-px bg-chess-border my-1" />
-                    <KeyMomentNavButtons
-                      moves={moves}
-                      currentMoveIdx={currentMoveIdx}
-                      onGoToIndex={navigateToMove}
-                    />
                   </>
                 )}
               </div>
@@ -1601,19 +1583,6 @@ export default function App() {
                       open={mobileEvalGraphOpen}
                       onOpenChange={setMobileEvalGraphOpen}
                     />
-                    <div className="mt-4 border-t border-chess-border">
-                      <CoachPanel
-                        keyMomentsOnly
-                        moves={moves}
-                        summary={summary}
-                        currentMove={null}
-                        currentMoveIdx={-1}
-                        onJumpToMove={(idx) => {
-                          navigateToMove(idx);
-                          setTab("moves");
-                        }}
-                      />
-                    </div>
                   </>
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />

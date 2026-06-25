@@ -30,12 +30,6 @@ export function SiteFooter() {
             >
               Help ChessReview.org
             </button>
-            <a
-              href="/privacy"
-              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors"
-            >
-              Privacy
-            </a>
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
             <ReviewOdometer />

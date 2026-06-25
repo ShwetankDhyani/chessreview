@@ -3,6 +3,7 @@ import type {
   ReviewSummary as ReviewSummaryType,
   AnalyzedMove,
   ReviewRun,
+  ReviewCoverage,
 } from "../types";
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
@@ -64,6 +65,52 @@ function ReviewSection({
   );
 }
 
+function ReviewCompleteBadge({
+  coverage,
+  run,
+}: {
+  coverage: ReviewCoverage;
+  run?: ReviewRun | null;
+}) {
+  const fullyVerified = coverage.unverifiedPlies === 0;
+  const depth = run?.requestedDepth;
+
+  return (
+    <div
+      className="mb-3 flex items-center gap-3 rounded-lg border border-chess-accent/30 bg-gradient-to-r from-chess-accent/[0.12] via-chess-panel/90 to-chess-bg/40 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+      role="status"
+    >
+      <span
+        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold ${
+          fullyVerified
+            ? "border-chess-accent/40 bg-chess-accent/15 text-chess-accent"
+            : "border-amber-400/40 bg-amber-400/10 text-amber-300"
+        }`}
+        aria-hidden
+      >
+        {fullyVerified ? "✓" : "·"}
+      </span>
+      <div className="min-w-0">
+        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-chess-accent">
+          {fullyVerified ? "Review complete" : "Review ready"}
+        </p>
+        <p className="mt-0.5 text-[11px] text-chess-muted">
+          {coverage.totalPlies} moves
+          {depth != null ? (
+            <span className="text-chess-subtext"> · depth {depth}</span>
+          ) : null}
+          {!fullyVerified ? (
+            <span className="text-amber-300/90">
+              {" "}
+              · {coverage.unverifiedPlies} still checking
+            </span>
+          ) : null}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   summary,
   whiteName,
@@ -100,26 +147,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   return (
     <div className="flex flex-col p-3 sm:p-4 animate-fade-in">
       {summary.coverage && (
-        <div className="mb-3 rounded-md border border-chess-border bg-chess-bg/60 px-2.5 py-2 text-[11px] text-chess-muted">
-          <span className="font-semibold text-chess-text">
-            Verified {summary.coverage.verifiedPlies}/{summary.coverage.totalPlies} plies
-          </span>
-          {summary.coverage.unverifiedPlies > 0 && (
-            <span className="ml-1 text-amber-300">
-              ({summary.coverage.unverifiedPlies} unverified)
-            </span>
-          )}
-          {run && (
-            <span className="ml-2 text-chess-subtext">
-              · D{run.requestedDepth} · {run.engineVersion}
-            </span>
-          )}
-          {summary.accuracyMeta?.formulaVersion && (
-            <span className="ml-2 text-chess-subtext">
-              · {summary.accuracyMeta.formulaVersion}
-            </span>
-          )}
-        </div>
+        <ReviewCompleteBadge coverage={summary.coverage} run={run} />
       )}
       <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />
 
