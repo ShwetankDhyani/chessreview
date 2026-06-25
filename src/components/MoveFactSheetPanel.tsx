@@ -3,6 +3,8 @@ import type { MoveFactSheet } from "../utils/moveFactSheet";
 interface MoveFactSheetPanelProps {
   sheet: MoveFactSheet;
   embedded?: boolean;
+  /** Hide when the continuation viewer already shows the best move. */
+  hideBestWas?: boolean;
 }
 
 const ROWS: Array<{
@@ -10,8 +12,6 @@ const ROWS: Array<{
   label: string;
   mono?: boolean;
 }> = [
-  { key: "classification", label: "Move type" },
-  { key: "played", label: "Played", mono: true },
   { key: "engineRank", label: "Engine rank" },
   { key: "bestWas", label: "Best was", mono: true },
   { key: "evalChange", label: "Eval change", mono: true },
@@ -22,7 +22,16 @@ const ROWS: Array<{
 export function MoveFactSheetPanel({
   sheet,
   embedded = false,
+  hideBestWas = false,
 }: MoveFactSheetPanelProps) {
+  const visibleRows = ROWS.filter(({ key }) => {
+    if (hideBestWas && key === "bestWas") return false;
+    const value = sheet[key];
+    return value !== "—";
+  });
+
+  if (visibleRows.length === 0) return null;
+
   return (
     <div
       className={`text-xs ${
@@ -35,29 +44,15 @@ export function MoveFactSheetPanel({
       }}
     >
       <dl className="grid grid-cols-[minmax(5.5rem,auto)_1fr] gap-x-3 gap-y-2">
-        {ROWS.map(({ key, label, mono }) => {
-          const value = sheet[key];
-          const isClassification = key === "classification";
-          return (
-            <Row
-              key={key}
-              label={label}
-              value={value}
-              mono={mono}
-              valueColor={
-                isClassification ? sheet.classificationColor : undefined
-              }
-              valueClass={
-                isClassification ? "font-semibold" : undefined
-              }
-            />
-          );
-        })}
+        {visibleRows.map(({ key, label, mono }) => (
+          <Row
+            key={key}
+            label={label}
+            value={sheet[key]}
+            mono={mono}
+          />
+        ))}
       </dl>
-      <p className="mt-2 text-[10px] text-chess-muted leading-snug">
-        Eval is from your perspective as{" "}
-        {sheet.played ? "the player who moved" : "this side"}.
-      </p>
     </div>
   );
 }
@@ -66,22 +61,15 @@ function Row({
   label,
   value,
   mono,
-  valueColor,
-  valueClass = "",
 }: {
   label: string;
   value: string;
   mono?: boolean;
-  valueColor?: string;
-  valueClass?: string;
 }) {
   return (
     <>
       <dt className="text-chess-muted font-medium pt-px">{label}</dt>
-      <dd
-        className={`text-chess-text break-words ${mono ? "font-mono" : ""} ${valueClass}`}
-        style={valueColor ? { color: valueColor } : undefined}
-      >
+      <dd className={`text-chess-text break-words ${mono ? "font-mono" : ""}`}>
         {value}
       </dd>
     </>

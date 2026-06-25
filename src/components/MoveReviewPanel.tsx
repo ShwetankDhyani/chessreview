@@ -229,9 +229,9 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         style={{ background: `${accentColor}0d` }}
       >
         {step === 0 && !hasBeenInLineRef.current
-          ? <><span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> was the engine&apos;s best move here. Use the line controls above to step through.</>
+          ? <>Step through the engine line with Prev / Next.</>
           : step === 0
-            ? <>Back at the branch.{actualMoveSan ? <> You played <span className="font-bold text-chess-text">{actualMoveSan}</span>.</> : null} Engine suggests <span className="font-bold" style={{ color: accentColor }}>{allMoves[0]}</span> from here.</>
+            ? <>Back at the branch.{actualMoveSan ? <> You played <span className="font-bold text-chess-text">{actualMoveSan}</span>.</> : null}</>
             : <>After <span className="font-bold" style={{ color: accentColor }}>{allMoves[step - 1]}</span>, {
               step % 2 === 1
                 ? " continuing the best line."
@@ -375,7 +375,11 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
       {/* Move summary */}
       {factSheet && (
-        <MoveFactSheetPanel sheet={factSheet} embedded={embedded} />
+        <MoveFactSheetPanel
+          sheet={factSheet}
+          embedded={embedded}
+          hideBestWas={showContinuation}
+        />
       )}
 
       {/* Interactive continuation */}
