@@ -380,7 +380,6 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         <MoveFactSheetPanel
           sheet={factSheet}
           embedded={embedded}
-          hideBestWas={showContinuation}
           hideOpening={showOpeningChapter}
         />
       )}
