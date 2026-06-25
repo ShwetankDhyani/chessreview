@@ -3,7 +3,6 @@ import type {
   ReviewSummary as ReviewSummaryType,
   AnalyzedMove,
   ReviewRun,
-  ReviewCoverage,
 } from "../types";
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
@@ -66,47 +65,47 @@ function ReviewSection({
   );
 }
 
-function ReviewCompleteBadge({
-  coverage,
-  run,
+function ReviewPlayersHeader({
+  whiteName,
+  blackName,
 }: {
-  coverage: ReviewCoverage;
-  run?: ReviewRun | null;
+  whiteName: string;
+  blackName: string;
 }) {
-  const fullyVerified = coverage.unverifiedPlies === 0;
-  const depth = run?.requestedDepth;
-
   return (
-    <div
-      className="mb-3 flex items-center gap-3 rounded-lg border border-chess-accent/30 bg-gradient-to-r from-chess-accent/[0.12] via-chess-panel/90 to-chess-bg/40 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-      role="status"
-    >
-      <span
-        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold ${
-          fullyVerified
-            ? "border-chess-accent/40 bg-chess-accent/15 text-chess-accent"
-            : "border-amber-400/40 bg-amber-400/10 text-amber-300"
-        }`}
-        aria-hidden
-      >
-        {fullyVerified ? "✓" : "·"}
+    <div className="flex items-center justify-center gap-4 sm:gap-8 pb-4">
+      <div className="flex flex-col items-center min-w-0 flex-1 max-w-[9rem]">
+        <span
+          className="text-[1.75rem] leading-none select-none"
+          style={{
+            color: "#f0ede8",
+            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+          }}
+          aria-hidden
+        >
+          ♔
+        </span>
+        <span className="mt-2 text-sm font-semibold text-chess-text truncate w-full text-center">
+          {whiteName}
+        </span>
+      </div>
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-chess-muted flex-shrink-0">
+        vs
       </span>
-      <div className="min-w-0">
-        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-chess-accent">
-          {fullyVerified ? "Review complete" : "Review ready"}
-        </p>
-        <p className="mt-0.5 text-[11px] text-chess-muted">
-          {coverage.totalPlies} moves
-          {depth != null ? (
-            <span className="text-chess-subtext"> · depth {depth}</span>
-          ) : null}
-          {!fullyVerified ? (
-            <span className="text-amber-300/90">
-              {" "}
-              · {coverage.unverifiedPlies} still checking
-            </span>
-          ) : null}
-        </p>
+      <div className="flex flex-col items-center min-w-0 flex-1 max-w-[9rem]">
+        <span
+          className="text-[1.75rem] leading-none select-none"
+          style={{
+            color: "#9a9a9a",
+            textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+          }}
+          aria-hidden
+        >
+          ♚
+        </span>
+        <span className="mt-2 text-sm font-semibold text-chess-text truncate w-full text-center">
+          {blackName}
+        </span>
       </div>
     </div>
   );
@@ -117,7 +116,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   whiteName,
   blackName,
   moves = [],
-  run = null,
+  run: _run = null,
   onMoveClick,
   onShare,
   sharing = false,
@@ -146,34 +145,8 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
     accGap < 0.5 ? null : wAcc >= bAcc ? "white" : "black";
 
   return (
-    <div className="flex flex-col p-3 sm:p-4 animate-fade-in">
-      {summary.coverage && (
-        <ReviewCompleteBadge coverage={summary.coverage} run={run} />
-      )}
-      <ReviewPlayerStrip whiteName={wLabel} blackName={bLabel} />
-
-      {onShare && (
-        <div className="mt-3 mb-1 space-y-2">
-          <button
-            type="button"
-            onClick={onShare}
-            disabled={sharing}
-            className="w-full text-xs font-semibold py-2 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
-          >
-            {sharing ? "Creating link…" : "Share this review"}
-          </button>
-          {shareUrl && (
-            <ShareReviewActions
-              url={shareUrl}
-              whiteName={wLabel}
-              blackName={bLabel}
-              whiteAccuracy={wAcc}
-              blackAccuracy={bAcc}
-            />
-          )}
-          {shareError && <p className="text-[11px] text-red-400">{shareError}</p>}
-        </div>
-      )}
+    <div className="flex flex-col min-h-full p-3 sm:p-4 animate-fade-in">
+      <ReviewPlayersHeader whiteName={wLabel} blackName={bLabel} />
 
       <ReviewSection title="Overall accuracy" first>
         <div className="flex items-stretch gap-1">
@@ -297,6 +270,28 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         </div>
       </ReviewSection>
 
+      {onShare && (
+        <div className="mt-auto pt-4 border-t border-chess-border/50 space-y-2">
+          <button
+            type="button"
+            onClick={onShare}
+            disabled={sharing}
+            className="w-full text-xs font-semibold py-2.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
+          >
+            {sharing ? "Creating link…" : "Share this review"}
+          </button>
+          {shareUrl && (
+            <ShareReviewActions
+              url={shareUrl}
+              whiteName={wLabel}
+              blackName={bLabel}
+              whiteAccuracy={wAcc}
+              blackAccuracy={bAcc}
+            />
+          )}
+          {shareError && <p className="text-[11px] text-red-400">{shareError}</p>}
+        </div>
+      )}
     </div>
   );
 };
@@ -325,25 +320,6 @@ const PieceIndicator: React.FC<{
   />
 );
 
-const ReviewPlayerStrip: React.FC<{
-  whiteName: string;
-  blackName: string;
-}> = ({ whiteName, blackName }) => (
-  <div className="flex items-center justify-between gap-3 pb-3 mb-1 border-b border-chess-border/45">
-    <div className="flex items-center gap-2 min-w-0 flex-1">
-      <PieceIndicator side="white" />
-      <span className="text-sm font-medium text-chess-subtext truncate">
-        {whiteName}
-      </span>
-    </div>
-    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-      <span className="text-sm font-medium text-chess-subtext truncate text-right">
-        {blackName}
-      </span>
-      <PieceIndicator side="black" />
-    </div>
-  </div>
-);
 
 const CountBadge: React.FC<{
   count: number;
