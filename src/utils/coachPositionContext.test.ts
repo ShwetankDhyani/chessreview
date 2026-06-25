@@ -31,7 +31,7 @@ describe("getPositionAwareMoveComment", () => {
     });
     const text = getPositionAwareMoveComment(m, 5);
     expect(text).toMatch(/Blunder/);
-    expect(text).toMatch(/Best was d4/);
+    expect(text).toMatch(/Best: d4/);
     expect(text).not.toMatch(/great job|right track|on the right track|keep fighting/i);
   });
 

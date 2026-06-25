@@ -1,6 +1,6 @@
 import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
-import { buildFactualMoveComment } from "./factualMoveComment";
+import { buildFactualMoveComment } from "./moveFactSheet";
 
 export { commentarySeed } from "./coachVariety";
 

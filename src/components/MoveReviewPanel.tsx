@@ -8,7 +8,8 @@ import { OpeningChapter } from "./OpeningChapter";
 import { openingHintForMove, computeOpeningChapter } from "../utils/openingContext";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
-import { buildFactualMoveComment } from "../utils/factualMoveComment";
+import { buildMoveFactSheet } from "../utils/moveFactSheet";
+import { MoveFactSheetPanel } from "./MoveFactSheetPanel";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
 
@@ -297,10 +298,10 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
       : `${m.moveNumber}...${m.san}`;
   }, [chapter, moves]);
 
-  const displayComment = useMemo(() => {
+  const factSheet = useMemo(() => {
     if (!move?.classification) return null;
     const hint = openingHintForMove(moveIdx, moves);
-    return buildFactualMoveComment(move, { openingHint: hint, moveIdx, moves });
+    return buildMoveFactSheet(move, { openingHint: hint, moveIdx, moves });
   }, [move, moveIdx, moves]);
 
   if (!move) {
@@ -372,26 +373,9 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         </div>
       </div>
 
-      {/* Factual move summary */}
-      {displayComment && (
-        <div
-          className={`text-xs leading-relaxed break-words ${
-            embedded
-              ? "border-l-2 pl-2.5 py-0.5"
-              : "rounded p-2"
-          }`}
-          style={{
-            color: meta?.color ?? "#aaa",
-            backgroundColor: embedded
-              ? "transparent"
-              : meta
-                ? `${meta.color}11`
-                : "transparent",
-            borderColor: embedded ? (meta?.color ?? "#6daa6d") : undefined,
-          }}
-        >
-          <p className="break-words whitespace-normal">{displayComment}</p>
-        </div>
+      {/* Move summary */}
+      {factSheet && (
+        <MoveFactSheetPanel sheet={factSheet} embedded={embedded} />
       )}
 
       {/* Interactive continuation */}

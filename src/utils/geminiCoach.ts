@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalyzedMove, ReviewSummary } from "../types";
-import { buildFactualMoveComment } from "./factualMoveComment";
+import { buildFactualMoveComment } from "./moveFactSheet";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
