@@ -18,6 +18,7 @@ import { URL } from "url";
 import os from "os";
 import { handleEngineStatsRequest } from "./server/reviewStatsFile.mjs";
 import { handleEngineShareRequest } from "./server/reviewShares.mjs";
+import { handleEngineSavedReviewsRequest } from "./server/reviewSaves.mjs";
 import {
   geoFromHeaders,
   normalizeReviewPayload,
@@ -349,6 +350,10 @@ const server = createServer(async (req, res) => {
   }
 
   if (handleEngineShareRequest(req, res, url, { readJsonBody })) {
+    return;
+  }
+
+  if (handleEngineSavedReviewsRequest(req, res, url, { readJsonBody })) {
     return;
   }
 

@@ -123,3 +123,71 @@ export function fileDeleteSavedReview(id, platform, username) {
   saveState(state);
   return { ok: true };
 }
+
+export function handleEngineSavedReviewsRequest(req, res, url, { readJsonBody }) {
+  if (url.pathname === "/saved-reviews" && req.method === "GET") {
+    const platform = String(url.searchParams.get("platform") ?? "").trim();
+    const username = String(url.searchParams.get("username") ?? "").trim();
+    const id = String(url.searchParams.get("id") ?? "").trim();
+    if (!platform || !username) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Missing platform/username" }));
+      return true;
+    }
+    if (id) {
+      const row = fileGetSavedReview(id, platform, username);
+      if (!row) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: "Not found" }));
+        return true;
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, review: row }));
+      return true;
+    }
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true, items: fileListSavedReviews(platform, username) }));
+    return true;
+  }
+
+  if (url.pathname === "/saved-reviews" && req.method === "POST") {
+    void (async () => {
+      try {
+        const body = await readJsonBody(req);
+        const result = fileSaveReview(body);
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, ...result }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end(
+          JSON.stringify({
+            error: e instanceof Error ? e.message : "Could not save review",
+          })
+        );
+      }
+    })();
+    return true;
+  }
+
+  if (url.pathname === "/saved-reviews" && req.method === "DELETE") {
+    const platform = String(url.searchParams.get("platform") ?? "").trim();
+    const username = String(url.searchParams.get("username") ?? "").trim();
+    const id = String(url.searchParams.get("id") ?? "").trim();
+    if (!platform || !username || !id) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Missing id/platform/username" }));
+      return true;
+    }
+    const result = fileDeleteSavedReview(id, platform, username);
+    if (!result.ok) {
+      res.writeHead(403);
+      res.end(JSON.stringify({ error: "Access denied" }));
+      return true;
+    }
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true }));
+    return true;
+  }
+
+  return false;
+}

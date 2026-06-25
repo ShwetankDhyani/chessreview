@@ -32,6 +32,80 @@ async function readEngineJson(path, init = {}) {
   return data;
 }
 
+function savedReviewsUnavailableMessage() {
+  return "Saved review storage is unavailable. Configure EVAL_SERVER_URL with saved-reviews support.";
+}
+
+export async function listSavedReviews(platform, username) {
+  const base = engineStatsUrl();
+  if (base) {
+    const engine = await readEngineJson(
+      `/saved-reviews?platform=${encodeURIComponent(platform)}&username=${encodeURIComponent(
+        username
+      )}`
+    );
+    if (engine) return engine;
+  }
+  if (!isWritableStore()) {
+    throw new Error(savedReviewsUnavailableMessage());
+  }
+  return { ok: true, items: fileListSavedReviews(platform, username) };
+}
+
+export async function getSavedReview(id, platform, username) {
+  const base = engineStatsUrl();
+  if (base) {
+    const engine = await readEngineJson(
+      `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
+        platform
+      )}&username=${encodeURIComponent(username)}`
+    );
+    if (engine) return engine;
+  }
+  if (!isWritableStore()) {
+    throw new Error(savedReviewsUnavailableMessage());
+  }
+  const row = fileGetSavedReview(id, platform, username);
+  if (!row) throw new Error("Not found");
+  return { ok: true, review: row };
+}
+
+export async function saveSavedReview(payload) {
+  const base = engineStatsUrl();
+  if (base) {
+    const engine = await readEngineJson("/saved-reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (engine) return engine;
+  }
+  if (!isWritableStore()) {
+    throw new Error(savedReviewsUnavailableMessage());
+  }
+  const result = fileSaveReview(payload);
+  return { ok: true, ...result };
+}
+
+export async function removeSavedReview(id, platform, username) {
+  const base = engineStatsUrl();
+  if (base) {
+    const engine = await readEngineJson(
+      `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
+        platform
+      )}&username=${encodeURIComponent(username)}`,
+      { method: "DELETE" }
+    );
+    if (engine) return engine;
+  }
+  if (!isWritableStore()) {
+    throw new Error(savedReviewsUnavailableMessage());
+  }
+  const result = fileDeleteSavedReview(id, platform, username);
+  if (!result.ok) throw new Error("Access denied");
+  return { ok: true };
+}
+
 export function createSavedReviewsMiddleware() {
   return async (req, res, next) => {
     const urlPath = req.url?.split("?")[0] ?? "";
@@ -60,46 +134,13 @@ export function createSavedReviewsMiddleware() {
         return;
       }
       try {
-        const base = engineStatsUrl();
-        if (base) {
-          try {
-            const path = id
-              ? `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
-                  platform
-                )}&username=${encodeURIComponent(username)}`
-              : `/saved-reviews?platform=${encodeURIComponent(
-                  platform
-                )}&username=${encodeURIComponent(username)}`;
-            const engine = await readEngineJson(path);
-            if (engine) {
-              res.statusCode = 200;
-              res.end(JSON.stringify(engine));
-              return;
-            }
-          } catch (e) {
-            if (!isWritableStore()) throw e;
-          }
-        }
-        if (id) {
-          const row = fileGetSavedReview(id, platform, username);
-          if (!row) {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Not found" }));
-            return;
-          }
-          res.statusCode = 200;
-          res.end(JSON.stringify({ ok: true, review: row }));
-          return;
-        }
+        const result = id
+          ? await getSavedReview(id, platform, username)
+          : await listSavedReviews(platform, username);
         res.statusCode = 200;
-        res.end(
-          JSON.stringify({
-            ok: true,
-            items: fileListSavedReviews(platform, username),
-          })
-        );
+        res.end(JSON.stringify(result));
       } catch (e) {
-        res.statusCode = 500;
+        res.statusCode = e instanceof Error && e.message === "Not found" ? 404 : 500;
         res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Saved reviews failed" }));
       }
       return;
@@ -113,31 +154,9 @@ export function createSavedReviewsMiddleware() {
       req.on("end", async () => {
         try {
           const parsed = body ? JSON.parse(body) : {};
-          const base = engineStatsUrl();
-          if (base) {
-            try {
-              const engine = await readEngineJson("/saved-reviews", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(parsed),
-              });
-              if (engine) {
-                res.statusCode = 200;
-                res.end(JSON.stringify(engine));
-                return;
-              }
-            } catch (e) {
-              if (!isWritableStore()) throw e;
-            }
-          }
-          if (!isWritableStore()) {
-            throw new Error(
-              "Saved review storage is unavailable. Configure EVAL_SERVER_URL with saved-reviews support."
-            );
-          }
-          const result = fileSaveReview(parsed);
+          const result = await saveSavedReview(parsed);
           res.statusCode = 200;
-          res.end(JSON.stringify({ ok: true, ...result }));
+          res.end(JSON.stringify(result));
         } catch (e) {
           res.statusCode = 400;
           res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Could not save review" }));
@@ -153,39 +172,11 @@ export function createSavedReviewsMiddleware() {
         return;
       }
       try {
-        const base = engineStatsUrl();
-        if (base) {
-          try {
-            const engine = await readEngineJson(
-              `/saved-reviews?id=${encodeURIComponent(id)}&platform=${encodeURIComponent(
-                platform
-              )}&username=${encodeURIComponent(username)}`,
-              { method: "DELETE" }
-            );
-            if (engine) {
-              res.statusCode = 200;
-              res.end(JSON.stringify(engine));
-              return;
-            }
-          } catch (e) {
-            if (!isWritableStore()) throw e;
-          }
-        }
-        if (!isWritableStore()) {
-          throw new Error(
-            "Saved review storage is unavailable. Configure EVAL_SERVER_URL with saved-reviews support."
-          );
-        }
-        const result = fileDeleteSavedReview(id, platform, username);
-        if (!result.ok) {
-          res.statusCode = 403;
-          res.end(JSON.stringify({ error: "Access denied" }));
-          return;
-        }
+        const result = await removeSavedReview(id, platform, username);
         res.statusCode = 200;
-        res.end(JSON.stringify({ ok: true }));
+        res.end(JSON.stringify(result));
       } catch (e) {
-        res.statusCode = 400;
+        res.statusCode = e instanceof Error && e.message === "Access denied" ? 403 : 400;
         res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Could not delete review" }));
       }
       return;
