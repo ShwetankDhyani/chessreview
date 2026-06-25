@@ -7,8 +7,8 @@ import { CoachIcon } from "./CoachIcon";
 import { OpeningChapter } from "./OpeningChapter";
 import { openingHintForMove, computeOpeningChapter } from "../utils/openingContext";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
-import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
-import { buildMoveFactSheet } from "../utils/moveFactSheet";
+import { shouldShowBestContinuation } from "../utils/bestMoveSuggestion";
+import { buildMoveFactSheet, bestMoveSanForDisplay } from "../utils/moveFactSheet";
 import { MoveFactSheetPanel } from "./MoveFactSheetPanel";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
@@ -195,7 +195,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   }, [step, allMoves.length, firstMove, line.join(",")]);
 
   return (
-    <div className="border border-chess-border rounded-lg bg-chess-panel flex flex-col gap-2 overflow-hidden min-w-0">
+    <div className="engine-line-panel border border-chess-border rounded-lg bg-chess-panel flex flex-col gap-2 overflow-hidden min-w-0">
       {/* Header */}
       <div className="flex items-center gap-1.5 px-2.5 pt-2 text-xs font-semibold uppercase tracking-wider text-chess-muted">
         <span>🔍</span>
@@ -209,10 +209,12 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
           <button
             key={i}
             onClick={() => { goToStep(i + 1); }}
-            className="font-mono text-sm font-bold px-2 py-0.5 rounded transition-all"
+            className={`font-mono text-sm font-bold px-2 py-0.5 rounded transition-all engine-line-step ${
+              i === step - 1 ? "engine-line-step--active" : ""
+            }`}
             style={
               i === step - 1
-                ? { backgroundColor: `${accentColor}33`, color: accentColor, boxShadow: `0 0 0 1px ${accentColor}66` }
+                ? { backgroundColor: `${accentColor}22`, color: accentColor }
                 : i < step - 1
                   ? { color: "#666", textDecoration: "line-through" }
                   : { color: "#888" }
@@ -318,8 +320,8 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
   const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
 
-  const suggestBest = shouldSuggestBestMove(move);
-  const showContinuation = suggestBest && !!move.bestMoveSan;
+  const bestSan = useMemo(() => bestMoveSanForDisplay(move), [move]);
+  const showContinuation = shouldShowBestContinuation(move) && !!bestSan;
   const showOpeningChapter =
     !!chapter &&
     (move.inOpeningBook ||
@@ -380,16 +382,15 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
         <MoveFactSheetPanel
           sheet={factSheet}
           embedded={embedded}
-          hideBestWas={showContinuation}
           hideOpening={showOpeningChapter}
         />
       )}
 
       {/* Interactive continuation */}
-      {showContinuation && move.bestMoveSan && (
+      {showContinuation && bestSan && (
         <ContinuationViewer
-          key={`${moveIdx}-${move.bestMoveSan}`}
-          firstMove={move.bestMoveSan}
+          key={`${moveIdx}-${bestSan}`}
+          firstMove={bestSan}
           line={move.pvLine ?? []}
           startFen={move.fenBefore}
           actualMoveSan={move.san}

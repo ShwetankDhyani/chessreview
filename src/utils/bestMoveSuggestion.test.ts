@@ -1,102 +1,83 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzedMove } from "../types";
-import { shouldSuggestBestMove } from "./bestMoveSuggestion";
+import {
+  playedMatchesEngineBest,
+  shouldShowBestContinuation,
+  shouldShowBestMoveHint,
+} from "./bestMoveSuggestion";
 
 function move(
-  partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "classification" | "uci">
+  partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "san" | "classification">
 ): AnalyzedMove {
   return {
-    moveNumber: 1,
+    moveNumber: 10,
     color: "w",
-    san: "e4",
-    fenBefore: "",
+    fenBefore: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     fenAfter: "",
-    eBest: 0,
-    eActual: 0,
-    deltaE: 0,
+    uci: "e2e4",
     bestMove: "e2e4",
+    deltaE: 0,
     ...partial,
   } as AnalyzedMove;
 }
 
-describe("shouldSuggestBestMove", () => {
-  it("returns false for book openings and best classifications", () => {
-    expect(shouldSuggestBestMove(move({ classification: "book", uci: "e2e4" }))).toBe(
+describe("shouldShowBestMoveHint", () => {
+  it("returns false for book and forced moves", () => {
+    expect(shouldShowBestMoveHint(move({ classification: "book", uci: "e2e4" }))).toBe(
       false
     );
     expect(
-      shouldSuggestBestMove(
-        move({ classification: "excellent", uci: "g1f3", inOpeningBook: true })
-      )
-    ).toBe(false);
-    expect(shouldSuggestBestMove(move({ classification: "best", uci: "e2e4" }))).toBe(
-      false
-    );
-  });
-
-  it("returns false when the played move matches engine best", () => {
-    expect(
-      shouldSuggestBestMove(
-        move({ classification: "excellent", uci: "g1f3", bestMove: "g1f3" })
+      shouldShowBestMoveHint(
+        move({ classification: "mistake", forced: true, uci: "g1f3", bestMove: "d2d4" })
       )
     ).toBe(false);
   });
 
-  it("returns false for first-ply opening moves marked inOpeningBook", () => {
+  it("returns true for inaccuracies and other non-book moves with a best line", () => {
     expect(
-      shouldSuggestBestMove(
-        move({
-          classification: "best",
-          uci: "e2e4",
-          bestMove: "e2e4",
-          inOpeningBook: true,
-          epLoss: 0.002,
-        })
+      shouldShowBestMoveHint(
+        move({ classification: "inaccuracy", uci: "b1c3", bestMove: "d2d4" })
       )
-    ).toBe(false);
+    ).toBe(true);
     expect(
-      shouldSuggestBestMove(
-        move({
-          classification: "excellent",
-          uci: "e2e4",
-          bestMove: "e2e4",
-          inOpeningBook: true,
-          epLoss: 0.01,
-        })
+      shouldShowBestMoveHint(
+        move({ classification: "excellent", uci: "e2e4", bestMove: "e2e4" })
       )
-    ).toBe(false);
-  });
-
-  it("returns false when SAN matches engine best even if label is excellent", () => {
+    ).toBe(true);
     expect(
-      shouldSuggestBestMove(
-        move({
-          classification: "excellent",
-          san: "e4",
-          uci: "e2e4",
-          bestMove: "e2e4",
-          bestMoveSan: "e4",
-          epLoss: 0.01,
-        })
-      )
-    ).toBe(false);
-  });
-
-  it("returns true for other classifications with a different best move", () => {
-    expect(
-      shouldSuggestBestMove(
+      shouldShowBestMoveHint(
         move({ classification: "good", uci: "d2d4", bestMove: "e2e4" })
       )
     ).toBe(true);
+  });
+});
+
+describe("shouldShowBestContinuation", () => {
+  it("requires a best move but not a different played move", () => {
     expect(
-      shouldSuggestBestMove(
-        move({ classification: "mistake", uci: "g1e2", bestMove: "g1f3" })
+      shouldShowBestContinuation(
+        move({ classification: "best", uci: "e2e4", bestMove: "e2e4", bestMoveSan: "e4" })
       )
     ).toBe(true);
     expect(
-      shouldSuggestBestMove(
-        move({ classification: "excellent", uci: "b1c3", bestMove: "d2d4" })
+      shouldShowBestContinuation(
+        move({ classification: "book", uci: "e2e4", bestMove: "e2e4" })
+      )
+    ).toBe(false);
+  });
+});
+
+describe("playedMatchesEngineBest", () => {
+  it("matches by UCI or SAN", () => {
+    expect(
+      playedMatchesEngineBest(
+        move({ san: "e4", uci: "e2e4", bestMove: "e2e4", bestMoveSan: "e4" })
       )
     ).toBe(true);
+    expect(
+      playedMatchesEngineBest(
+        move({ san: "Nf3", uci: "g1f3", bestMove: "d2d4", bestMoveSan: "d4" })
+      )
+    ).toBe(false);
   });
 });

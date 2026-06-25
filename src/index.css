@@ -100,8 +100,19 @@
 }
 
 @keyframes engineGlow {
-  0%, 100% { box-shadow: 0 0 0 4px #6daa6dcc, 0 0 20px 8px #6daa6d77, 0 0 50px 12px #6daa6d33, inset 0 0 30px 4px #6daa6d22; }
-  50%       { box-shadow: 0 0 0 4px #6daa6dff, 0 0 28px 14px #6daa6d99, 0 0 70px 18px #6daa6d55, inset 0 0 40px 6px #6daa6d33; }
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(109, 170, 109, 0.35),
+      0 0 12px 4px rgba(109, 170, 109, 0.18),
+      inset 0 0 14px 2px rgba(109, 170, 109, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(109, 170, 109, 0.48),
+      0 0 16px 6px rgba(109, 170, 109, 0.24),
+      inset 0 0 18px 3px rgba(109, 170, 109, 0.12);
+  }
 }
 
 @keyframes shake {
@@ -841,6 +852,16 @@
 
 .board-continuation-ring[data-active="true"] {
   animation: engineGlow 2.4s ease-in-out infinite;
+}
+
+@media (min-width: 1024px) {
+  .engine-line-step--active {
+    box-shadow: 0 0 0 1px rgba(109, 170, 109, 0.28), 0 0 10px 2px rgba(109, 170, 109, 0.16);
+  }
+
+  .engine-line-panel {
+    box-shadow: 0 0 0 1px rgba(109, 170, 109, 0.08);
+  }
 }
 
 @media (max-width: 1023px) {
