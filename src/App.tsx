@@ -41,6 +41,7 @@ import {
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { BoardReviewActions } from "./components/BoardReviewActions";
+import { buildPgnFilename, downloadPgn } from "./utils/exportPgn";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
@@ -773,6 +774,7 @@ export default function App() {
   }, [pgn, analysisRunning, runAnalysis]);
 
   const canReanalyze = !!pgn.trim() && reviewReady;
+  const canExportPgn = !!pgn.trim();
   const canSaveCurrentReview = !!activeUser && analysisState === "done" && moves.length > 0;
 
   const applyReviewResult = useCallback(
@@ -934,6 +936,13 @@ export default function App() {
       setSavingReview(false);
     }
   }, [activeUser, pgn, reviewResult, summary, moves, playerNames, refreshSavedReviews]);
+
+  const handleExportPgn = useCallback(() => {
+    if (!pgn.trim()) return;
+    downloadPgn(pgn, buildPgnFilename(playerNames.white, playerNames.black));
+    setSaveReviewMessage("PGN downloaded.");
+    window.setTimeout(() => setSaveReviewMessage(null), 2500);
+  }, [pgn, playerNames.white, playerNames.black]);
 
   const handleOpenSavedReview = useCallback(
     async (id: string) => {
@@ -1696,11 +1705,13 @@ export default function App() {
                 <BoardReviewActions
                   canReanalyze={canReanalyze}
                   canSave={canSaveCurrentReview}
+                  canExportPgn={canExportPgn}
                   saving={savingReview}
                   isAnalyzing={isAnalyzing}
                   saveMessage={saveReviewMessage}
                   onReanalyze={requestReanalysis}
                   onSave={() => void handleSaveReview()}
+                  onExportPgn={handleExportPgn}
                   className="pl-[34px] pt-1.5"
                 />
               </div>
@@ -1940,16 +1951,18 @@ export default function App() {
                     }
                     onFlip={() => setBoardFlipped((f) => !f)}
                     leading={
-                      (canReanalyze || canSaveCurrentReview) ? (
+                      (canReanalyze || canSaveCurrentReview || canExportPgn) ? (
                         <BoardReviewActions
                           inline
                           canReanalyze={canReanalyze}
                           canSave={canSaveCurrentReview}
+                          canExportPgn={canExportPgn}
                           saving={savingReview}
                           isAnalyzing={isAnalyzing}
                           saveMessage={null}
                           onReanalyze={requestReanalysis}
                           onSave={() => void handleSaveReview()}
+                          onExportPgn={handleExportPgn}
                         />
                       ) : undefined
                     }
