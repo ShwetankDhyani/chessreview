@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  gameAccuracyFromMoveScores,
+  caps2GameAccuracy,
   moveAccuracyFromEpLoss,
 } from "./caps2Accuracy";
 
@@ -15,13 +15,12 @@ describe("caps2Accuracy", () => {
     expect(loss).toBeLessThan(92);
   });
 
-  it("penalizes volatile games via standard deviation", () => {
-    const steady = gameAccuracyFromMoveScores(Array(18).fill(88));
-    const volatile = gameAccuracyFromMoveScores([
-      ...Array(17).fill(92),
-      25,
+  it("weights blunders heavily via harmonic blend", () => {
+    const clean = caps2GameAccuracy(Array(18).fill(0.01));
+    const withBlunder = caps2GameAccuracy([
+      ...Array(17).fill(0.01),
+      0.25,
     ]);
-    expect(steady).toBeGreaterThan(volatile);
-    expect(steady - volatile).toBeGreaterThan(3);
+    expect(clean - withBlunder).toBeGreaterThan(5);
   });
 });

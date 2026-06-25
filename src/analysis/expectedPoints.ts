@@ -1,10 +1,8 @@
 import type { WdlTriple } from "./wdl";
 import {
-  cpToWinProb,
   expectedPointsFromWdlWhite,
   wdlTripleToWinProb,
 } from "./wdl";
-import { totalBoardMaterial } from "./material";
 
 export const WIN_PROB_K = 0.00368208;
 export const MATE_CP = 10000;
@@ -55,7 +53,7 @@ export function expectedPointsFromLine(
 export function expectedPointsFromEval(
   evalWhite: EvalLike,
   mover: "w" | "b",
-  options?: { afterDeliveredCheckmate?: boolean; fen?: string }
+  options?: { afterDeliveredCheckmate?: boolean }
 ): number {
   if (options?.afterDeliveredCheckmate) return 1;
   if (evalWhite.mate !== undefined) {
@@ -66,23 +64,17 @@ export function expectedPointsFromEval(
   if (evalWhite.wdl) {
     return expectedPointsFromWdlWhite(evalWhite.wdl, mover);
   }
-  if (options?.fen) {
-    const cpWhite = evalWhite.cp ?? 0;
-    const signed = mover === "w" ? cpWhite : -cpWhite;
-    return cpToWinProb(signed, totalBoardMaterial(options.fen));
-  }
   return expectedPointsFromCpWhite(evalWhite.cp ?? 0, mover);
+}
+
+/** Convert mover-relative cp (positive = good for mover) to expected points. */
+export function expectedPointsFromMoverCp(cp: number): number {
+  return winPercentFromCp(cp) / 100;
 }
 
 /** Expected points lost: E_before − E_after (≥ 0). */
 export function expectedPointsLoss(eBefore: number, eAfter: number): number {
   return Math.max(0, eBefore - eAfter);
-}
-
-/** Convert mover-relative cp (positive = good for mover) to expected points. */
-export function expectedPointsFromMoverCp(cp: number, fen?: string): number {
-  if (fen) return cpToWinProb(cp, totalBoardMaterial(fen));
-  return winPercentFromCp(cp) / 100;
 }
 
 export function evalToCpWhite(evalWhite: EvalLike): number {

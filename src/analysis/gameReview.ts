@@ -110,7 +110,7 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
     },
     accuracyMeta: {
       method: "chesscom_wdl_v4",
-      formulaVersion: `v3.2-${formulaVersion}`,
+      formulaVersion: `v3.2.1-${formulaVersion}`,
     },
   };
 }
@@ -306,8 +306,7 @@ export async function analyzeGameReview(
         mate: lineBefore?.mate,
         wdl: lineBefore?.wdl,
       },
-      mover,
-      { fen: fenBefore }
+      mover
     );
     const eAfterPlayed = expectedPointsFromEval(
       {
@@ -316,7 +315,7 @@ export async function analyzeGameReview(
         wdl: lineAfter?.wdl,
       },
       mover,
-      { afterDeliveredCheckmate: deliveredMate, fen: fenAfter }
+      { afterDeliveredCheckmate: deliveredMate }
     );
 
     const bestUci =
