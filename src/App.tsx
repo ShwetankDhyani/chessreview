@@ -772,6 +772,7 @@ export default function App() {
   }, [pgn, analysisRunning, runAnalysis]);
 
   const canReanalyze = !!pgn.trim() && reviewReady;
+  const canSaveCurrentReview = !!activeUser && analysisState === "done" && moves.length > 0;
 
   const applyReviewResult = useCallback(
     (result: ReviewResult) => {
@@ -904,7 +905,14 @@ export default function App() {
   }, [tab, activeUser]);
 
   const handleSaveReview = useCallback(async () => {
-    if (!activeUser?.name || !pgn || !reviewResult || !summary || moves.length === 0) return;
+    if (!activeUser?.name) {
+      setSaveReviewMessage("Link a profile to save games.");
+      return;
+    }
+    if (!pgn || !reviewResult || !summary || moves.length === 0) {
+      setSaveReviewMessage("Complete a review first, then save.");
+      return;
+    }
     setSavingReview(true);
     setSaveReviewMessage(null);
     try {
@@ -1604,10 +1612,6 @@ export default function App() {
                       moves={moves}
                       run={reviewResult?.run}
                       onMoveClick={(idx) => { navigateToMove(idx); setTab("moves"); }}
-                      onSaveReview={activeUser ? () => void handleSaveReview() : undefined}
-                      savingReview={savingReview}
-                      canSaveReview={!!activeUser && analysisState === "done" && moves.length > 0}
-                      saveReviewMessage={saveReviewMessage}
                       onShare={() => void handleShareReview()}
                       sharing={sharing}
                       shareUrl={shareUrl}
@@ -1720,13 +1724,30 @@ export default function App() {
                     side={boardFlipped ? "b" : "w"}
                   />
                 </div>
-                {canReanalyze && (
-                  <div className="pl-[34px] flex justify-center pt-1.5">
-                    <ReanalyzeButton
-                      onClick={requestReanalysis}
-                      disabled={isAnalyzing}
-                      spinning={isAnalyzing}
-                    />
+                {(canReanalyze || canSaveCurrentReview || !!saveReviewMessage) && (
+                  <div className="pl-[34px] pt-1.5 flex flex-col items-center gap-1.5">
+                    {canReanalyze && (
+                      <ReanalyzeButton
+                        onClick={requestReanalysis}
+                        disabled={isAnalyzing}
+                        spinning={isAnalyzing}
+                      />
+                    )}
+                    {(canSaveCurrentReview || !!saveReviewMessage) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveReview()}
+                          disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
+                          className="text-xs font-semibold px-3 py-2 rounded-lg border border-chess-accent/50 text-chess-accent hover:bg-chess-hover disabled:opacity-50"
+                        >
+                          {savingReview ? "Saving game…" : "Save game"}
+                        </button>
+                        {saveReviewMessage && (
+                          <p className="text-[11px] text-chess-subtext">{saveReviewMessage}</p>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1933,10 +1954,6 @@ export default function App() {
                         navigateToMove(idx);
                         setTab("moves");
                       }}
-                      onSaveReview={activeUser ? () => void handleSaveReview() : undefined}
-                      savingReview={savingReview}
-                      canSaveReview={!!activeUser && analysisState === "done" && moves.length > 0}
-                      saveReviewMessage={saveReviewMessage}
                       onShare={() => void handleShareReview()}
                       sharing={sharing}
                       shareUrl={shareUrl}
@@ -2005,6 +2022,21 @@ export default function App() {
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
                 />
+              )}
+              {(canSaveCurrentReview || !!saveReviewMessage) && (
+                <div className="w-full flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveReview()}
+                    disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
+                    className="w-full max-w-[220px] text-xs font-semibold px-3 py-2 rounded-lg border border-chess-accent/50 text-chess-accent hover:bg-chess-hover disabled:opacity-50"
+                  >
+                    {savingReview ? "Saving game…" : "Save game"}
+                  </button>
+                  {saveReviewMessage && (
+                    <p className="text-[11px] text-chess-subtext text-center">{saveReviewMessage}</p>
+                  )}
+                </div>
               )}
               {continuationNav && (
                 <EngineLineNavBar nav={continuationNav} />
