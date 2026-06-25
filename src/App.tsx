@@ -73,7 +73,7 @@ import {
   trackAppError,
 } from "./utils/appError";
 
-type SidebarTab = "games" | "saved" | "review" | "moves";
+type SidebarTab = "games" | "review" | "moves";
 
 interface GameMeta {
   white: string;
@@ -329,10 +329,6 @@ export default function App() {
   const [saveReviewMessage, setSaveReviewMessage] = useState<string | null>(null);
 
   const activeUser = profiles[activeProfileIdx] ?? null;
-  const availableTabs = useMemo<SidebarTab[]>(
-    () => (activeUser ? ["games", "saved", "moves", "review"] : ["games", "moves", "review"]),
-    [activeUser]
-  );
 
   const saveProfiles = (ps: ChessProfile[], activeIdx?: number) => {
     setProfiles(ps);
@@ -898,12 +894,6 @@ export default function App() {
     void refreshSavedReviews();
   }, [refreshSavedReviews]);
 
-  useEffect(() => {
-    if (tab === "saved" && !activeUser) {
-      setTab("games");
-    }
-  }, [tab, activeUser]);
-
   const handleSaveReview = useCallback(async () => {
     if (!activeUser?.name) {
       setSaveReviewMessage("Link a profile to save games.");
@@ -929,7 +919,12 @@ export default function App() {
       setSaveReviewMessage("Saved to your account.");
       await refreshSavedReviews();
     } catch (e) {
-      setSaveReviewMessage(e instanceof Error ? e.message : "Could not save game");
+      const raw = e instanceof Error ? e.message : "Could not save game";
+      setSaveReviewMessage(
+        /not found/i.test(raw)
+          ? "Save service is unavailable right now. Please try again shortly."
+          : raw
+      );
     } finally {
       setSavingReview(false);
     }
@@ -1316,6 +1311,53 @@ export default function App() {
                 </div>
               )}
 
+              {activeUser && (
+                <div className="border-b border-chess-border bg-chess-panel">
+                  <div className="text-xs font-semibold text-chess-muted px-3 py-2 bg-chess-bg">
+                    Saved Games
+                  </div>
+                  <div className="max-h-36 overflow-y-auto">
+                    {savedReviewsLoading ? (
+                      <p className="px-3 py-2 text-[11px] text-chess-muted">Loading saved games…</p>
+                    ) : savedReviews.length === 0 ? (
+                      <p className="px-3 py-2 text-[11px] text-chess-muted">
+                        No saved games yet.
+                      </p>
+                    ) : (
+                      savedReviews.slice(0, 8).map((item) => (
+                        <div key={item.id} className="px-3 py-2 border-t border-chess-border/40 first:border-t-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleOpenSavedReview(item.id);
+                              setShowAddProfile(false);
+                              setTab("moves");
+                            }}
+                            className="w-full text-left"
+                          >
+                            <div className="truncate text-[12px] text-chess-text">
+                              {item.whiteName} vs {item.blackName}
+                            </div>
+                            <div className="text-[10px] text-chess-muted">
+                              {item.movesCount} moves
+                            </div>
+                          </button>
+                          <div className="mt-1 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteSavedReview(item.id)}
+                              className="text-[10px] text-chess-muted hover:text-red-300"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Add New Profile Section */}
               {profiles.length < 5 ? (
                 <div className="p-3 bg-chess-panel">
@@ -1401,28 +1443,15 @@ export default function App() {
           style={{ bottom: "var(--mobile-footer-stack)" }}
         >
           <div className="page-inline-pad flex min-h-[56px]">
-          {availableTabs.map((t) => {
+          {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
             const isActive = tab === t;
-            const label =
-              t === "games"
-                ? "Games"
-                : t === "saved"
-                  ? "Saved"
-                  : t === "moves"
-                    ? "Moves"
-                    : "Review";
+            const label = t === "games" ? "Games" : t === "moves" ? "Moves" : "Review";
             const icon =
               t === "games" ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="6" width="18" height="14" rx="2" />
                   <path d="M3 10h18" />
                   <path d="M8 6V4M16 6V4" />
-                </svg>
-              ) : t === "saved" ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                  <path d="M17 21v-8H7v8" />
-                  <path d="M7 3v5h8" />
                 </svg>
               ) : t === "moves" ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1459,7 +1488,7 @@ export default function App() {
         {isDesktop && (
         <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex flex-col overflow-hidden">
           <div className="flex bg-chess-bg/40 border-b border-chess-border">
-            {availableTabs.map((t) => (
+            {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1469,7 +1498,7 @@ export default function App() {
                     : "text-chess-muted hover:text-chess-text"
                 }`}
               >
-                {t === "games" ? "Games" : t === "saved" ? "Saved" : t === "moves" ? "Moves" : "Review"}
+                {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
                 {tab === t && (
                   <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-chess-accent" />
                 )}
@@ -1493,48 +1522,6 @@ export default function App() {
               </>
             )}
 
-            {tab === "saved" && (
-              <div className="p-3 space-y-2">
-                {!activeUser ? (
-                  <p className="text-xs text-chess-muted">Link a profile to save games.</p>
-                ) : savedReviewsLoading ? (
-                  <p className="text-xs text-chess-muted">Loading saved games…</p>
-                ) : savedReviews.length === 0 ? (
-                  <p className="text-xs text-chess-muted">
-                    No saved games yet. Run analysis, then use Save game in the Review tab.
-                  </p>
-                ) : (
-                  savedReviews.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border border-chess-border/50 bg-black/20 px-2.5 py-2"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => void handleOpenSavedReview(item.id)}
-                        className="w-full text-left"
-                      >
-                        <div className="truncate text-[12px] text-chess-text">
-                          {item.whiteName} vs {item.blackName}
-                        </div>
-                        <div className="text-[10px] text-chess-muted">
-                          {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
-                        </div>
-                      </button>
-                      <div className="mt-2 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteSavedReview(item.id)}
-                          className="text-[11px] text-chess-muted hover:text-red-300"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
 
             {tab === "moves" && (
               <div className="flex flex-col h-full">
@@ -1725,28 +1712,32 @@ export default function App() {
                   />
                 </div>
                 {(canReanalyze || canSaveCurrentReview || !!saveReviewMessage) && (
-                  <div className="pl-[34px] pt-1.5 flex flex-col items-center gap-1.5">
-                    {canReanalyze && (
-                      <ReanalyzeButton
-                        onClick={requestReanalysis}
-                        disabled={isAnalyzing}
-                        spinning={isAnalyzing}
-                      />
-                    )}
-                    {(canSaveCurrentReview || !!saveReviewMessage) && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveReview()}
-                          disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
-                          className="text-xs font-semibold px-3 py-2 rounded-lg border border-chess-accent/50 text-chess-accent hover:bg-chess-hover disabled:opacity-50"
-                        >
-                          {savingReview ? "Saving game…" : "Save game"}
-                        </button>
-                        {saveReviewMessage && (
-                          <p className="text-[11px] text-chess-subtext">{saveReviewMessage}</p>
-                        )}
-                      </>
+                  <div className="pl-[34px] pt-1.5 flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {canReanalyze && (
+                        <ReanalyzeButton
+                          onClick={requestReanalysis}
+                          disabled={isAnalyzing}
+                          spinning={isAnalyzing}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveReview()}
+                        disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
+                        aria-label="Save game"
+                        title={savingReview ? "Saving game…" : "Save game"}
+                        className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 rounded-lg border border-chess-border-strong bg-chess-surface text-chess-subtext hover:text-chess-accent hover:border-chess-accent/40 hover:bg-chess-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                          <path d="M17 21v-8H7v8" />
+                          <path d="M7 3v5h8" />
+                        </svg>
+                      </button>
+                    </div>
+                    {saveReviewMessage && (
+                      <p className="text-[11px] text-chess-subtext text-center">{saveReviewMessage}</p>
                     )}
                   </div>
                 )}
@@ -1889,54 +1880,6 @@ export default function App() {
                 />
             </div>
 
-            {tab === "saved" && (
-              <div
-                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll"
-                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
-              >
-                {!activeUser ? (
-                  <p className="text-xs text-chess-muted">Link a profile to save games.</p>
-                ) : savedReviewsLoading ? (
-                  <p className="text-xs text-chess-muted">Loading saved games…</p>
-                ) : savedReviews.length === 0 ? (
-                  <p className="text-xs text-chess-muted">
-                    No saved games yet. Run analysis, then use Save game in the Review tab.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {savedReviews.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-lg border border-chess-border/50 bg-black/20 px-2.5 py-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => void handleOpenSavedReview(item.id)}
-                          className="w-full text-left"
-                        >
-                          <div className="truncate text-[12px] text-chess-text">
-                            {item.whiteName} vs {item.blackName}
-                          </div>
-                          <div className="text-[10px] text-chess-muted">
-                            {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
-                          </div>
-                        </button>
-                        <div className="mt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteSavedReview(item.id)}
-                            className="text-[11px] text-chess-muted hover:text-red-300"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {tab === "review" && (
               <div
                 className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll"
@@ -2022,21 +1965,6 @@ export default function App() {
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
                 />
-              )}
-              {(canSaveCurrentReview || !!saveReviewMessage) && (
-                <div className="w-full flex flex-col items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveReview()}
-                    disabled={!canSaveCurrentReview || savingReview || isAnalyzing}
-                    className="w-full max-w-[220px] text-xs font-semibold px-3 py-2 rounded-lg border border-chess-accent/50 text-chess-accent hover:bg-chess-hover disabled:opacity-50"
-                  >
-                    {savingReview ? "Saving game…" : "Save game"}
-                  </button>
-                  {saveReviewMessage && (
-                    <p className="text-[11px] text-chess-subtext text-center">{saveReviewMessage}</p>
-                  )}
-                </div>
               )}
               {continuationNav && (
                 <EngineLineNavBar nav={continuationNav} />
