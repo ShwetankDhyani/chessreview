@@ -1,8 +1,6 @@
-import { Chess } from "chess.js";
 import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "./classificationMeta";
-import { playedMatchesEngineBest } from "./bestMoveSuggestion";
 import {
   formatWinChanceLossShort,
   winChanceLossPercent,
@@ -16,6 +14,7 @@ import {
 export interface MoveFactSheet {
   classification: string;
   classificationColor: string;
+  engineRank: string;
   bestWas: string;
   winChange: string;
   opening: string;
@@ -30,26 +29,42 @@ export interface MoveFactSheetOptions {
 
 const EMPTY = "—";
 
-export function bestMoveSanForDisplay(move: AnalyzedMove): string | null {
-  if (move.bestMoveSan) return move.bestMoveSan;
-  if (!move.bestMove || move.bestMove.length < 4 || !move.fenBefore) return null;
-  try {
-    const chess = new Chess(move.fenBefore);
-    const from = move.bestMove.slice(0, 2);
-    const to = move.bestMove.slice(2, 4);
-    const promotion = move.bestMove[4] as "q" | "r" | "b" | "n" | undefined;
-    const m = chess.move({ from, to, promotion });
-    return m?.san ?? null;
-  } catch {
-    return null;
+function normalizeSan(san: string): string {
+  return san.replace(/[+#]/g, "");
+}
+
+function playedMatchesBest(move: AnalyzedMove): boolean {
+  if (!move.bestMove || move.bestMove.length < 4) return false;
+  if (move.uci.toLowerCase() === move.bestMove.toLowerCase()) return true;
+  if (
+    move.bestMoveSan &&
+    normalizeSan(move.bestMoveSan) === normalizeSan(move.san)
+  ) {
+    return true;
   }
+  return false;
+}
+
+function engineRankLabel(move: AnalyzedMove): string {
+  const lineCount = move.engineLineCount;
+  const n = lineCount && lineCount > 1 ? lineCount : 3;
+
+  if (move.engineRank != null && move.engineRank > 0) {
+    if (move.engineRank === 1) return `1st of ${n}`;
+    if (move.engineRank === 2) return `2nd of ${n}`;
+    if (move.engineRank === 3) return `3rd of ${n}`;
+    return `${move.engineRank}th of ${n}`;
+  }
+  if (playedMatchesBest(move)) return `1st of ${n}`;
+  if (lineCount != null && lineCount <= 1) return "Not engine best";
+  if (lineCount && lineCount > 0) return `Outside top ${lineCount}`;
+  return `Outside top ${n}`;
 }
 
 function bestWasLabel(move: AnalyzedMove): string {
-  const san = bestMoveSanForDisplay(move);
-  if (!san) return EMPTY;
-  if (playedMatchesEngineBest(move)) return "Same as played";
-  return san;
+  if (!move.bestMoveSan) return EMPTY;
+  if (playedMatchesBest(move)) return "Same as played";
+  return move.bestMoveSan;
 }
 
 function winChangeLabel(move: AnalyzedMove): string {
@@ -100,6 +115,7 @@ export function buildMoveFactSheet(
     return {
       classification: "Checkmate",
       classificationColor: "#e84855",
+      engineRank: EMPTY,
       bestWas: EMPTY,
       winChange: "0%",
       opening: openingLabel(move, options),
@@ -111,6 +127,7 @@ export function buildMoveFactSheet(
     return {
       classification: "Forced",
       classificationColor,
+      engineRank: EMPTY,
       bestWas: EMPTY,
       winChange: winChangeLabel(move),
       opening: openingLabel(move, options),
@@ -122,6 +139,7 @@ export function buildMoveFactSheet(
     return {
       classification,
       classificationColor,
+      engineRank: EMPTY,
       bestWas: EMPTY,
       winChange: "0%",
       opening: openingLabel(move, options),
@@ -132,6 +150,7 @@ export function buildMoveFactSheet(
   return {
     classification,
     classificationColor,
+    engineRank: engineRankLabel(move),
     bestWas: bestWasLabel(move),
     winChange: winChangeLabel(move),
     opening: openingLabel(move, options),
@@ -148,6 +167,7 @@ export function buildFactualMoveComment(
   if (!sheet) return null;
   return [
     sheet.classification,
+    sheet.engineRank !== EMPTY ? `Rank: ${sheet.engineRank}` : null,
     `Played ${sheet.played}`,
     sheet.bestWas !== EMPTY ? `Best: ${sheet.bestWas}` : null,
     `Win ${sheet.winChange}`,

@@ -51,7 +51,7 @@ import {
   formatEtaGuess,
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
-import { shouldShowBestMoveHint } from "./utils/bestMoveSuggestion";
+import { shouldSuggestBestMove } from "./utils/bestMoveSuggestion";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
@@ -1664,7 +1664,7 @@ export default function App() {
                     !isAnalyzing &&
                     !showBoardGameEnd &&
                     !!showBestMove &&
-                    shouldShowBestMoveHint(currentMove)
+                    shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
                   analysisState={analysisState}
@@ -1911,7 +1911,7 @@ export default function App() {
                     !isAnalyzing &&
                     !continuationActive &&
                     !!showBestMove &&
-                    shouldShowBestMoveHint(currentMove)
+                    shouldSuggestBestMove(currentMove)
                   }
                   bestMove={currentMove?.bestMove}
                   analysisState={analysisState}
