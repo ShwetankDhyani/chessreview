@@ -349,7 +349,13 @@ export const GameList: React.FC<GameListProps> = ({
                   message={gamesError.message}
                   onRetry={gamesError.retryable ? handleRetry : undefined}
                   onDismiss={() => setGamesError(null)}
-                />
+                >
+                  {platform === "lichess" ? (
+                    <p className="text-[11px] text-red-100/80">
+                      Sorry about this — if you&apos;re in a hurry, Lichess&apos;s own free analysis is excellent too.
+                    </p>
+                  ) : null}
+                </InlineErrorNotice>
               )}
             </div>
 
