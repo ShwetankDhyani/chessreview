@@ -86,14 +86,11 @@ export function ReviewChessboard({
 
   return (
     <div
-      className={`relative board-viewport${dimmed ? " board-viewport--dimmed" : ""}`}
+      className={`relative board-viewport${
+        dimmed ? " board-viewport--dimmed" : ""
+      }${continuationActive ? " board-viewport--engine-line" : ""}`}
       style={{ width: boardWidth, maxWidth: "100%" }}
     >
-      <div
-        className="absolute inset-0 pointer-events-none z-10 board-continuation-ring"
-        data-active={continuationActive ? "true" : "false"}
-        style={{ borderRadius: "2px" }}
-      />
       <div
         ref={boardHostRef}
         className="relative w-full aspect-square overflow-visible"

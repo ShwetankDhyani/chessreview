@@ -158,7 +158,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         onArrowChangeRef.current?.(null);
       }
     }
-    setContinuationActive(step > 0);
+    setContinuationActive(true);
   }, [step, stepFens, stepUcis, startFen, evalBefore, firstMove, line.join(",")]);
 
   // Reset when the line changes

@@ -196,7 +196,11 @@ export function MobileBoardShell({
             integrated
             integratedWidth={barWidth}
           />
-          <div className="relative flex-1 min-w-0 h-full overflow-hidden">
+          <div
+            className={`relative flex-1 min-w-0 h-full ${
+              boardProps.continuationActive ? "overflow-visible" : "overflow-hidden"
+            }`}
+          >
             <AnalyzeBoardStack
               {...boardProps}
               boardWidth={boardWidth}

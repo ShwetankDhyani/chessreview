@@ -99,22 +99,6 @@
   100% { transform: translateY(0); }
 }
 
-@keyframes engineGlow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(109, 170, 109, 0.1),
-      0 0 6px 2px rgba(109, 170, 109, 0.04),
-      inset 0 0 8px 1px rgba(109, 170, 109, 0.025);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(109, 170, 109, 0.16),
-      0 0 10px 3px rgba(109, 170, 109, 0.07),
-      inset 0 0 10px 2px rgba(109, 170, 109, 0.04);
-  }
-}
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   15%       { transform: translateX(-5px) rotate(-1deg); }
@@ -180,6 +164,28 @@
 
 .board-viewport--dimmed {
   opacity: 0.42;
+}
+
+.board-viewport--engine-line {
+  animation: engineLinePulse 3.6s ease-in-out infinite;
+}
+
+@keyframes engineLinePulse {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(109, 170, 109, 0.12),
+      0 0 12px 3px rgba(109, 170, 109, 0.07),
+      inset 0 0 18px 2px rgba(109, 170, 109, 0.035);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(109, 170, 109, 0.2),
+      0 0 16px 5px rgba(109, 170, 109, 0.11),
+      inset 0 0 22px 3px rgba(109, 170, 109, 0.055);
+  }
 }
 
 /* Board-side navigation buttons */
@@ -848,10 +854,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(129, 182, 76, 0.92);
-}
-
-.board-continuation-ring[data-active="true"] {
-  animation: engineGlow 3.8s ease-in-out infinite;
 }
 
 /* On-board analysis veil — uses board space during review */
