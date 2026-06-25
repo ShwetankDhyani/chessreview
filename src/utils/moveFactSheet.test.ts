@@ -33,7 +33,21 @@ describe("buildMoveFactSheet", () => {
     expect(sheet!.played).toBe("Be7");
   });
 
-  it("marks best move when engine rank is first", () => {
+  it("derives best was from UCI when SAN was not stored", () => {
+    const sheet = buildMoveFactSheet(
+      move({
+        san: "Nf3",
+        classification: "excellent",
+        uci: "g1f3",
+        bestMoveSan: undefined,
+        bestMove: "d2d4",
+        fenBefore: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      })
+    );
+    expect(sheet!.bestWas).toBe("d4");
+  });
+
+  it("hides best was when played matches engine best", () => {
     const sheet = buildMoveFactSheet(
       move({
         san: "d4",

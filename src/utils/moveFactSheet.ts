@@ -1,3 +1,4 @@
+import { Chess } from "chess.js";
 import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "./classificationMeta";
@@ -61,10 +62,27 @@ function engineRankLabel(move: AnalyzedMove): string {
   return `Outside top ${n}`;
 }
 
+function bestMoveSanFromMove(move: AnalyzedMove): string | null {
+  if (move.bestMoveSan) return move.bestMoveSan;
+  if (!move.bestMove || move.bestMove.length < 4 || !move.fenBefore) return null;
+  try {
+    const chess = new Chess(move.fenBefore);
+    const m = chess.move({
+      from: move.bestMove.slice(0, 2),
+      to: move.bestMove.slice(2, 4),
+      promotion: move.bestMove[4] as "q" | "r" | "b" | "n" | undefined,
+    });
+    return m?.san ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function bestWasLabel(move: AnalyzedMove): string {
-  if (!move.bestMoveSan) return EMPTY;
+  const san = bestMoveSanFromMove(move);
+  if (!san) return EMPTY;
   if (playedMatchesBest(move)) return EMPTY;
-  return move.bestMoveSan;
+  return san;
 }
 
 function winChangeLabel(move: AnalyzedMove): string {
