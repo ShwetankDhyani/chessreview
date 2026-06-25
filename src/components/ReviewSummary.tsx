@@ -8,6 +8,7 @@ import type {
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
+import { ShareReviewActions } from "./ShareReviewActions";
 
 interface ReviewSummaryProps {
   summary: ReviewSummaryType;
@@ -162,21 +163,13 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             {sharing ? "Creating link…" : "Share this review"}
           </button>
           {shareUrl && (
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={shareUrl}
-                className="flex-1 min-w-0 text-[11px] rounded-lg border border-chess-border bg-chess-bg px-2 py-1.5 text-chess-muted"
-                onFocus={(e) => e.target.select()}
-              />
-              <button
-                type="button"
-                className="text-[11px] px-2.5 rounded-lg bg-chess-accent text-chess-bg font-semibold"
-                onClick={() => void navigator.clipboard.writeText(shareUrl)}
-              >
-                Copy
-              </button>
-            </div>
+            <ShareReviewActions
+              url={shareUrl}
+              whiteName={wLabel}
+              blackName={bLabel}
+              whiteAccuracy={wAcc}
+              blackAccuracy={bAcc}
+            />
           )}
           {shareError && <p className="text-[11px] text-red-400">{shareError}</p>}
         </div>
