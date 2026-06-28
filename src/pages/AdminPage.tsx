@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -17,6 +17,7 @@ import {
 import { usePageSeo } from "../hooks/usePageSeo";
 
 const KEY_STORAGE = "cr_admin_key";
+const RECENT_PAGE_SIZE = 10;
 
 function formatWhen(iso: string) {
   try {
@@ -55,6 +56,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminReviewStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recentPage, setRecentPage] = useState(0);
 
   const load = async (key: string) => {
     setLoading(true);
@@ -62,6 +64,7 @@ export default function AdminPage() {
     try {
       const data = await fetchAdminStats(key);
       setStats(data);
+      setRecentPage(0);
       sessionStorage.setItem(KEY_STORAGE, key);
       setAdminKey(key);
     } catch (e) {
@@ -77,9 +80,24 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const recentTotal = stats?.recent?.length ?? 0;
+  const recentPageCount = Math.max(1, Math.ceil(recentTotal / RECENT_PAGE_SIZE));
+
+  const recentSlice = useMemo(() => {
+    const all = stats?.recent ?? [];
+    const start = recentPage * RECENT_PAGE_SIZE;
+    return all.slice(start, start + RECENT_PAGE_SIZE);
+  }, [stats?.recent, recentPage]);
+
+  useEffect(() => {
+    if (recentPage > 0 && recentPage >= recentPageCount) {
+      setRecentPage(Math.max(0, recentPageCount - 1));
+    }
+  }, [recentPage, recentPageCount]);
+
   if (!adminKey || error === "Invalid admin key") {
     return (
-      <div className="min-h-screen bg-chess-bg text-chess-text flex items-center justify-center p-6">
+      <div className="page-scroll-root bg-chess-bg text-chess-text flex items-center justify-center p-6">
         <form
           className="w-full max-w-xs space-y-3"
           onSubmit={(e) => {
@@ -117,8 +135,11 @@ export default function AdminPage() {
     );
   }
 
+  const recentStart = recentTotal === 0 ? 0 : recentPage * RECENT_PAGE_SIZE + 1;
+  const recentEnd = Math.min(recentTotal, (recentPage + 1) * RECENT_PAGE_SIZE);
+
   return (
-    <div className="min-h-screen bg-chess-bg text-chess-text overflow-y-auto">
+    <div className="page-scroll-root bg-chess-bg text-chess-text">
       <header className="border-b border-chess-border bg-chess-panel/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <h1 className="text-base font-bold">Analytics</h1>
@@ -138,7 +159,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 pb-12 space-y-6">
         {loading && !stats ? (
           <p className="text-sm text-chess-muted">Loading…</p>
         ) : !stats?.configured ? (
@@ -221,10 +242,15 @@ export default function AdminPage() {
             </div>
 
             <section className="rounded-xl border border-chess-border bg-chess-panel overflow-hidden">
-              <div className="px-4 py-3 border-b border-chess-border/50">
+              <div className="px-4 py-3 border-b border-chess-border/50 flex items-center justify-between gap-3">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
                   Recent reviews
                 </h2>
+                {recentTotal > 0 && (
+                  <span className="text-[10px] text-chess-muted tabular-nums">
+                    {recentStart}–{recentEnd} of {recentTotal}
+                  </span>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs min-w-[720px]">
@@ -239,14 +265,14 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(stats.recent?.length ?? 0) === 0 ? (
+                    {recentTotal === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-6 px-3 text-chess-muted text-center">
                           No reviews yet.
                         </td>
                       </tr>
                     ) : (
-                      stats.recent?.map((row, i) => (
+                      recentSlice.map((row, i) => (
                         <tr key={`${row.reviewed_at}-${i}`} className="border-t border-chess-border/30 hover:bg-chess-hover/20">
                           <td className="py-2 px-3 text-chess-muted whitespace-nowrap">
                             {formatWhen(row.reviewed_at)}
@@ -280,6 +306,29 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+              {recentTotal > RECENT_PAGE_SIZE && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-chess-border/50 bg-chess-bg/30">
+                  <button
+                    type="button"
+                    onClick={() => setRecentPage((p) => Math.max(0, p - 1))}
+                    disabled={recentPage <= 0}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-[11px] text-chess-muted tabular-nums">
+                    Page {recentPage + 1} of {recentPageCount}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRecentPage((p) => Math.min(recentPageCount - 1, p + 1))}
+                    disabled={recentPage >= recentPageCount - 1}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </section>
           </>
         )}

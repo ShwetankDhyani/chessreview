@@ -121,7 +121,7 @@ export default function SharePage() {
     pgn,
     whiteName,
     blackName,
-    startAtLastMove: true,
+    startAtLastMove: false,
   });
 
   const seoOptions = useMemo(() => {

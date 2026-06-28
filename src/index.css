@@ -26,6 +26,14 @@
   padding-right: var(--page-pad-inline-end);
 }
 
+.page-scroll-root {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
