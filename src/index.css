@@ -166,23 +166,27 @@
   opacity: 0.42;
 }
 
-.board-viewport--engine-line {
-  animation: engineLinePulse 3.6s ease-in-out infinite;
+/* Sits above the chessboard (z-12); arrows stay on top at z-20. */
+.board-engine-line-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  border-radius: 2px;
+  animation: engineLineGlowPulse 3.6s ease-in-out infinite;
 }
 
-@keyframes engineLinePulse {
+@keyframes engineLineGlowPulse {
   0%,
   100% {
     box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 2px rgba(109, 170, 109, 0.38),
-      inset 0 0 28px 6px rgba(109, 170, 109, 0.07);
+      inset 0 0 0 2px rgba(129, 182, 76, 0.55),
+      inset 0 0 28px 8px rgba(129, 182, 76, 0.1);
   }
   50% {
     box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 2px rgba(109, 170, 109, 0.72),
-      inset 0 0 36px 10px rgba(109, 170, 109, 0.13);
+      inset 0 0 0 3px rgba(129, 182, 76, 0.92),
+      inset 0 0 40px 14px rgba(129, 182, 76, 0.18);
   }
 }
 

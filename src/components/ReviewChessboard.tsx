@@ -93,7 +93,7 @@ export function ReviewChessboard({
     <div
       className={`relative board-viewport${
         dimmed ? " board-viewport--dimmed" : ""
-      }${showEngineLineGlow ? " board-viewport--engine-line" : ""}`}
+      }`}
       style={{ width: boardWidth, maxWidth: "100%" }}
     >
       <div
@@ -113,6 +113,9 @@ export function ReviewChessboard({
           customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
           customSquareStyles={squareStyles}
         />
+        {showEngineLineGlow ? (
+          <div className="board-engine-line-glow" aria-hidden />
+        ) : null}
         {arrow ? (
           <BoardArrowOverlay
             from={arrow.from}
