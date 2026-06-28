@@ -24,6 +24,8 @@ export interface ReviewChessboardProps {
   remountKey?: number;
   dimmed: boolean;
   continuationActive: boolean;
+  /** When true, show the green engine-line border glow (defaults to continuationActive). */
+  engineLineGlow?: boolean;
   /** from/to squares for the move currently shown (always when available). */
   lastMoveHighlight: { from: string; to: string } | null;
   continuationArrow: { from: string; to: string } | null;
@@ -39,6 +41,7 @@ export function ReviewChessboard({
   remountKey = 0,
   dimmed,
   continuationActive,
+  engineLineGlow,
   lastMoveHighlight,
   continuationArrow,
   showBestMoveArrow,
@@ -77,6 +80,8 @@ export function ReviewChessboard({
     ? { ...continuationArrow, variant: "continuation" as const }
     : hintArrow ?? playedArrow;
 
+  const showEngineLineGlow = engineLineGlow ?? continuationActive;
+
   const squareStyles = lastMoveHighlight
     ? {
         [lastMoveHighlight.from]: LAST_MOVE_FROM_STYLE,
@@ -88,7 +93,7 @@ export function ReviewChessboard({
     <div
       className={`relative board-viewport${
         dimmed ? " board-viewport--dimmed" : ""
-      }${continuationActive ? " board-viewport--engine-line" : ""}`}
+      }${showEngineLineGlow ? " board-viewport--engine-line" : ""}`}
       style={{ width: boardWidth, maxWidth: "100%" }}
     >
       <div

@@ -1109,6 +1109,8 @@ export default function App() {
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const boardPositionFen = continuationFen ?? currentFen;
+  const engineLineGlow =
+    continuationActive || !!continuationFen || !!continuationArrow;
 
   const boardLastMoveHighlight = useMemo(() => {
     if (continuationActive) return null;
@@ -1657,6 +1659,7 @@ export default function App() {
                   remountKey={boardRemountKey}
                   dimmed={boardDimmed && !continuationFen && !isAnalyzing}
                   continuationActive={continuationActive}
+                  engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
@@ -1904,6 +1907,7 @@ export default function App() {
                   remountKey={boardRemountKey}
                   dimmed={boardDimmed && !continuationFen && !isAnalyzing}
                   continuationActive={continuationActive}
+                  engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={

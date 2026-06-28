@@ -166,6 +166,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     setStep(0);
     hasBeenInLineRef.current = false;
     evalCache.current.clear();
+    setContinuationActive(true);
     return () => {
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
       setContinuationActive(false);

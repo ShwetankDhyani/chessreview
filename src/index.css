@@ -167,30 +167,22 @@
 }
 
 .board-viewport--engine-line {
-  position: relative;
+  animation: engineLinePulse 3.6s ease-in-out infinite;
 }
 
-.board-viewport--engine-line::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow:
-    0 0 0 1px rgba(109, 170, 109, 0.22),
-    0 0 18px 5px rgba(109, 170, 109, 0.1),
-    inset 0 0 22px 3px rgba(109, 170, 109, 0.05);
-  opacity: 0.55;
-  animation: engineLineGlowOpacity 3.6s ease-in-out infinite;
-}
-
-@keyframes engineLineGlowOpacity {
+@keyframes engineLinePulse {
   0%,
   100% {
-    opacity: 0.45;
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 2px rgba(109, 170, 109, 0.38),
+      inset 0 0 28px 6px rgba(109, 170, 109, 0.07);
   }
   50% {
-    opacity: 0.95;
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 2px rgba(109, 170, 109, 0.72),
+      inset 0 0 36px 10px rgba(109, 170, 109, 0.13);
   }
 }
 

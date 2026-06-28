@@ -59,6 +59,7 @@ export function ReviewSessionView({
     setShowBestMove,
     continuationActive,
     continuationArrow,
+    engineLineGlow,
     continuationNav,
     boardPieceAnimMs,
     boardRemountKey,
@@ -143,6 +144,7 @@ export function ReviewSessionView({
                   remountKey={boardRemountKey}
                   dimmed={false}
                   continuationActive={continuationActive}
+                  engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={showBestMoveArrow}
@@ -323,6 +325,7 @@ export function ReviewSessionView({
             remountKey={boardRemountKey}
             dimmed={false}
             continuationActive={continuationActive}
+            engineLineGlow={engineLineGlow}
             lastMoveHighlight={boardLastMoveHighlight}
             continuationArrow={continuationArrow}
             showBestMoveArrow={showBestMoveArrow}

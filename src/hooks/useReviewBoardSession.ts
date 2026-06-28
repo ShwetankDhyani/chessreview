@@ -258,6 +258,8 @@ export function useReviewBoardSession({
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
   const boardPositionFen = continuationFen ?? currentFen;
   const displayEval = continuationEval ?? currentEval;
+  const engineLineGlow =
+    continuationActive || !!continuationFen || !!continuationArrow;
 
   const boardLastMoveHighlight = useMemo(() => {
     if (continuationActive) return null;
@@ -324,6 +326,7 @@ export function useReviewBoardSession({
     setShowBestMove,
     continuationActive,
     continuationArrow,
+    engineLineGlow,
     continuationNav,
     boardPieceAnimMs,
     boardRemountKey,
