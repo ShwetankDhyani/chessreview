@@ -1675,7 +1675,6 @@ export default function App() {
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                   onCancelAnalysis={isAnalyzing ? () => cancelAnalysis() : undefined}
-                  showEngineLineBanner={continuationActive}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
@@ -1922,7 +1921,6 @@ export default function App() {
                   blackName={playerNames.black}
                   onAnalyze={pgn ? () => requestAnalysisUi() : undefined}
                   onCancelAnalysis={isAnalyzing ? () => cancelAnalysis() : undefined}
-                  showEngineLineBanner={continuationActive}
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}

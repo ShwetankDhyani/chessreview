@@ -153,7 +153,6 @@ export function ReviewSessionView({
                   gameEnd={gameEnd}
                   whiteName={playerNames.white}
                   blackName={playerNames.black}
-                  showEngineLineBanner={continuationActive}
                 />
               </div>
               <div className="pl-[34px]">
@@ -333,7 +332,6 @@ export function ReviewSessionView({
             gameEnd={gameEnd}
             whiteName={playerNames.white}
             blackName={playerNames.black}
-            showEngineLineBanner={continuationActive}
             onPrev={(animate = true) => stepBoardMove(-1, animate)}
             onNext={(animate = true) => stepBoardMove(1, animate)}
             canPrev={canBoardStepBack}

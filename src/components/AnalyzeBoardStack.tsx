@@ -13,7 +13,6 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   whiteName?: string;
   blackName?: string;
   onAnalyze?: () => void;
-  showEngineLineBanner?: boolean;
   progressPercent?: number;
   analysisStageLabel?: string;
   analyzingMoveSan?: string;
@@ -33,7 +32,6 @@ export function AnalyzeBoardStack({
   blackName = "Black",
   onAnalyze,
   onCancelAnalysis,
-  showEngineLineBanner = false,
   progressPercent = 0,
   analysisStageLabel,
   analyzingMoveSan,
@@ -50,11 +48,6 @@ export function AnalyzeBoardStack({
       className="flex flex-col flex-shrink-0 overflow-visible"
       style={{ width: boardWidth }}
     >
-      {showEngineLineBanner ? (
-        <div className="engine-line-tag-row" aria-live="polite">
-          <span className="engine-line-tag">Engine line</span>
-        </div>
-      ) : null}
       <div
         className="relative flex-shrink-0 overflow-visible"
         style={{ width: boardWidth, height: boardWidth + 2 }}

@@ -167,24 +167,30 @@
 }
 
 .board-viewport--engine-line {
-  animation: engineLinePulse 3.6s ease-in-out infinite;
+  position: relative;
 }
 
-@keyframes engineLinePulse {
+.board-viewport--engine-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(109, 170, 109, 0.22),
+    0 0 18px 5px rgba(109, 170, 109, 0.1),
+    inset 0 0 22px 3px rgba(109, 170, 109, 0.05);
+  opacity: 0.55;
+  animation: engineLineGlowOpacity 3.6s ease-in-out infinite;
+}
+
+@keyframes engineLineGlowOpacity {
   0%,
   100% {
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.45),
-      0 0 0 1px rgba(109, 170, 109, 0.12),
-      0 0 12px 3px rgba(109, 170, 109, 0.07),
-      inset 0 0 18px 2px rgba(109, 170, 109, 0.035);
+    opacity: 0.45;
   }
   50% {
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.45),
-      0 0 0 1px rgba(109, 170, 109, 0.2),
-      0 0 16px 5px rgba(109, 170, 109, 0.11),
-      inset 0 0 22px 3px rgba(109, 170, 109, 0.055);
+    opacity: 0.95;
   }
 }
 
@@ -831,29 +837,6 @@
   align-self: center;
   overflow: visible;
   background: #1a1816;
-}
-
-.game-board-frame--tagged {
-  flex-direction: column;
-  align-items: stretch;
-  height: auto;
-}
-
-.engine-line-tag-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem 0.5rem;
-  border-bottom: 1px solid rgba(129, 182, 76, 0.18);
-  background: rgba(129, 182, 76, 0.07);
-}
-
-.engine-line-tag {
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(129, 182, 76, 0.92);
 }
 
 /* On-board analysis veil — uses board space during review */

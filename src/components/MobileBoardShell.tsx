@@ -24,7 +24,6 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   blackName?: string;
   onAnalyze?: () => void;
   onCancelAnalysis?: () => void;
-  showEngineLineBanner?: boolean;
   progressPercent?: number;
   analysisStageLabel?: string;
   analyzingMoveSan?: string;
@@ -118,7 +117,6 @@ export function MobileBoardShell({
   blackName,
   onAnalyze,
   onCancelAnalysis,
-  showEngineLineBanner = false,
   progressPercent = 0,
   analysisStageLabel,
   analyzingMoveSan,
@@ -174,17 +172,12 @@ export function MobileBoardShell({
   return (
     <div className="relative w-full flex justify-center mobile-board-shell">
       <div
-        className={`game-board-frame${showEngineLineBanner ? " game-board-frame--tagged" : ""}`}
+        className="game-board-frame"
         style={{
           width: frameWidth,
-          height: showEngineLineBanner ? undefined : boardWidth,
+          height: boardWidth,
         }}
       >
-        {showEngineLineBanner ? (
-          <div className="engine-line-tag-row" aria-live="polite">
-            <span className="engine-line-tag">Engine line</span>
-          </div>
-        ) : null}
         <div
           className="flex items-stretch min-w-0 overflow-visible"
           style={{ height: boardWidth }}
@@ -213,7 +206,6 @@ export function MobileBoardShell({
               blackName={blackName}
               onAnalyze={onAnalyze}
               onCancelAnalysis={onCancelAnalysis}
-              showEngineLineBanner={false}
               progressPercent={progressPercent}
               analysisStageLabel={analysisStageLabel}
               analyzingMoveSan={analyzingMoveSan}
