@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-chess-text font-semibold">Contact</h2>
           <p className="text-chess-muted">
-            Questions? Use the Help link on the site footer.
+            Questions? Use <strong className="text-chess-subtext font-medium">Support us</strong> in the site footer — email or Chess.com message.
           </p>
         </section>
       </main>

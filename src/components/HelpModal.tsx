@@ -10,6 +10,9 @@ const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
   },
 ];
 
+const CHESSCOM_USERNAME = "ShwetankDhyani";
+const CHESSCOM_MESSAGE = `https://www.chess.com/messages/compose?to=${CHESSCOM_USERNAME}`;
+
 function parseSupportLinks(): SupportLink[] {
   const raw = import.meta.env.VITE_SUPPORT_LINKS as string | undefined;
   if (!raw?.trim()) return DEFAULT_SUPPORT_LINKS;
@@ -90,34 +93,61 @@ export function HelpModal({
             Questions & suggestions
           </p>
           <p className="text-xs text-chess-muted mb-3 leading-relaxed">
-            Need help or want to share feedback? We read every note.
+            Reach us by email or a Chess.com message — we read every note.
           </p>
-          <a
-            href="mailto:admin@chessreview.org"
-            className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
-          >
-            <span
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
-              aria-hidden
+          <div className="flex flex-col gap-2">
+            <a
+              href="mailto:admin@chessreview.org"
+              className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <span
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
+                aria-hidden
               >
-                <path d="M4 6h16v12H4z" />
-                <path d="M4 7l8 6 8-6" />
-              </svg>
-            </span>
-            <span className="min-w-0 flex-1 truncate font-medium">
-              admin@chessreview.org
-            </span>
-          </a>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 6h16v12H4z" />
+                  <path d="M4 7l8 6 8-6" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1 truncate font-medium">
+                admin@chessreview.org
+              </span>
+            </a>
+            <a
+              href={CHESSCOM_MESSAGE}
+              className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
+            >
+              <span
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
+                aria-hidden
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1 truncate font-medium">
+                Message ShwetankDhyani on Chess.com
+              </span>
+            </a>
+          </div>
         </div>
 
         {links.length > 0 && (
