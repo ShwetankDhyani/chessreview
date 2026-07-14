@@ -170,12 +170,13 @@ export default function App() {
 
   const [depth, setDepth] = useState<number>(() => {
     const saved = localStorage.getItem("cr_depth");
-    return parseInt(saved ?? "12", 10);
+    const parsed = parseInt(saved ?? "14", 10);
+    return Number.isFinite(parsed) ? Math.max(14, parsed) : 14;
   });
   const { timingModel, noteCompletedReview } = useReviewTimingModel();
 
   useEffect(() => {
-    setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 12));
+    setCloudOnlyMode(!hasRemoteEngine && (import.meta.env.PROD || depth <= 14));
   }, [depth, hasRemoteEngine]);
 
   const openProfilePanel = useCallback(

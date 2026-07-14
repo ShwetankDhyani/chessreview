@@ -12,6 +12,12 @@ import { buildMoveFactSheet } from "../utils/moveFactSheet";
 import { MoveFactSheetPanel } from "./MoveFactSheetPanel";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
+import {
+  formatTablebaseSummary,
+  isTablebasePosition,
+  probeTablebase,
+  type TablebaseResult,
+} from "../utils/tablebase";
 
 export interface MoveReviewPanelProps {
   move: AnalyzedMove | null;
@@ -305,6 +311,28 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
     return buildMoveFactSheet(move, { openingHint: hint, moveIdx, moves });
   }, [move, moveIdx, moves]);
 
+  const [tablebase, setTablebase] = useState<TablebaseResult | null>(null);
+
+  useEffect(() => {
+    if (!move?.fenAfter || !isTablebasePosition(move.fenAfter)) {
+      setTablebase(null);
+      return;
+    }
+    const ac = new AbortController();
+    let cancelled = false;
+    probeTablebase(move.fenAfter, ac.signal)
+      .then((tb) => {
+        if (!cancelled) setTablebase(tb);
+      })
+      .catch(() => {
+        if (!cancelled) setTablebase(null);
+      });
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [move?.fenAfter]);
+
   if (!move) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 text-chess-muted text-xs gap-2 p-6 text-center">
@@ -317,7 +345,9 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const meta = move.classification ? getMeta(move.classification) : null;
   const accent = meta?.color ?? "#6daa6d";
 
-  const isNegative = ["inaccuracy", "mistake", "blunder"].includes(move.classification ?? "");
+  const isNegative = ["inaccuracy", "mistake", "miss", "blunder"].includes(
+    move.classification ?? ""
+  );
 
   const suggestBest = shouldSuggestBestMove(move);
   const showContinuation = suggestBest && !!move.bestMoveSan;
@@ -383,6 +413,27 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
           embedded={embedded}
           hideOpening={showOpeningChapter}
         />
+      )}
+
+      {tablebase && (
+        <div
+          className={`text-xs ${
+            embedded
+              ? "border-l-2 border-chess-accent/40 pl-2.5 py-0.5"
+              : "rounded-md border border-chess-border/50 p-2.5"
+          }`}
+        >
+          <dl className="grid grid-cols-[minmax(5.5rem,auto)_1fr] gap-x-3 gap-y-2">
+            <dt className="text-chess-muted font-medium pt-px">Tablebase</dt>
+            <dd className="text-chess-text">{formatTablebaseSummary(tablebase)}</dd>
+            {tablebase.best?.san && (
+              <>
+                <dt className="text-chess-muted font-medium pt-px">TB best</dt>
+                <dd className="text-chess-text font-mono">{tablebase.best.san}</dd>
+              </>
+            )}
+          </dl>
+        </div>
       )}
 
       {/* Interactive continuation */}

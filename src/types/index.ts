@@ -7,6 +7,7 @@ export type MoveClassification =
   | "good"
   | "inaccuracy"
   | "mistake"
+  | "miss"
   | "blunder"
   | null;
 
@@ -137,6 +138,7 @@ export interface ClassificationCounts {
   book: number;
   inaccuracy: number;
   mistake: number;
+  miss: number;
   blunder: number;
 }
 

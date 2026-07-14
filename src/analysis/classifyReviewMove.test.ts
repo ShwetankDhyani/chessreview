@@ -88,6 +88,26 @@ describe("classifyReviewMove thresholds", () => {
     expect(classifyReviewMove(base({ eBefore: 0.85, eAfterPlayed: 0.48 }))).toBe("blunder");
     expect(classifyReviewMove(base({ eBefore: 0.8, eAfterPlayed: 0.44 }))).toBe("blunder");
   });
+
+  it("labels missed chances after opponent errors as miss", () => {
+    expect(
+      classifyReviewMove(
+        base({
+          eBefore: 0.78,
+          eAfterPlayed: 0.42,
+          eAfterBest: 0.85,
+          opponentPriorClass: "blunder",
+          opponentPriorEpLoss: 0.35,
+          epBeforeOpponentMove: 0.4,
+          postOpponentEP: 0.78,
+          playedUci: "a2a3",
+          multipvLines: [
+            { multipv: 1, cp: 400, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
+          ],
+        })
+      )
+    ).toBe("miss");
+  });
 });
 
 describe("detectGreatMove", () => {

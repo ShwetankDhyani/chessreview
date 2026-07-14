@@ -56,6 +56,7 @@ describe("buildMoveFactSheet", () => {
         bestMove: "d2d4",
         bestMoveSan: "d4",
         engineRank: 1,
+        engineLineCount: 1,
         deltaE: 0,
         eBefore: 0.55,
         eActual: 0.55,
@@ -63,6 +64,26 @@ describe("buildMoveFactSheet", () => {
     );
     expect(sheet!.bestWas).toBe("—");
     expect(sheet!.winChange).toBe("0%");
+    expect(sheet!.engineRank).toBe("Engine best");
+  });
+
+  it("does not invent MultiPV top-3 when only one line was searched", () => {
+    const sheet = buildMoveFactSheet(
+      move({
+        san: "a3",
+        classification: "inaccuracy",
+        uci: "a2a3",
+        bestMove: "d2d4",
+        bestMoveSan: "d4",
+        engineRank: null,
+        engineLineCount: 1,
+        deltaE: 0.05,
+        eBefore: 0.5,
+        eActual: 0.45,
+      })
+    );
+    expect(sheet!.engineRank).toBe("Not engine best");
+    expect(sheet!.engineRank).not.toMatch(/top 3/i);
   });
 
   it("shows signed win-chance swing when eval changes", () => {

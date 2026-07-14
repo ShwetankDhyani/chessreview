@@ -162,6 +162,19 @@ function IconSvg({
         </CircleBadge>
       );
 
+    case "miss":
+      return (
+        <CircleBadge color={color} size={size}>
+          <path
+            stroke="#fff"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            fill="none"
+            d="M8 8l8 8M16 8l-8 8"
+          />
+        </CircleBadge>
+      );
+
     case "blunder":
       return (
         <CircleBadge color={color} size={size}>

@@ -14,8 +14,9 @@ export async function analyzePgn(
   depth = 18,
   opts?: AnalyzePgnOptions
 ): Promise<ReviewResult> {
+  const resolvedDepth = Math.max(14, depth);
   return analyzeGameReview(pgn, {
-    depth: Math.max(14, depth),
+    depth: resolvedDepth,
     minDepth: 14,
     multiPv: 3,
     openingBook: getOpeningBook(),

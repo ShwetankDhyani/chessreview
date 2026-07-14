@@ -48,18 +48,22 @@ function playedMatchesBest(move: AnalyzedMove): boolean {
 
 function engineRankLabel(move: AnalyzedMove): string {
   const lineCount = move.engineLineCount;
-  const n = lineCount && lineCount > 1 ? lineCount : 3;
+  const isBest =
+    move.engineRank === 1 || playedMatchesBest(move);
+
+  // Single-PV / unknown MultiPV — never invent a "top 3" claim.
+  if (lineCount == null || lineCount <= 1) {
+    return isBest ? "Engine best" : "Not engine best";
+  }
 
   if (move.engineRank != null && move.engineRank > 0) {
-    if (move.engineRank === 1) return `1st of ${n}`;
-    if (move.engineRank === 2) return `2nd of ${n}`;
-    if (move.engineRank === 3) return `3rd of ${n}`;
-    return `${move.engineRank}th of ${n}`;
+    if (move.engineRank === 1) return `1st of ${lineCount}`;
+    if (move.engineRank === 2) return `2nd of ${lineCount}`;
+    if (move.engineRank === 3) return `3rd of ${lineCount}`;
+    return `${move.engineRank}th of ${lineCount}`;
   }
-  if (playedMatchesBest(move)) return `1st of ${n}`;
-  if (lineCount != null && lineCount <= 1) return "Not engine best";
-  if (lineCount && lineCount > 0) return `Outside top ${lineCount}`;
-  return `Outside top ${n}`;
+  if (isBest) return `1st of ${lineCount}`;
+  return `Outside top ${lineCount}`;
 }
 
 function bestMoveSanFromMove(move: AnalyzedMove): string | null {

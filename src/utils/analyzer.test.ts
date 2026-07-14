@@ -40,6 +40,7 @@ const mockReview: ReviewResult = {
       book: 0,
       inaccuracy: 0,
       mistake: 0,
+      miss: 0,
       blunder: 0,
     },
     black: {
@@ -51,6 +52,7 @@ const mockReview: ReviewResult = {
       book: 0,
       inaccuracy: 0,
       mistake: 0,
+      miss: 0,
       blunder: 0,
     },
     accuracy: { white: 90, black: 0 },

@@ -69,6 +69,13 @@ export const CLASSIFICATION_META: Record<
     glyph: "?",
     symbol: "?",
   },
+  miss: {
+    label: "Miss",
+    color: "#c45c26",
+    bgColor: "bg-move-miss",
+    glyph: "✗",
+    symbol: "✗",
+  },
   blunder: {
     label: "Blunder",
     color: "#e84855",

@@ -165,6 +165,7 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
       (move.classification === "brilliant" ||
         move.classification === "great" ||
         move.classification === "blunder" ||
+        move.classification === "miss" ||
         move.classification === "mistake");
 
     return (

@@ -74,8 +74,9 @@ function epAfterLineForMover(
 
 /**
  * Failed to capitalize on opponent's mistake (rating-adjusted winning threshold).
+ * Returns "miss" when the side to move received a winning chance and threw it back.
  */
-export function detectMiss(input: ClassifyReviewInput): MoveClassification | null {
+export function detectMiss(input: ClassifyReviewInput): "miss" | null {
   const rating = input.playerRating ?? DEFAULT_PLAYER_RATING;
   const winThreshold = getWinningThreshold(rating);
 
@@ -88,15 +89,15 @@ export function detectMiss(input: ClassifyReviewInput): MoveClassification | nul
     if (epAfterOpp < winThreshold) return null;
     if (epAfterPlay >= winThreshold) return null;
     const eLoss = expectedPointsLoss(input.eBefore, epAfterPlay);
+    if (eLoss < EP_CLASS_THRESHOLDS.inaccuracy) return null;
     if (isInitiativeSlipNotBlunder(input.eBefore, epAfterPlay, eLoss)) {
-      return "mistake";
+      return null;
     }
-    if (eLoss >= BLUNDER_FORCE_EP || epAfterPlay <= 0.45) return "blunder";
-    return "mistake";
+    return "miss";
   }
 
   const opp = input.opponentPriorClass;
-  if (opp !== "inaccuracy" && opp !== "mistake" && opp !== "blunder") {
+  if (opp !== "inaccuracy" && opp !== "mistake" && opp !== "miss" && opp !== "blunder") {
     return null;
   }
   if (input.opponentPriorEpLoss < EP_CLASS_THRESHOLDS.inaccuracy) return null;
@@ -108,10 +109,9 @@ export function detectMiss(input: ClassifyReviewInput): MoveClassification | nul
   if (!failedToPunish) return null;
 
   if (isInitiativeSlipNotBlunder(input.eBefore, epAfterPlay, eLoss)) {
-    return "mistake";
+    return null;
   }
-  if (eLoss >= BLUNDER_FORCE_EP || epAfterPlay <= 0.45) return "blunder";
-  return "mistake";
+  return "miss";
 }
 
 function classifyByEpLoss(

@@ -20,15 +20,14 @@ function depthOptions(
   engineBackend: EngineBackend
 ): readonly number[] {
   if (hasRemoteEngine || engineBackend === "native") {
-    return [12, 14, 16, 18] as const;
+    return [14, 16, 18] as const;
   }
-  return import.meta.env.PROD ? ([12] as const) : ([12, 16, 18, 20, 24] as const);
+  return import.meta.env.PROD ? ([14] as const) : ([14, 16, 18, 20, 24] as const);
 }
 
 function depthHint(d: number): string {
-  if (d === 12) return "Default (recommended)";
-  if (d === 14) return "Stronger, slower than default";
-  if (d === 16) return "Deep, ~2× slower than 12";
+  if (d === 14) return "Default (recommended)";
+  if (d === 16) return "Stronger, slower than default";
   if (d === 18) return "Deep (long waits)";
   return "Max";
 }

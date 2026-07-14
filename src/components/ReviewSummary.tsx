@@ -10,6 +10,12 @@ import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { ShareReviewActions } from "./ShareReviewActions";
 import { computePhaseAccuracies } from "../analysis/gamePhases";
+import { pickCriticalMoments } from "../utils/criticalMoments";
+import {
+  formatWinChanceDelta,
+  moverWinChanceDeltaPercent,
+} from "../utils/evalDisplay";
+import { getMeta } from "../utils/classificationMeta";
 
 interface ReviewSummaryProps {
   summary: ReviewSummaryType;
@@ -33,6 +39,7 @@ const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
   "book",
   "inaccuracy",
   "mistake",
+  "miss",
   "blunder",
 ];
 
@@ -231,6 +238,11 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
     [summary.phaseAccuracy, moves]
   );
 
+  const criticalMoments = useMemo(
+    () => pickCriticalMoments(moves, 6),
+    [moves]
+  );
+
   return (
     <div className="flex flex-col min-h-full p-3 sm:p-4 animate-fade-in">
       <ReviewPlayersHeader whiteName={wLabel} blackName={bLabel} />
@@ -268,6 +280,15 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
       <ReviewSection title="Phase accuracy">
         <PhaseAccuracyTable phases={phaseAccuracy} />
       </ReviewSection>
+
+      {criticalMoments.length > 0 && (
+        <ReviewSection title="Critical moments">
+          <CriticalMomentsList
+            moments={criticalMoments}
+            onMoveClick={onMoveClick}
+          />
+        </ReviewSection>
+      )}
 
       <ReviewSection title="Move breakdown">
         <div
@@ -386,6 +407,56 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
     </div>
   );
 };
+
+const CriticalMomentsList: React.FC<{
+  moments: ReturnType<typeof pickCriticalMoments>;
+  onMoveClick?: (idx: number) => void;
+}> = ({ moments, onMoveClick }) => (
+  <div className="space-y-0.5">
+    {moments.map(({ idx, move, swingPct }) => {
+      const meta = getMeta(move.classification);
+      const signed = formatWinChanceDelta(
+        moverWinChanceDeltaPercent(move)
+      );
+      const moveNum = move.moveNumber;
+      const label =
+        move.color === "w"
+          ? `${moveNum}. ${move.san}`
+          : `${moveNum}… ${move.san}`;
+      return (
+        <button
+          key={idx}
+          type="button"
+          disabled={!onMoveClick}
+          onClick={() => onMoveClick?.(idx)}
+          className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-md text-left transition-colors ${
+            onMoveClick ? "hover:bg-chess-hover/40 cursor-pointer" : ""
+          }`}
+        >
+          {move.classification && (
+            <ClassificationIcon type={move.classification} size="xs" />
+          )}
+          <span className="font-mono text-xs font-semibold text-chess-text truncate">
+            {label}
+          </span>
+          <span
+            className="text-[10px] font-medium truncate"
+            style={{ color: meta?.color }}
+          >
+            {meta?.label}
+          </span>
+          <span
+            className={`ml-auto text-xs font-mono font-bold tabular-nums ${
+              swingPct >= 8 ? "text-chess-text" : "text-chess-muted"
+            }`}
+          >
+            {signed}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+);
 
 const PieceIndicator: React.FC<{
   side: "white" | "black";

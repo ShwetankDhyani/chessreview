@@ -73,6 +73,7 @@ function emptyCounts(): ClassificationCounts {
     book: 0,
     inaccuracy: 0,
     mistake: 0,
+    miss: 0,
     blunder: 0,
   };
 }
