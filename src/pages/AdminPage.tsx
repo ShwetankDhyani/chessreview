@@ -15,6 +15,7 @@ import {
   type RecentReviewRow,
 } from "../utils/reviewStats";
 import { usePageSeo } from "../hooks/usePageSeo";
+import { AdminBlogPanel } from "../components/AdminBlogPanel";
 
 const KEY_STORAGE = "cr_admin_key";
 const RECENT_PAGE_SIZE = 10;
@@ -164,10 +165,12 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 pb-12 space-y-6">
+        <AdminBlogPanel adminKey={adminKey} />
+
         {loading && !stats ? (
-          <p className="text-sm text-chess-muted">Loading…</p>
+          <p className="text-sm text-chess-muted">Loading analytics…</p>
         ) : !stats?.configured ? (
-          <p className="text-sm text-chess-muted">Could not load stats.</p>
+          <p className="text-sm text-chess-muted">Could not load analytics stats.</p>
         ) : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">

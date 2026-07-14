@@ -34,6 +34,15 @@ export function SiteFooter() {
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
             </span>
+            <a
+              href="/blog"
+              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+            >
+              Blog
+            </a>
+            <span className="text-chess-border-strong text-[10px]" aria-hidden>
+              ·
+            </span>
             <button
               type="button"
               onClick={() => setHelpOpen(true)}

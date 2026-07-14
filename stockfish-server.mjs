@@ -20,6 +20,7 @@ import { handleEngineStatsRequest } from "./server/reviewStatsFile.mjs";
 import { handleEngineShareRequest } from "./server/reviewShares.mjs";
 import { handleEngineSavedReviewsRequest } from "./server/reviewSaves.mjs";
 import { handleEngineAboutCommentsRequest } from "./server/aboutComments.mjs";
+import { handleEngineBlogRequest } from "./server/blog.mjs";
 import {
   geoFromHeaders,
   normalizeReviewPayload,
@@ -374,6 +375,10 @@ const server = createServer(async (req, res) => {
   }
 
   if (handleEngineAboutCommentsRequest(req, res, url, { readJsonBody })) {
+    return;
+  }
+
+  if (handleEngineBlogRequest(req, res, url, { readJsonBody, adminSecret })) {
     return;
   }
 
