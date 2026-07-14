@@ -34,15 +34,38 @@ describe("evalDisplay", () => {
     ).toBeCloseTo(-31, 5);
   });
 
-  it("computes mover win-chance delta from eval before/after", () => {
+  it("computes mover win-chance from CP bar mapping, not sticky WDL", () => {
     const delta = moverWinChanceDeltaPercent({
       color: "w",
       fenAfter: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-      evalBefore: { cp: 400, depth: 18, source: "local" },
-      evalAfter: { cp: 50, depth: 18, source: "local" },
+      // Flat WDL would claim ~0 change; CP clearly swung.
+      eBefore: 0.55,
+      eActual: 0.55,
+      evalBefore: {
+        cp: 400,
+        depth: 18,
+        source: "local",
+        wdl: { w: 550, d: 400, l: 50 },
+      },
+      evalAfter: {
+        cp: 50,
+        depth: 18,
+        source: "local",
+        wdl: { w: 550, d: 400, l: 50 },
+      },
     });
     expect(delta).toBeLessThan(-10);
     expect(formatWinChanceDelta(delta)).toMatch(/−/);
+  });
+
+  it("flips sign for Black so gain matches their POV", () => {
+    const delta = moverWinChanceDeltaPercent({
+      color: "b",
+      evalBefore: { cp: 200, depth: 18, source: "local" },
+      evalAfter: { cp: -200, depth: 18, source: "local" },
+    });
+    // White win% dropped → Black's win chance rose.
+    expect(delta).toBeGreaterThan(10);
   });
 
   it("drives the eval bar from CP even when WDL is extreme", () => {

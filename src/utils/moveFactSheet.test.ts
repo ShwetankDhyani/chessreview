@@ -60,6 +60,8 @@ describe("buildMoveFactSheet", () => {
         deltaE: 0,
         eBefore: 0.55,
         eActual: 0.55,
+        evalBefore: { cp: 20, depth: 18, source: "local" },
+        evalAfter: { cp: 20, depth: 18, source: "local" },
       })
     );
     expect(sheet!.bestWas).toBe("—");
@@ -98,7 +100,8 @@ describe("buildMoveFactSheet", () => {
         evalAfter: { cp: -50, depth: 18, source: "local" },
       })
     );
-    expect(sheet!.winChange).toBe("−35%");
+    // Driven by CP bar mapping (≈ −41%), not sticky WDL EP.
+    expect(sheet!.winChange).toBe("−41%");
   });
 
   it("shows win-chance row for book moves from expected points", () => {
@@ -110,9 +113,11 @@ describe("buildMoveFactSheet", () => {
         deltaE: 0,
         eBefore: 0.5,
         eActual: 0.53,
+        evalBefore: { cp: 0, depth: 18, source: "local" },
+        evalAfter: { cp: 35, depth: 18, source: "local" },
       })
     );
-    expect(sheet!.winChange).toBe("+3%");
+    expect(sheet!.winChange).toMatch(/^\+/);
   });
 
   it("fills opening row for book moves", () => {

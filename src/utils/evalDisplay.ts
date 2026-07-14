@@ -3,7 +3,7 @@
  */
 
 import type { EvalResult } from "../types";
-import { expectedPointsFromEval, winPercentFromCp } from "../analysis/expectedPoints";
+import { winPercentFromCp } from "../analysis/expectedPoints";
 import { wdlTripleToWinProb } from "../analysis/wdl";
 import { isDeliveredCheckmate } from "../analysis/mateDetection";
 
@@ -71,7 +71,9 @@ export function whiteWinPercentFromEval(
 
 /**
  * Signed mover win-chance change across a ply, in percentage points.
- * Prefers stored eBefore/eActual (review pipeline); falls back to evalBefore/evalAfter.
+ * Prefer the same CP→win% mapping as the eval bar so the fact-sheet
+ * number matches what players see while scrubbing (WDL EP alone often
+ * sticks near 0% while the bar moves).
  */
 export function moverWinChanceDeltaPercent(move: {
   color: "w" | "b";
@@ -86,6 +88,27 @@ export function moverWinChanceDeltaPercent(move: {
     ? isDeliveredCheckmate(move.fenAfter)
     : false;
 
+  const hasBefore = evalHasScore(move.evalBefore);
+  const hasAfter = deliveredMate || evalHasScore(move.evalAfter);
+
+  if (hasBefore && hasAfter) {
+    const afterEval: EvalResult | null | undefined = deliveredMate
+      ? {
+          ...(move.evalAfter ?? {
+            depth: 0,
+            source: "local" as const,
+          }),
+          cp: undefined,
+          mate: move.color === "w" ? 1 : -1,
+        }
+      : move.evalAfter;
+    const beforeWhite = whiteWinPercentFromEval(move.evalBefore);
+    const afterWhite = whiteWinPercentFromEval(afterEval);
+    const whiteDelta = afterWhite - beforeWhite;
+    // Win chance is from the side that just moved.
+    return move.color === "w" ? whiteDelta : -whiteDelta;
+  }
+
   if (
     typeof move.eBefore === "number" &&
     Number.isFinite(move.eBefore) &&
@@ -93,22 +116,6 @@ export function moverWinChanceDeltaPercent(move: {
     Number.isFinite(move.eActual)
   ) {
     return (move.eActual - move.eBefore) * 100;
-  }
-
-  const hasBefore = evalHasScore(move.evalBefore);
-  const hasAfter = deliveredMate || evalHasScore(move.evalAfter);
-
-  if (hasBefore && hasAfter) {
-    const before = expectedPointsFromEval(
-      move.evalBefore ?? { cp: 0 },
-      move.color
-    );
-    const after = expectedPointsFromEval(
-      move.evalAfter ?? { cp: 0 },
-      move.color,
-      { afterDeliveredCheckmate: deliveredMate }
-    );
-    return (after - before) * 100;
   }
 
   // Legacy reviews: only non-negative EP loss was stored.
