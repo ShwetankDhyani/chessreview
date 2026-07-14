@@ -3,9 +3,7 @@ import type { FormEvent } from "react";
 import { usePageSeo } from "../hooks/usePageSeo";
 
 const CHESSCOM_USERNAME = "ShwetankDhyani";
-const CHESSCOM_PROFILE = `https://www.chess.com/member/${CHESSCOM_USERNAME.toLowerCase()}`;
-/** Chess.com preserves this return URL after login — closest public “message me” deep link. */
-const CHESSCOM_COMPOSE = `https://www.chess.com/messages/compose?to=${CHESSCOM_USERNAME}`;
+const CHESSCOM_CHALLENGE = `https://www.chess.com/play/${CHESSCOM_USERNAME}`;
 const PAGE_SIZE = 8;
 
 type Comment = {
@@ -51,8 +49,7 @@ async function fetchComments(page: number): Promise<CommentsResponse> {
 export default function AboutPage() {
   usePageSeo({
     title: "About — ChessReview",
-    description:
-      "ChessReview is a personal project that grew into a free place to review chess games — sync Chess.com, save studies, leave a note for Shwetank.",
+    description: "ChessReview — free game review. Challenge Shwetank on Chess.com.",
     path: "/about",
   });
 
@@ -121,103 +118,32 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-chess-bg text-chess-text">
       <header className="border-b border-chess-border bg-chess-panel/80">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-start justify-between gap-3">
-          <div>
-            <a
-              href="/"
-              className="text-sm font-bold text-chess-accent hover:underline"
-            >
-              ← ChessReview
-            </a>
-            <h1 className="text-lg font-bold mt-2">About</h1>
-          </div>
+        <div className="max-w-2xl mx-auto px-4 py-4">
           <a
-            href={CHESSCOM_COMPOSE}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-2 rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3 py-2 text-xs font-semibold text-chess-accent hover:bg-chess-accent/25 transition-colors"
+            href="/"
+            className="text-sm font-bold text-chess-accent hover:underline"
           >
-            <MessageIcon />
-            Contact
+            ← ChessReview
           </a>
+          <h1 className="text-lg font-bold mt-2">About</h1>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-10 pb-16">
-        <article className="space-y-5 text-sm text-chess-subtext leading-relaxed">
-          <p className="text-chess-muted text-[11px] uppercase tracking-wider font-semibold">
-            A short note from the builder
-          </p>
-
-          <p className="text-base text-chess-text leading-relaxed">
-            ChessReview started as a personal project — something I wanted for
-            myself: review games without friction, sync with Chess.com, save the
-            ones worth coming back to, and keep the whole thing uncomplicated.
-          </p>
-
-          <p>
-            We are not perfect. Features will keep evolving, edges will need
-            polish, and some days the engine path is slower than we like. Still,
-            we have built the kind of board-side companion we actually want to
-            use: load a game, see the story of the moves, share a review when it
-            matters — without paywalls or clutter.
-          </p>
-
-          <p>
-            What surprised us is how many players from around the world found
-            their way here organically. No big campaign — just people studying
-            chess, one game at a time. Watching reviews light up from places we
-            have never been is one of the quieter joys of shipping this.
-          </p>
-
-          <p className="text-chess-text">
-            Thank you for being here. If ChessReview has helped a session or two,
-            that already means more than we expected when this was just a
-            weekend idea.
-          </p>
-
-          <p>
-            If you feel like saying hello, leave a comment below — or message me
-            on Chess.com. I read both.
-          </p>
-
-          <footer className="pt-6 mt-2 border-t border-chess-border/80 space-y-4">
-            <div>
-              <p className="text-chess-text font-semibold">Shwetank Dhyani</p>
-              <p className="text-chess-muted text-xs mt-0.5">
-                Builder of ChessReview.org
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={CHESSCOM_PROFILE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-chess-border bg-chess-surface/80 px-3 py-2 text-xs font-medium text-chess-subtext hover:border-chess-accent/40 hover:text-chess-accent transition-colors"
-              >
-                <ChessComGlyph />
-                chess.com/{CHESSCOM_USERNAME}
-              </a>
-              <a
-                href={CHESSCOM_COMPOSE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3 py-2 text-xs font-semibold text-chess-accent hover:bg-chess-accent/25 transition-colors"
-              >
-                <MessageIcon />
-                Message on Chess.com
-              </a>
-            </div>
-
-            <p className="text-[11px] text-chess-muted leading-relaxed">
-              The contact button opens Chess.com’s message compose for{" "}
-              <span className="text-chess-subtext">{CHESSCOM_USERNAME}</span>.
-              You may need to be signed in; if the recipient field is empty,
-              search for that username once.
-            </p>
-          </footer>
-        </article>
+        <div className="flex justify-center py-6">
+          <a
+            href={CHESSCOM_CHALLENGE}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-3 rounded-xl border border-chess-border bg-chess-panel/60 px-6 py-4 text-chess-text hover:border-chess-accent/40 hover:bg-chess-accent/[0.08] transition-colors"
+          >
+            <span className="text-lg font-bold tracking-wide">Challenge Me</span>
+            <span className="flex items-center gap-1 text-chess-accent" aria-hidden>
+              <SwordIcon className="group-hover:translate-x-0.5 transition-transform" />
+              <SwordIcon mirrored className="group-hover:-translate-x-0.5 transition-transform" />
+            </span>
+          </a>
+        </div>
 
         <section
           id="comments"
@@ -226,13 +152,12 @@ export default function AboutPage() {
           <div>
             <h2 className="text-base font-bold text-chess-text">Comments</h2>
             <p className="text-xs text-chess-muted mt-1">
-              Say thanks, share a thought, or just leave a mark. Newest first.
+              Newest first.
               {total > 0 ? ` ${total} note${total === 1 ? "" : "s"} so far.` : ""}
             </p>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-3">
-            {/* Honeypot — hidden from users */}
             <label className="absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0">
               Website
               <input
@@ -257,7 +182,7 @@ export default function AboutPage() {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={40}
                 required
-                placeholder="How should we show you?"
+                placeholder="Your name"
                 className="w-full rounded-lg border border-chess-border bg-chess-bg px-3 py-2 text-sm text-chess-text placeholder:text-chess-muted/70 focus:outline-none focus:border-chess-accent/50"
               />
             </div>
@@ -275,7 +200,7 @@ export default function AboutPage() {
                 maxLength={600}
                 required
                 rows={3}
-                placeholder="A short note for the guestbook…"
+                placeholder="Say something…"
                 className="w-full rounded-lg border border-chess-border bg-chess-bg px-3 py-2 text-sm text-chess-text placeholder:text-chess-muted/70 focus:outline-none focus:border-chess-accent/50 resize-y min-h-[5rem]"
               />
               <p className="text-[10px] text-chess-muted mt-1 text-right">
@@ -368,40 +293,30 @@ export default function AboutPage() {
   );
 }
 
-function MessageIcon() {
+function SwordIcon({
+  mirrored = false,
+  className = "",
+}: {
+  mirrored?: boolean;
+  className?: string;
+}) {
   return (
     <svg
-      width="14"
-      height="14"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={`${mirrored ? "scale-x-[-1]" : ""} ${className}`}
       aria-hidden
     >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function ChessComGlyph() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden className="opacity-90">
-      <rect
-        x="3"
-        y="3"
-        width="18"
-        height="18"
-        rx="2"
-        fill="currentColor"
-        opacity="0.15"
-      />
-      <path
-        d="M8 16V8h2.2c1.4 0 2.3.8 2.3 2 0 .9-.5 1.5-1.2 1.8L14 16h-2.1l-2.3-3.8H10V16H8zm2-5.5h.4c.5 0 .8-.3.8-.7s-.3-.7-.8-.7H10v1.4z"
-        fill="currentColor"
-      />
+      <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+      <path d="M13 19l6-6" />
+      <path d="M16 16l4 4" />
+      <path d="M19 21l2-2" />
     </svg>
   );
 }
