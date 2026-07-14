@@ -3,7 +3,8 @@ import type { FormEvent } from "react";
 import { usePageSeo } from "../hooks/usePageSeo";
 
 const CHESSCOM_USERNAME = "ShwetankDhyani";
-const CHESSCOM_CHALLENGE = `https://www.chess.com/play/${CHESSCOM_USERNAME}`;
+/** Opens Chess.com’s new-game challenge screen with opponent prefilled. */
+const CHESSCOM_CHALLENGE = `https://www.chess.com/play/online/new?isInvited=1&opponent=${CHESSCOM_USERNAME}`;
 const PAGE_SIZE = 8;
 
 type Comment = {
@@ -133,11 +134,9 @@ export default function AboutPage() {
         <div className="flex justify-center py-6">
           <a
             href={CHESSCOM_CHALLENGE}
-            target="_blank"
-            rel="noopener noreferrer"
             className="group inline-flex items-center gap-3 rounded-xl border border-chess-border bg-chess-panel/60 px-6 py-4 text-chess-text hover:border-chess-accent/40 hover:bg-chess-accent/[0.08] transition-colors"
           >
-            <span className="text-lg font-bold tracking-wide">Challenge Me</span>
+            <span className="text-lg font-bold tracking-wide">Play Me!</span>
             <span className="flex items-center gap-1 text-chess-accent" aria-hidden>
               <SwordIcon className="group-hover:translate-x-0.5 transition-transform" />
               <SwordIcon mirrored className="group-hover:-translate-x-0.5 transition-transform" />

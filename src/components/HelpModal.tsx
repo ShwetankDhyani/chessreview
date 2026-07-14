@@ -51,7 +51,7 @@ export function HelpModal({
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <h2 id="help-title" className="text-base font-bold text-chess-text">
-            Help ChessReview.org
+            Support us
           </h2>
           <button
             type="button"
@@ -81,14 +81,7 @@ export function HelpModal({
           </p>
           <p className="text-chess-muted text-xs">
             There is no paywall — support is entirely optional. Thank you for
-            being here. Prefer a longer read? See the{" "}
-            <a
-              href="/about"
-              className="text-chess-accent hover:underline"
-            >
-              About page
-            </a>
-            .
+            being here.
           </p>
         </div>
 

@@ -24,10 +24,10 @@ export function SiteFooter() {
         <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
           <div className="flex items-center gap-3">
             <a
-              href="/about"
+              href="https://www.chess.com/play/online/new?isInvited=1&opponent=ShwetankDhyani"
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              About
+              Play Me!
             </a>
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
@@ -37,7 +37,7 @@ export function SiteFooter() {
               onClick={() => setHelpOpen(true)}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              Help ChessReview.org
+              Support us
             </button>
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
