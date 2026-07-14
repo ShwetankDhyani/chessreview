@@ -159,14 +159,28 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
 
     const meta = getMeta(move.classification);
     const inBook = move.inOpeningBook || move.classification === "book";
+    const classification = move.classification;
 
     const isKeyMove =
       !inBook &&
-      (move.classification === "brilliant" ||
-        move.classification === "great" ||
-        move.classification === "blunder" ||
-        move.classification === "miss" ||
-        move.classification === "mistake");
+      (classification === "brilliant" ||
+        classification === "great" ||
+        classification === "blunder" ||
+        classification === "miss" ||
+        classification === "mistake");
+
+    const tintHex =
+      !inBook && meta
+        ? isKeyMove
+          ? `${meta.color}24`
+          : classification === "inaccuracy"
+            ? `${meta.color}1a`
+            : classification === "best" ||
+                classification === "excellent" ||
+                classification === "good"
+              ? `${meta.color}14`
+              : undefined
+        : undefined;
 
     return (
       <button
@@ -198,20 +212,23 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
         `}
         style={
           isActive && meta
-            ? { backgroundColor: `${meta.color}22`, color: "#fff" }
+            ? { backgroundColor: `${meta.color}28`, color: "#fff" }
             : !isActive && isLeftBook
               ? { backgroundColor: "#b5886318" }
               : !isActive && inBook
                 ? { backgroundColor: "#b588630c" }
-                : !isActive && isKeyMove && meta
-                  ? { backgroundColor: `${meta.color}18` }
+                : !isActive && tintHex
+                  ? { backgroundColor: tintHex }
                   : undefined
         }
       >
         <span
-          className={`truncate ${
-            isActive ? "text-white" : isKeyMove ? "text-chess-text" : ""
-          }`}
+          className={`truncate ${isActive ? "text-white" : ""}`}
+          style={
+            !isActive && meta && !inBook
+              ? { color: meta.color }
+              : undefined
+          }
         >
           {move.san}
         </span>
@@ -223,10 +240,10 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
             End
           </span>
         )}
-        {meta && move.classification && !inBook && (
+        {meta && classification && !inBook && (
           <ClassificationIcon
-            type={move.classification}
-            size={isKeyMove ? "md" : "sm"}
+            type={classification}
+            size={isKeyMove || classification === "best" ? "md" : "sm"}
           />
         )}
         {inBook && !isActive && (
