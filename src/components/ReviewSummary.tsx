@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   ReviewSummary as ReviewSummaryType,
   AnalyzedMove,
@@ -10,12 +10,23 @@ import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { ShareReviewActions } from "./ShareReviewActions";
 import { computePhaseAccuracies } from "../analysis/gamePhases";
+import { caps2AccuracyForMoves } from "../analysis/caps2Accuracy";
 import { pickCriticalMoments } from "../utils/criticalMoments";
 import {
   formatWinChanceDelta,
   moverWinChanceDeltaPercent,
 } from "../utils/evalDisplay";
 import { getMeta } from "../utils/classificationMeta";
+
+const ACCURACY_EXCLUDE_KEY = "cr_accuracy_exclude_book_forced";
+
+function readExcludePref(): boolean {
+  try {
+    return localStorage.getItem(ACCURACY_EXCLUDE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 interface ReviewSummaryProps {
   summary: ReviewSummaryType;
@@ -126,12 +137,37 @@ const PhaseAccuracyTable: React.FC<{ phases: PhaseAccuracyStats }> = ({
         );
       })}
     </div>
-
-    <p className="mt-2.5 text-[10px] leading-relaxed text-chess-muted text-center">
-      CAPS2 · every classified move · book &amp; forced count as perfect
-    </p>
   </div>
 );
+
+function AccuracyExcludeToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="mt-3 flex items-start gap-2.5 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-chess-border bg-chess-surface accent-chess-accent"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="min-w-0">
+        <span className="block text-[11px] font-medium text-chess-text leading-snug">
+          Exclude book &amp; forced moves
+        </span>
+        <span className="block text-[10px] text-chess-muted leading-snug mt-0.5">
+          {checked
+            ? "Accuracy from real decisions only"
+            : "Book & forced count as perfect"}
+        </span>
+      </span>
+    </label>
+  );
+}
 
 function ReviewSection({
   title,
@@ -213,8 +249,20 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   shareError = null,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [excludeBookAndForced, setExcludeBookAndForced] = useState(readExcludePref);
   const toggle = (key: string) =>
     setExpanded((prev) => (prev === key ? null : key));
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        ACCURACY_EXCLUDE_KEY,
+        excludeBookAndForced ? "1" : "0"
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [excludeBookAndForced]);
 
   const wLabel = whiteName ?? "White";
   const bLabel = blackName ?? "Black";
@@ -227,15 +275,32 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
       return acc;
     }, []);
 
-  const wAcc = summary.accuracy.white;
-  const bAcc = summary.accuracy.black;
+  const accuracyOpts = useMemo(
+    () => ({ excludeBookAndForced }),
+    [excludeBookAndForced]
+  );
+
+  const wAcc = useMemo(() => {
+    if (moves.length) {
+      return caps2AccuracyForMoves(moves, "w", accuracyOpts);
+    }
+    return summary.accuracy.white;
+  }, [moves, summary.accuracy.white, accuracyOpts]);
+
+  const bAcc = useMemo(() => {
+    if (moves.length) {
+      return caps2AccuracyForMoves(moves, "b", accuracyOpts);
+    }
+    return summary.accuracy.black;
+  }, [moves, summary.accuracy.black, accuracyOpts]);
+
   const accGap = Math.abs(wAcc - bAcc);
   const accLeader: "white" | "black" | null =
     accGap < 0.5 ? null : wAcc >= bAcc ? "white" : "black";
 
   const phaseAccuracy: PhaseAccuracyStats = useMemo(
-    () => summary.phaseAccuracy ?? computePhaseAccuracies(moves),
-    [summary.phaseAccuracy, moves]
+    () => computePhaseAccuracies(moves, accuracyOpts),
+    [moves, accuracyOpts]
   );
 
   const criticalMoments = useMemo(
@@ -275,6 +340,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             showName={false}
           />
         </div>
+        <AccuracyExcludeToggle
+          checked={excludeBookAndForced}
+          onChange={setExcludeBookAndForced}
+        />
       </ReviewSection>
 
       <ReviewSection title="Phase accuracy">

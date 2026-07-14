@@ -65,4 +65,24 @@ describe("caps2Accuracy", () => {
     // Counting book as perfect should raise accuracy vs grading only post-book.
     expect(withTheory).toBeGreaterThan(withoutTheory);
   });
+
+  it("can exclude book and forced from the average", () => {
+    const included = caps2AccuracyForMoves(
+      [
+        move({ color: "w", classification: "book", epLoss: 0 }),
+        move({ color: "w", classification: "blunder", epLoss: 0.25 }),
+      ],
+      "w",
+      { excludeBookAndForced: false }
+    );
+    const excluded = caps2AccuracyForMoves(
+      [
+        move({ color: "w", classification: "book", epLoss: 0 }),
+        move({ color: "w", classification: "blunder", epLoss: 0.25 }),
+      ],
+      "w",
+      { excludeBookAndForced: true }
+    );
+    expect(excluded).toBeLessThan(included);
+  });
 });

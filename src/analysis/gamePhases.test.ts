@@ -183,6 +183,12 @@ describe("computePhaseAccuracies", () => {
     expect(acc.opening.black).toBe(99.9);
     expect(acc.middlegame.white).toBeNull();
     expect(acc.endgame.white).toBeNull();
+
+    const excluded = computePhaseAccuracies(moves, {
+      excludeBookAndForced: true,
+    });
+    expect(excluded.opening.white).toBeNull();
+    expect(excluded.opening.black).toBeNull();
   });
 
   it("scores opening non-book moves with CAPS2", () => {

@@ -1,5 +1,8 @@
 import type { AnalyzedMove, PhaseAccuracyStats, PhaseSideAccuracy } from "../types";
-import { caps2AccuracyForMoves } from "./caps2Accuracy";
+import {
+  caps2AccuracyForMoves,
+  type Caps2AccuracyOptions,
+} from "./caps2Accuracy";
 
 export type GamePhase = "opening" | "middlegame" | "endgame";
 
@@ -140,20 +143,24 @@ export function assignGamePhases(moves: AnalyzedMove[]): GamePhase[] {
 
 function sideAccuracyOrNull(
   moves: AnalyzedMove[],
-  color: "w" | "b"
+  color: "w" | "b",
+  options: Caps2AccuracyOptions = {}
 ): number | null {
+  const exclude = options.excludeBookAndForced === true;
   let scored = 0;
   for (const m of moves) {
     if (m.color !== color || !m.classification) continue;
+    if (exclude && (m.classification === "book" || m.forced)) continue;
     scored++;
   }
   if (scored === 0) return null;
-  return caps2AccuracyForMoves(moves, color);
+  return caps2AccuracyForMoves(moves, color, options);
 }
 
-/** CAPS2 phase accuracies (same formula as overall; every classified ply counts). */
+/** CAPS2 phase accuracies (same formula / options as overall). */
 export function computePhaseAccuracies(
-  moves: AnalyzedMove[]
+  moves: AnalyzedMove[],
+  options: Caps2AccuracyOptions = {}
 ): PhaseAccuracyStats {
   const empty: PhaseSideAccuracy = { white: null, black: null };
   if (!moves.length) {
@@ -171,8 +178,8 @@ export function computePhaseAccuracies(
   }
 
   const side = (phase: GamePhase): PhaseSideAccuracy => ({
-    white: sideAccuracyOrNull(buckets[phase], "w"),
-    black: sideAccuracyOrNull(buckets[phase], "b"),
+    white: sideAccuracyOrNull(buckets[phase], "w", options),
+    black: sideAccuracyOrNull(buckets[phase], "b", options),
   });
 
   return {

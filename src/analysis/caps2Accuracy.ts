@@ -5,6 +5,14 @@ export const CAPS2_A = 103.1668100711649;
 export const CAPS2_B = -0.04354415386753951;
 export const CAPS2_C = -3.166924740191411;
 
+export interface Caps2AccuracyOptions {
+  /**
+   * When true, book and forced plies are omitted from the average.
+   * When false (default), they count as perfect (0 EP loss).
+   */
+  excludeBookAndForced?: boolean;
+}
+
 /** Per-move score from expected-points loss (win-% points lost × 100). */
 export function moveAccuracyFromEpLoss(epLoss: number): number {
   const winDiff = Math.max(0, epLoss * 100);
@@ -44,15 +52,21 @@ export function gameAccuracyFromMoveScores(moveAccuracies: number[]): number {
   return Math.round(Math.min(99.9, Math.max(0, raw)) * 10) / 10;
 }
 
+function isBookOrForced(m: AnalyzedMove): boolean {
+  return m.classification === "book" || !!m.forced;
+}
+
 export function caps2AccuracyForMoves(
   moves: AnalyzedMove[],
-  color: "w" | "b"
+  color: "w" | "b",
+  options: Caps2AccuracyOptions = {}
 ): number {
+  const exclude = options.excludeBookAndForced === true;
   const losses: number[] = [];
   for (const m of moves) {
     if (m.color !== color || !m.classification) continue;
-    // Book / forced still count — as perfect plies (same spirit as Chess.com).
-    if (m.classification === "book" || m.forced) {
+    if (isBookOrForced(m)) {
+      if (exclude) continue;
       losses.push(0);
       continue;
     }
