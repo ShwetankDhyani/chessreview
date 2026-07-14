@@ -355,12 +355,12 @@ export const GameList: React.FC<GameListProps> = ({
     <div className="flex flex-col h-full min-h-0 flex-1">
       {inputVal ? (
         <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5">
-          <div className="mobile-surface flex flex-col flex-1 min-h-0 w-full">
-            <div className="mobile-surface-section py-2">
+          <div className="mobile-surface flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+            <div className="mobile-surface-section flex-shrink-0 py-2">
               <GameUrlImport onImported={onGameSelect} compact />
             </div>
 
-            <div className="mobile-surface-section py-2">
+            <div className="mobile-surface-section flex-shrink-0 py-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 truncate text-sm font-semibold text-chess-text">
@@ -447,7 +447,7 @@ export const GameList: React.FC<GameListProps> = ({
             </div>
 
             {games.length > 0 && !loading && (
-              <div className="mobile-surface-section py-2 space-y-1.5">
+              <div className="mobile-surface-section flex-shrink-0 py-2 space-y-1.5">
                 <input
                   type="text"
                   value={opponentSearch}
@@ -500,8 +500,13 @@ export const GameList: React.FC<GameListProps> = ({
               </div>
             )}
 
-            <div className="mobile-surface-list">
-              {renderActivePin()}
+            {showActivePin ? (
+              <div className="flex-shrink-0 z-10 border-t border-[#3f3c39] bg-[#312e2b] shadow-[0_6px_14px_rgba(0,0,0,0.28)]">
+                {renderActivePin()}
+              </div>
+            ) : null}
+
+            <div className="mobile-surface-list flex-1 min-h-0 overflow-y-auto overscroll-contain">
               {games.length === 0 && !loading && (
                 <div className="mobile-surface-section py-4 flex flex-col gap-2 items-center">
                   <button type="button" onClick={handleGo} className="mobile-chip mobile-chip--active">
@@ -597,29 +602,31 @@ export const GameList: React.FC<GameListProps> = ({
           </div>
         </div>
       ) : (
-        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-y-auto overscroll-contain">
-          <div className="mobile-surface flex flex-col w-full">
-            {(showActivePin) && (
-              <div className="mobile-surface-list border-b border-chess-border/60">
+        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-hidden">
+          <div className="mobile-surface flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            {showActivePin ? (
+              <div className="z-10 flex-shrink-0 border-b border-[#3f3c39] bg-[#312e2b] shadow-[0_6px_14px_rgba(0,0,0,0.28)]">
                 {renderActivePin()}
               </div>
-            )}
-            {onLinkProfile && (
-              <div className="mobile-surface-section">
-                <AccountLinkPromo onConnect={onLinkProfile} embedded />
+            ) : null}
+            <div className="mobile-surface-list flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+              {onLinkProfile && (
+                <div className="mobile-surface-section">
+                  <AccountLinkPromo onConnect={onLinkProfile} embedded />
+                </div>
+              )}
+              <div className="mobile-surface-section py-2">
+                <p className="text-[10px] text-chess-muted mb-2 text-center">
+                  Open a game from link
+                </p>
+                <GameUrlImport onImported={onGameSelect} compact />
               </div>
-            )}
-            <div className="mobile-surface-section py-2">
-              <p className="text-[10px] text-chess-muted mb-2 text-center">
-                Open a game from link
-              </p>
-              <GameUrlImport onImported={onGameSelect} compact />
-            </div>
-            <div className="mobile-surface-section flex flex-col py-3">
-              <p className="text-[10px] text-chess-muted mb-2 text-center">
-                Or paste PGN / open a .pgn file
-              </p>
-              <PgnPastePanel onLoad={onGameSelect} compact />
+              <div className="mobile-surface-section flex flex-col py-3">
+                <p className="text-[10px] text-chess-muted mb-2 text-center">
+                  Or paste PGN / open a .pgn file
+                </p>
+                <PgnPastePanel onLoad={onGameSelect} compact />
+              </div>
             </div>
           </div>
         </div>

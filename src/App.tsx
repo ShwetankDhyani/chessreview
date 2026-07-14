@@ -1730,11 +1730,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col overscroll-contain">
             {tab === "games" && (
-              <>
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 {showWelcome && !pgn && (
-                  <div className="px-3 pt-3">
+                  <div className="px-3 pt-3 flex-shrink-0">
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
@@ -1746,12 +1746,12 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
-              </>
+              </div>
             )}
 
 
             {tab === "moves" && (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full overflow-y-auto min-h-0">
                 {pgn ? (
                   <>
                     <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border flex-shrink-0 gap-2">
@@ -2088,7 +2088,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           {/* ── Mobile: one shell for Games / Moves / Review (shared header padding) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
             <div
-              className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col bg-chess-sidebar ${
+              className={`flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar ${
                 tab === "games" ? "" : "hidden"
               }`}
               style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
@@ -2098,14 +2098,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <GameList
-                  username=""
-                  onGameSelect={selectGame}
-                  onLinkProfile={openProfilePanel}
-                  selectedGameId={sessionGameId ?? undefined}
-                  activeReview={activeReview}
-                  onOpenActiveReview={openActiveReview}
-                />
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <GameList
+                    username=""
+                    onGameSelect={selectGame}
+                    onLinkProfile={openProfilePanel}
+                    selectedGameId={sessionGameId ?? undefined}
+                    activeReview={activeReview}
+                    onOpenActiveReview={openActiveReview}
+                  />
+                </div>
             </div>
 
             <div
