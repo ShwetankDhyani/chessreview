@@ -1,8 +1,29 @@
 import { describe, expect, it } from "vitest";
+import type { AnalyzedMove } from "../types";
 import {
+  caps2AccuracyForMoves,
   caps2GameAccuracy,
   moveAccuracyFromEpLoss,
 } from "./caps2Accuracy";
+
+function move(
+  partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "color" | "classification">
+): AnalyzedMove {
+  return {
+    moveNumber: 1,
+    san: "e4",
+    uci: "e2e4",
+    fenBefore: "",
+    fenAfter: "",
+    evalBefore: null,
+    evalAfter: null,
+    eBest: 0.5,
+    eActual: 0.5,
+    deltaE: 0,
+    epLoss: 0,
+    ...partial,
+  };
+}
 
 describe("caps2Accuracy", () => {
   it("scores perfect moves at 100", () => {
@@ -22,5 +43,26 @@ describe("caps2Accuracy", () => {
       0.25,
     ]);
     expect(clean - withBlunder).toBeGreaterThan(5);
+  });
+
+  it("includes book and forced plies as perfect moves", () => {
+    const withTheory = caps2AccuracyForMoves(
+      [
+        move({ color: "w", classification: "book", epLoss: 0 }),
+        move({ color: "w", classification: "book", epLoss: 0 }),
+        move({ color: "w", classification: "best", epLoss: 0 }),
+        move({ color: "w", classification: "blunder", epLoss: 0.25 }),
+      ],
+      "w"
+    );
+    const withoutTheory = caps2AccuracyForMoves(
+      [
+        move({ color: "w", classification: "best", epLoss: 0 }),
+        move({ color: "w", classification: "blunder", epLoss: 0.25 }),
+      ],
+      "w"
+    );
+    // Counting book as perfect should raise accuracy vs grading only post-book.
+    expect(withTheory).toBeGreaterThan(withoutTheory);
   });
 });

@@ -128,7 +128,7 @@ const PhaseAccuracyTable: React.FC<{ phases: PhaseAccuracyStats }> = ({
     </div>
 
     <p className="mt-2.5 text-[10px] leading-relaxed text-chess-muted text-center">
-      CAPS2 · scored moves only · book &amp; forced excluded
+      CAPS2 · every classified move · book &amp; forced count as perfect
     </p>
   </div>
 );

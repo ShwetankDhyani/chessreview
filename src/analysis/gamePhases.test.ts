@@ -159,7 +159,7 @@ describe("assignGamePhases", () => {
 });
 
 describe("computePhaseAccuracies", () => {
-  it("returns null when a phase has no scored moves for a side", () => {
+  it("counts book-only opening as perfect accuracy", () => {
     const moves: AnalyzedMove[] = [
       move({
         fenBefore: START,
@@ -167,6 +167,7 @@ describe("computePhaseAccuracies", () => {
         moveNumber: 1,
         classification: "book",
         inOpeningBook: true,
+        epLoss: 0,
       }),
       move({
         fenBefore: START,
@@ -174,11 +175,12 @@ describe("computePhaseAccuracies", () => {
         moveNumber: 1,
         classification: "book",
         inOpeningBook: true,
+        epLoss: 0,
       }),
     ];
     const acc = computePhaseAccuracies(moves);
-    expect(acc.opening.white).toBeNull();
-    expect(acc.opening.black).toBeNull();
+    expect(acc.opening.white).toBe(99.9);
+    expect(acc.opening.black).toBe(99.9);
     expect(acc.middlegame.white).toBeNull();
     expect(acc.endgame.white).toBeNull();
   });

@@ -144,16 +144,14 @@ function sideAccuracyOrNull(
 ): number | null {
   let scored = 0;
   for (const m of moves) {
-    if (m.color !== color || !m.classification || m.classification === "book")
-      continue;
-    if (m.forced) continue;
+    if (m.color !== color || !m.classification) continue;
     scored++;
   }
   if (scored === 0) return null;
   return caps2AccuracyForMoves(moves, color);
 }
 
-/** CAPS2 phase accuracies (same formula as overall; book/forced excluded). */
+/** CAPS2 phase accuracies (same formula as overall; every classified ply counts). */
 export function computePhaseAccuracies(
   moves: AnalyzedMove[]
 ): PhaseAccuracyStats {

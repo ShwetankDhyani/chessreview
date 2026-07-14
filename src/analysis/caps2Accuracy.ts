@@ -50,9 +50,12 @@ export function caps2AccuracyForMoves(
 ): number {
   const losses: number[] = [];
   for (const m of moves) {
-    if (m.color !== color || !m.classification || m.classification === "book")
+    if (m.color !== color || !m.classification) continue;
+    // Book / forced still count — as perfect plies (same spirit as Chess.com).
+    if (m.classification === "book" || m.forced) {
+      losses.push(0);
       continue;
-    if (m.forced) continue;
+    }
     losses.push(m.epLoss ?? 0);
   }
   return caps2GameAccuracy(losses);
