@@ -10,7 +10,7 @@ export function SiteChrome({
   title?: string;
 }) {
   return (
-    <div className="min-h-[100dvh] bg-chess-bg text-chess-text font-sans flex flex-col">
+    <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
       <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <a href="/" className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span
@@ -37,7 +37,7 @@ export function SiteChrome({
         ) : null}
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(var(--mobile-footer-stack)+0.5rem)] lg:pb-0">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[calc(var(--mobile-footer-stack)+0.75rem)] lg:pb-6">
         {children}
       </div>
 
