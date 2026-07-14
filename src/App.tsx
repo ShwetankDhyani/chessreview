@@ -27,6 +27,12 @@ import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { parseGameText } from "./utils/pgnParse";
 import { samePgn } from "./utils/pgnIdentity";
+import {
+  clearSessionReviewPin,
+  getSessionReviewPin,
+  setSessionReviewPin,
+  type SessionReviewPin,
+} from "./utils/sessionReviewPin";
 import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
@@ -189,12 +195,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   /** Completed review for `reviewJob` while the user was viewing another game. */
   const [parkedResult, setParkedResult] = useState<ReviewResult | null>(null);
   /** Completed review pinned on Games for this browser session (cleared on refresh). */
-  const [completedPin, setCompletedPin] = useState<{
-    pgn: string;
-    label: string;
-    gameId: string | null;
-    result: ReviewResult;
-  } | null>(null);
+  const [completedPin, setCompletedPinState] = useState<SessionReviewPin | null>(
+    () => getSessionReviewPin()
+  );
+  const setCompletedPin = useCallback((pin: SessionReviewPin | null) => {
+    setSessionReviewPin(pin);
+    setCompletedPinState(pin);
+  }, []);
+  const clearCompletedPin = useCallback(() => {
+    clearSessionReviewPin();
+    setCompletedPinState(null);
+  }, []);
   const displayPgnRef = useRef("");
   const sessionGameIdRef = useRef<string | null>(null);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
@@ -781,15 +792,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setSaveReviewMessage(null);
         setAnalysisState("done");
         setReviewReady(true);
-        setParkedResult(null);
+        // Keep the job parked so Games pin survives browsing another board.
+        setParkedResult(result);
         setCompletedPin({
           pgn: job.pgn,
           label: job.label,
           gameId: job.gameId,
           result,
         });
-        reviewJobRef.current = null;
-        setReviewJob(null);
+        // Leave reviewJob set — pin identity for this session.
 
         setTab("moves");
         // Open finished reviews at the start of the game.
@@ -863,17 +874,23 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setShareError(null);
 
     if (!keepAnalysis) {
-      abortRef.current = true;
-      analysisGenerationRef.current += 1;
-      setAnalysisRunning(false);
-      setShowAnalysisProgress(false);
-      showAnalysisProgressRef.current = false;
-      setAnalysisStartedAt(null);
-      reviewJobRef.current = null;
-      setReviewJob(null);
-      setParkedResult(null);
+      // Only cancel a *running* analysis. Never drop a finished session pin —
+      // browsing another game must leave the Games pin intact.
+      if (analysisRunning) {
+        abortRef.current = true;
+        analysisGenerationRef.current += 1;
+        setAnalysisRunning(false);
+        setShowAnalysisProgress(false);
+        showAnalysisProgressRef.current = false;
+        setAnalysisStartedAt(null);
+        reviewJobRef.current = null;
+        setReviewJob(null);
+        setParkedResult(null);
+      }
       setAnalysisState("loading");
       setReviewReady(false);
+      setShowAnalysisProgress(false);
+      showAnalysisProgressRef.current = false;
     }
 
     const frames = buildPgnReplayFrames(parsed.pgn);
@@ -910,7 +927,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setGameMeta(meta);
     setClocks(extractClocks(parsed.pgn));
     return true;
-  }, []);
+  }, [analysisRunning]);
 
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
@@ -969,9 +986,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       showAnalysisProgressRef.current = false;
       setAnalysisStartedAt(null);
       setSaveReviewMessage(null);
-      clearReviewJob();
       if (pinMeta) {
-        setCompletedPin({ ...pinMeta, result });
+        const pin = { ...pinMeta, result };
+        setCompletedPin(pin);
+        reviewJobRef.current = {
+          pgn: pinMeta.pgn,
+          label: pinMeta.label,
+          gameId: pinMeta.gameId,
+        };
+        setReviewJob(reviewJobRef.current);
+        setParkedResult(result);
       }
       setContinuationNav(null);
       setContinuationActive(false);
@@ -1000,7 +1024,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setMoveAnim(null);
       }
     },
-    [clearReviewJob]
+    [setCompletedPin]
   );
 
   const dismissWelcome = useCallback(() => {
@@ -1010,14 +1034,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   }, []);
 
   const restoreCompletedPin = useCallback(() => {
-    if (!completedPin) return false;
-    setSessionGameId(completedPin.gameId);
-    const loaded = loadPgn(completedPin.pgn, { keepAnalysis: true });
+    const pin = completedPin ?? getSessionReviewPin();
+    if (!pin) return false;
+    if (!completedPin) setCompletedPin(pin);
+    setSessionGameId(pin.gameId);
+    const loaded = loadPgn(pin.pgn, { keepAnalysis: true });
     if (!loaded) return false;
-    applyReviewResult(completedPin.result);
+    applyReviewResult(pin.result, {
+      pgn: pin.pgn,
+      label: pin.label,
+      gameId: pin.gameId,
+    });
     setTab("moves");
     return true;
-  }, [completedPin, loadPgn, applyReviewResult]);
+  }, [completedPin, loadPgn, applyReviewResult, setCompletedPin]);
 
   const returnToActiveReview = useCallback(() => {
     hapticSoft();
@@ -1047,17 +1077,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setTab("moves");
       return;
     }
-    if (completedPin && samePgn(job.pgn, completedPin.pgn)) {
-      restoreCompletedPin();
-      return;
-    }
-    loadPgn(job.pgn);
+    if (restoreCompletedPin()) return;
+    loadPgn(job.pgn, { keepAnalysis: true });
     setTab("moves");
   }, [
     reviewJob,
     analysisRunning,
     parkedResult,
-    completedPin,
     loadPgn,
     applyReviewResult,
     restoreCompletedPin,
@@ -1080,14 +1106,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const selectGame = useCallback(
     (pgnStr: string, meta?: { id?: string }) => {
       hapticSelection();
-      // Jump back to the game that is already analyzing / parked.
+      const pin = completedPin ?? getSessionReviewPin();
+      // Jump back to the game that is already analyzing / parked / pinned.
       if (reviewJob && samePgn(pgnStr, reviewJob.pgn)) {
         if (meta?.id) setSessionGameId(meta.id);
         returnToActiveReview();
         return;
       }
-      // Re-open the session's last completed review from the Games list row.
-      if (completedPin && samePgn(pgnStr, completedPin.pgn) && !analysisRunning) {
+      if (pin && samePgn(pgnStr, pin.pgn) && !analysisRunning) {
         if (meta?.id) setSessionGameId(meta.id);
         restoreCompletedPin();
         return;
@@ -1109,10 +1135,22 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         }
         return;
       }
-      // Browse another game — keep the completed review pin for this session.
+      // Browse another game — never wipe a finished session pin.
       setSessionGameId(meta?.id ?? null);
-      const loaded = loadPgn(pgnStr);
+      const loaded = loadPgn(pgnStr, {
+        keepAnalysis: analysisRunning || !!pin || !!reviewJob,
+      });
       if (!loaded) return;
+      if (pin && !analysisRunning) {
+        // Soft-browse: board shows the new game, pin keeps the finished review.
+        setMoves([]);
+        setSummary(null);
+        setReviewResult(null);
+        setAnalysisState("loading");
+        setReviewReady(false);
+        setShowAnalysisProgress(false);
+        showAnalysisProgressRef.current = false;
+      }
       setSaveReviewMessage(null);
     },
     [
@@ -1403,6 +1441,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const activeReview = useMemo(() => {
+    const pin = completedPin ?? getSessionReviewPin();
     if (reviewJob && (analysisRunning || parkedResult)) {
       return {
         gameId: reviewJob.gameId,
@@ -1414,11 +1453,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           !analysisRunning && parkedResult ? 100 : progressPercent,
       };
     }
-    if (completedPin) {
+    if (pin) {
       return {
-        gameId: completedPin.gameId,
-        label: completedPin.label,
-        pgn: completedPin.pgn,
+        gameId: pin.gameId,
+        label: pin.label,
+        pgn: pin.pgn,
         running: false,
         done: true,
         progressPercent: 100,
