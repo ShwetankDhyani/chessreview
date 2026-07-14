@@ -33,12 +33,14 @@ import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
 import { useReviewTimingModel } from "./hooks/useReviewTimingModel";
 import {
+  announce,
   hapticHeavy,
   hapticSelection,
   hapticSoft,
   hapticTap,
   hapticTapStrong,
   notifyError,
+  notifyReviewStart,
   notifySuccess,
   notifyWarning,
   playMoveFeedback,
@@ -892,8 +894,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
     if (!pgn.trim()) return;
-    hapticTapStrong();
     if (analysisState === "done" && moves.length > 0) {
+      hapticTapStrong();
       setTab("moves");
       if (currentMoveIdxRef.current < 0) {
         navigateToMove(moves.length - 1, false);
@@ -903,11 +905,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     if (analysisRunning) {
       // Another game is analyzing — board conflict plaque handles Cancel & analyze.
       if (reviewJob && !samePgn(pgn, reviewJob.pgn)) return;
+      hapticTapStrong();
       showAnalysisProgressRef.current = true;
       setShowAnalysisProgress(true);
       setAnalysisState("analyzing");
       return;
     }
+    notifyReviewStart();
     void runAnalysis(pgn, { visible: true });
   }, [
     pgn,
@@ -922,7 +926,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   /** Re-run full analysis (e.g. after depth change or accuracy formula update). */
   const requestReanalysis = useCallback(() => {
     if (!pgn.trim() || analysisRunning) return;
-    hapticTapStrong();
+    notifyReviewStart();
     void runAnalysis(pgn, { visible: true });
   }, [pgn, analysisRunning, runAnalysis]);
 
@@ -1013,6 +1017,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const cancelAndAnalyzeCurrent = useCallback(() => {
     if (!pgn.trim()) return;
     hapticHeavy();
+    announce("start");
     abortRef.current = true;
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);

@@ -67,7 +67,7 @@ export function FeedbackSettings({ className = "" }: { className?: string }) {
       </div>
       <PrefSwitch
         label="Haptics"
-        detail="Taptic clicks on touch · vibration where supported"
+        detail="Tabs, buttons, and chrome — quiet, classy taps"
         checked={feelOn}
         onChange={(next) => {
           setHapticsEnabled(next);
@@ -77,7 +77,7 @@ export function FeedbackSettings({ className = "" }: { className?: string }) {
       />
       <PrefSwitch
         label="Sounds"
-        detail="Wood moves and soft system cues"
+        detail="Board moves + rare review cues — soft and low"
         checked={soundOn}
         onChange={(next) => {
           setSoundsEnabled(next);

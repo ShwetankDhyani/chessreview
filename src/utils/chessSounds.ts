@@ -1,6 +1,11 @@
 /**
- * Premium sensory layer — UIKit-inspired impacts + notification patterns,
- * wood move audio, and sonic haptic ticks for iOS Safari (no Vibration API).
+ * Sensory layer — classy chrome haptics + reserved chess/announcement audio.
+ *
+ * Policy:
+ * - Navigation / chrome: haptics only (selection, light, soft, medium…).
+ * - Chess board: distinctive low wood sounds + matching haptics by event.
+ * - Website announcements: rare soft low tones (review start / done / warn / error).
+ * - iOS Safari has no Vibration API; chrome uses a near-inaudible low thump as taptic proxy.
  */
 
 export type MoveSoundKind = "move" | "capture" | "castle" | "check" | "promote";
@@ -16,6 +21,8 @@ export type SensoryKind =
   | "success"
   | "warning"
   | "error";
+
+export type AnnounceKind = "start" | "done" | "warn" | "error";
 
 const SOUND_KEY = "cr_sound";
 const HAPTIC_KEY = "cr_haptics";
@@ -80,14 +87,6 @@ function canFire(slot: string, minGapMs: number): boolean {
   return true;
 }
 
-function reducedMotion(): boolean {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
-
 /** True when the device is likely touch-primary (phone / tablet). */
 export function isTouchFeelDevice(): boolean {
   if (typeof window === "undefined") return false;
@@ -147,6 +146,8 @@ async function ensureAudioReady(): Promise<AudioContext | null> {
   }
 }
 
+/* ── Chess wood knocks — low, dry, subtle ─────────────────────────────── */
+
 function fillWoodKnock(
   data: Float32Array,
   sampleRate: number,
@@ -156,30 +157,31 @@ function fillWoodKnock(
   const len = data.length;
   for (let i = 0; i < len; i++) {
     const t = i / sampleRate;
-    const attack = 1 - Math.exp(-t * 1400);
-    const decay = Math.exp(-t * (46 + thump * 14));
+    const attack = 1 - Math.exp(-t * 1100);
+    const decay = Math.exp(-t * (38 + thump * 10));
     const env = attack * decay;
-    const bend = 1 - t * (2.8 + thump * 0.6);
-    const f1 = baseHz * Math.max(0.55, bend);
-    const f2 = f1 * 0.5;
+    const bend = 1 - t * (2.2 + thump * 0.45);
+    const f1 = baseHz * Math.max(0.58, bend);
+    const f2 = f1 * 0.48;
     const body =
-      Math.sin(2 * Math.PI * f1 * t) * 0.72 +
-      Math.sin(2 * Math.PI * f2 * t) * 0.28;
+      Math.sin(2 * Math.PI * f1 * t) * 0.78 +
+      Math.sin(2 * Math.PI * f2 * t) * 0.22;
     data[i] = body * env * peak;
   }
 }
 
 function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
   const sampleRate = ctx.sampleRate;
+  // Intentionally low / muted — board presence without arcade flash.
   const profile: Record<
     MoveSoundKind,
-    { duration: number; baseHz: number; peak: number; thump: number }
+    { duration: number; baseHz: number; peak: number; thump: number; lp: number }
   > = {
-    move: { duration: 0.042, baseHz: 172, peak: 0.13, thump: 0 },
-    capture: { duration: 0.062, baseHz: 112, peak: 0.175, thump: 1.15 },
-    castle: { duration: 0.058, baseHz: 148, peak: 0.145, thump: 0.45 },
-    check: { duration: 0.048, baseHz: 205, peak: 0.125, thump: 0.15 },
-    promote: { duration: 0.07, baseHz: 158, peak: 0.155, thump: 0.55 },
+    move: { duration: 0.048, baseHz: 118, peak: 0.09, thump: 0.1, lp: 420 },
+    capture: { duration: 0.072, baseHz: 86, peak: 0.125, thump: 1.25, lp: 340 },
+    castle: { duration: 0.065, baseHz: 102, peak: 0.1, thump: 0.5, lp: 380 },
+    check: { duration: 0.055, baseHz: 132, peak: 0.1, thump: 0.35, lp: 460 },
+    promote: { duration: 0.08, baseHz: 110, peak: 0.115, thump: 0.7, lp: 400 },
   };
   const p = profile[kind];
   const length = Math.floor(sampleRate * p.duration);
@@ -195,9 +197,9 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = kind === "capture" ? 500 : 720;
-  filter.Q.value = 0.55;
-  gain.gain.value = 0.9;
+  filter.frequency.value = p.lp;
+  filter.Q.value = 0.45;
+  gain.gain.value = 0.85;
   src.buffer = buffer;
   src.connect(filter);
   filter.connect(gain);
@@ -213,17 +215,76 @@ export async function playMoveSound(kind: MoveSoundKind): Promise<void> {
   playWoodSound(ctx, kind);
 }
 
-/** Android Vibration API patterns modeled on UIKit feedback timings (ms). */
+/* ── Soft low announcement cues (rare) ────────────────────────────────── */
+
+function playAnnounceTone(ctx: AudioContext, kind: AnnounceKind): void {
+  const sampleRate = ctx.sampleRate;
+  type Tone = { hz: number; dur: number; peak: number; delay: number };
+  const seq: Record<AnnounceKind, Tone[]> = {
+    start: [{ hz: 164, dur: 0.09, peak: 0.055, delay: 0 }],
+    done: [
+      { hz: 148, dur: 0.07, peak: 0.045, delay: 0 },
+      { hz: 196, dur: 0.1, peak: 0.05, delay: 0.08 },
+    ],
+    warn: [
+      { hz: 140, dur: 0.08, peak: 0.048, delay: 0 },
+      { hz: 118, dur: 0.09, peak: 0.042, delay: 0.09 },
+    ],
+    error: [
+      { hz: 110, dur: 0.09, peak: 0.055, delay: 0 },
+      { hz: 88, dur: 0.12, peak: 0.05, delay: 0.1 },
+    ],
+  };
+
+  const t0 = ctx.currentTime + 0.002;
+  for (const tone of seq[kind]) {
+    const length = Math.max(1, Math.floor(sampleRate * tone.dur));
+    const buffer = ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      const t = i / sampleRate;
+      const env = (1 - Math.exp(-t * 80)) * Math.exp(-t * 28);
+      data[i] = Math.sin(2 * Math.PI * tone.hz * t) * env * tone.peak;
+    }
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 520;
+    filter.Q.value = 0.4;
+    src.buffer = buffer;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.gain.value = 0.8;
+    gain.connect(ctx.destination);
+    src.start(t0 + tone.delay);
+  }
+}
+
+/** Soft site announcement — review start/done and rare warnings. */
+export function announce(kind: AnnounceKind): void {
+  if (!soundsEnabled()) return;
+  if (!canFire(`announce:${kind}`, 400)) return;
+  unlockChessAudio();
+  void ensureAudioReady().then((ctx) => {
+    if (!ctx) return;
+    playAnnounceTone(ctx, kind);
+  });
+}
+
+/* ── Haptics (chrome) ─────────────────────────────────────────────────── */
+
+/** Android Vibration API — short, restrained, classy. */
 const VIBRATE: Record<SensoryKind, number | number[]> = {
-  selection: 8,
-  light: 12,
-  soft: 16,
-  medium: 22,
-  rigid: [10, 16, 18],
-  heavy: [18, 22, 32],
-  success: [10, 40, 14, 48, 18],
-  warning: [18, 60, 22],
-  error: [28, 48, 36, 48, 48],
+  selection: 7,
+  light: 10,
+  soft: 14,
+  medium: 18,
+  rigid: [8, 14, 14],
+  heavy: [14, 18, 24],
+  success: [8, 36, 12, 42],
+  warning: [14, 48, 16],
+  error: [22, 40, 28, 40],
 };
 
 function vibrate(pattern: number | number[]): void {
@@ -238,94 +299,44 @@ function vibrate(pattern: number | number[]): void {
 }
 
 /**
- * Micro-click / taptic proxy for iOS Safari (vibrate is unavailable).
- * Extremely short, quiet — felt as “click” more than heard when volume is normal.
+ * Near-inaudible low thump used as iOS taptic proxy (not a UI “click”).
+ * Gated by haptics only — never by the Sounds preference.
  */
-function playSonicTick(
-  ctx: AudioContext,
-  kind: SensoryKind,
-  opts: { asHapticProxy: boolean; asUiSound: boolean }
-): void {
-  if (!opts.asHapticProxy && !opts.asUiSound) return;
-
+function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
   const sampleRate = ctx.sampleRate;
-  type Tone = { hz: number; dur: number; peak: number; noise?: number };
-  const tones: Record<SensoryKind, Tone[]> = {
-    selection: [{ hz: 1180, dur: 0.009, peak: 0.045, noise: 0.08 }],
-    light: [{ hz: 920, dur: 0.012, peak: 0.05, noise: 0.06 }],
-    soft: [{ hz: 210, dur: 0.028, peak: 0.055, noise: 0.12 }],
-    medium: [
-      { hz: 180, dur: 0.018, peak: 0.06, noise: 0.1 },
-      { hz: 980, dur: 0.01, peak: 0.032, noise: 0.05 },
-    ],
-    rigid: [
-      { hz: 240, dur: 0.014, peak: 0.07, noise: 0.15 },
-      { hz: 1400, dur: 0.008, peak: 0.04, noise: 0.04 },
-    ],
-    heavy: [
-      { hz: 120, dur: 0.034, peak: 0.09, noise: 0.2 },
-      { hz: 420, dur: 0.02, peak: 0.035, noise: 0.08 },
-    ],
-    success: [
-      { hz: 520, dur: 0.03, peak: 0.045 },
-      { hz: 690, dur: 0.032, peak: 0.05 },
-      { hz: 880, dur: 0.04, peak: 0.055 },
-    ],
-    warning: [
-      { hz: 420, dur: 0.04, peak: 0.05 },
-      { hz: 380, dur: 0.05, peak: 0.045 },
-    ],
-    error: [
-      { hz: 240, dur: 0.045, peak: 0.07, noise: 0.18 },
-      { hz: 170, dur: 0.06, peak: 0.06, noise: 0.22 },
-    ],
+  const profile: Record<SensoryKind, { hz: number; dur: number; peak: number }> = {
+    selection: { hz: 96, dur: 0.011, peak: 0.016 },
+    light: { hz: 88, dur: 0.013, peak: 0.018 },
+    soft: { hz: 78, dur: 0.02, peak: 0.02 },
+    medium: { hz: 72, dur: 0.018, peak: 0.024 },
+    rigid: { hz: 84, dur: 0.015, peak: 0.026 },
+    heavy: { hz: 64, dur: 0.028, peak: 0.032 },
+    success: { hz: 90, dur: 0.022, peak: 0.022 },
+    warning: { hz: 70, dur: 0.024, peak: 0.024 },
+    error: { hz: 58, dur: 0.03, peak: 0.028 },
   };
-
-  const hapticScale = opts.asHapticProxy ? (opts.asUiSound ? 0.72 : 1) : 0;
-  const soundScale = opts.asUiSound ? (reducedMotion() ? 0.55 : 0.85) : 0;
-  const amp = Math.max(hapticScale, soundScale);
-  if (amp <= 0) return;
-
-  let t0 = ctx.currentTime + 0.001;
-  const seq = tones[kind];
-  for (let i = 0; i < seq.length; i++) {
-    const tone = seq[i]!;
-    const length = Math.max(1, Math.floor(sampleRate * tone.dur));
-    const buffer = ctx.createBuffer(1, length, sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let s = 0; s < length; s++) {
-      const t = s / sampleRate;
-      const attack = 1 - Math.exp(-t * 2200);
-      const decay = Math.exp(-t * (90 + (kind === "heavy" ? 20 : 40)));
-      const env = attack * decay;
-      const sine = Math.sin(2 * Math.PI * tone.hz * t);
-      const noise =
-        (tone.noise ?? 0) > 0 ? (Math.random() * 2 - 1) * (tone.noise ?? 0) : 0;
-      data[s] = (sine * (1 - (tone.noise ?? 0) * 0.4) + noise) * env * tone.peak * amp;
-    }
-
-    const src = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = kind === "soft" || kind === "heavy" ? "lowpass" : "highpass";
-    filter.frequency.value =
-      kind === "soft" || kind === "heavy"
-        ? 900
-        : kind === "selection"
-          ? 700
-          : 420;
-    filter.Q.value = 0.5;
-    src.buffer = buffer;
-    src.connect(filter);
-    filter.connect(gain);
-    gain.gain.value = 1;
-    gain.connect(ctx.destination);
-
-    // Stagger notification chords like UINotificationFeedback.
-    const gap =
-      kind === "success" ? 0.045 : kind === "warning" ? 0.07 : kind === "error" ? 0.055 : 0;
-    src.start(t0 + i * gap);
+  const p = profile[kind];
+  const length = Math.max(1, Math.floor(sampleRate * p.dur));
+  const buffer = ctx.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) {
+    const t = i / sampleRate;
+    const env = (1 - Math.exp(-t * 1600)) * Math.exp(-t * 110);
+    const body = Math.sin(2 * Math.PI * p.hz * t) * 0.85 + (Math.random() * 2 - 1) * 0.12;
+    data[i] = body * env * p.peak;
   }
+  const src = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 280;
+  filter.Q.value = 0.5;
+  src.buffer = buffer;
+  src.connect(filter);
+  filter.connect(gain);
+  gain.gain.value = 1;
+  gain.connect(ctx.destination);
+  src.start();
 }
 
 function sensoryGap(kind: SensoryKind): number {
@@ -350,41 +361,30 @@ function sensoryGap(kind: SensoryKind): number {
 }
 
 /**
- * Fire a UIKit-style impact / selection / notification.
- * On iPhone, pairs Android-style vibrate patterns with sonic ticks so feel survives Safari.
+ * Chrome / navigation feel — haptics only.
+ * Never plays musical UI clicks; on iPhone uses a muted low thump as taptic proxy.
  */
 export function sensate(kind: SensoryKind): void {
-  if (!hapticsEnabled() && !soundsEnabled()) return;
+  if (!hapticsEnabled()) return;
   if (!canFire(`s:${kind}`, sensoryGap(kind))) return;
 
-  unlockChessAudio();
   vibrate(VIBRATE[kind]);
 
-  const touch = isTouchFeelDevice();
-  const asHapticProxy = hapticsEnabled() && touch;
-  // On touch: micro-ticks when haptics on (iOS proxy). Richer UI chirps when sounds on.
-  // On desktop: only play chirps when sounds are on (avoid surprise clicks on mouse).
-  const asUiSound =
-    soundsEnabled() &&
-    (kind === "success" ||
-      kind === "warning" ||
-      kind === "error" ||
-      (touch && (kind === "medium" || kind === "rigid" || kind === "heavy")));
-
-  if (!asHapticProxy && !asUiSound) return;
-
+  // iOS has no Vibration API — keep feel alive with a haptic-channel proxy only.
+  if (!isTouchFeelDevice()) return;
+  unlockChessAudio();
   void ensureAudioReady().then((ctx) => {
     if (!ctx) return;
-    playSonicTick(ctx, kind, { asHapticProxy, asUiSound });
+    playHapticProxy(ctx, kind);
   });
 }
 
-/** Selection Changed — tabs, filters, switches. */
+/** Selection Changed — tabs, filters, profile, switches. */
 export function hapticSelection(): void {
   sensate("selection");
 }
 
-/** Default chrome tap (UIImpact light). */
+/** Default chrome tap. */
 export function hapticTap(): void {
   sensate("light");
 }
@@ -406,26 +406,39 @@ export function hapticHeavy(): void {
   sensate("heavy");
 }
 
+/** Review finished (or similar). */
 export function notifySuccess(): void {
   sensate("success");
+  announce("done");
 }
 
+/** Soft caution (cancel, missing profile, etc.). */
 export function notifyWarning(): void {
   sensate("warning");
+  announce("warn");
 }
 
+/** Hard failure. */
 export function notifyError(): void {
   sensate("error");
+  announce("error");
+}
+
+/** Analysis / review just began. */
+export function notifyReviewStart(): void {
+  sensate("medium");
+  announce("start");
 }
 
 const MOVE_VIBRATE: Record<MoveSoundKind, number | number[]> = {
-  move: [10, 12, 16],
-  capture: [16, 28, 22, 36],
-  castle: [12, 20, 14, 18],
-  check: [18, 36, 22],
-  promote: [12, 24, 16, 28, 14],
+  move: [8, 10, 12],
+  capture: [14, 22, 18, 28],
+  castle: [10, 16, 12, 14],
+  check: [16, 28, 18],
+  promote: [10, 18, 12, 22, 12],
 };
 
+/** Board step: low wood sound (if enabled) + importance-matched haptics. */
 export function playMoveFeedback(san: string): void {
   const kind = soundKindFromSan(san);
   unlockChessAudio();
@@ -435,14 +448,17 @@ export function playMoveFeedback(san: string): void {
   if (!canFire(`move:${kind}`, 28)) return;
   vibrate(MOVE_VIBRATE[kind]);
 
-  // Subtle taptic proxy under the wood knock on phones (doesn’t fight the piece sound).
+  // Soft taptic under the wood knock on phones (haptic channel only).
   if (isTouchFeelDevice()) {
     void ensureAudioReady().then((ctx) => {
       if (!ctx) return;
-      playSonicTick(ctx, kind === "capture" || kind === "check" ? "rigid" : "light", {
-        asHapticProxy: true,
-        asUiSound: false,
-      });
+      const proxy: SensoryKind =
+        kind === "capture" || kind === "check" || kind === "promote"
+          ? "rigid"
+          : kind === "castle"
+            ? "medium"
+            : "light";
+      playHapticProxy(ctx, proxy);
     });
   }
 }
