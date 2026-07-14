@@ -144,7 +144,7 @@ export function HelpModal({
                 </svg>
               </span>
               <span className="min-w-0 flex-1 truncate font-medium">
-                Message ShwetankDhyani on Chess.com
+                Message on Chess.com
               </span>
             </a>
           </div>
