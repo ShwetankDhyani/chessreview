@@ -26,6 +26,8 @@ export default function AboutPage() {
       <main className="max-w-2xl mx-auto px-4 py-8 pb-16 flex justify-center">
         <a
           href={CHESSCOM_CHALLENGE}
+          target="_blank"
+          rel="noopener noreferrer"
           className="group inline-flex items-center gap-3 rounded-xl border border-chess-border bg-chess-panel/60 px-6 py-4 text-chess-text hover:border-chess-accent/40 hover:bg-chess-accent/[0.08] transition-colors"
         >
           <span className="text-lg font-bold tracking-wide">Play Me!</span>

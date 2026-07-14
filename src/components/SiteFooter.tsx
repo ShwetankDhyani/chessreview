@@ -25,6 +25,8 @@ export function SiteFooter() {
           <div className="flex items-center gap-3">
             <a
               href="https://www.chess.com/play/online/new?isInvited=1&opponent=ShwetankDhyani"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
               Play Me!
@@ -37,7 +39,7 @@ export function SiteFooter() {
               onClick={() => setHelpOpen(true)}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              Support us
+              Support Us
             </button>
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">

@@ -54,7 +54,7 @@ export function HelpModal({
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <h2 id="help-title" className="text-base font-bold text-chess-text">
-            Support us
+            Support Us
           </h2>
           <button
             type="button"
