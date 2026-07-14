@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import type { AnalyzedMove } from "../types";
+import {
+  assignGamePhases,
+  type GamePhase,
+} from "../analysis/gamePhases";
 import { getMeta } from "../utils/classificationMeta";
 import { formatWinChanceDeltaLong, moverWinChanceDeltaPercent } from "../utils/evalDisplay";
 import { computeOpeningChapter } from "../utils/openingContext";
@@ -16,6 +20,12 @@ interface MoveListProps {
   scrollActiveIntoView?: boolean;
 }
 
+const PHASE_LABEL: Record<GamePhase, string> = {
+  opening: "Opening",
+  middlegame: "Middlegame",
+  endgame: "Endgame",
+};
+
 function formatMoveLabel(move: AnalyzedMove): string {
   return move.color === "w"
     ? `${move.moveNumber}. ${move.san}`
@@ -31,6 +41,17 @@ export const MoveList: React.FC<MoveListProps> = ({
 }) => {
   const activeRef = useRef<HTMLButtonElement>(null);
   const chapter = useMemo(() => computeOpeningChapter(moves), [moves]);
+  const phases = useMemo(() => assignGamePhases(moves), [moves]);
+
+  /** First ply index of each phase that actually appears (skip empty leading). */
+  const phaseStarts = useMemo(() => {
+    const starts: Partial<Record<GamePhase, number>> = {};
+    for (let i = 0; i < phases.length; i++) {
+      const p = phases[i]!;
+      if (starts[p] == null) starts[p] = i;
+    }
+    return starts;
+  }, [phases]);
 
   const leftBookLabel = useMemo(() => {
     if (chapter?.leftBookIdx == null) return undefined;
@@ -67,8 +88,28 @@ export const MoveList: React.FC<MoveListProps> = ({
           const whiteMoveIdx = pairIdx * 2;
           const blackMoveIdx = pairIdx * 2 + 1;
 
+          const whitePhaseStart =
+            phaseStarts.opening === whiteMoveIdx ||
+            phaseStarts.middlegame === whiteMoveIdx ||
+            phaseStarts.endgame === whiteMoveIdx
+              ? phases[whiteMoveIdx]
+              : null;
+          const blackPhaseStart =
+            blackMove &&
+            (phaseStarts.opening === blackMoveIdx ||
+              phaseStarts.middlegame === blackMoveIdx ||
+              phaseStarts.endgame === blackMoveIdx)
+              ? phases[blackMoveIdx]
+              : null;
+
           return (
             <React.Fragment key={pairIdx}>
+              {whitePhaseStart && (
+                <PhaseDivider
+                  phase={whitePhaseStart}
+                  onJump={() => onMoveSelect(whiteMoveIdx)}
+                />
+              )}
               {chapter?.leftBookIdx === whiteMoveIdx && (
                 <LeftBookDivider label={leftBookLabel} />
               )}
@@ -87,6 +128,9 @@ export const MoveList: React.FC<MoveListProps> = ({
                   onClick={() => onMoveSelect(whiteMoveIdx)}
                 />
 
+                {blackPhaseStart && (
+                  <PhaseDivider phase={blackPhaseStart} inline />
+                )}
                 {chapter?.leftBookIdx === blackMoveIdx && (
                   <LeftBookDivider label={leftBookLabel} inline />
                 )}
@@ -108,6 +152,59 @@ export const MoveList: React.FC<MoveListProps> = ({
     </div>
   );
 };
+
+function PhaseDivider({
+  phase,
+  inline = false,
+  onJump,
+}: {
+  phase: GamePhase;
+  inline?: boolean;
+  onJump?: () => void;
+}) {
+  const label = PHASE_LABEL[phase];
+  const tone =
+    phase === "opening"
+      ? "text-[#c4a484]"
+      : phase === "middlegame"
+        ? "text-chess-accent"
+        : "text-chess-muted";
+  const rule =
+    phase === "opening"
+      ? "bg-[#c4a484]/35"
+      : phase === "middlegame"
+        ? "bg-chess-accent/35"
+        : "bg-chess-border";
+
+  if (inline) {
+    return (
+      <span
+        className={`flex-shrink-0 px-0.5 text-[8px] font-bold uppercase tracking-wide ${tone}`}
+        title={label}
+        aria-hidden
+      >
+        ‖
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onJump}
+      className="flex w-full items-center gap-2 py-1.5 pl-7 pr-1 group"
+      aria-label={`Jump to ${label}`}
+    >
+      <div className={`flex-1 h-px ${rule}`} />
+      <span
+        className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 group-hover:underline ${tone}`}
+      >
+        {label}
+      </span>
+      <div className={`flex-1 h-px ${rule}`} />
+    </button>
+  );
+}
 
 function LeftBookDivider({
   label,
