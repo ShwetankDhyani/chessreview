@@ -70,10 +70,23 @@ export interface AccuracyStats {
   black: number;
 }
 
+/** Per-phase CAPS2 accuracy; null = not enough scored moves to grade. */
+export interface PhaseSideAccuracy {
+  white: number | null;
+  black: number | null;
+}
+
+export interface PhaseAccuracyStats {
+  opening: PhaseSideAccuracy;
+  middlegame: PhaseSideAccuracy;
+  endgame: PhaseSideAccuracy;
+}
+
 export interface ReviewSummary {
   white: ClassificationCounts;
   black: ClassificationCounts;
   accuracy: AccuracyStats;
+  phaseAccuracy?: PhaseAccuracyStats;
   coverage?: ReviewCoverage;
   accuracyMeta?: AccuracyMeta;
 }

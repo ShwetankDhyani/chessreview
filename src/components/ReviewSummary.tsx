@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   ReviewSummary as ReviewSummaryType,
   AnalyzedMove,
   ReviewRun,
+  PhaseAccuracyStats,
 } from "../types";
 import { AccuracyWheel } from "./AccuracyWheel";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { ShareReviewActions } from "./ShareReviewActions";
+import { computePhaseAccuracies } from "../analysis/gamePhases";
 
 interface ReviewSummaryProps {
   summary: ReviewSummaryType;
@@ -37,12 +39,92 @@ const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
 const MOVE_GRID =
   "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)";
 
-function accuracyStrokeColor(value: number): string {
-  if (value >= 85) return "#6daa6d";
-  if (value >= 65) return "#e6c84a";
-  if (value >= 45) return "#e07b39";
+/** Match AccuracyWheel tone bands for serious report-card readouts. */
+function accuracyTone(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "#666";
+  if (value >= 90) return "#6daa6d";
+  if (value >= 75) return "#96bc6c";
+  if (value >= 60) return "#e6c84a";
+  if (value >= 40) return "#e07b39";
   return "#ca3c3c";
 }
+
+function formatPhaseAccuracy(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return value.toFixed(1);
+}
+
+const PHASE_ROWS: Array<{
+  key: keyof PhaseAccuracyStats;
+  label: string;
+}> = [
+  { key: "opening", label: "Opening" },
+  { key: "middlegame", label: "Middlegame" },
+  { key: "endgame", label: "Endgame" },
+];
+
+const PHASE_GRID =
+  "minmax(2.25rem, 1fr) minmax(5.5rem, auto) minmax(2.25rem, 1fr)";
+
+const PhaseAccuracyTable: React.FC<{ phases: PhaseAccuracyStats }> = ({
+  phases,
+}) => (
+  <div className="min-w-0">
+    <div
+      className="grid gap-x-2 mb-1.5 min-w-0"
+      style={{ gridTemplateColumns: PHASE_GRID }}
+    >
+      <div className="flex justify-end pr-1">
+        <PieceIndicator side="white" />
+      </div>
+      <span className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider text-center self-center">
+        Phase
+      </span>
+      <div className="flex justify-start pl-1">
+        <PieceIndicator side="black" />
+      </div>
+    </div>
+
+    <div className="space-y-px min-w-0">
+      {PHASE_ROWS.map(({ key, label }) => {
+        const row = phases[key];
+        return (
+          <div
+            key={key}
+            className="grid items-center gap-x-1.5 sm:gap-x-2 py-2 min-w-0 rounded-md"
+            style={{ gridTemplateColumns: PHASE_GRID }}
+          >
+            <div className="flex justify-end min-w-0 pr-1 border-r border-chess-border/25">
+              <span
+                className="text-sm font-bold tabular-nums tracking-tight"
+                style={{ color: accuracyTone(row.white) }}
+              >
+                {formatPhaseAccuracy(row.white)}
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center min-w-0 px-0.5">
+              <span className="text-xs font-medium text-chess-text tracking-tight">
+                {label}
+              </span>
+            </div>
+            <div className="flex justify-start min-w-0 pl-1 border-l border-chess-border/25">
+              <span
+                className="text-sm font-bold tabular-nums tracking-tight"
+                style={{ color: accuracyTone(row.black) }}
+              >
+                {formatPhaseAccuracy(row.black)}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <p className="mt-2.5 text-[10px] leading-relaxed text-chess-muted text-center">
+      CAPS2 · scored moves only · book &amp; forced excluded
+    </p>
+  </div>
+);
 
 function ReviewSection({
   title,
@@ -144,6 +226,11 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   const accLeader: "white" | "black" | null =
     accGap < 0.5 ? null : wAcc >= bAcc ? "white" : "black";
 
+  const phaseAccuracy: PhaseAccuracyStats = useMemo(
+    () => summary.phaseAccuracy ?? computePhaseAccuracies(moves),
+    [summary.phaseAccuracy, moves]
+  );
+
   return (
     <div className="flex flex-col min-h-full p-3 sm:p-4 animate-fade-in">
       <ReviewPlayersHeader whiteName={wLabel} blackName={bLabel} />
@@ -176,6 +263,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             showName={false}
           />
         </div>
+      </ReviewSection>
+
+      <ReviewSection title="Phase accuracy">
+        <PhaseAccuracyTable phases={phaseAccuracy} />
       </ReviewSection>
 
       <ReviewSection title="Move breakdown">

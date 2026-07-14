@@ -9,6 +9,7 @@ import type {
   MoveClassification,
 } from "../types";
 import { caps2AccuracyForMoves } from "./caps2Accuracy";
+import { computePhaseAccuracies } from "./gamePhases";
 import {
   classifyReviewMove,
   engineRankFromMultipv,
@@ -98,6 +99,7 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
       white: caps2AccuracyForMoves(moves, "w"),
       black: caps2AccuracyForMoves(moves, "b"),
     },
+    phaseAccuracy: computePhaseAccuracies(moves),
     coverage: {
       totalPlies: moves.length,
       classifiedPlies: moves.filter((m) => m.classification).length,
