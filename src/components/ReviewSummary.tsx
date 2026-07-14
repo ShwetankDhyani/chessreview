@@ -317,8 +317,9 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   }, [moves, summary.accuracy.black, accuracyOpts]);
 
   const accGap = Math.abs(wAcc - bAcc);
+  const nearTie = accGap < 1;
   const accLeader: "white" | "black" | null =
-    accGap < 0.5 ? null : wAcc >= bAcc ? "white" : "black";
+    nearTie ? null : wAcc >= bAcc ? "white" : "black";
 
   const phaseAccuracy: PhaseAccuracyStats = useMemo(
     () => computePhaseAccuracies(moves, accuracyOpts),
