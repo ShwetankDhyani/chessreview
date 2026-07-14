@@ -30,7 +30,11 @@ import { samePgn } from "./utils/pgnIdentity";
 import {
   clearSessionReviewPin,
   getSessionReviewPin,
+  jobFromPin,
+  matchesReviewIdentity,
+  resolveActiveReview,
   setSessionReviewPin,
+  shouldSoftBrowseOtherGame,
   type SessionReviewPin,
 } from "./utils/sessionReviewPin";
 import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
@@ -648,9 +652,29 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   useEffect(() => {
     currentFenRef.current = currentFen;
-  displayPgnRef.current = pgn;
-  sessionGameIdRef.current = sessionGameId;
   }, [currentFen]);
+
+  useEffect(() => {
+    displayPgnRef.current = pgn;
+  }, [pgn]);
+
+  useEffect(() => {
+    sessionGameIdRef.current = sessionGameId;
+  }, [sessionGameId]);
+
+  // Heal React state from the tab-memory pin after remounts / HMR.
+  useEffect(() => {
+    const pin = getSessionReviewPin();
+    if (!pin) return;
+    if (!completedPin) setCompletedPinState(pin);
+    if (!reviewJobRef.current) {
+      const job = jobFromPin(pin);
+      reviewJobRef.current = job;
+      setReviewJob(job);
+    }
+    if (!parkedResult) setParkedResult(pin.result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount / memory heal only
+  }, []);
 
   useEffect(() => {
     currentMoveIdxRef.current = currentMoveIdx;
@@ -929,6 +953,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     return true;
   }, [analysisRunning]);
 
+  /** Reattach the finished Games pin so soft-browse never drops it. */
+  const retainCompletedPin = useCallback(() => {
+    const pin = completedPin ?? getSessionReviewPin();
+    if (!pin) return null;
+    if (!completedPin) setCompletedPin(pin);
+    if (!reviewJobRef.current) {
+      const job = jobFromPin(pin);
+      reviewJobRef.current = job;
+      setReviewJob(job);
+    }
+    if (!parkedResult) setParkedResult(pin.result);
+    return pin;
+  }, [completedPin, parkedResult, setCompletedPin]);
+
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
     if (!pgn.trim()) return;
@@ -949,6 +987,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setAnalysisState("analyzing");
       return;
     }
+    const pin = completedPin ?? getSessionReviewPin();
+    if (pin && !matchesReviewIdentity({ pgn, gameId: sessionGameId }, pin)) {
+      // Finished review still parked — board plaque handles Open / Analyze this.
+      return;
+    }
     notifyReviewStart();
     void runAnalysis(pgn, { visible: true });
   }, [
@@ -957,6 +1000,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     moves.length,
     analysisRunning,
     reviewJob,
+    completedPin,
+    sessionGameId,
     runAnalysis,
     navigateToMove,
   ]);
@@ -1034,10 +1079,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   }, []);
 
   const restoreCompletedPin = useCallback(() => {
-    const pin = completedPin ?? getSessionReviewPin();
+    const pin = retainCompletedPin();
     if (!pin) return false;
-    if (!completedPin) setCompletedPin(pin);
     setSessionGameId(pin.gameId);
+    sessionGameIdRef.current = pin.gameId;
     const loaded = loadPgn(pin.pgn, { keepAnalysis: true });
     if (!loaded) return false;
     applyReviewResult(pin.result, {
@@ -1047,17 +1092,18 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     });
     setTab("moves");
     return true;
-  }, [completedPin, loadPgn, applyReviewResult, setCompletedPin]);
+  }, [retainCompletedPin, loadPgn, applyReviewResult]);
 
   const returnToActiveReview = useCallback(() => {
     hapticSoft();
-    const job = reviewJob;
+    const job = reviewJob ?? (completedPin ? jobFromPin(completedPin) : null);
     if (!job) {
       if (restoreCompletedPin()) return;
       setTab("moves");
       return;
     }
     setSessionGameId(job.gameId);
+    sessionGameIdRef.current = job.gameId;
     if (analysisRunning) {
       loadPgn(job.pgn, { keepAnalysis: true });
       showAnalysisProgressRef.current = true;
@@ -1066,8 +1112,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setTab("moves");
       return;
     }
-    if (parkedResult) {
-      const parked = parkedResult;
+    if (parkedResult || completedPin) {
+      const parked = parkedResult ?? completedPin!.result;
       loadPgn(job.pgn, { keepAnalysis: true });
       applyReviewResult(parked, {
         pgn: job.pgn,
@@ -1084,6 +1130,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     reviewJob,
     analysisRunning,
     parkedResult,
+    completedPin,
     loadPgn,
     applyReviewResult,
     restoreCompletedPin,
@@ -1100,34 +1147,50 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     showAnalysisProgressRef.current = false;
     setAnalysisStartedAt(null);
     clearReviewJob();
+    clearCompletedPin();
     void runAnalysis(pgn, { visible: true });
-  }, [pgn, clearReviewJob, runAnalysis]);
+  }, [pgn, clearReviewJob, clearCompletedPin, runAnalysis]);
 
   const selectGame = useCallback(
     (pgnStr: string, meta?: { id?: string }) => {
       hapticSelection();
-      const pin = completedPin ?? getSessionReviewPin();
+      const pin = retainCompletedPin() ?? completedPin ?? getSessionReviewPin();
+      const target = { pgn: pgnStr, gameId: meta?.id ?? null };
       // Jump back to the game that is already analyzing / parked / pinned.
-      if (reviewJob && samePgn(pgnStr, reviewJob.pgn)) {
-        if (meta?.id) setSessionGameId(meta.id);
+      if (matchesReviewIdentity(target, reviewJob)) {
+        if (meta?.id) {
+          setSessionGameId(meta.id);
+          sessionGameIdRef.current = meta.id;
+        }
         returnToActiveReview();
         return;
       }
-      if (pin && samePgn(pgnStr, pin.pgn) && !analysisRunning) {
-        if (meta?.id) setSessionGameId(meta.id);
+      if (
+        pin &&
+        matchesReviewIdentity(target, pin) &&
+        !analysisRunning
+      ) {
+        if (meta?.id) {
+          setSessionGameId(meta.id);
+          sessionGameIdRef.current = meta.id;
+        }
         restoreCompletedPin();
         return;
       }
       // Open another board without killing the in-flight review.
-      if (analysisRunning && reviewJob && !samePgn(pgnStr, reviewJob.pgn)) {
+      if (analysisRunning && reviewJob && !matchesReviewIdentity(target, reviewJob)) {
         setSessionGameId(meta?.id ?? null);
+        sessionGameIdRef.current = meta?.id ?? null;
         const loaded = loadPgn(pgnStr, { keepAnalysis: true });
         if (!loaded) return;
         setSaveReviewMessage(null);
         return;
       }
       if (pgn.trim() && samePgn(pgnStr, pgn)) {
-        if (meta?.id) setSessionGameId(meta.id);
+        if (meta?.id) {
+          setSessionGameId(meta.id);
+          sessionGameIdRef.current = meta.id;
+        }
         setTab("moves");
         if (analysisRunning) {
           showAnalysisProgressRef.current = true;
@@ -1137,12 +1200,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       }
       // Browse another game — never wipe a finished session pin.
       setSessionGameId(meta?.id ?? null);
-      const loaded = loadPgn(pgnStr, {
-        keepAnalysis: analysisRunning || !!pin || !!reviewJob,
+      sessionGameIdRef.current = meta?.id ?? null;
+      const keep = shouldSoftBrowseOtherGame({
+        analysisRunning,
+        reviewJob,
+        pin,
       });
+      const loaded = loadPgn(pgnStr, { keepAnalysis: keep });
       if (!loaded) return;
       if (pin && !analysisRunning) {
         // Soft-browse: board shows the new game, pin keeps the finished review.
+        retainCompletedPin();
         setMoves([]);
         setSummary(null);
         setReviewResult(null);
@@ -1161,6 +1229,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       completedPin,
       returnToActiveReview,
       restoreCompletedPin,
+      retainCompletedPin,
     ]
   );
 
@@ -1414,6 +1483,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     !samePgn(pgn, reviewJob.pgn)
   );
 
+  const pinForAway = completedPin ?? getSessionReviewPin();
+  const isViewingAwayFromCompleted = !!(
+    pinForAway &&
+    !analysisRunning &&
+    pgn.trim() &&
+    !matchesReviewIdentity(
+      { pgn, gameId: sessionGameId },
+      pinForAway
+    )
+  );
+
   const isAnalyzing = analysisRunning && analysisState === "analyzing" && !isViewingAway;
 
   const analysisPlyCount = gamePlyCount || replayFrames.length;
@@ -1442,38 +1522,18 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const activeReview = useMemo(() => {
     const pin = completedPin ?? getSessionReviewPin();
-    if (reviewJob && (analysisRunning || parkedResult)) {
-      return {
-        gameId: reviewJob.gameId,
-        label: reviewJob.label,
-        pgn: reviewJob.pgn,
-        running: analysisRunning,
-        done: !analysisRunning && !!parkedResult,
-        progressPercent:
-          !analysisRunning && parkedResult ? 100 : progressPercent,
-      };
-    }
-    if (pin) {
-      return {
-        gameId: pin.gameId,
-        label: pin.label,
-        pgn: pin.pgn,
-        running: false,
-        done: true,
-        progressPercent: 100,
-      };
-    }
-    if (!pgn.trim()) return null;
-    const done = analysisState === "done" && moves.length > 0;
-    if (!analysisRunning && !done) return null;
-    return {
-      gameId: sessionGameId,
-      label: vsLabel,
+    return resolveActiveReview({
+      reviewJob,
+      analysisRunning,
+      parkedResult,
+      pin,
+      progressPercent,
       pgn,
-      running: analysisRunning,
-      done,
-      progressPercent: done ? 100 : progressPercent,
-    };
+      analysisState,
+      movesLength: moves.length,
+      sessionGameId,
+      vsLabel,
+    });
   }, [
     reviewJob,
     analysisRunning,
@@ -1494,7 +1554,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         onWait: returnToActiveReview,
         onCancelAndAnalyze: cancelAndAnalyzeCurrent,
       }
-    : null;
+    : isViewingAwayFromCompleted
+      ? {
+          runningLabel: pinForAway!.label,
+          progressPercent: 100,
+          done: true,
+          onWait: returnToActiveReview,
+          onCancelAndAnalyze: cancelAndAnalyzeCurrent,
+        }
+      : null;
 
   const boardPositionFen = continuationFen ?? currentFen;
   const engineLineGlow =
@@ -1582,6 +1650,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     !!pgn &&
     (!isMobileLayout || tab === "moves") &&
     (isViewingAway ||
+      isViewingAwayFromCompleted ||
       isAnalyzing ||
       (moves.length === 0 && analysisState === "loading"));
 
@@ -1949,6 +2018,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                         >
                           Wait · {Math.round(progressPercent)}%
                         </button>
+                      ) : isViewingAwayFromCompleted ? (
+                        <button
+                          type="button"
+                          onClick={returnToActiveReview}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent hover:border-chess-accent/40"
+                        >
+                          Open review
+                        </button>
                       ) : analysisState === "loading" ? (
                         <AnalyzeNowButton
                           variant="compact"
@@ -1981,6 +2058,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           <span>
                             Another review is running. Cancel it on the board to
                             analyze this game, or wait for it to finish.
+                          </span>
+                        </div>
+                      ) : isViewingAwayFromCompleted ? (
+                        <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
+                          <span>
+                            Your last review is still open. Tap Open review to
+                            return, or analyze this game instead.
                           </span>
                         </div>
                       ) : (

@@ -298,17 +298,24 @@ export const GameList: React.FC<GameListProps> = ({
     activeReview?.gameId != null
       ? games.find((g) => g.id === activeReview.gameId) ?? null
       : activeReview
-        ? games.find((g) => g.pgn.replace(/\s+/g, " ").trim() === activeReview.pgn.replace(/\s+/g, " ").trim()) ?? null
+        ? games.find(
+            (g) =>
+              g.pgn.replace(/\s+/g, " ").trim() ===
+              activeReview.pgn.replace(/\s+/g, " ").trim()
+          ) ?? null
         : null;
-
-  const listGames = pinnedGame
-    ? filteredGames.filter((g) => g.id !== pinnedGame.id)
-    : filteredGames;
 
   const showActivePin =
     !!activeReview &&
     !!activeReview.pgn.trim() &&
     (activeReview.running || activeReview.done);
+
+  // Never drop the reviewed game from Games while its session pin is live —
+  // keep it in the sticky header only; the scroll list excludes that one row.
+  const listGames =
+    showActivePin && pinnedGame
+      ? filteredGames.filter((g) => g.id !== pinnedGame.id)
+      : filteredGames;
 
   const handleRowSelect = (game: GameListItem) => {
     onGameSelect(game.pgn, { id: game.id });
