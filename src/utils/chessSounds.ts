@@ -177,17 +177,66 @@ function fillImpulse(
   }
 }
 
+/** Harsh wood chop — noise-forward transient for captures. */
+function fillChop(
+  data: Float32Array,
+  sampleRate: number,
+  opts: { peak: number; decay: number; thudHz: number }
+): void {
+  const { peak, decay, thudHz } = opts;
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    // Near-instant blade crack, then body.
+    const crack = Math.exp(-t * 220) * (t < 0.004 ? 1 : Math.exp(-(t - 0.004) * 90));
+    const body = (1 - Math.exp(-t * 900)) * Math.exp(-t * decay);
+    const noise = (Math.random() * 2 - 1) * (0.85 * crack + 0.35 * body);
+    const thud =
+      Math.sin(2 * Math.PI * thudHz * t) * 0.55 * body +
+      Math.sin(2 * Math.PI * thudHz * 0.5 * t) * 0.25 * body;
+    // Soft square-ish mid snap for “chop” character.
+    const snapHz = 380 * Math.max(0.4, 1 - t * 8);
+    const snap =
+      Math.sign(Math.sin(2 * Math.PI * snapHz * t)) * 0.22 * Math.exp(-t * 55);
+    data[i] = (noise * 0.72 + thud + snap) * peak;
+  }
+}
+
+/** Alarming check ping — dissonant short siren tick, not a wood knock. */
+function fillAlarmPip(
+  data: Float32Array,
+  sampleRate: number,
+  opts: { hz: number; peak: number; decay: number }
+): void {
+  const { hz, peak, decay } = opts;
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const env = (1 - Math.exp(-t * 2800)) * Math.exp(-t * decay);
+    // Slight dissonance (minor 2nd overtone) reads as “alert,” not musical.
+    const wave =
+      Math.sin(2 * Math.PI * hz * t) * 0.62 +
+      Math.sin(2 * Math.PI * hz * 1.06 * t) * 0.28 +
+      Math.sin(2 * Math.PI * hz * 2 * t) * 0.1;
+    data[i] = wave * env * peak;
+  }
+}
+
 function playBuffered(
   ctx: AudioContext,
   buffer: AudioBuffer,
-  opts: { lp: number; gain?: number; when?: number }
+  opts: {
+    lp?: number;
+    hp?: number;
+    gain?: number;
+    when?: number;
+    filterType?: BiquadFilterType;
+  }
 ): void {
   const src = ctx.createBufferSource();
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = opts.lp;
-  filter.Q.value = 0.55;
+  filter.type = opts.filterType ?? (opts.hp ? "highpass" : "lowpass");
+  filter.frequency.value = opts.hp ?? opts.lp ?? 800;
+  filter.Q.value = 0.7;
   gain.gain.value = opts.gain ?? 0.95;
   src.buffer = buffer;
   src.connect(filter);
@@ -204,14 +253,24 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
   const make = (
     dur: number,
     fill: (data: Float32Array) => void,
-    lp: number,
-    when = t0,
-    gain = 0.95
+    playOpts: {
+      lp?: number;
+      hp?: number;
+      when?: number;
+      gain?: number;
+      filterType?: BiquadFilterType;
+    } = {}
   ) => {
     const length = Math.max(1, Math.floor(sampleRate * dur));
     const buffer = ctx.createBuffer(1, length, sampleRate);
     fill(buffer.getChannelData(0));
-    playBuffered(ctx, buffer, { lp, when, gain });
+    playBuffered(ctx, buffer, {
+      lp: playOpts.lp,
+      hp: playOpts.hp,
+      when: playOpts.when ?? t0,
+      gain: playOpts.gain ?? 0.95,
+      filterType: playOpts.filterType,
+    });
   };
 
   switch (kind) {
@@ -228,38 +287,30 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             noise: 0.12,
             bend: 2.6,
           }),
-        780
+        { lp: 780 }
       );
       break;
     case "capture":
-      // Heavier board thump + short clack.
+      // Harsh chop: blade crack + low board thud (not a soft wood tap).
       make(
-        0.07,
+        0.09,
         (data) =>
-          fillImpulse(data, sampleRate, {
-            baseHz: 95,
-            peak: 0.2,
-            attack: 1200,
-            decay: 34,
-            noise: 0.22,
-            bend: 1.8,
+          fillChop(data, sampleRate, {
+            peak: 0.28,
+            decay: 28,
+            thudHz: 78,
           }),
-        420
+        { lp: 2600, gain: 1 }
       );
       make(
-        0.04,
+        0.045,
         (data) =>
-          fillImpulse(data, sampleRate, {
-            baseHz: 240,
-            peak: 0.1,
-            attack: 2000,
-            decay: 70,
-            noise: 0.08,
-            bend: 3.2,
+          fillChop(data, sampleRate, {
+            peak: 0.14,
+            decay: 60,
+            thudHz: 140,
           }),
-        900,
-        t0 + 0.018,
-        0.7
+        { hp: 480, gain: 0.75, when: t0 + 0.012 }
       );
       break;
     case "castle":
@@ -274,7 +325,7 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             decay: 55,
             noise: 0.1,
           }),
-        700
+        { lp: 700 }
       );
       make(
         0.05,
@@ -286,38 +337,42 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             decay: 48,
             noise: 0.12,
           }),
-        650,
-        t0 + 0.055
+        { lp: 650, when: t0 + 0.055 }
       );
       break;
     case "check":
-      // Piece drop + bright alert tick.
-      make(
-        0.05,
-        (data) =>
-          fillImpulse(data, sampleRate, {
-            baseHz: 175,
-            peak: 0.145,
-            attack: 1600,
-            decay: 50,
-            noise: 0.1,
-          }),
-        720
-      );
+      // Urgent double alarm after a short piece contact — clearly “alert.”
       make(
         0.035,
         (data) =>
           fillImpulse(data, sampleRate, {
-            baseHz: 520,
-            peak: 0.075,
-            attack: 2200,
-            decay: 90,
-            noise: 0.04,
-            bend: 1.2,
+            baseHz: 190,
+            peak: 0.1,
+            attack: 1800,
+            decay: 70,
+            noise: 0.08,
           }),
-        1800,
-        t0 + 0.028,
-        0.65
+        { lp: 820, gain: 0.7 }
+      );
+      make(
+        0.07,
+        (data) =>
+          fillAlarmPip(data, sampleRate, {
+            hz: 740,
+            peak: 0.13,
+            decay: 42,
+          }),
+        { hp: 420, gain: 0.95, when: t0 + 0.03 }
+      );
+      make(
+        0.085,
+        (data) =>
+          fillAlarmPip(data, sampleRate, {
+            hz: 930,
+            peak: 0.125,
+            decay: 36,
+          }),
+        { hp: 480, gain: 0.9, when: t0 + 0.095 }
       );
       break;
     case "promote":
@@ -332,7 +387,7 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             decay: 48,
             noise: 0.1,
           }),
-        680
+        { lp: 680 }
       );
       make(
         0.06,
@@ -345,9 +400,7 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             noise: 0.05,
             bend: 1.4,
           }),
-        1100,
-        t0 + 0.04,
-        0.7
+        { lp: 1100, when: t0 + 0.04, gain: 0.7 }
       );
       make(
         0.07,
@@ -360,9 +413,7 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
             noise: 0.03,
             bend: 1.1,
           }),
-        1400,
-        t0 + 0.085,
-        0.55
+        { lp: 1400, when: t0 + 0.085, gain: 0.55 }
       );
       break;
   }
