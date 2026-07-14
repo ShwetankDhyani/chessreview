@@ -13,6 +13,7 @@
     "laptop:stop": "bash scripts/stop-laptop-bg.sh",
     "expose-engine": "bash scripts/expose-engine.sh",
     "check-engine": "bash scripts/check-engine.sh",
+    "precompute-demo": "vite-node scripts/precompute-demo-review.ts",
     "build": "tsc && vite build",
     "test": "vitest run",
     "test:watch": "vitest",

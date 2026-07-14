@@ -56,6 +56,7 @@ import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { DEMO_GAME_PGN } from "./demoGame";
+import { fetchDemoReview } from "./utils/demoReview";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
@@ -998,8 +999,41 @@ export default function App() {
 
   const tryDemoGame = useCallback(() => {
     dismissWelcome();
-    selectGame(DEMO_GAME_PGN);
-  }, [dismissWelcome, selectGame]);
+    void (async () => {
+      try {
+        const demo = await fetchDemoReview();
+        const loaded = loadPgn(demo.pgn || DEMO_GAME_PGN);
+        if (!loaded) return;
+        const fallbackRun = {
+          runId: "demo-review",
+          engineVersion: "demo",
+          startedAt: demo.createdAt ?? new Date().toISOString(),
+          finishedAt: demo.createdAt ?? new Date().toISOString(),
+          requestedDepth: demo.depth ?? depth,
+          fastDepth: demo.depth ?? depth,
+          deepDepth: demo.depth ?? depth,
+          backendPolicy: "consensus" as const,
+          pgnHash: "demo",
+        };
+        applyReviewResult({
+          moves: demo.moves,
+          summary: demo.summary,
+          run: demo.run ?? fallbackRun,
+        });
+        setTab("moves");
+      } catch {
+        selectGame(DEMO_GAME_PGN);
+        void runAnalysis(DEMO_GAME_PGN, { visible: true });
+      }
+    })();
+  }, [
+    dismissWelcome,
+    loadPgn,
+    applyReviewResult,
+    depth,
+    selectGame,
+    runAnalysis,
+  ]);
 
   // Unlock Web Audio on first touch (required on iOS / Android Chrome)
   useEffect(() => {
