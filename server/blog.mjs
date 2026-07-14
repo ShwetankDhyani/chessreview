@@ -23,6 +23,7 @@ const MAX_BODY = 80_000;
 const MAX_REPLY = 800;
 const MAX_NAME = 40;
 const MAX_MEDIA_BYTES = 2_500_000;
+const MAX_REPLY_DEPTH = 5;
 
 function newId(len = 10) {
   return randomBytes(8)
@@ -40,6 +41,7 @@ function publicReply(row) {
     id: row.id,
     name: row.name,
     body: row.body,
+    parentId: row.parentId || null,
     chesscom: row.chesscom || null,
     lichess: row.lichess || null,
     createdAt: row.createdAt,
@@ -239,17 +241,32 @@ export function fileAddReply(postId, input) {
     ""
   );
   const lichess = clip(input?.lichess, 40).replace(/^@/, "");
+  const parentId = clip(input?.parentId, 24) || null;
 
   const s = loadState();
   const post = s.posts.find((p) => p.id === postId);
   if (!post || !post.published) throw new Error("Post not found");
 
   const list = Array.isArray(s.replies[postId]) ? s.replies[postId] : [];
+  if (parentId) {
+    const parent = list.find((r) => r.id === parentId);
+    if (!parent) throw new Error("Parent reply not found");
+    let depth = 1;
+    let cursor = parent;
+    while (cursor?.parentId) {
+      depth += 1;
+      cursor = list.find((r) => r.id === cursor.parentId);
+      if (!cursor) break;
+      if (depth >= MAX_REPLY_DEPTH) throw new Error("Thread is too deep");
+    }
+  }
+
   const deleteToken = randomBytes(18).toString("hex");
   const row = {
     id: newId(10),
     name,
     body,
+    parentId,
     chesscom: chesscom || null,
     lichess: lichess || null,
     createdAt: new Date().toISOString(),
@@ -265,19 +282,31 @@ export function fileAddReply(postId, input) {
   return { ...publicReply(row), deleteToken };
 }
 
-export function fileDeleteReply(postId, replyId, deleteToken) {
+export function fileDeleteReply(postId, replyId, { deleteToken = "", asAdmin = false } = {}) {
   const s = loadState();
   const list = Array.isArray(s.replies[postId]) ? [...s.replies[postId]] : [];
   const idx = list.findIndex((r) => r.id === replyId);
   if (idx < 0) throw new Error("Reply not found");
   const row = list[idx];
-  if (!tokensMatch(deleteToken, row.deleteHash)) {
+  if (!asAdmin && !tokensMatch(deleteToken, row.deleteHash)) {
     throw new Error("Not allowed to delete this reply");
   }
-  list.splice(idx, 1);
-  s.replies[postId] = list;
+
+  const remove = new Set([replyId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const r of list) {
+      if (r.parentId && remove.has(r.parentId) && !remove.has(r.id)) {
+        remove.add(r.id);
+        changed = true;
+      }
+    }
+  }
+
+  s.replies[postId] = list.filter((r) => !remove.has(r.id));
   saveState(s);
-  return { ok: true };
+  return { ok: true, deletedIds: [...remove] };
 }
 
 const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
@@ -455,11 +484,15 @@ export function handleEngineBlogRequest(req, res, url, { readJsonBody, adminSecr
           return;
         }
         const body = await readJsonBody(req);
-        const result = fileDeleteReply(
-          post.id,
-          String(body?.replyId ?? body?.id ?? "").trim(),
-          String(body?.deleteToken ?? "").trim()
-        );
+        const key = (
+          req.headers["x-admin-key"] ??
+          String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "")
+        ).trim();
+        const asAdmin = !!(adminSecret && key === adminSecret);
+        const result = fileDeleteReply(post.id, String(body?.replyId ?? body?.id ?? "").trim(), {
+          deleteToken: String(body?.deleteToken ?? "").trim(),
+          asAdmin,
+        });
         res.writeHead(200);
         res.end(JSON.stringify(result));
       } catch (e) {

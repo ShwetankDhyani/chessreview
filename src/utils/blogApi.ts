@@ -20,14 +20,60 @@ export type BlogReply = {
   id: string;
   name: string;
   body: string;
+  parentId?: string | null;
   chesscom: string | null;
   lichess: string | null;
   createdAt: string;
   deleteToken?: string;
 };
 
+export type BlogReplyNode = BlogReply & { children: BlogReplyNode[] };
+
 const REPLY_TOKEN_KEY = "cr_blog_reply_tokens";
 const REPLY_NAME_KEY = "cr_blog_reply_name";
+const ADMIN_KEY_STORAGE = "cr_admin_key";
+export const MAX_REPLY_DEPTH = 5;
+
+export function loadSessionAdminKey(): string {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function buildReplyTree(replies: BlogReply[]): BlogReplyNode[] {
+  const nodes = new Map<string, BlogReplyNode>();
+  for (const r of replies) {
+    nodes.set(r.id, { ...r, parentId: r.parentId || null, children: [] });
+  }
+  const roots: BlogReplyNode[] = [];
+  for (const node of nodes.values()) {
+    if (node.parentId && nodes.has(node.parentId)) {
+      nodes.get(node.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  const sortNodes = (list: BlogReplyNode[]) => {
+    list.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    for (const n of list) sortNodes(n.children);
+  };
+  sortNodes(roots);
+  return roots;
+}
+
+export function replyDepth(replies: BlogReply[], replyId: string): number {
+  const byId = new Map(replies.map((r) => [r.id, r]));
+  let depth = 0;
+  let cur = byId.get(replyId);
+  while (cur?.parentId) {
+    depth += 1;
+    cur = byId.get(cur.parentId);
+    if (depth > MAX_REPLY_DEPTH) break;
+  }
+  return depth;
+}
 
 export function loadReplyName(): string {
   try {
@@ -222,6 +268,7 @@ export async function postBlogReply(
   payload: {
     name: string;
     body: string;
+    parentId?: string | null;
     chesscom?: string;
     lichess?: string;
     hp?: string;
@@ -272,21 +319,25 @@ export async function postBlogReply(
 
 export async function deleteBlogReply(
   slug: string,
-  payload: { replyId: string; deleteToken: string }
-): Promise<{ ok: boolean }> {
+  payload: { replyId: string; deleteToken?: string },
+  adminKey?: string
+): Promise<{ ok: boolean; deletedIds?: string[] }> {
   const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
   const body = JSON.stringify({
     action: "delete-reply",
     slug,
     replyId: payload.replyId,
-    deleteToken: payload.deleteToken,
+    deleteToken: payload.deleteToken ?? "",
   });
   const sources = [
     { url: "/api/blog", body },
     engineUrl
       ? {
           url: `${engineUrl}/blog/${encodeURIComponent(slug)}/replies/delete`,
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            replyId: payload.replyId,
+            deleteToken: payload.deleteToken ?? "",
+          }),
         }
       : null,
   ].filter(Boolean) as { url: string; body: string }[];
@@ -296,7 +347,7 @@ export async function deleteBlogReply(
     try {
       const res = await fetch(src.url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders(adminKey),
         body: src.body,
       });
       const ct = res.headers.get("content-type") || "";
@@ -310,7 +361,7 @@ export async function deleteBlogReply(
           typeof data.error === "string" ? data.error : "Could not delete reply";
         continue;
       }
-      return data as { ok: boolean };
+      return data as { ok: boolean; deletedIds?: string[] };
     } catch {
       continue;
     }

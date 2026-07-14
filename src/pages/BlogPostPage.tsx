@@ -1,19 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
+  buildReplyTree,
   deleteBlogReply,
   fetchBlogPost,
   forgetReplyToken,
   formatBlogDate,
   loadOwnedReplyTokens,
   loadReplyName,
+  loadSessionAdminKey,
+  MAX_REPLY_DEPTH,
   postBlogReply,
   rememberReplyToken,
+  replyDepth,
   saveReplyName,
   type BlogPost,
   type BlogReply,
+  type BlogReplyNode,
 } from "../utils/blogApi";
 import { renderBlogMarkdown } from "../utils/blogMarkdown";
 
@@ -29,11 +34,190 @@ function initialOf(name: string) {
 
 function toPublicReply(reply: BlogReply): BlogReply {
   const { deleteToken: _token, ...rest } = reply;
-  return rest;
+  return { ...rest, parentId: rest.parentId || null };
 }
 
 function fieldClass() {
   return "w-full rounded-lg border border-chess-border/70 bg-chess-bg/60 px-2.5 py-1.5 text-sm text-chess-text placeholder:text-chess-muted/55 focus:outline-none focus:border-chess-accent/45 focus:ring-1 focus:ring-chess-accent/15";
+}
+
+function ReplyComposer({
+  name,
+  body,
+  hp,
+  submitting,
+  error,
+  placeholder,
+  submitLabel,
+  onNameChange,
+  onBodyChange,
+  onHpChange,
+  onSubmit,
+  onCancel,
+}: {
+  name: string;
+  body: string;
+  hp: string;
+  submitting: boolean;
+  error: string | null;
+  placeholder?: string;
+  submitLabel?: string;
+  onNameChange: (v: string) => void;
+  onBodyChange: (v: string) => void;
+  onHpChange: (v: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  onCancel?: () => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-2">
+      <label className="absolute -left-[9999px] opacity-0 h-0 w-0 overflow-hidden">
+        Website
+        <input
+          value={hp}
+          onChange={(e) => onHpChange(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </label>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          required
+          maxLength={40}
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="Name"
+          aria-label="Name"
+          className={`${fieldClass()} sm:w-36 sm:flex-shrink-0`}
+        />
+        <textarea
+          required
+          maxLength={800}
+          rows={2}
+          value={body}
+          onChange={(e) => onBodyChange(e.target.value)}
+          placeholder={placeholder ?? "Write a reply…"}
+          aria-label="Reply"
+          className={`${fieldClass()} resize-y min-h-[2.75rem] flex-1`}
+        />
+        <div className="flex gap-2 sm:flex-col">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3.5 py-1.5 text-xs font-semibold text-chess-accent
+              hover:bg-chess-accent/25 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            {submitting ? "…" : submitLabel ?? "Post"}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-lg px-2.5 py-1.5 text-xs text-chess-muted hover:text-chess-text transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-red-400/90">{error}</p>}
+    </form>
+  );
+}
+
+function ReplyThread({
+  nodes,
+  depth,
+  ownedTokens,
+  isAdmin,
+  deletingId,
+  replyToId,
+  composer,
+  onStartReply,
+  onCancelReply,
+  onDelete,
+}: {
+  nodes: BlogReplyNode[];
+  depth: number;
+  ownedTokens: Record<string, string>;
+  isAdmin: boolean;
+  deletingId: string | null;
+  replyToId: string | null;
+  composer: ReactNode;
+  onStartReply: (id: string) => void;
+  onCancelReply: () => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className={depth === 0 ? "space-y-3" : "mt-2 space-y-2"}>
+      {nodes.map((r) => {
+        const canDelete = isAdmin || Boolean(ownedTokens[r.id]);
+        const canNest = depth + 1 < MAX_REPLY_DEPTH;
+        return (
+          <div key={r.id} className={depth > 0 ? "pl-3 sm:pl-4 border-l border-chess-border/50" : ""}>
+            <div className="flex items-start gap-2.5 py-1.5">
+              <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
+                {initialOf(r.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-semibold text-chess-text">{r.name}</span>
+                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                    <time
+                      dateTime={r.createdAt}
+                      className="text-[10px] text-chess-muted tabular-nums"
+                    >
+                      {formatBlogDate(r.createdAt)}
+                    </time>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        disabled={deletingId === r.id}
+                        onClick={() => onDelete(r.id)}
+                        className="text-[10px] font-medium text-red-400/90 hover:text-red-300 disabled:opacity-50 transition-colors"
+                      >
+                        {deletingId === r.id ? "…" : "Delete"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
+                  {r.body}
+                </p>
+                {canNest && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      replyToId === r.id ? onCancelReply() : onStartReply(r.id)
+                    }
+                    className="mt-1 text-[10px] font-medium text-chess-muted hover:text-chess-accent transition-colors"
+                  >
+                    {replyToId === r.id ? "Cancel" : "Reply"}
+                  </button>
+                )}
+                {replyToId === r.id && <div className="mt-2">{composer}</div>}
+              </div>
+            </div>
+            {r.children.length > 0 && (
+              <ReplyThread
+                nodes={r.children}
+                depth={depth + 1}
+                ownedTokens={ownedTokens}
+                isAdmin={isAdmin}
+                deletingId={deletingId}
+                replyToId={replyToId}
+                composer={composer}
+                onStartReply={onStartReply}
+                onCancelReply={onCancelReply}
+                onDelete={onDelete}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function BlogPostPage() {
@@ -48,11 +232,15 @@ export default function BlogPostPage() {
   const [hp, setHp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
   const [ownedTokens, setOwnedTokens] = useState<Record<string, string>>(() =>
     loadOwnedReplyTokens()
   );
+  const [adminKey] = useState(() => loadSessionAdminKey());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const tree = useMemo(() => buildReplyTree(replies), [replies]);
 
   usePageSeo({
     title: post ? `${post.title} — ChessReview Blog` : "Blog — ChessReview",
@@ -79,14 +267,22 @@ export default function BlogPostPage() {
     void load();
   }, [load]);
 
-  async function onReply(e: FormEvent) {
+  async function submitReply(e: FormEvent, parentId: string | null) {
     e.preventDefault();
     setSubmitError(null);
+    if (parentId) {
+      const depth = replyDepth(replies, parentId);
+      if (depth + 1 >= MAX_REPLY_DEPTH) {
+        setSubmitError("Thread is too deep");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const data = await postBlogReply(slug, {
         name,
         body,
+        parentId: parentId || undefined,
         hp,
       });
       const reply = data.reply;
@@ -100,6 +296,8 @@ export default function BlogPostPage() {
 
       setReplies((prev) => [...prev, toPublicReply(reply)]);
       setBody("");
+      setHp("");
+      setReplyToId(null);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Could not reply");
     } finally {
@@ -109,20 +307,43 @@ export default function BlogPostPage() {
 
   async function onDeleteReply(replyId: string) {
     const deleteToken = ownedTokens[replyId];
-    if (!deleteToken) return;
+    if (!adminKey && !deleteToken) return;
     setDeleteError(null);
     setDeletingId(replyId);
     try {
-      await deleteBlogReply(slug, { replyId, deleteToken });
-      forgetReplyToken(replyId);
+      const result = await deleteBlogReply(
+        slug,
+        { replyId, deleteToken },
+        adminKey || undefined
+      );
+      const removed = new Set(result.deletedIds?.length ? result.deletedIds : [replyId]);
+      for (const id of removed) forgetReplyToken(id);
       setOwnedTokens(loadOwnedReplyTokens());
-      setReplies((prev) => prev.filter((r) => r.id !== replyId));
+      setReplies((prev) => prev.filter((r) => !removed.has(r.id)));
+      if (replyToId && removed.has(replyToId)) setReplyToId(null);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : "Could not delete");
     } finally {
       setDeletingId(null);
     }
   }
+
+  const composer = (
+    <ReplyComposer
+      name={name}
+      body={body}
+      hp={hp}
+      submitting={submitting}
+      error={submitError}
+      placeholder={replyToId ? "Write a reply…" : "Write a reply…"}
+      submitLabel={replyToId ? "Reply" : "Post"}
+      onNameChange={setName}
+      onBodyChange={setBody}
+      onHpChange={setHp}
+      onSubmit={(e) => void submitReply(e, replyToId)}
+      onCancel={replyToId ? () => setReplyToId(null) : undefined}
+    />
+  );
 
   return (
     <SiteChrome title="Blog">
@@ -213,103 +434,46 @@ export default function BlogPostPage() {
                 </h2>
               </div>
 
-              <form onSubmit={onReply} className="space-y-2">
-                <label className="absolute -left-[9999px] opacity-0 h-0 w-0 overflow-hidden">
-                  Website
-                  <input
-                    value={hp}
-                    onChange={(e) => setHp(e.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                  />
-                </label>
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    id="reply-name"
-                    required
-                    maxLength={40}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Name"
-                    aria-label="Name"
-                    className={`${fieldClass()} sm:w-40 sm:flex-shrink-0`}
-                  />
-                  <textarea
-                    id="reply-body"
-                    required
-                    maxLength={800}
-                    rows={2}
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder="Write a reply…"
-                    aria-label="Reply"
-                    className={`${fieldClass()} resize-y min-h-[2.75rem] flex-1`}
-                  />
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="sm:self-start rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3.5 py-1.5 text-xs font-semibold text-chess-accent
-                      hover:bg-chess-accent/25 disabled:opacity-50 transition-colors whitespace-nowrap"
-                  >
-                    {submitting ? "…" : "Post"}
-                  </button>
-                </div>
-
-                {submitError && <p className="text-xs text-red-400/90">{submitError}</p>}
-              </form>
+              {!replyToId && (
+                <ReplyComposer
+                  name={name}
+                  body={body}
+                  hp={hp}
+                  submitting={submitting}
+                  error={submitError}
+                  onNameChange={setName}
+                  onBodyChange={setBody}
+                  onHpChange={setHp}
+                  onSubmit={(e) => void submitReply(e, null)}
+                />
+              )}
 
               {deleteError && (
                 <p className="text-xs text-red-400/90">{deleteError}</p>
               )}
 
-              <div className="space-y-2">
-                {replies.length === 0 ? (
-                  <p className="text-xs text-chess-muted py-1">No replies yet.</p>
-                ) : (
-                  replies.map((r) => {
-                    const canDelete = Boolean(ownedTokens[r.id]);
-                    return (
-                      <div
-                        key={r.id}
-                        className="flex items-start gap-2.5 py-2 border-b border-chess-border/40 last:border-0"
-                      >
-                        <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
-                          {initialOf(r.name)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-xs font-semibold text-chess-text">
-                              {r.name}
-                            </span>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <time
-                                dateTime={r.createdAt}
-                                className="text-[10px] text-chess-muted tabular-nums"
-                              >
-                                {formatBlogDate(r.createdAt)}
-                              </time>
-                              {canDelete && (
-                                <button
-                                  type="button"
-                                  disabled={deletingId === r.id}
-                                  onClick={() => void onDeleteReply(r.id)}
-                                  className="text-[10px] text-chess-muted hover:text-red-400/90 disabled:opacity-50 transition-colors"
-                                >
-                                  {deletingId === r.id ? "…" : "Delete"}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
-                            {r.body}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+              {replies.length === 0 ? (
+                <p className="text-xs text-chess-muted py-1">No replies yet.</p>
+              ) : (
+                <ReplyThread
+                  nodes={tree}
+                  depth={0}
+                  ownedTokens={ownedTokens}
+                  isAdmin={Boolean(adminKey)}
+                  deletingId={deletingId}
+                  replyToId={replyToId}
+                  composer={composer}
+                  onStartReply={(id) => {
+                    setSubmitError(null);
+                    setReplyToId(id);
+                  }}
+                  onCancelReply={() => {
+                    setSubmitError(null);
+                    setReplyToId(null);
+                  }}
+                  onDelete={(id) => void onDeleteReply(id)}
+                />
+              )}
             </section>
           )}
         </main>

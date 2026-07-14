@@ -49,7 +49,9 @@ export default async function handler(req, res) {
       if (body.action === "delete-reply") {
         const slug = String(body.slug ?? "").trim();
         if (!slug) return res.status(400).json({ error: "Missing slug" });
-        return res.status(200).json(await deleteBlogReply(slug, body));
+        return res
+          .status(200)
+          .json(await deleteBlogReply(slug, body, { adminKey: adminKey(req) }));
       }
       const key = adminKey(req);
       if (key !== expectedAdmin()) {
