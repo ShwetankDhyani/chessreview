@@ -23,7 +23,59 @@ export type BlogReply = {
   chesscom: string | null;
   lichess: string | null;
   createdAt: string;
+  deleteToken?: string;
 };
+
+const REPLY_TOKEN_KEY = "cr_blog_reply_tokens";
+const REPLY_NAME_KEY = "cr_blog_reply_name";
+
+export function loadReplyName(): string {
+  try {
+    return localStorage.getItem(REPLY_NAME_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveReplyName(name: string) {
+  try {
+    localStorage.setItem(REPLY_NAME_KEY, name.trim().slice(0, 40));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadOwnedReplyTokens(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(REPLY_TOKEN_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function rememberReplyToken(replyId: string, deleteToken: string) {
+  if (!replyId || !deleteToken) return;
+  try {
+    const map = loadOwnedReplyTokens();
+    map[replyId] = deleteToken;
+    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function forgetReplyToken(replyId: string) {
+  try {
+    const map = loadOwnedReplyTokens();
+    delete map[replyId];
+    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
 
 function adminHeaders(adminKey?: string): HeadersInit {
   const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -174,7 +226,7 @@ export async function postBlogReply(
     lichess?: string;
     hp?: string;
   }
-) {
+): Promise<{ ok: boolean; reply: BlogReply }> {
   const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
   const body = JSON.stringify({ ...payload, action: "reply", slug });
   const sources = [
@@ -210,7 +262,55 @@ export async function postBlogReply(
           typeof data.error === "string" ? data.error : "Could not post reply";
         continue;
       }
-      return data;
+      return data as { ok: boolean; reply: BlogReply };
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(lastError);
+}
+
+export async function deleteBlogReply(
+  slug: string,
+  payload: { replyId: string; deleteToken: string }
+): Promise<{ ok: boolean }> {
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const body = JSON.stringify({
+    action: "delete-reply",
+    slug,
+    replyId: payload.replyId,
+    deleteToken: payload.deleteToken,
+  });
+  const sources = [
+    { url: "/api/blog", body },
+    engineUrl
+      ? {
+          url: `${engineUrl}/blog/${encodeURIComponent(slug)}/replies/delete`,
+          body: JSON.stringify(payload),
+        }
+      : null,
+  ].filter(Boolean) as { url: string; body: string }[];
+
+  let lastError = "Could not delete reply";
+  for (const src of sources) {
+    try {
+      const res = await fetch(src.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: src.body,
+      });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        lastError = "Delete API unavailable";
+        continue;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        lastError =
+          typeof data.error === "string" ? data.error : "Could not delete reply";
+        continue;
+      }
+      return data as { ok: boolean };
     } catch {
       continue;
     }

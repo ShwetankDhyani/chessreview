@@ -2,6 +2,7 @@ import {
   addBlogReply,
   createBlogPost,
   deleteBlogPost,
+  deleteBlogReply,
   getBlogPost,
   listBlogPosts,
   updateBlogPost,
@@ -44,6 +45,11 @@ export default async function handler(req, res) {
         const slug = String(body.slug ?? "").trim();
         if (!slug) return res.status(400).json({ error: "Missing slug" });
         return res.status(200).json(await addBlogReply(slug, body));
+      }
+      if (body.action === "delete-reply") {
+        const slug = String(body.slug ?? "").trim();
+        if (!slug) return res.status(400).json({ error: "Missing slug" });
+        return res.status(200).json(await deleteBlogReply(slug, body));
       }
       const key = adminKey(req);
       if (key !== expectedAdmin()) {

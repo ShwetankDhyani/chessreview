@@ -3,9 +3,15 @@ import type { FormEvent } from "react";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
+  deleteBlogReply,
   fetchBlogPost,
+  forgetReplyToken,
   formatBlogDate,
+  loadOwnedReplyTokens,
+  loadReplyName,
   postBlogReply,
+  rememberReplyToken,
+  saveReplyName,
   type BlogPost,
   type BlogReply,
 } from "../utils/blogApi";
@@ -21,6 +27,11 @@ function initialOf(name: string) {
   return t ? t[0]!.toUpperCase() : "?";
 }
 
+function toPublicReply(reply: BlogReply): BlogReply {
+  const { deleteToken: _token, ...rest } = reply;
+  return rest;
+}
+
 function fieldClass() {
   return "w-full rounded-lg border border-chess-border/70 bg-chess-bg/60 px-2.5 py-1.5 text-sm text-chess-text placeholder:text-chess-muted/55 focus:outline-none focus:border-chess-accent/45 focus:ring-1 focus:ring-chess-accent/15";
 }
@@ -32,12 +43,16 @@ export default function BlogPostPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => loadReplyName());
   const [body, setBody] = useState("");
   const [hp, setHp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitOk, setSubmitOk] = useState<string | null>(null);
+  const [ownedTokens, setOwnedTokens] = useState<Record<string, string>>(() =>
+    loadOwnedReplyTokens()
+  );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   usePageSeo({
     title: post ? `${post.title} — ChessReview Blog` : "Blog — ChessReview",
@@ -67,21 +82,45 @@ export default function BlogPostPage() {
   async function onReply(e: FormEvent) {
     e.preventDefault();
     setSubmitError(null);
-    setSubmitOk(null);
     setSubmitting(true);
     try {
-      await postBlogReply(slug, {
+      const data = await postBlogReply(slug, {
         name,
         body,
         hp,
       });
+      const reply = data.reply;
+      if (!reply?.id) throw new Error("Could not post reply");
+
+      saveReplyName(name);
+      if (reply.deleteToken) {
+        rememberReplyToken(reply.id, reply.deleteToken);
+        setOwnedTokens(loadOwnedReplyTokens());
+      }
+
+      setReplies((prev) => [...prev, toPublicReply(reply)]);
       setBody("");
-      setSubmitOk("Reply posted.");
-      await load();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Could not reply");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function onDeleteReply(replyId: string) {
+    const deleteToken = ownedTokens[replyId];
+    if (!deleteToken) return;
+    setDeleteError(null);
+    setDeletingId(replyId);
+    try {
+      await deleteBlogReply(slug, { replyId, deleteToken });
+      forgetReplyToken(replyId);
+      setOwnedTokens(loadOwnedReplyTokens());
+      setReplies((prev) => prev.filter((r) => r.id !== replyId));
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Could not delete");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -218,34 +257,57 @@ export default function BlogPostPage() {
                 </div>
 
                 {submitError && <p className="text-xs text-red-400/90">{submitError}</p>}
-                {submitOk && <p className="text-xs text-chess-accent">{submitOk}</p>}
               </form>
+
+              {deleteError && (
+                <p className="text-xs text-red-400/90">{deleteError}</p>
+              )}
 
               <div className="space-y-2">
                 {replies.length === 0 ? (
                   <p className="text-xs text-chess-muted py-1">No replies yet.</p>
                 ) : (
-                  replies.map((r) => (
-                    <div key={r.id} className="flex items-start gap-2.5 py-2 border-b border-chess-border/40 last:border-0">
-                      <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
-                        {initialOf(r.name)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-xs font-semibold text-chess-text">{r.name}</span>
-                          <time
-                            dateTime={r.createdAt}
-                            className="text-[10px] text-chess-muted flex-shrink-0 tabular-nums"
-                          >
-                            {formatBlogDate(r.createdAt)}
-                          </time>
+                  replies.map((r) => {
+                    const canDelete = Boolean(ownedTokens[r.id]);
+                    return (
+                      <div
+                        key={r.id}
+                        className="flex items-start gap-2.5 py-2 border-b border-chess-border/40 last:border-0"
+                      >
+                        <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
+                          {initialOf(r.name)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs font-semibold text-chess-text">
+                              {r.name}
+                            </span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <time
+                                dateTime={r.createdAt}
+                                className="text-[10px] text-chess-muted tabular-nums"
+                              >
+                                {formatBlogDate(r.createdAt)}
+                              </time>
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === r.id}
+                                  onClick={() => void onDeleteReply(r.id)}
+                                  className="text-[10px] text-chess-muted hover:text-red-400/90 disabled:opacity-50 transition-colors"
+                                >
+                                  {deletingId === r.id ? "…" : "Delete"}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
+                            {r.body}
+                          </p>
                         </div>
-                        <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
-                          {r.body}
-                        </p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>

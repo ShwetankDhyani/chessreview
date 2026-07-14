@@ -9,7 +9,7 @@ import {
   renameSync,
   writeFileSync,
 } from "fs";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { join, extname } from "path";
 
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
@@ -29,6 +29,32 @@ function newId(len = 10) {
     .toString("base64url")
     .replace(/[^a-zA-Z0-9]/g, "x")
     .slice(0, len);
+}
+
+function hashDeleteToken(token) {
+  return createHash("sha256").update(String(token ?? "")).digest("hex");
+}
+
+function publicReply(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    body: row.body,
+    chesscom: row.chesscom || null,
+    lichess: row.lichess || null,
+    createdAt: row.createdAt,
+  };
+}
+
+function tokensMatch(provided, expectedHash) {
+  const got = hashDeleteToken(provided);
+  const expected = String(expectedHash ?? "");
+  if (!expected || got.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 function slugify(title) {
@@ -110,14 +136,7 @@ export function fileGetPostBySlug(slug, { includeDrafts = false } = {}) {
   const replies = (s.replies[p.id] ?? [])
     .slice()
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
-    .map(({ id, name, body, chesscom, lichess, createdAt }) => ({
-      id,
-      name,
-      body,
-      chesscom: chesscom || null,
-      lichess: lichess || null,
-      createdAt,
-    }));
+    .map((row) => publicReply(row));
   return { post: publicPost(p, replies.length), replies };
 }
 
@@ -226,6 +245,7 @@ export function fileAddReply(postId, input) {
   if (!post || !post.published) throw new Error("Post not found");
 
   const list = Array.isArray(s.replies[postId]) ? s.replies[postId] : [];
+  const deleteToken = randomBytes(18).toString("hex");
   const row = {
     id: newId(10),
     name,
@@ -233,6 +253,7 @@ export function fileAddReply(postId, input) {
     chesscom: chesscom || null,
     lichess: lichess || null,
     createdAt: new Date().toISOString(),
+    deleteHash: hashDeleteToken(deleteToken),
   };
   list.push(row);
   if (list.length > MAX_REPLIES_PER_POST) {
@@ -241,14 +262,22 @@ export function fileAddReply(postId, input) {
     s.replies[postId] = list;
   }
   saveState(s);
-  return {
-    id: row.id,
-    name: row.name,
-    body: row.body,
-    chesscom: row.chesscom,
-    lichess: row.lichess,
-    createdAt: row.createdAt,
-  };
+  return { ...publicReply(row), deleteToken };
+}
+
+export function fileDeleteReply(postId, replyId, deleteToken) {
+  const s = loadState();
+  const list = Array.isArray(s.replies[postId]) ? [...s.replies[postId]] : [];
+  const idx = list.findIndex((r) => r.id === replyId);
+  if (idx < 0) throw new Error("Reply not found");
+  const row = list[idx];
+  if (!tokensMatch(deleteToken, row.deleteHash)) {
+    throw new Error("Not allowed to delete this reply");
+  }
+  list.splice(idx, 1);
+  s.replies[postId] = list;
+  saveState(s);
+  return { ok: true };
 }
 
 const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
@@ -405,6 +434,34 @@ export function handleEngineBlogRequest(req, res, url, { readJsonBody, adminSecr
         const reply = fileAddReply(post.id, body);
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true, reply }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Failed" }));
+      }
+    })();
+    return true;
+  }
+
+  const replyDelete = path.match(/^\/blog\/([^/]+)\/replies\/delete$/);
+  if (replyDelete && req.method === "POST") {
+    void (async () => {
+      try {
+        const slug = decodeURIComponent(replyDelete[1]);
+        const s = loadState();
+        const post = s.posts.find((p) => p.slug === slug || p.id === slug);
+        if (!post) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: "Not found" }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const result = fileDeleteReply(
+          post.id,
+          String(body?.replyId ?? body?.id ?? "").trim(),
+          String(body?.deleteToken ?? "").trim()
+        );
+        res.writeHead(200);
+        res.end(JSON.stringify(result));
       } catch (e) {
         res.writeHead(400);
         res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Failed" }));

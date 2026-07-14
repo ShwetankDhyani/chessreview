@@ -7,6 +7,7 @@ import {
   fileAddReply,
   fileCreatePost,
   fileDeletePost,
+  fileDeleteReply,
   fileGetPostBySlug,
   fileListPosts,
   fileReadBlogMedia,
@@ -166,6 +167,25 @@ export async function addBlogReply(slug, body) {
   return { ok: true, reply: fileAddReply(data.post.id, body) };
 }
 
+export async function deleteBlogReply(slug, body) {
+  const replyId = String(body?.replyId ?? body?.id ?? "").trim();
+  const deleteToken = String(body?.deleteToken ?? "").trim();
+  if (!replyId || !deleteToken) throw new Error("Missing reply credentials");
+
+  const base = engineStatsUrl();
+  if (base) {
+    return engineJson(`/blog/${encodeURIComponent(slug)}/replies/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replyId, deleteToken }),
+    });
+  }
+  if (!isWritableStore()) throw new Error("Blog storage unavailable");
+  const data = fileGetPostBySlug(slug, { includeDrafts: true });
+  if (!data?.post) throw new Error("Post not found");
+  return fileDeleteReply(data.post.id, replyId, deleteToken);
+}
+
 export async function readBlogMedia(id) {
   const base = engineStatsUrl();
   if (base) {
@@ -247,6 +267,11 @@ export function createBlogMiddleware() {
           const slug = String(body.slug ?? "").trim();
           if (!slug) return sendJson(res, 400, { error: "Missing slug" });
           return sendJson(res, 200, await addBlogReply(slug, body));
+        }
+        if (body.action === "delete-reply") {
+          const slug = String(body.slug ?? "").trim();
+          if (!slug) return sendJson(res, 400, { error: "Missing slug" });
+          return sendJson(res, 200, await deleteBlogReply(slug, body));
         }
         const key = adminKeyFrom(req);
         if (key !== expectedAdmin()) {
