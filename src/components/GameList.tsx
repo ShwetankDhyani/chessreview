@@ -404,7 +404,10 @@ export const GameList: React.FC<GameListProps> = ({
                 {loading && (
                   <button
                     type="button"
-                    onClick={cancelLoad}
+                    onClick={() => {
+                      hapticSoft();
+                      cancelLoad();
+                    }}
                     className="mobile-chip"
                     title="Cancel loading"
                     aria-label="Cancel loading"
