@@ -1838,7 +1838,7 @@ export default function App() {
           {/* ── Mobile: one shell for Games / Moves / Review (shared header padding) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
             <div
-              className={`flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar ${
+              className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col bg-chess-sidebar ${
                 tab === "games" ? "" : "hidden"
               }`}
               style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}

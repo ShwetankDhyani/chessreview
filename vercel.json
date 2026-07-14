@@ -23,6 +23,9 @@
       ],
       "destination": "/api/share-preview?id=:id"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

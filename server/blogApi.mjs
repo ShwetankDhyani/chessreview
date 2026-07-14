@@ -240,13 +240,18 @@ export function createBlogMiddleware() {
       }
 
       if (pathOnly === "/api/blog" && req.method === "POST") {
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+        if (body.action === "reply") {
+          const slug = String(body.slug ?? "").trim();
+          if (!slug) return sendJson(res, 400, { error: "Missing slug" });
+          return sendJson(res, 200, await addBlogReply(slug, body));
+        }
         const key = adminKeyFrom(req);
         if (key !== expectedAdmin()) {
           return sendJson(res, 401, { error: "Unauthorized" });
         }
-        const chunks = [];
-        for await (const chunk of req) chunks.push(chunk);
-        const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
         if (body.action === "upload") {
           return sendJson(res, 200, await uploadBlogMedia(body, key));
         }

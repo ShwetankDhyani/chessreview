@@ -520,8 +520,8 @@ export const GameList: React.FC<GameListProps> = ({
           </div>
         </div>
       ) : (
-        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5">
-          <div className="mobile-surface flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+        <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-y-auto overscroll-contain">
+          <div className="mobile-surface flex flex-col w-full">
             {onLinkProfile && (
               <div className="mobile-surface-section">
                 <AccountLinkPromo onConnect={onLinkProfile} embedded />
@@ -533,15 +533,11 @@ export const GameList: React.FC<GameListProps> = ({
               </p>
               <GameUrlImport onImported={onGameSelect} compact />
             </div>
-            <div className="mobile-surface-section flex-1 min-h-0 flex flex-col py-3">
+            <div className="mobile-surface-section flex flex-col py-3">
               <p className="text-[10px] text-chess-muted mb-2 text-center">
                 Or paste PGN / open a .pgn file
               </p>
-              <PgnPastePanel
-                onLoad={onGameSelect}
-                compact
-                className={onLinkProfile ? "flex-1 min-h-0" : undefined}
-              />
+              <PgnPastePanel onLoad={onGameSelect} compact />
             </div>
           </div>
         </div>

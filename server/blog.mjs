@@ -207,7 +207,9 @@ export function fileDeletePost(id) {
 }
 
 export function fileAddReply(postId, input) {
-  if (input?.website || input?.hp) throw new Error("Rejected");
+  if (String(input?.website ?? "").trim() || String(input?.hp ?? "").trim()) {
+    throw new Error("Rejected");
+  }
   const name = clip(input?.name, MAX_NAME);
   const body = clip(input?.body ?? input?.text, MAX_REPLY);
   if (name.length < 2) throw new Error("Name must be at least 2 characters");

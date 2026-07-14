@@ -175,16 +175,47 @@ export async function postBlogReply(
     hp?: string;
   }
 ) {
-  const res = await fetch(`/api/blog/${encodeURIComponent(slug)}?replies=1`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(typeof data.error === "string" ? data.error : "Could not post reply");
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const body = JSON.stringify({ ...payload, action: "reply", slug });
+  const sources = [
+    { url: "/api/blog", body },
+    {
+      url: `/api/blog/${encodeURIComponent(slug)}?replies=1`,
+      body: JSON.stringify(payload),
+    },
+    engineUrl
+      ? {
+          url: `${engineUrl}/blog/${encodeURIComponent(slug)}/replies`,
+          body: JSON.stringify(payload),
+        }
+      : null,
+  ].filter(Boolean) as { url: string; body: string }[];
+
+  let lastError = "Could not post reply";
+  for (const src of sources) {
+    try {
+      const res = await fetch(src.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: src.body,
+      });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        lastError = "Reply API unavailable";
+        continue;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        lastError =
+          typeof data.error === "string" ? data.error : "Could not post reply";
+        continue;
+      }
+      return data;
+    } catch {
+      continue;
+    }
   }
-  return data;
+  throw new Error(lastError);
 }
 
 export function formatBlogDate(iso: string) {
