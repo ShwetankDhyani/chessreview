@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { HelpModal } from "./HelpModal";
 import { ReviewOdometer } from "./ReviewOdometer";
 
@@ -34,12 +35,12 @@ export function SiteFooter() {
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
             </span>
-            <a
-              href="/blog"
+            <Link
+              to="/blog"
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
               Blog
-            </a>
+            </Link>
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
             </span>

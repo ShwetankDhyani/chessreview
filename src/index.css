@@ -26,6 +26,28 @@
   padding-right: var(--page-pad-inline-end);
 }
 
+/* Soft enter for client-side panel changes (blog, privacy, about, share). */
+@keyframes spaPanelEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.spa-panel-enter {
+  animation: spaPanelEnter 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spa-panel-enter {
+    animation: none;
+  }
+}
+
 .page-scroll-root {
   position: fixed;
   inset: 0;

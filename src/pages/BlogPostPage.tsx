@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { Link, useParams } from "react-router-dom";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
@@ -21,11 +22,6 @@ import {
   type BlogReplyNode,
 } from "../utils/blogApi";
 import { renderBlogMarkdown } from "../utils/blogMarkdown";
-
-function slugFromPath() {
-  const parts = window.location.pathname.replace(/\/$/, "").split("/");
-  return decodeURIComponent(parts[parts.length - 1] || "");
-}
 
 function initialOf(name: string) {
   const t = name.trim();
@@ -221,7 +217,8 @@ function ReplyThread({
 }
 
 export default function BlogPostPage() {
-  const slug = slugFromPath();
+  const { slug: slugParam } = useParams<{ slug: string }>();
+  const slug = decodeURIComponent(slugParam || "");
   const [post, setPost] = useState<BlogPost | null>(null);
   const [replies, setReplies] = useState<BlogReply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -355,12 +352,12 @@ export default function BlogPostPage() {
         />
 
         <main className="relative max-w-2xl mx-auto px-4 py-6 sm:py-9 pb-12 space-y-8">
-          <a
-            href="/blog"
+          <Link
+            to="/blog"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-chess-muted hover:text-chess-accent transition-colors"
           >
             <span aria-hidden>←</span> All posts
-          </a>
+          </Link>
 
           {loading && (
             <div className="space-y-4 py-6">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
@@ -15,8 +16,8 @@ function PostCard({
   featured?: boolean;
 }) {
   return (
-    <a
-      href={`/blog/${post.slug}`}
+    <Link
+      to={`/blog/${post.slug}`}
       className={`group relative block overflow-hidden rounded-2xl border border-chess-border/80
         bg-gradient-to-br from-chess-panel via-chess-panel to-chess-bg
         shadow-[0_12px_40px_rgba(0,0,0,0.28)]
@@ -103,7 +104,7 @@ function PostCard({
           </span>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 

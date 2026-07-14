@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { usePageSeo } from "../hooks/usePageSeo";
 
 const CHESSCOM_USERNAME = "ShwetankDhyani";
@@ -11,15 +12,15 @@ export default function AboutPage() {
   });
 
   return (
-    <div className="min-h-screen bg-chess-bg text-chess-text">
+    <div className="min-h-screen bg-chess-bg text-chess-text spa-panel-enter">
       <header className="border-b border-chess-border bg-chess-panel/80">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <a
-            href="/"
+          <Link
+            to="/"
             className="text-sm font-bold text-chess-accent hover:underline"
           >
             ← ChessReview
-          </a>
+          </Link>
         </div>
       </header>
 

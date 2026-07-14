@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { usePageSeo } from "../hooks/usePageSeo";
 
 export default function PrivacyPage() {
@@ -9,10 +10,10 @@ export default function PrivacyPage() {
   });
 
   return (
-    <div className="min-h-screen bg-chess-bg text-chess-text">
+    <div className="min-h-screen bg-chess-bg text-chess-text spa-panel-enter">
       <header className="border-b border-chess-border bg-chess-panel/80">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <a href="/" className="text-sm font-bold text-chess-accent hover:underline">← ChessReview</a>
+          <Link to="/" className="text-sm font-bold text-chess-accent hover:underline">← ChessReview</Link>
           <h1 className="text-lg font-bold mt-2">Privacy</h1>
         </div>
       </header>

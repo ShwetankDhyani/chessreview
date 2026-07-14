@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { MoveList } from "../components/MoveList";
 import { ReviewSessionView } from "../components/ReviewSessionView";
@@ -11,12 +12,6 @@ import { InlineErrorNotice } from "../components/InlineErrorNotice";
 import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
 
 type ShareTab = "game" | "stats";
-
-function shareIdFromPath(): string {
-  const path = window.location.pathname.replace(/\/$/, "");
-  const match = path.match(/^\/r\/([^/]+)$/);
-  return match?.[1] ?? "";
-}
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -102,7 +97,8 @@ function DesktopSidebarTabs({
 }
 
 export default function SharePage() {
-  const shareId = shareIdFromPath();
+  const { id: shareIdParam } = useParams<{ id: string }>();
+  const shareId = shareIdParam ?? "";
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [tab, setTab] = useState<ShareTab>("game");
   const [desktopTab, setDesktopTab] = useState<ShareTab>("game");
@@ -219,9 +215,9 @@ export default function SharePage() {
             setReloadTick((v) => v + 1);
           }}
         />
-        <a href="/" className="text-sm text-chess-accent hover:underline">
+        <Link to="/" className="text-sm text-chess-accent hover:underline">
           Go to ChessReview
-        </a>
+        </Link>
       </div>
     );
   }
@@ -230,15 +226,15 @@ export default function SharePage() {
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
       <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <a
-            href="/"
+          <Link
+            to="/"
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
             aria-label="ChessReview home"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M5.5 21h13l-.7-3.4H6.2L5.5 21zM6.5 16h11l-.5-2H7L6.5 16zM7.2 12.6h9.6c-.3-1-1-2.4-2-3.4l1.7-1.7-1.4-1.4-1.7 1.7c-1-1-2.4-1.7-3.4-2L11 4l-1.6.4c-1 .3-2.4 1-3.4 2L4.3 4.7 2.9 6.1l1.7 1.7c-1 1-1.7 2.4-2 3.4l4.6 1.4zM12 3a1 1 0 0 1 1 1v1h-2V4a1 1 0 0 1 1-1z" />
             </svg>
-          </a>
+          </Link>
           <div className="min-w-0">
             <span className="font-bold text-[17px] tracking-tight leading-none inline-flex items-baseline">
               <span className="text-chess-subtext">Chess</span>
@@ -248,12 +244,12 @@ export default function SharePage() {
           </div>
         </div>
         <div className="flex-1 min-w-0" />
-        <a
-          href="/"
+        <Link
+          to="/"
           className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover transition-colors font-semibold"
         >
           Analyze yours
-        </a>
+        </Link>
       </header>
 
       <ShareTabBar tab={tab} onTab={setTab} />
@@ -290,12 +286,12 @@ export default function SharePage() {
                     onMoveClick={handleMoveSelect}
                   />
                   <p className="text-[11px] text-chess-muted text-center py-4 px-3">
-                    <a
-                      href="/"
+                    <Link
+                      to="/"
                       className="text-chess-accent hover:underline font-medium"
                     >
                       Review your own games on ChessReview
-                    </a>
+                    </Link>
                   </p>
                 </div>
               )}
@@ -333,12 +329,12 @@ export default function SharePage() {
                     onMoveClick={handleMoveSelect}
                   />
                   <p className="text-[11px] text-chess-muted text-center py-4">
-                    <a
-                      href="/"
+                    <Link
+                      to="/"
                       className="text-chess-accent hover:underline font-medium"
                     >
                       Review your own games on ChessReview
-                    </a>
+                    </Link>
                   </p>
                 </div>
               )}

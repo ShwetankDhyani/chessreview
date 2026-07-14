@@ -134,7 +134,7 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-export default function App() {
+export default function App({ isCovered = false }: { isCovered?: boolean }) {
   usePageSeo({ path: "/" });
 
   const [tab, setTab] = useState<SidebarTab>("games");
@@ -1156,6 +1156,7 @@ export default function App() {
   }, [profiles]);
 
   useEffect(() => {
+    if (isCovered) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
         stepBoardMove(1, false);
@@ -1169,7 +1170,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [moves.length, navigateToMove, stepBoardMove]);
+  }, [isCovered, moves.length, navigateToMove, stepBoardMove]);
 
   useEffect(() => {
     if (!activeUser?.name?.trim() || !pgn) return;
@@ -2052,11 +2053,12 @@ export default function App() {
                 />
             </div>
 
-            {tab === "review" && (
-              <div
-                className="flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll"
-                style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
-              >
+            <div
+              className={`flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll ${
+                tab === "review" ? "" : "hidden"
+              }`}
+              style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+            >
                 <div className="w-full">
                 {summary ? (
                   <ReviewSummaryPanel
@@ -2079,10 +2081,12 @@ export default function App() {
                 )}
                 </div>
               </div>
-            )}
 
-            {tab === "moves" && (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div
+              className={`flex flex-col flex-1 min-h-0 overflow-hidden ${
+                tab === "moves" ? "" : "hidden"
+              }`}
+            >
             <div className="flex-shrink-0 page-inline-pad pt-1.5 pb-0">
               {moves.length > 0 || (pgn && (tab === "moves" || isAnalyzing)) ? (
                 <div className="review-flow-stack w-full">
@@ -2222,7 +2226,6 @@ export default function App() {
               </div>
             )}
             </div>
-            )}
           </div>
         </main>
       </div>
