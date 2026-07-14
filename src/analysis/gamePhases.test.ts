@@ -2,13 +2,19 @@ import { describe, expect, it } from "vitest";
 import type { AnalyzedMove, MoveClassification } from "../types";
 import {
   assignGamePhases,
+  backrankSparse,
   computePhaseAccuracies,
+  dividePhases,
   isEndgameFen,
-  nonPawnMaterial,
+  majorsAndMinors,
+  mixedness,
   openingEndIndex,
 } from "./gamePhases";
 
-function move(partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "fenBefore" | "color" | "moveNumber">): AnalyzedMove {
+function move(
+  partial: Partial<AnalyzedMove> &
+    Pick<AnalyzedMove, "fenBefore" | "color" | "moveNumber">
+): AnalyzedMove {
   return {
     san: "e4",
     uci: "e2e4",
@@ -26,135 +32,110 @@ function move(partial: Partial<AnalyzedMove> & Pick<AnalyzedMove, "fenBefore" | 
 
 const START =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-const AFTER_QE =
-  "4k3/8/8/8/8/8/4P3/4K3 w - - 0 40"; // K+P vs K — endgame
-/** Queens off, two rooks each side — npm 20, classic endgame latch. */
-const NO_QUEENS_LIGHT =
-  "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 30";
-/** Queens off but full minors/majors remaining — still middlegame material. */
+/** K+P vs K — 0 majors/minors → endgame. */
+const BARE_KINGS = "4k3/8/8/8/8/8/4P3/4K3 w - - 0 40";
+/** Two rooks each side, no queens — 4 pieces → Lichess endgame. */
+const FOUR_ROOKS = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 30";
+/** Queen + rook each — 4 pieces → Lichess endgame (was middlegame under npm rules). */
+const QUEEN_ROOK =
+  "4k3/4qr2/8/8/8/8/4QR2/4K3 w - - 0 40";
+/** Queens off but all minors/rooks remain — 12 majors, full back ranks → still opening board. */
 const NO_QUEENS_HEAVY =
   "rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 10";
+/** Developed position: black back rank sparse (<4) → Lichess middlegame, not endgame. */
+const MIDGAME_SPARSE =
+  "3q1rk1/pp1bpppp/2n1pn2/3p4/3P1B2/2N1PN2/PP2BPPP/R2Q1RK1 w - - 0 10";
 
-describe("nonPawnMaterial / isEndgameFen", () => {
-  it("counts full starting material as 62", () => {
-    expect(nonPawnMaterial(START).total).toBe(62);
+describe("Lichess Divider board heuristics", () => {
+  it("counts 14 majors/minors at the start", () => {
+    expect(majorsAndMinors(START)).toBe(14);
+    expect(backrankSparse(START)).toBe(false);
+    expect(mixedness(START)).toBe(0);
     expect(isEndgameFen(START)).toBe(false);
   });
 
-  it("detects bare king endings as endgame", () => {
-    expect(isEndgameFen(AFTER_QE)).toBe(true);
+  it("treats ≤6 majors/minors as endgame boards", () => {
+    expect(majorsAndMinors(BARE_KINGS)).toBe(0);
+    expect(isEndgameFen(BARE_KINGS)).toBe(true);
+
+    expect(majorsAndMinors(FOUR_ROOKS)).toBe(4);
+    expect(isEndgameFen(FOUR_ROOKS)).toBe(true);
+
+    expect(majorsAndMinors(QUEEN_ROOK)).toBe(4);
+    expect(isEndgameFen(QUEEN_ROOK)).toBe(true);
   });
 
-  it("detects queenless low-material as endgame", () => {
-    expect(nonPawnMaterial(NO_QUEENS_LIGHT).total).toBe(20);
-    expect(nonPawnMaterial(NO_QUEENS_LIGHT).whiteQueen).toBe(false);
-    expect(nonPawnMaterial(NO_QUEENS_LIGHT).blackQueen).toBe(false);
-    expect(isEndgameFen(NO_QUEENS_LIGHT)).toBe(true);
-  });
-
-  it("keeps queenless high-material out of endgame", () => {
-    expect(nonPawnMaterial(NO_QUEENS_HEAVY).whiteQueen).toBe(false);
-    expect(nonPawnMaterial(NO_QUEENS_HEAVY).blackQueen).toBe(false);
-    expect(nonPawnMaterial(NO_QUEENS_HEAVY).total).toBeGreaterThan(26);
+  it("does not call packed queenless middlegame material an endgame yet", () => {
+    expect(majorsAndMinors(NO_QUEENS_HEAVY)).toBe(12);
     expect(isEndgameFen(NO_QUEENS_HEAVY)).toBe(false);
+  });
+
+  it("detects sparse back ranks after development", () => {
+    expect(backrankSparse(MIDGAME_SPARSE)).toBe(true);
+    expect(isEndgameFen(MIDGAME_SPARSE)).toBe(false);
   });
 });
 
-describe("assignGamePhases", () => {
-  it("keeps continuous book in opening then middlegame", () => {
+describe("dividePhases / assignGamePhases", () => {
+  it("keeps the starting stretch as opening until a mid trigger", () => {
     const moves: AnalyzedMove[] = [
-      move({
-        fenBefore: START,
-        color: "w",
-        moveNumber: 1,
-        classification: "book",
-        inOpeningBook: true,
-      }),
-      move({
-        fenBefore: START,
-        color: "b",
-        moveNumber: 1,
-        classification: "book",
-        inOpeningBook: true,
-      }),
-      move({
-        fenBefore: START,
-        color: "w",
-        moveNumber: 2,
-        classification: "best",
-        epLoss: 0,
-      }),
-      move({
-        fenBefore: START,
-        color: "b",
-        moveNumber: 2,
-        classification: "best",
-        epLoss: 0.02,
-      }),
-      move({
-        fenBefore: START,
-        color: "w",
-        moveNumber: 10,
-        classification: "excellent",
-        epLoss: 0.04,
-      }),
-      move({
-        fenBefore: START,
-        color: "b",
-        moveNumber: 10,
-        classification: "good",
-        epLoss: 0.06,
-      }),
-      move({
-        fenBefore: START,
-        color: "w",
-        moveNumber: 18,
-        classification: "best",
-        epLoss: 0,
-      }),
-      move({
-        fenBefore: AFTER_QE,
-        color: "b",
-        moveNumber: 40,
-        classification: "best",
-        epLoss: 0,
-      }),
+      move({ fenBefore: START, color: "w", moveNumber: 1 }),
+      move({ fenBefore: START, color: "b", moveNumber: 1 }),
+      move({ fenBefore: MIDGAME_SPARSE, color: "w", moveNumber: 8 }),
+      move({ fenBefore: MIDGAME_SPARSE, color: "b", moveNumber: 8 }),
+      move({ fenBefore: QUEEN_ROOK, color: "w", moveNumber: 40 }),
     ];
 
-    const openEnd = openingEndIndex(moves);
-    expect(openEnd).toBeGreaterThanOrEqual(1);
+    const div = dividePhases(moves.map((m) => m.fenBefore));
+    expect(div.middle).toBe(2);
+    expect(div.end).toBe(4);
 
     const phases = assignGamePhases(moves);
-    expect(phases[0]).toBe("opening");
-    expect(phases[1]).toBe("opening");
-    expect(phases[phases.length - 1]).toBe("endgame");
-    expect(phases.some((p) => p === "middlegame")).toBe(true);
+    expect(phases).toEqual([
+      "opening",
+      "opening",
+      "middlegame",
+      "middlegame",
+      "endgame",
+    ]);
+    expect(openingEndIndex(moves)).toBe(1);
   });
 
-  it("latches endgame once entered", () => {
+  it("classifies Q+R endings as endgame (the prior npm false middlegame)", () => {
     const moves: AnalyzedMove[] = [
+      move({ fenBefore: START, color: "w", moveNumber: 1 }),
       move({
-        fenBefore: START,
-        color: "w",
-        moveNumber: 1,
-        classification: "book" as MoveClassification,
-      }),
-      move({
-        fenBefore: AFTER_QE,
+        fenBefore: MIDGAME_SPARSE,
         color: "b",
-        moveNumber: 30,
-        classification: "best",
+        moveNumber: 10,
+        classification: "best" as MoveClassification,
       }),
-      move({
-        fenBefore: START, // even if npm rises (illegal in practice), latch holds
-        color: "w",
-        moveNumber: 31,
-        classification: "best",
-      }),
+      move({ fenBefore: QUEEN_ROOK, color: "w", moveNumber: 35 }),
+      move({ fenBefore: QUEEN_ROOK, color: "b", moveNumber: 35 }),
     ];
     const phases = assignGamePhases(moves);
-    expect(phases[1]).toBe("endgame");
+    expect(phases[0]).toBe("opening");
+    expect(phases[1]).toBe("middlegame");
     expect(phases[2]).toBe("endgame");
+    expect(phases[3]).toBe("endgame");
+  });
+
+  it("latches endgame once entered (later boards stay endgame via index)", () => {
+    const moves: AnalyzedMove[] = [
+      move({ fenBefore: START, color: "w", moveNumber: 1 }),
+      move({ fenBefore: MIDGAME_SPARSE, color: "b", moveNumber: 12 }),
+      move({ fenBefore: BARE_KINGS, color: "w", moveNumber: 40 }),
+      move({
+        // Illegal material swing; end index already latched from prior board.
+        fenBefore: START,
+        color: "b",
+        moveNumber: 41,
+      }),
+    ];
+    // Once end starts at index 2, index 3 is also ≥ end → endgame.
+    const phases = assignGamePhases(moves);
+    expect(phases[2]).toBe("endgame");
+    expect(phases[3]).toBe("endgame");
   });
 });
 
