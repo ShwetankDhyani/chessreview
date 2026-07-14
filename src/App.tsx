@@ -672,8 +672,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setSummary(null);
         setReviewResult(null);
         setCurrentMoveIdx(-1);
-        setCurrentFen("start");
+        currentMoveIdxRef.current = -1;
         setCurrentEval(null);
+        // Keep the current board position under the analysis veil — snapping to
+        // start caused a visible blink before the overlay settled.
         setProgress({ done: 2, total: 100 });
         setPlayerNames({ white: meta.white, black: meta.black });
         setGameMeta(meta);
@@ -747,10 +749,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setReviewJob(null);
 
         setTab("moves");
-        navigateToMove(
-          result.moves.length > 0 ? result.moves.length - 1 : -1,
-          false
-        );
+        // Snap with the fresh moves array (navigateToMove would see a stale []).
+        if (result.moves.length > 0) {
+          const idx = result.moves.length - 1;
+          const m = result.moves[idx]!;
+          setCurrentMoveIdx(idx);
+          currentMoveIdxRef.current = idx;
+          setCurrentEval(m.evalAfter ?? null);
+          const highlight = highlightFromUci(m.uci);
+          setBoardPieceAnimMs(0);
+          setCurrentFen(m.fenAfter);
+          currentFenRef.current = m.fenAfter;
+          lastRenderedFenRef.current = m.fenAfter;
+          setMoveAnim(highlight);
+        }
       } catch (e) {
         if (gen !== analysisGenerationRef.current) return;
         console.error(e);
@@ -770,7 +782,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setAnalysisState("loading");
       }
     },
-    [navigateToMove, depth, recheckEngine, activeUser, noteCompletedReview]
+    [depth, recheckEngine, activeUser, noteCompletedReview]
   );
 
   const clearReviewJob = useCallback(() => {
@@ -820,20 +832,35 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setReviewReady(false);
     }
 
+    const frames = buildPgnReplayFrames(parsed.pgn);
+    const last = frames.length > 0 ? frames[frames.length - 1]! : null;
+    const targetFen = last?.fenAfter ?? "start";
+    const highlight = last ? { from: last.from, to: last.to } : null;
+
     setPgn(parsed.pgn);
     displayPgnRef.current = parsed.pgn;
-    setReplayFrames(buildPgnReplayFrames(parsed.pgn));
+    setReplayFrames(frames);
     setGamePlyCount(parsed.moveCount);
     setMoves([]);
     setSummary(null);
     setReviewResult(null);
     setCurrentMoveIdx(-1);
-    setCurrentFen("start");
+    currentMoveIdxRef.current = -1;
     setCurrentEval(null);
+    setContinuationNav(null);
+    setContinuationActive(false);
+    setContinuationFen(null);
+    setContinuationEval(null);
+    setContinuationArrow(null);
     setTab("moves");
-    setBoardRemountKey((k) => k + 1);
+    // Keep the Chessboard mounted — remounting here is what caused the blink.
+    // Snap to the game's final position with zero animation in the same paint.
     setBoardPieceAnimMs(0);
-    lastRenderedFenRef.current = "start";
+    setCurrentFen(targetFen);
+    currentFenRef.current = targetFen;
+    lastRenderedFenRef.current = targetFen;
+    setMoveAnim(highlight);
+    setBoardDimmed(false);
     const meta = extractGameMeta(parsed.pgn);
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
@@ -882,7 +909,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const applyReviewResult = useCallback(
     (result: ReviewResult) => {
-      setMoves(result.moves);
+      const nextMoves = result.moves;
+      setMoves(nextMoves);
       setSummary(result.summary);
       setReviewResult(result);
       setProgress({ done: 100, total: 100 });
@@ -894,11 +922,36 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setAnalysisStartedAt(null);
       setSaveReviewMessage(null);
       clearReviewJob();
-      if (result.moves.length > 0) {
-        navigateToMove(result.moves.length - 1, false);
+      setContinuationNav(null);
+      setContinuationActive(false);
+      setContinuationFen(null);
+      setContinuationEval(null);
+      setContinuationArrow(null);
+      // Snap with the new moves array — don't call navigateToMove (stale closure).
+      if (nextMoves.length > 0) {
+        const idx = nextMoves.length - 1;
+        const m = nextMoves[idx]!;
+        setCurrentMoveIdx(idx);
+        currentMoveIdxRef.current = idx;
+        setCurrentEval(m.evalAfter ?? null);
+        const highlight = highlightFromUci(m.uci);
+        setBoardPieceAnimMs(0);
+        setCurrentFen(m.fenAfter);
+        currentFenRef.current = m.fenAfter;
+        lastRenderedFenRef.current = m.fenAfter;
+        setMoveAnim(highlight);
+      } else {
+        setCurrentMoveIdx(-1);
+        currentMoveIdxRef.current = -1;
+        setCurrentEval(null);
+        setBoardPieceAnimMs(0);
+        setCurrentFen("start");
+        currentFenRef.current = "start";
+        lastRenderedFenRef.current = "start";
+        setMoveAnim(null);
       }
     },
-    [navigateToMove, clearReviewJob]
+    [clearReviewJob]
   );
 
   const dismissWelcome = useCallback(() => {
@@ -1343,7 +1396,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const isMobileLayout = winWidth < 1024;
   const desktopBoardSize = computeDesktopBoardSize(viewport.w, viewport.h, {
     evalGraphOpen: desktopEvalGraphOpen,
-    hasAnalyzedMoves: moves.length > 0,
+    // Reserve coach column whenever a game is loaded so the board width does
+    // not jump when moves appear/clear during open ↔ analyze transitions.
+    hasAnalyzedMoves: moves.length > 0 || !!pgn.trim(),
   });
   const mobileInlinePad = 12;
   const mobileEvalBar = MOBILE_LAYOUT.evalBar;

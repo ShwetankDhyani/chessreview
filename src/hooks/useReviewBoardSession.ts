@@ -104,9 +104,6 @@ export function useReviewBoardSession({
 
       currentFenRef.current = fen;
       setBoardPieceAnimMs(safeToAnimate ? BOARD_PLAY_MOVE_MS : 0);
-      if (!safeToAnimate) {
-        setBoardRemountKey((k) => k + 1);
-      }
       setCurrentFen(fen);
     },
     [clearBoardTimers]
