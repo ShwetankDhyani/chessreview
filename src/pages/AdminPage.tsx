@@ -89,6 +89,9 @@ export default function AdminPage() {
     return all.slice(start, start + RECENT_PAGE_SIZE);
   }, [stats?.recent, recentPage]);
 
+  const countryRows = stats?.countries ?? [];
+  const countryChartHeight = Math.min(Math.max(countryRows.length * 28, 160), 560);
+
   useEffect(() => {
     if (recentPage > 0 && recentPage >= recentPageCount) {
       setRecentPage(Math.max(0, recentPageCount - 1));
@@ -181,17 +184,45 @@ export default function AdminPage() {
 
             <div className="grid lg:grid-cols-2 gap-6">
               <section className="rounded-xl border border-chess-border bg-chess-panel p-4">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted mb-3">
-                  By country
-                </h2>
-                {(stats.countries?.length ?? 0) === 0 ? (
+                <div className="flex items-baseline justify-between gap-3 mb-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
+                    By country
+                  </h2>
+                  {countryRows.length > 0 && (
+                    <span className="text-[10px] text-chess-muted tabular-nums">
+                      {countryRows.length} countries
+                    </span>
+                  )}
+                </div>
+                {countryRows.length === 0 ? (
                   <p className="text-sm text-chess-muted">No country data yet.</p>
                 ) : (
-                  <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats.countries?.slice(0, 16)} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                        <XAxis dataKey="countryCode" tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis allowDecimals={false} tick={{ fill: "#666", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <div
+                    className="overflow-y-auto max-h-[28rem]"
+                    style={{ height: countryChartHeight }}
+                  >
+                    <ResponsiveContainer width="100%" height={countryChartHeight}>
+                      <BarChart
+                        layout="vertical"
+                        data={countryRows}
+                        margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                      >
+                        <XAxis
+                          type="number"
+                          allowDecimals={false}
+                          tick={{ fill: "#666", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="countryCode"
+                          width={88}
+                          tick={{ fill: "#888", fontSize: 10 }}
+                          tickFormatter={(code) => countryLabel(String(code))}
+                          axisLine={false}
+                          tickLine={false}
+                        />
                         <Tooltip
                           content={({ active, payload }) => {
                             if (!active || !payload?.[0]) return null;
@@ -203,7 +234,7 @@ export default function AdminPage() {
                             );
                           }}
                         />
-                        <Bar dataKey="count" fill="#96bc4b" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="#96bc4b" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

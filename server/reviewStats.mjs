@@ -118,11 +118,12 @@ export function normalizeReviewPayload(body = {}, geo = {}) {
     timezone: clip(body.timezone, 64),
     locale: clip(body.locale, 16),
     source: clip(body.source, 24),
-    country_code: geo.country_code ?? clip(body.countryCode ?? body.country_code, 8),
-    region: geo.region ?? clip(body.region, 80),
-    city: geo.city ?? clip(body.city, 80),
-    latitude: geo.latitude ?? floatOrNull(body.latitude),
-    longitude: geo.longitude ?? floatOrNull(body.longitude),
+    country_code:
+      clip(body.countryCode ?? body.country_code, 8) ?? geo.country_code,
+    region: clip(body.region, 80) ?? geo.region,
+    city: clip(body.city, 80) ?? geo.city,
+    latitude: floatOrNull(body.latitude) ?? geo.latitude,
+    longitude: floatOrNull(body.longitude) ?? geo.longitude,
   };
 }
 

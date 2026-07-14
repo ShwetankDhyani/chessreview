@@ -133,7 +133,8 @@ const GEO_FIELDS = ["country_code", "region", "city", "latitude", "longitude"];
 function mergeGeoFields(existing, incoming) {
   let updated = false;
   for (const field of GEO_FIELDS) {
-    if (incoming[field] != null && incoming[field] !== "" && !existing[field]) {
+    if (incoming[field] == null || incoming[field] === "") continue;
+    if (existing[field] !== incoming[field]) {
       existing[field] = incoming[field];
       updated = true;
     }
