@@ -59,8 +59,8 @@ export const CLASSIFICATION_META: Record<
     label: "Book",
     color: "#c4a484",
     bgColor: "bg-move-book",
-    glyph: "",
-    symbol: "📖",
+    glyph: "🕮",
+    symbol: "🕮",
   },
   inaccuracy: {
     label: "Inaccuracy",

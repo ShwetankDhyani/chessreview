@@ -12,7 +12,7 @@ interface ClassificationIconProps {
   className?: string;
 }
 
-/** Chess.com Game Review badges: filled circle + white symbol (see chess.com post-game review). */
+/** Chess.com-style badges: filled circle + glyph (book uses 🕮). */
 export function ClassificationIcon({
   type,
   size = "sm",
@@ -20,6 +20,23 @@ export function ClassificationIcon({
 }: ClassificationIconProps) {
   const px = SIZE_PX[size];
   const color = CLASSIFICATION_META[type].color;
+
+  if (type === "book") {
+    return (
+      <span
+        className={`inline-flex flex-shrink-0 items-center justify-center leading-none select-none ${className}`}
+        style={{
+          width: px,
+          height: px,
+          fontSize: Math.max(11, px * 0.95),
+        }}
+        title="Book"
+        aria-hidden
+      >
+        🕮
+      </span>
+    );
+  }
 
   return (
     <span
@@ -138,15 +155,8 @@ function IconSvg({
       );
 
     case "book":
-      return (
-        <CircleBadge color={color} size={size}>
-          <path
-            fill="#fff"
-            d="M8 7.5h3.2c.9 0 1.5.6 1.5 1.4V16H9.2c-.7 0-1.2-.5-1.2-1.2V7.5zm5.3 0H16.5c.7 0 1.2.5 1.2 1.2V16h-3.7V8.9c0-.8-.6-1.4-1.5-1.4z"
-          />
-          <path fill={color} d="M12.5 7.5V16" opacity="0.5" />
-        </CircleBadge>
-      );
+      // Handled in ClassificationIcon via 🕮 emoji for crisp rendering.
+      return null;
 
     case "inaccuracy":
       return (

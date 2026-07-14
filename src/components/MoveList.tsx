@@ -225,7 +225,7 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
         <span
           className={`truncate ${isActive ? "text-white" : ""}`}
           style={
-            !isActive && meta && !inBook
+            !isActive && meta
               ? { color: meta.color }
               : undefined
           }
@@ -240,17 +240,16 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
             End
           </span>
         )}
-        {meta && classification && !inBook && (
+        {meta && classification && (
           <ClassificationIcon
             type={classification}
-            size={isKeyMove || classification === "best" ? "md" : "sm"}
-          />
-        )}
-        {inBook && !isActive && (
-          <span
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#b58863]/70"
-            title="Book move"
-            aria-hidden
+            size={
+              classification === "book" ||
+              classification === "best" ||
+              isKeyMove
+                ? "md"
+                : "sm"
+            }
           />
         )}
       </button>
