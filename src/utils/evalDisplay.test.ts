@@ -45,15 +45,31 @@ describe("evalDisplay", () => {
     expect(formatWinChanceDelta(delta)).toMatch(/−/);
   });
 
-  it("uses WDL for white win percent when present", () => {
-    expect(
-      whiteWinPercentFromEval({
-        cp: 0,
-        depth: 18,
-        source: "local",
-        wdl: { w: 800, d: 150, l: 50 },
-      })
-    ).toBeGreaterThan(70);
+  it("drives the eval bar from CP even when WDL is extreme", () => {
+    const pct = whiteWinPercentFromEval({
+      cp: 80,
+      depth: 18,
+      source: "local",
+      wdl: { w: 980, d: 20, l: 0 },
+    });
+    // Soft CP (+0.8) must not slam to the 95% clamp just because WDL did.
+    expect(pct).toBeLessThan(70);
+    expect(pct).toBeGreaterThan(50);
+  });
+
+  it("softens distant mates instead of hard-clamping to 95", () => {
+    const near = whiteWinPercentFromEval({
+      mate: 1,
+      depth: 18,
+      source: "local",
+    });
+    const far = whiteWinPercentFromEval({
+      mate: 12,
+      depth: 18,
+      source: "local",
+    });
+    expect(near).toBeGreaterThan(far);
+    expect(far).toBeLessThan(90);
   });
 
   it("formats signed pawn eval from white POV", () => {

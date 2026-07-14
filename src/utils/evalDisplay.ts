@@ -36,23 +36,37 @@ function evalHasScore(ev: EvalResult | null | undefined): boolean {
 
 /**
  * White win probability 0–100 for the eval bar.
- * Prefers mate → native WDL → logistic CP (aligned with review expected points).
+ * Prefer centipawns for a smooth scrubbing bar. Native WDL is too spiky
+ * ply-to-ply (often clamps to the 5/95 edges while the CP label stays mild).
  */
 export function whiteWinPercentFromEval(
   evalResult: EvalResult | null | undefined
 ): number {
   if (!evalResult) return 50;
-  if (evalResult.mate !== undefined) {
-    return evalResult.mate > 0 ? 95 : 5;
+
+  const clamp = (pct: number) => Math.min(95, Math.max(5, pct));
+
+  // When CP is present, drive the bar from it — matches the numeric label.
+  if (typeof evalResult.cp === "number" && Number.isFinite(evalResult.cp)) {
+    return clamp(winPercentFromCp(evalResult.cp));
   }
+
+  if (evalResult.mate !== undefined) {
+    // Soft mate curve: M1 is extreme, distant mates stay off the hard edge.
+    const m = evalResult.mate;
+    const abs = Math.max(1, Math.abs(m));
+    const syntheticCp = Math.sign(m) * (180 + 720 / Math.sqrt(abs));
+    return clamp(winPercentFromCp(syntheticCp));
+  }
+
   if (evalResult.wdl) {
     const pct =
       wdlTripleToWinProb(evalResult.wdl.w, evalResult.wdl.d, evalResult.wdl.l) *
       100;
-    return Math.min(95, Math.max(5, pct));
+    return clamp(pct);
   }
-  const pct = winPercentFromCp(evalResult.cp ?? 0);
-  return Math.min(95, Math.max(5, pct));
+
+  return 50;
 }
 
 /**
