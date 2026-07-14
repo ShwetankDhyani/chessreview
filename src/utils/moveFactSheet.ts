@@ -3,8 +3,8 @@ import { isDeliveredCheckmate } from "../analysis/mateDetection";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "./classificationMeta";
 import {
-  formatWinChanceLossShort,
-  winChanceLossPercent,
+  formatWinChanceDelta,
+  moverWinChanceDeltaPercent,
 } from "./evalDisplay";
 import {
   computeOpeningChapter,
@@ -94,9 +94,7 @@ export function coachShowsBestWas(move: AnalyzedMove | null | undefined): boolea
 }
 
 function winChangeLabel(move: AnalyzedMove): string {
-  const pct = winChanceLossPercent(move.deltaE);
-  if (pct < 1) return "0%";
-  return formatWinChanceLossShort(move.deltaE);
+  return formatWinChanceDelta(moverWinChanceDeltaPercent(move));
 }
 
 function openingLabel(
@@ -143,7 +141,7 @@ export function buildMoveFactSheet(
       classificationColor: "#e84855",
       engineRank: EMPTY,
       bestWas: EMPTY,
-      winChange: "0%",
+      winChange: winChangeLabel(move),
       opening: openingLabel(move, options),
       played: move.san,
     };
@@ -167,7 +165,7 @@ export function buildMoveFactSheet(
       classificationColor,
       engineRank: EMPTY,
       bestWas: EMPTY,
-      winChange: "0%",
+      winChange: winChangeLabel(move),
       opening: openingLabel(move, options),
       played: move.san,
     };

@@ -57,10 +57,41 @@ describe("buildMoveFactSheet", () => {
         bestMoveSan: "d4",
         engineRank: 1,
         deltaE: 0,
+        eBefore: 0.55,
+        eActual: 0.55,
       })
     );
     expect(sheet!.bestWas).toBe("—");
     expect(sheet!.winChange).toBe("0%");
+  });
+
+  it("shows signed win-chance swing when eval changes", () => {
+    const sheet = buildMoveFactSheet(
+      move({
+        san: "Ke2",
+        classification: "blunder",
+        deltaE: 0.25,
+        eBefore: 0.8,
+        eActual: 0.45,
+        evalBefore: { cp: 500, depth: 18, source: "local" },
+        evalAfter: { cp: -50, depth: 18, source: "local" },
+      })
+    );
+    expect(sheet!.winChange).toBe("−35%");
+  });
+
+  it("shows win-chance row for book moves from expected points", () => {
+    const sheet = buildMoveFactSheet(
+      move({
+        san: "e4",
+        classification: "book",
+        inOpeningBook: true,
+        deltaE: 0,
+        eBefore: 0.5,
+        eActual: 0.53,
+      })
+    );
+    expect(sheet!.winChange).toBe("+3%");
   });
 
   it("fills opening row for book moves", () => {

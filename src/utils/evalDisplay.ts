@@ -2,6 +2,11 @@
  * Display helpers — engine eval uses centipawns; classification loss uses expected points (0–1).
  */
 
+import type { EvalResult } from "../types";
+import { expectedPointsFromEval, winPercentFromCp } from "../analysis/expectedPoints";
+import { wdlTripleToWinProb } from "../analysis/wdl";
+import { isDeliveredCheckmate } from "../analysis/mateDetection";
+
 /** Expected-points loss (deltaE / epLoss) → whole-percent win chance lost. */
 export function winChanceLossPercent(epLoss: number): number {
   return Math.round(Math.abs(epLoss) * 100);
@@ -18,6 +23,100 @@ export function formatWinChanceLoss(epLoss: number): string | null {
 /** Compact form for inline UI: "−18%" */
 export function formatWinChanceLossShort(epLoss: number): string {
   return `−${winChanceLossPercent(epLoss)}%`;
+}
+
+function evalHasScore(ev: EvalResult | null | undefined): boolean {
+  if (!ev) return false;
+  return (
+    ev.mate !== undefined ||
+    ev.wdl != null ||
+    (typeof ev.cp === "number" && (ev.depth > 0 || ev.cp !== 0))
+  );
+}
+
+/**
+ * White win probability 0–100 for the eval bar.
+ * Prefers mate → native WDL → logistic CP (aligned with review expected points).
+ */
+export function whiteWinPercentFromEval(
+  evalResult: EvalResult | null | undefined
+): number {
+  if (!evalResult) return 50;
+  if (evalResult.mate !== undefined) {
+    return evalResult.mate > 0 ? 95 : 5;
+  }
+  if (evalResult.wdl) {
+    const pct =
+      wdlTripleToWinProb(evalResult.wdl.w, evalResult.wdl.d, evalResult.wdl.l) *
+      100;
+    return Math.min(95, Math.max(5, pct));
+  }
+  const pct = winPercentFromCp(evalResult.cp ?? 0);
+  return Math.min(95, Math.max(5, pct));
+}
+
+/**
+ * Signed mover win-chance change across a ply, in percentage points.
+ * Prefers stored eBefore/eActual (review pipeline); falls back to evalBefore/evalAfter.
+ */
+export function moverWinChanceDeltaPercent(move: {
+  color: "w" | "b";
+  fenAfter?: string;
+  eBefore?: number;
+  eActual?: number;
+  deltaE?: number;
+  evalBefore?: EvalResult | null;
+  evalAfter?: EvalResult | null;
+}): number {
+  const deliveredMate = move.fenAfter
+    ? isDeliveredCheckmate(move.fenAfter)
+    : false;
+
+  if (
+    typeof move.eBefore === "number" &&
+    Number.isFinite(move.eBefore) &&
+    typeof move.eActual === "number" &&
+    Number.isFinite(move.eActual)
+  ) {
+    return (move.eActual - move.eBefore) * 100;
+  }
+
+  const hasBefore = evalHasScore(move.evalBefore);
+  const hasAfter = deliveredMate || evalHasScore(move.evalAfter);
+
+  if (hasBefore && hasAfter) {
+    const before = expectedPointsFromEval(
+      move.evalBefore ?? { cp: 0 },
+      move.color
+    );
+    const after = expectedPointsFromEval(
+      move.evalAfter ?? { cp: 0 },
+      move.color,
+      { afterDeliveredCheckmate: deliveredMate }
+    );
+    return (after - before) * 100;
+  }
+
+  // Legacy reviews: only non-negative EP loss was stored.
+  if (typeof move.deltaE === "number" && Number.isFinite(move.deltaE)) {
+    return -Math.abs(move.deltaE) * 100;
+  }
+  return 0;
+}
+
+/** Signed win-chance readout for fact sheets / tooltips: "+3%" / "−12%" / "0%". */
+export function formatWinChanceDelta(deltaPercent: number): string {
+  const pct = Math.round(deltaPercent);
+  if (pct === 0) return "0%";
+  return pct > 0 ? `+${pct}%` : `−${Math.abs(pct)}%`;
+}
+
+/** Longer tooltip form when non-zero. */
+export function formatWinChanceDeltaLong(deltaPercent: number): string | null {
+  const pct = Math.round(deltaPercent);
+  if (pct === 0) return null;
+  const body = pct > 0 ? `+${pct}%` : `−${Math.abs(pct)}%`;
+  return `${body} win chance`;
 }
 
 /** Signed pawn eval from White's perspective (Lichess / Chess.com convention). */

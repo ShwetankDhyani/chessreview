@@ -41,6 +41,8 @@ export interface AnalyzedMove {
   fenAfter: string;
   evalBefore: EvalResult | null;
   evalAfter: EvalResult | null;
+  /** Mover expected points before the ply (0–1). */
+  eBefore?: number;
   eBest: number;
   eActual: number;
   deltaE: number;
