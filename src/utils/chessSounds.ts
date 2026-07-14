@@ -488,16 +488,15 @@ export function announce(kind: AnnounceKind): void {
 
 /**
  * Hierarchy (approx):
- *   selection / soft  ≈ ½ of board move  → navigation chrome
- *   light / medium    → buttons & primary UI
- *   board plies       → strongest (+ sound)
+ *   selection / soft  → navigation chrome (noticeable, lighter than board)
+ *   light / medium / rigid → buttons, toggles, board plies (toggle = board strength)
  */
 const VIBRATE: Record<SensoryKind, number | number[]> = {
-  selection: 10,
-  soft: 12,
-  light: 22,
-  medium: 32,
-  rigid: [18, 22, 30],
+  selection: 15,
+  soft: 18,
+  light: 28,
+  medium: [18, 20, 28],
+  rigid: [26, 32, 34, 44],
   heavy: [26, 28, 44],
   success: [16, 36, 22, 46],
   warning: [22, 46, 26],
@@ -517,12 +516,12 @@ function vibrate(pattern: number | number[]): void {
 
 function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
   const sampleRate = ctx.sampleRate;
-  // Nav (selection/soft) ~ half of previous strong peaks; buttons mid; board uses rigid/medium via moves.
+  // Nav bumped ~50% from prior; toggles/buttons use medium/rigid matching board plies.
   const profile: Record<SensoryKind, { hz: number; dur: number; peak: number }> = {
-    selection: { hz: 120, dur: 0.014, peak: 0.034 },
-    soft: { hz: 100, dur: 0.018, peak: 0.04 },
-    light: { hz: 98, dur: 0.026, peak: 0.075 },
-    medium: { hz: 82, dur: 0.034, peak: 0.1 },
+    selection: { hz: 118, dur: 0.018, peak: 0.051 },
+    soft: { hz: 100, dur: 0.022, peak: 0.06 },
+    light: { hz: 90, dur: 0.03, peak: 0.095 },
+    medium: { hz: 82, dur: 0.034, peak: 0.11 },
     rigid: { hz: 92, dur: 0.032, peak: 0.12 },
     heavy: { hz: 70, dur: 0.044, peak: 0.135 },
     success: { hz: 100, dur: 0.036, peak: 0.095 },
@@ -591,7 +590,7 @@ export function sensate(kind: SensoryKind): void {
   });
 }
 
-/** Tabs, profile, filters — light enough to register, half of board intensity. */
+/** Tabs, profile, filters — noticeable nav tap (~board × 0.5, +50% from prior). */
 export function hapticSelection(): void {
   sensate("selection");
 }
@@ -601,8 +600,13 @@ export function hapticTap(): void {
   sensate("light");
 }
 
-/** Primary / confirming press. */
+/** Primary press / toggles — same weight as a board ply. */
 export function hapticTapStrong(): void {
+  sensate("medium");
+}
+
+/** Toggle switches — match chess piece move strength. */
+export function hapticToggle(): void {
   sensate("medium");
 }
 

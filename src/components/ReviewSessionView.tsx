@@ -14,7 +14,7 @@ import {
 } from "../utils/boardLayout";
 import { coachShowsBestWas } from "../utils/moveFactSheet";
 import type { ReviewBoardSession } from "../hooks/useReviewBoardSession";
-import { hapticSelection } from "../utils/chessSounds";
+import { hapticToggle } from "../utils/chessSounds";
 
 function useViewport() {
   const [viewport, setViewport] = useState(() => ({
@@ -269,7 +269,7 @@ export function ReviewSessionView({
                   </span>
                   <button
                     type="button"
-                    onClick={() => { hapticSelection(); setShowBestMove((b) => !b); }}
+                    onClick={() => { hapticToggle(); setShowBestMove((b) => !b); }}
                     role="switch"
                     aria-checked={showBestMove}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${

@@ -67,7 +67,7 @@ export function FeedbackSettings({ className = "" }: { className?: string }) {
       </div>
       <PrefSwitch
         label="Haptics"
-        detail="Light on tabs · stronger on board plies & buttons"
+        detail="Light on tabs · board-strong on toggles & moves"
         checked={feelOn}
         onChange={(next) => {
           setHapticsEnabled(next);
