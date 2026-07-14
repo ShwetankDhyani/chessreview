@@ -1605,9 +1605,15 @@ export default function App() {
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* ── Desktop board area ── */}
           <div className="hidden lg:flex flex-1 flex-col min-h-0 overflow-hidden">
-          <div className="flex flex-1 items-center justify-center px-4 py-3 gap-4 min-h-0 overflow-hidden">
-            <div className="flex items-stretch gap-2 max-h-full">
-              <div className="relative flex flex-col gap-1">
+          <div className="flex flex-1 items-center justify-center px-4 py-3 gap-4 min-h-0 overflow-y-auto">
+            <div className="flex max-h-full min-h-0 items-stretch gap-2">
+              {/*
+                Keep Save / Reanalyze / Download pinned below the board column.
+                Board size already reserves their height; flex-shrink-0 is a
+                backstop so shorter laptop viewports never clip the buttons.
+              */}
+              <div className="relative flex max-h-full min-h-0 flex-col gap-1">
+                <div className="flex min-h-0 flex-col gap-1 overflow-y-auto">
                 {isAnalyzing && replayFrames.length > 0 ? (
                   <div className="pl-[34px]">
                     <BoardAnalysisStrip
@@ -1699,6 +1705,7 @@ export default function App() {
                     side={boardFlipped ? "b" : "w"}
                   />
                 </div>
+                </div>
                 <BoardReviewActions
                   canReanalyze={canReanalyze}
                   canSave={canSaveCurrentReview}
@@ -1709,7 +1716,7 @@ export default function App() {
                   onReanalyze={requestReanalysis}
                   onSave={() => void handleSaveReview()}
                   onExportPgn={handleExportPgn}
-                  className="pl-[34px] pt-1.5"
+                  className="flex-shrink-0 pl-[34px] pt-1.5"
                 />
               </div>
 
