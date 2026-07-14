@@ -375,15 +375,6 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         <PhaseAccuracyTable phases={phaseAccuracy} />
       </ReviewSection>
 
-      {criticalMoments.length > 0 && (
-        <ReviewSection title="Critical moments">
-          <CriticalMomentsList
-            moments={criticalMoments}
-            onMoveClick={onMoveClick}
-          />
-        </ReviewSection>
-      )}
-
       <ReviewSection title="Move breakdown">
         <div
           className="grid gap-x-2 mb-2 min-w-0"
@@ -475,6 +466,15 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
           })}
         </div>
       </ReviewSection>
+
+      {criticalMoments.length > 0 && (
+        <ReviewSection title="Critical moments">
+          <CriticalMomentsList
+            moments={criticalMoments}
+            onMoveClick={onMoveClick}
+          />
+        </ReviewSection>
+      )}
 
       {onShare && (
         <div className="mt-auto pt-4 border-t border-chess-border/50 space-y-2">
