@@ -29,7 +29,7 @@ function inline(text: string, keyBase: string): ReactNode[] {
           src: m[3],
           alt: m[2] || "",
           className:
-            "my-4 w-full max-h-[28rem] object-cover rounded-xl border border-chess-border",
+            "my-5 w-full max-h-[28rem] object-cover rounded-xl border border-chess-border/80 shadow-[0_8px_28px_rgba(0,0,0,0.25)]",
           loading: "lazy",
         })
       );
@@ -99,7 +99,7 @@ export function renderBlogMarkdown(md: string): ReactNode {
           {
             key: key++,
             className:
-              "my-4 overflow-x-auto rounded-xl border border-chess-border bg-chess-bg/70 p-3 text-xs font-mono text-chess-subtext",
+              "my-5 overflow-x-auto rounded-xl border border-chess-border/80 bg-chess-bg/80 p-3.5 text-xs font-mono text-chess-subtext shadow-inner",
             "data-lang": lang || undefined,
           },
           createElement("code", null, buf.join("\n"))
@@ -114,10 +114,10 @@ export function renderBlogMarkdown(md: string): ReactNode {
       const Tag = level === 1 ? "h1" : level === 2 ? "h2" : "h3";
       const cls =
         level === 1
-          ? "text-xl font-bold text-chess-text mt-6 mb-3"
+          ? "text-2xl font-bold text-chess-text mt-8 mb-3 tracking-tight"
           : level === 2
-            ? "text-lg font-bold text-chess-text mt-5 mb-2"
-            : "text-base font-semibold text-chess-text mt-4 mb-2";
+            ? "text-lg font-bold text-chess-text mt-7 mb-2.5 tracking-tight border-b border-chess-border/50 pb-2"
+            : "text-base font-semibold text-chess-text mt-5 mb-2";
       blocks.push(createElement(Tag, { key: key++, className: cls }, inline(text, `h${key}`)));
       i += 1;
       continue;
@@ -135,7 +135,7 @@ export function renderBlogMarkdown(md: string): ReactNode {
           {
             key: key++,
             className:
-              "my-4 border-l-2 border-chess-accent/50 pl-3 text-chess-subtext italic",
+              "my-5 rounded-r-xl border-l-[3px] border-chess-accent/60 bg-chess-accent/[0.06] px-4 py-3 text-chess-subtext italic",
           },
           buf.map((b, bi) =>
             createElement("p", { key: bi, className: "mb-1 last:mb-0" }, inline(b, `q${key}-${bi}`))
@@ -156,7 +156,7 @@ export function renderBlogMarkdown(md: string): ReactNode {
           "ul",
           {
             key: key++,
-            className: "my-3 list-disc pl-5 space-y-1 text-chess-subtext",
+            className: "my-4 list-disc pl-5 space-y-1.5 text-[15px] text-chess-subtext marker:text-chess-accent/70",
           },
           items.map((item, ii) =>
             createElement("li", { key: ii }, inline(item, `li${key}-${ii}`))
@@ -181,7 +181,7 @@ export function renderBlogMarkdown(md: string): ReactNode {
     blocks.push(
       createElement(
         "p",
-        { key: key++, className: "my-3 text-sm sm:text-[15px] leading-relaxed text-chess-subtext" },
+        { key: key++, className: "my-4 text-[15px] sm:text-base leading-[1.7] text-chess-subtext" },
         inline(para.join(" "), `p${key}`)
       )
     );
