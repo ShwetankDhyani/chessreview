@@ -23,6 +23,15 @@ export function SiteFooter() {
       >
         <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
           <div className="flex items-center gap-3">
+            <a
+              href="/about"
+              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+            >
+              About
+            </a>
+            <span className="text-chess-border-strong text-[10px]" aria-hidden>
+              ·
+            </span>
             <button
               type="button"
               onClick={() => setHelpOpen(true)}

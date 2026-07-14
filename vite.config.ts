@@ -4,6 +4,7 @@ import { createGameImportMiddleware } from "./server/gameUrlImport.mjs";
 import { createReviewStatsMiddleware } from "./server/reviewStats.mjs";
 import { createShareMiddleware } from "./server/reviewSharesApi.mjs";
 import { createSavedReviewsMiddleware } from "./server/reviewSavesApi.mjs";
+import { createAboutCommentsMiddleware } from "./server/aboutCommentsApi.mjs";
 
 export default defineConfig({
   plugins: [
@@ -15,6 +16,7 @@ export default defineConfig({
         server.middlewares.use(createReviewStatsMiddleware());
         server.middlewares.use(createShareMiddleware());
         server.middlewares.use(createSavedReviewsMiddleware());
+        server.middlewares.use(createAboutCommentsMiddleware());
       },
     },
   ],

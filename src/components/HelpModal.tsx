@@ -81,7 +81,14 @@ export function HelpModal({
           </p>
           <p className="text-chess-muted text-xs">
             There is no paywall — support is entirely optional. Thank you for
-            being here.
+            being here. Prefer a longer read? See the{" "}
+            <a
+              href="/about"
+              className="text-chess-accent hover:underline"
+            >
+              About page
+            </a>
+            .
           </p>
         </div>
 
