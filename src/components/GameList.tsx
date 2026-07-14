@@ -7,6 +7,7 @@ import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
 import { GameUrlImport } from "./GameUrlImport";
 import { InlineErrorNotice } from "./InlineErrorNotice";
+import { hapticSelection, hapticSoft, hapticTap } from "../utils/chessSounds";
 import {
   normalizeGameLoadError,
   trackAppError,
@@ -236,7 +237,10 @@ export const GameList: React.FC<GameListProps> = ({
     }
   };
 
-  const handleGo = () => loadGames(inputVal, platform);
+  const handleGo = () => {
+    hapticTap();
+    loadGames(inputVal, platform);
+  };
   const cancelLoad = useCallback(() => {
     loadGenRef.current += 1;
     setLoading(false);
@@ -246,6 +250,7 @@ export const GameList: React.FC<GameListProps> = ({
   }, [clearSlowTimer]);
 
   const handleRetry = () => {
+    hapticSelection();
     // Allow retry to take over even if a prior request is still pending.
     cancelLoad();
     void loadGames(inputVal, platform);
@@ -323,7 +328,7 @@ export const GameList: React.FC<GameListProps> = ({
     return (
       <button
         type="button"
-        onClick={() => onOpenActiveReview?.()}
+        onClick={() => { hapticTap(); onOpenActiveReview?.(); }}
         className="mobile-list-row relative overflow-hidden mobile-list-row--active"
         aria-label={`${activeReview.label}, ${statusLabel}. Open review.`}
       >
@@ -461,7 +466,7 @@ export const GameList: React.FC<GameListProps> = ({
                       <button
                         key={r}
                         type="button"
-                        onClick={() => setResultFilter(r)}
+                        onClick={() => { hapticSelection(); setResultFilter(r); }}
                         className={`mobile-segment-btn ${
                           resultFilter === r
                             ? `mobile-segment-btn--active mobile-segment-btn--${r}`
@@ -489,7 +494,7 @@ export const GameList: React.FC<GameListProps> = ({
                       <button
                         key={f}
                         type="button"
-                        onClick={() => setFormatFilter(f)}
+                        onClick={() => { hapticSelection(); setFormatFilter(f); }}
                         className={`mobile-chip ${formatFilter === f ? "mobile-chip--active" : ""}`}
                       >
                         {f === "all" ? "All" : f}
@@ -540,6 +545,7 @@ export const GameList: React.FC<GameListProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      hapticSoft();
                       setOpponentSearch("");
                       setResultFilter("all");
                       setFormatFilter("all");

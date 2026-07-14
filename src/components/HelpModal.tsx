@@ -1,3 +1,4 @@
+import { hapticSoft } from "../utils/chessSounds";
 export interface SupportLink {
   label: string;
   href: string;
@@ -49,7 +50,7 @@ export function HelpModal({
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         aria-label="Close"
-        onClick={onClose}
+        onClick={() => { hapticSoft(); onClose(); }}
       />
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -58,7 +59,7 @@ export function HelpModal({
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { hapticSoft(); onClose(); }}
             className="h-8 w-8 flex-shrink-0 rounded-lg text-chess-muted hover:text-chess-text hover:bg-chess-hover"
             aria-label="Close"
           >

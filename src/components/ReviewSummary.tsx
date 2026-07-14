@@ -17,6 +17,7 @@ import {
   moverWinChanceDeltaPercent,
 } from "../utils/evalDisplay";
 import { getMeta } from "../utils/classificationMeta";
+import { hapticSelection, hapticTap } from "../utils/chessSounds";
 
 const ACCURACY_EXCLUDE_KEY = "cr_accuracy_exclude_book_forced";
 
@@ -173,7 +174,7 @@ function AccuracyExcludeToggle({
           role="switch"
           aria-checked={checked}
           aria-label="Exclude book and forced moves from accuracy"
-          onClick={() => onChange(!checked)}
+          onClick={() => { hapticSelection(); onChange(!checked); }}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chess-accent/50 ${
             checked ? "bg-chess-accent" : "bg-chess-border-strong"
           }`}
@@ -480,7 +481,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         <div className="mt-auto pt-4 border-t border-chess-border/50 space-y-2">
           <button
             type="button"
-            onClick={onShare}
+            onClick={() => { hapticTap(); onShare?.(); }}
             disabled={sharing}
             className="w-full text-xs font-semibold py-2.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
           >

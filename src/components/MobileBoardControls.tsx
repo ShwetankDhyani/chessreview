@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { formatChessMoveCounter } from "../utils/pgnPlies";
+import { hapticSoft } from "../utils/chessSounds";
 
 export function FlipBoardIcon() {
   return (
@@ -33,13 +34,18 @@ export function MobileBoardControls({
   onFlip: () => void;
   leading?: ReactNode;
 }) {
+  const flip = () => {
+    hapticSoft();
+    onFlip();
+  };
+
   if (moveCount <= 0) {
     return (
       <div className="ml-auto flex items-center gap-1.5">
         {leading}
         <button
           type="button"
-          onClick={onFlip}
+          onClick={flip}
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
           aria-label="Flip board"
         >
@@ -62,7 +68,7 @@ export function MobileBoardControls({
       </span>
       <button
         type="button"
-        onClick={onFlip}
+        onClick={flip}
         className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
         aria-label="Flip board"
       >

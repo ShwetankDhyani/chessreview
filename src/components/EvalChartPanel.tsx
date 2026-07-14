@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { AnalyzedMove } from "../types";
 import { EvalChart } from "./EvalChart";
+import { hapticSelection } from "../utils/chessSounds";
 
 interface EvalChartPanelProps {
   moves: AnalyzedMove[];
@@ -29,6 +30,7 @@ export function EvalChartPanel({
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp ?? openInternal;
   const toggle = () => {
+    hapticSelection();
     const next = !open;
     if (openProp === undefined) setOpenInternal(next);
     onOpenChange?.(next);

@@ -12,6 +12,7 @@ import { buildMoveFactSheet } from "../utils/moveFactSheet";
 import { MoveFactSheetPanel } from "./MoveFactSheetPanel";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
+import { hapticSelection } from "../utils/chessSounds";
 import {
   formatTablebaseSummary,
   isTablebasePosition,
@@ -184,8 +185,14 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
 
   const goToStep = (nextStep: number) => {
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    if (nextStep <= 0) { setStep(0); return; }
+    if (nextStep <= 0) {
+      if (step !== 0) hapticSelection();
+      setStep(0);
+      return;
+    }
     if (nextStep > allMoves.length) return;
+    if (nextStep === step) return;
+    hapticSelection();
     setStep(nextStep);
   };
 

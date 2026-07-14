@@ -1,3 +1,4 @@
+import { hapticSelection } from "../utils/chessSounds";
 import {
   ENGINE_TONE_STYLES,
   resolveEngineUi,
@@ -88,7 +89,7 @@ export function EngineDepthControls({
             <button
               key={d}
               type="button"
-              onClick={() => onDepthChange(d)}
+              onClick={() => { hapticSelection(); onDepthChange(d); }}
               title={`${depthHint(d)} · ${ui.title}`}
               className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
                 depth === d ? styles.depthActive : styles.depthIdle
@@ -103,7 +104,7 @@ export function EngineDepthControls({
       <div className="lg:hidden relative">
         <button
           type="button"
-          onClick={ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu}
+          onClick={() => { hapticSelection(); (ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu)(); }}
           className={`inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg border font-mono font-semibold text-xs transition-colors ${styles.mobileBtn}`}
           title={ui.title}
         >

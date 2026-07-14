@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { hapticSelection, hapticSoft } from "../utils/chessSounds";
 
 interface InlineErrorNoticeProps {
   message: string;
@@ -31,7 +32,10 @@ export function InlineErrorNotice({
             {onRetry ? (
               <button
                 type="button"
-                onClick={onRetry}
+                onClick={() => {
+                  hapticSelection();
+                  onRetry();
+                }}
                 className="font-semibold text-red-100 hover:text-white"
               >
                 Retry
@@ -40,7 +44,10 @@ export function InlineErrorNotice({
             {onDismiss ? (
               <button
                 type="button"
-                onClick={onDismiss}
+                onClick={() => {
+                  hapticSoft();
+                  onDismiss();
+                }}
                 className="font-semibold text-red-300 hover:text-red-100"
               >
                 Dismiss

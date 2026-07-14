@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { hapticTap, hapticTapStrong } from "../utils/chessSounds";
+import { hapticTap, hapticTapStrong, notifyError, notifySuccess } from "../utils/chessSounds";
 import { parseGameText } from "../utils/pgnParse";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import {
@@ -32,6 +32,7 @@ export function PgnPastePanel({
     if (!result.ok) {
       const normalized = normalizeImportError(result.error);
       setError(normalized);
+      notifyError();
       trackAppError({
         code: normalized.code,
         message: normalized.message,
@@ -40,6 +41,7 @@ export function PgnPastePanel({
       return;
     }
     setError(null);
+    notifySuccess();
     onLoad(result.pgn);
   };
 
@@ -53,6 +55,7 @@ export function PgnPastePanel({
       if (!result.ok) {
         const normalized = normalizeImportError(result.error);
         setError(normalized);
+        notifyError();
         trackAppError({
           code: normalized.code,
           message: normalized.message,
@@ -61,11 +64,12 @@ export function PgnPastePanel({
         return;
       }
       setError(null);
-      hapticTapStrong();
+      notifySuccess();
       onLoad(result.pgn);
     } catch {
       const normalized = normalizeImportError("Invalid file");
       setError(normalized);
+      notifyError();
       trackAppError({
         code: normalized.code,
         message: normalized.message,
@@ -82,11 +86,12 @@ export function PgnPastePanel({
       if (clip.trim()) {
         setText(clip);
         setError(null);
-        hapticTapStrong();
+        notifySuccess();
       }
     } catch {
       const normalized = normalizeImportError("Paste manually");
       setError(normalized);
+      notifyError();
       trackAppError({
         code: normalized.code,
         message: normalized.message,

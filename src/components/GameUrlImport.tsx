@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { fetchPgnFromGameUrl } from "../utils/gameUrlImport";
-import { hapticTapStrong } from "../utils/chessSounds";
+import { hapticTapStrong, notifyError, notifySuccess } from "../utils/chessSounds";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import {
   normalizeImportError,
@@ -28,9 +28,11 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
       onImported(pgn);
       setUrl("");
       setError(null);
+      notifySuccess();
     } catch (e) {
       const normalized = normalizeImportError(e);
       setError(normalized);
+      notifyError();
       trackAppError({
         code: normalized.code,
         message: normalized.message,

@@ -10,6 +10,7 @@ import {
 } from "../utils/socialShare";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { trackAppError } from "../utils/appError";
+import { hapticSelection, hapticTap, notifyError, notifySuccess } from "../utils/chessSounds";
 
 interface ShareReviewActionsProps {
   url: string;
@@ -76,7 +77,9 @@ export function ShareReviewActions({
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setActionError(null);
+      notifySuccess();
     } catch {
+      notifyError();
       setActionError("Could not copy link. You can still select and copy it manually.");
       trackAppError({
         code: "SHARE_COPY_FAILED",
@@ -87,6 +90,7 @@ export function ShareReviewActions({
   }, [url]);
 
   const openShare = useCallback((href: string) => {
+    hapticSelection();
     window.open(href, "_blank", "noopener,noreferrer");
   }, []);
 
@@ -107,9 +111,12 @@ export function ShareReviewActions({
 
   const handleNativeShare = useCallback(async () => {
     try {
+      hapticTap();
       await shareViaNativeSheet(url, shareText);
       setActionError(null);
+      notifySuccess();
     } catch {
+      notifyError();
       setActionError("Sharing was cancelled or unavailable on this device.");
       trackAppError({
         code: "SHARE_NATIVE_FAILED",

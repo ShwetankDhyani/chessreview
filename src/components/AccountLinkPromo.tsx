@@ -1,4 +1,4 @@
-import { hapticTap } from "../utils/chessSounds";
+import { hapticSelection } from "../utils/chessSounds";
 
 type Platform = "chesscom" | "lichess";
 
@@ -37,7 +37,7 @@ function LichessMark({ className = "" }: { className?: string }) {
 
 export function AccountLinkPromo({ onConnect, embedded = false }: AccountLinkPromoProps) {
   const pick = (platform: Platform) => {
-    hapticTap();
+    hapticSelection();
     onConnect(platform);
   };
 

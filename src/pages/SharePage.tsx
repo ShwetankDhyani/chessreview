@@ -10,6 +10,7 @@ import { useReviewBoardSession } from "../hooks/useReviewBoardSession";
 import type { AnalyzedMove, ReviewRun, ReviewSummary } from "../types";
 import { InlineErrorNotice } from "../components/InlineErrorNotice";
 import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
+import { hapticSelection } from "../utils/chessSounds";
 
 type ShareTab = "game" | "stats";
 
@@ -48,7 +49,7 @@ function ShareTabBar({
           <button
             key={id}
             type="button"
-            onClick={() => onTab(id)}
+            onClick={() => { hapticSelection(); onTab(id); }}
             className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
               active ? "text-chess-accent" : "text-chess-muted"
             }`}
@@ -81,7 +82,7 @@ function DesktopSidebarTabs({
         <button
           key={id}
           type="button"
-          onClick={() => onTab(id)}
+          onClick={() => { hapticSelection(); onTab(id); }}
           className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors ${
             tab === id ? "text-chess-accent" : "text-chess-muted hover:text-chess-text"
           }`}

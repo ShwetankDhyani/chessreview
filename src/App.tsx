@@ -32,7 +32,19 @@ import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
 import { useReviewTimingModel } from "./hooks/useReviewTimingModel";
-import { hapticTap, playMoveFeedback, unlockChessAudio } from "./utils/chessSounds";
+import {
+  hapticHeavy,
+  hapticSelection,
+  hapticSoft,
+  hapticTap,
+  hapticTapStrong,
+  notifyError,
+  notifySuccess,
+  notifyWarning,
+  playMoveFeedback,
+  unlockChessAudio,
+} from "./utils/chessSounds";
+import { FeedbackSettings } from "./components/FeedbackSettings";
 import { computeDesktopBoardSize, computeMobileBoardSize, MOBILE_LAYOUT } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
@@ -443,6 +455,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     const exists = profiles.some(p => p.name.toLowerCase() === name.toLowerCase() && p.platform === platform);
     if (exists) {
       setAddProfileError("Profile already added");
+      notifyWarning();
       return;
     }
 
@@ -463,10 +476,12 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setAddProfileError(
           "Profile check timed out after 5s. You can retry or paste PGN/game URL to keep reviewing."
         );
+        notifyWarning();
         return;
       }
       if (!officialName) {
         setAddProfileError(`User not found on ${platform === "chesscom" ? "Chess.com" : "Lichess"}`);
+        notifyError();
         return;
       }
       finalName = officialName;
@@ -478,6 +493,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     );
     if (normalizedExists) {
       setAddProfileError("Profile already added");
+      notifyWarning();
       return;
     }
 
@@ -486,6 +502,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setShowAddProfile(false);
     setAddProfileName("");
     setAddProfileError(null);
+    notifySuccess();
     // Clear games cache and trigger reload
     localStorage.removeItem("cr_games");
     window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: { name: finalName, platform } }));
@@ -537,6 +554,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     localStorage.setItem("cr_depth", String(d));
     // depth < 16 implies cloud-only fallback is fine; only block local for very shallow
     setCloudOnlyMode(d <= 12);
+    hapticSelection();
   }, []);
 
   const handleContinuationFen = useCallback((fen: string | null) => {
@@ -763,6 +781,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           lastRenderedFenRef.current = m.fenAfter;
           setMoveAnim(highlight);
         }
+        notifySuccess();
       } catch (e) {
         if (gen !== analysisGenerationRef.current) return;
         console.error(e);
@@ -780,6 +799,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         reviewJobRef.current = null;
         setReviewJob(null);
         setAnalysisState("loading");
+        notifyError();
       }
     },
     [depth, recheckEngine, activeUser, noteCompletedReview]
@@ -804,6 +824,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     } else {
       setAnalysisState("idle");
     }
+    notifyWarning();
   }, [pgn, clearReviewJob]);
 
   /** Soft-load a PGN onto the board without aborting an in-flight review job. */
@@ -871,6 +892,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
     if (!pgn.trim()) return;
+    hapticTapStrong();
     if (analysisState === "done" && moves.length > 0) {
       setTab("moves");
       if (currentMoveIdxRef.current < 0) {
@@ -900,6 +922,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   /** Re-run full analysis (e.g. after depth change or accuracy formula update). */
   const requestReanalysis = useCallback(() => {
     if (!pgn.trim() || analysisRunning) return;
+    hapticTapStrong();
     void runAnalysis(pgn, { visible: true });
   }, [pgn, analysisRunning, runAnalysis]);
 
@@ -957,9 +980,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const dismissWelcome = useCallback(() => {
     localStorage.setItem("cr_welcome_dismissed", "1");
     setShowWelcome(false);
+    hapticSoft();
   }, []);
 
   const returnToActiveReview = useCallback(() => {
+    hapticSoft();
     const job = reviewJob;
     if (!job) {
       setTab("moves");
@@ -987,6 +1012,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const cancelAndAnalyzeCurrent = useCallback(() => {
     if (!pgn.trim()) return;
+    hapticHeavy();
     abortRef.current = true;
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);
@@ -999,6 +1025,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const selectGame = useCallback(
     (pgnStr: string, meta?: { id?: string }) => {
+      hapticSelection();
       // Jump back to the game that is already analyzing / parked.
       if (reviewJob && samePgn(pgnStr, reviewJob.pgn)) {
         if (meta?.id) setSessionGameId(meta.id);
@@ -1086,12 +1113,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const handleSaveReview = useCallback(async () => {
     if (!activeUser?.name) {
       setSaveReviewMessage("Link a profile to save games.");
+      notifyWarning();
       return;
     }
     if (!pgn || !reviewResult || !summary || moves.length === 0) {
       setSaveReviewMessage("Complete a review first, then save.");
+      notifyWarning();
       return;
     }
+    hapticTapStrong();
     setSavingReview(true);
     setSaveReviewMessage(null);
     try {
@@ -1107,6 +1137,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       });
       setSaveReviewMessage("Saved to your account.");
       await refreshSavedReviews();
+      notifySuccess();
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Could not save game";
       setSaveReviewMessage(
@@ -1114,6 +1145,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           ? "Cloud save is unavailable right now. Try again shortly."
           : raw
       );
+      notifyError();
     } finally {
       setSavingReview(false);
     }
@@ -1121,8 +1153,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const handleExportPgn = useCallback(() => {
     if (!pgn.trim()) return;
+    hapticTap();
     downloadPgn(pgn, buildPgnFilename(playerNames.white, playerNames.black));
     setSaveReviewMessage("PGN downloaded.");
+    notifySuccess();
     window.setTimeout(() => setSaveReviewMessage(null), 2500);
   }, [pgn, playerNames.white, playerNames.black]);
 
@@ -1212,13 +1246,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     if (isCovered) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
-        stepBoardMove(1, false);
+        stepBoardMove(1, true);
       } else if (e.key === "ArrowLeft") {
-        stepBoardMove(-1, false);
+        stepBoardMove(-1, true);
       } else if (e.key === "ArrowUp") {
         navigateToMove(-1, false);
+        hapticSoft();
       } else if (e.key === "ArrowDown") {
         navigateToMove(moves.length - 1, false);
+        hapticSoft();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1487,7 +1523,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         {/* ── Profile Dropdown ── */}
         <div className="flex items-center relative flex-shrink-0">
           <button
-            onClick={() => setShowAddProfile((v) => !v)}
+            onClick={() => {
+              hapticSelection();
+              setShowAddProfile((v) => !v);
+            }}
             aria-label={activeUser ? `Profile: ${activeUser.name}` : "Sign in"}
             className="flex items-center gap-1.5 sm:gap-2 h-9 px-1.5 sm:px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface hover:bg-chess-hover hover:border-chess-accent/40 transition-colors"
           >
@@ -1546,7 +1585,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                         }`}
                       >
                         <button
-                          onClick={() => { switchProfile(i); setShowAddProfile(false); }}
+                          onClick={() => {
+                            hapticSelection();
+                            switchProfile(i);
+                            setShowAddProfile(false);
+                          }}
                           className="flex items-center gap-2 flex-1 text-left min-w-0"
                         >
                           <span className="text-sm leading-none">{p.platform === "lichess" ? "🏳" : "♟"}</span>
@@ -1555,7 +1598,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           </span>
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); removeProfile(i); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            notifyWarning();
+                            removeProfile(i);
+                          }}
                           title="Remove profile"
                           className="w-6 h-6 flex items-center justify-center rounded text-chess-muted hover:bg-move-blunder hover:text-white transition-colors"
                         >
@@ -1566,6 +1613,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                         <button
                           type="button"
                           onClick={() => {
+                            hapticTap();
                             setShowSavedGamesModal(true);
                             void refreshSavedReviews();
                           }}
@@ -1588,13 +1636,21 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   <div className="text-xs font-semibold text-chess-text mb-2">Add New Profile</div>
                   <div className="flex rounded overflow-hidden border border-chess-border text-xs font-semibold mb-2">
                     <button
-                      onClick={() => { setAddProfilePlatform("chesscom"); setAddProfileError(null); }}
+                      onClick={() => {
+                        hapticSelection();
+                        setAddProfilePlatform("chesscom");
+                        setAddProfileError(null);
+                      }}
                       className={`flex-1 py-1.5 flex items-center justify-center gap-1 transition-colors ${
                         addProfilePlatform === "chesscom" ? "bg-move-best text-white" : "bg-chess-bg text-chess-muted hover:text-chess-text"
                       }`}
                     >♟ Chess.com</button>
                     <button
-                      onClick={() => { setAddProfilePlatform("lichess"); setAddProfileError(null); }}
+                      onClick={() => {
+                        hapticSelection();
+                        setAddProfilePlatform("lichess");
+                        setAddProfileError(null);
+                      }}
                       className={`flex-1 py-1.5 flex items-center justify-center gap-1 border-l border-chess-border transition-colors ${
                         addProfilePlatform === "lichess" ? "bg-[#b58863] text-white" : "bg-chess-bg text-chess-muted hover:text-chess-text"
                       }`}
@@ -1643,6 +1699,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   Maximum of 5 profiles reached.
                 </div>
               )}
+              <FeedbackSettings />
             </div>
           )}
         </div>
@@ -1690,7 +1747,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
               <button
                 key={t}
                 onClick={() => {
-                  hapticTap();
+                  hapticSelection();
                   setTab(t);
                 }}
                 className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 px-2 transition-colors ${
@@ -1715,7 +1772,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  hapticSelection();
+                  setTab(t);
+                }}
                 className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors ${
                   tab === t
                     ? "text-chess-accent"
@@ -1970,7 +2030,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
               <div className="flex flex-col items-stretch gap-1 w-11">
                 <button
-                  onClick={() => setBoardFlipped((f: boolean) => !f)}
+                  onClick={() => {
+                    hapticSoft();
+                    setBoardFlipped((f: boolean) => !f);
+                  }}
                   className="board-nav-btn"
                   title="Flip board"
                   aria-label="Flip board"
@@ -1986,7 +2049,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   <>
                     <div className="h-px bg-chess-border my-1" />
                     <button
-                      onClick={() => navigateToMove(-1, false)}
+                      onClick={() => {
+                        hapticSoft();
+                        navigateToMove(-1, false);
+                      }}
                       className="board-nav-btn"
                       title="Go to start"
                       aria-label="Go to start"
@@ -2012,7 +2078,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5l9 7-9 7z" /></svg>
                     </button>
                     <button
-                      onClick={() => navigateToMove(moves.length - 1, false)}
+                      onClick={() => {
+                        hapticSoft();
+                        navigateToMove(moves.length - 1, false);
+                      }}
                       className="board-nav-btn"
                       title="Go to end"
                       aria-label="Go to end"
@@ -2041,7 +2110,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <span className="text-[11px] text-chess-subtext">Best-move arrow</span>
                     <button
                       type="button"
-                      onClick={() => setShowBestMove((b) => !b)}
+                      onClick={() => {
+                        hapticSelection();
+                        setShowBestMove((b) => !b);
+                      }}
                       role="switch"
                       aria-checked={showBestMove}
                       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${

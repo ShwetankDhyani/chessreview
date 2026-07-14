@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { HelpModal } from "./HelpModal";
 import { ReviewOdometer } from "./ReviewOdometer";
+import { hapticTap } from "../utils/chessSounds";
 
 export function SiteFooter() {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -46,7 +47,10 @@ export function SiteFooter() {
             </span>
             <button
               type="button"
-              onClick={() => setHelpOpen(true)}
+              onClick={() => {
+                hapticTap();
+                setHelpOpen(true);
+              }}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
               Support Us

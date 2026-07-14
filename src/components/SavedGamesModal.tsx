@@ -1,3 +1,4 @@
+import { hapticSoft, hapticTap, notifyWarning } from "../utils/chessSounds";
 import type { SavedReviewListItem } from "../utils/savedReviews";
 
 interface SavedGamesModalProps {
@@ -23,7 +24,10 @@ export function SavedGamesModal({
     <>
       <div
         className="fixed inset-0 z-[80] bg-black/60"
-        onClick={onClose}
+        onClick={() => {
+          hapticSoft();
+          onClose();
+        }}
         aria-hidden
       />
       <div
@@ -38,7 +42,10 @@ export function SavedGamesModal({
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              hapticSoft();
+              onClose();
+            }}
             className="h-7 w-7 rounded-md text-chess-muted hover:text-chess-text hover:bg-chess-hover"
             aria-label="Close"
           >
@@ -62,7 +69,10 @@ export function SavedGamesModal({
                 >
                   <button
                     type="button"
-                    onClick={() => onOpen(item.id)}
+                    onClick={() => {
+                      hapticTap();
+                      onOpen(item.id);
+                    }}
                     className="w-full text-left"
                   >
                     <div className="truncate text-[13px] font-medium text-chess-text">
@@ -75,7 +85,10 @@ export function SavedGamesModal({
                   <div className="mt-2 flex justify-end">
                     <button
                       type="button"
-                      onClick={() => onDelete(item.id)}
+                      onClick={() => {
+                        notifyWarning();
+                        onDelete(item.id);
+                      }}
                       className="text-[11px] text-chess-muted hover:text-red-300"
                     >
                       Delete

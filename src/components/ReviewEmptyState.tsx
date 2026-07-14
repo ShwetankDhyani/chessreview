@@ -1,4 +1,4 @@
-import { hapticTap } from "../utils/chessSounds";
+import { hapticSelection } from "../utils/chessSounds";
 
 interface ReviewEmptyStateProps {
   onGoToGames: () => void;
@@ -10,7 +10,7 @@ export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
       <button
         type="button"
         onClick={() => {
-          hapticTap();
+          hapticSelection();
           onGoToGames();
         }}
         className="group flex flex-col items-center gap-3 rounded-xl border border-dashed border-chess-border/60 bg-chess-bg/25 px-7 py-5 transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-chess-accent/50"
