@@ -5,7 +5,7 @@ import { ReviewSummaryPanel } from "./components/ReviewSummary";
 import { ReviewEmptyState } from "./components/ReviewEmptyState";
 import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
-import { GameList } from "./components/GameList";
+import { GameList, type SwitchGameRequest } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
 import type {
@@ -26,6 +26,7 @@ import { MobileBoardShell } from "./components/MobileBoardShell";
 import { MobileGameHero } from "./components/MobileGameHero";
 import { getGameEndInfo } from "./utils/gameEnd";
 import { parseGameText } from "./utils/pgnParse";
+import { samePgn } from "./utils/pgnIdentity";
 import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
@@ -154,6 +155,10 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
+  /** List-row id for the PGN currently loaded / under review (Games pin). */
+  const [sessionGameId, setSessionGameId] = useState<string | null>(null);
+  /** User tried to open another game while analysis is still running. */
+  const [switchRequest, setSwitchRequest] = useState<SwitchGameRequest | null>(null);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -741,6 +746,7 @@ export default function App() {
     setShowAnalysisProgress(false);
     showAnalysisProgressRef.current = false;
     setAnalysisStartedAt(null);
+    setSwitchRequest(null);
     if (pgn.trim()) {
       setAnalysisState("loading");
     } else {
@@ -790,6 +796,7 @@ export default function App() {
       showAnalysisProgressRef.current = false;
       setAnalysisStartedAt(null);
       setSaveReviewMessage(null);
+      setSwitchRequest(null);
       if (result.moves.length > 0) {
         navigateToMove(result.moves.length - 1, false);
       }
@@ -812,6 +819,7 @@ export default function App() {
     setShowAnalysisProgress(false);
     showAnalysisProgressRef.current = false;
     setAnalysisStartedAt(null);
+    setSwitchRequest(null);
     setPgn(parsed.pgn);
     setReplayFrames(buildPgnReplayFrames(parsed.pgn));
     setGamePlyCount(parsed.moveCount);
@@ -869,13 +877,66 @@ export default function App() {
   }, [pgn, summary, moves, playerNames, reviewResult]);
 
   const selectGame = useCallback(
-    (pgnStr: string) => {
+    (pgnStr: string, meta?: { id?: string }) => {
+      if (analysisRunning && pgn.trim() && !samePgn(pgnStr, pgn)) {
+        const gm = extractGameMeta(pgnStr);
+        setSwitchRequest({
+          pgn: pgnStr,
+          gameId: meta?.id ?? null,
+          label: `${gm.white} vs ${gm.black}`,
+        });
+        setTab("games");
+        return;
+      }
+      if (pgn.trim() && samePgn(pgnStr, pgn)) {
+        setSwitchRequest(null);
+        if (meta?.id) setSessionGameId(meta.id);
+        setTab("moves");
+        if (analysisRunning) {
+          showAnalysisProgressRef.current = true;
+          setShowAnalysisProgress(true);
+        }
+        return;
+      }
+      setSwitchRequest(null);
+      setSessionGameId(meta?.id ?? null);
       const loaded = loadPgn(pgnStr);
       if (!loaded) return;
       setSaveReviewMessage(null);
     },
-    [loadPgn]
+    [analysisRunning, pgn, loadPgn]
   );
+
+  const openActiveReview = useCallback(() => {
+    setSwitchRequest(null);
+    setTab("moves");
+    if (analysisRunning) {
+      showAnalysisProgressRef.current = true;
+      setShowAnalysisProgress(true);
+    }
+  }, [analysisRunning]);
+
+  const confirmSwitchGame = useCallback(() => {
+    if (!switchRequest) return;
+    const next = switchRequest;
+    setSwitchRequest(null);
+    setSessionGameId(next.gameId);
+    const loaded = loadPgn(next.pgn);
+    if (!loaded) return;
+    setSaveReviewMessage(null);
+  }, [switchRequest, loadPgn]);
+
+  const dismissSwitchGame = useCallback(() => {
+    setSwitchRequest(null);
+  }, []);
+
+  // If the blocked review finishes while the conflict banner is up, drop it —
+  // the user can open the other game normally.
+  useEffect(() => {
+    if (!analysisRunning && switchRequest) {
+      setSwitchRequest(null);
+    }
+  }, [analysisRunning, switchRequest]);
 
   const refreshSavedReviews = useCallback(async () => {
     if (!activeUser?.name) {
@@ -953,6 +1014,7 @@ export default function App() {
           platform: activeUser.platform,
           username: activeUser.name,
         });
+        setSessionGameId(null);
         const loaded = loadPgn(saved.pgn);
         if (!loaded) return;
         const fallbackRun = {
@@ -1103,6 +1165,29 @@ export default function App() {
   );
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
+  const activeReview = useMemo(() => {
+    if (!pgn.trim()) return null;
+    const running = analysisRunning;
+    const done = analysisState === "done" && moves.length > 0;
+    if (!running && !done) return null;
+    return {
+      gameId: sessionGameId,
+      label: vsLabel,
+      pgn,
+      running,
+      done,
+      progressPercent: done ? 100 : progressPercent,
+    };
+  }, [
+    pgn,
+    analysisRunning,
+    analysisState,
+    moves.length,
+    sessionGameId,
+    vsLabel,
+    progressPercent,
+  ]);
+
   const boardPositionFen = continuationFen ?? currentFen;
   const engineLineGlow =
     continuationActive || !!continuationFen || !!continuationArrow;
@@ -1506,6 +1591,13 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
+                  selectedGameId={sessionGameId ?? undefined}
+                  activeReview={activeReview}
+                  switchRequest={switchRequest}
+                  onOpenActiveReview={openActiveReview}
+                  onCancelAnalysis={cancelAnalysis}
+                  onConfirmSwitchGame={confirmSwitchGame}
+                  onDismissSwitchGame={dismissSwitchGame}
                 />
               </>
             )}
@@ -1847,6 +1939,13 @@ export default function App() {
                   username=""
                   onGameSelect={selectGame}
                   onLinkProfile={openProfilePanel}
+                  selectedGameId={sessionGameId ?? undefined}
+                  activeReview={activeReview}
+                  switchRequest={switchRequest}
+                  onOpenActiveReview={openActiveReview}
+                  onCancelAnalysis={cancelAnalysis}
+                  onConfirmSwitchGame={confirmSwitchGame}
+                  onDismissSwitchGame={dismissSwitchGame}
                 />
             </div>
 

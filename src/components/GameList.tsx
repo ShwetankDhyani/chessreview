@@ -22,11 +22,33 @@ const STORAGE_KEY_GAMES   = "cr_games";
 const LICHESS_FETCH_TIMEOUT_MS = 5000;
 const CHESSCOM_FETCH_TIMEOUT_MS = 20000;
 
+/** In-tab review session shown while browsing Games without a full refresh. */
+export interface ActiveReviewSession {
+  gameId: string | null;
+  label: string;
+  pgn: string;
+  running: boolean;
+  done: boolean;
+  progressPercent: number;
+}
+
+export interface SwitchGameRequest {
+  pgn: string;
+  gameId: string | null;
+  label: string;
+}
+
 interface GameListProps {
   username: string;
-  onGameSelect: (pgn: string) => void;
+  onGameSelect: (pgn: string, meta?: { id?: string }) => void;
   onLinkProfile?: (platform: Platform) => void;
   selectedGameId?: string;
+  activeReview?: ActiveReviewSession | null;
+  switchRequest?: SwitchGameRequest | null;
+  onOpenActiveReview?: () => void;
+  onCancelAnalysis?: () => void;
+  onConfirmSwitchGame?: () => void;
+  onDismissSwitchGame?: () => void;
 }
 
 type ResultFilter = "all" | "win" | "loss" | "draw";
@@ -36,6 +58,12 @@ export const GameList: React.FC<GameListProps> = ({
   onGameSelect,
   onLinkProfile,
   selectedGameId,
+  activeReview = null,
+  switchRequest = null,
+  onOpenActiveReview,
+  onCancelAnalysis,
+  onConfirmSwitchGame,
+  onDismissSwitchGame,
 }) => {
   const [platform, setPlatform] = useState<Platform>(
     () => (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom"
@@ -275,6 +303,112 @@ export const GameList: React.FC<GameListProps> = ({
       return ratingSort === "high" ? bOppRating - aOppRating : aOppRating - bOppRating;
     });
 
+  const pinnedGame =
+    activeReview?.gameId != null
+      ? games.find((g) => g.id === activeReview.gameId) ?? null
+      : activeReview
+        ? games.find((g) => g.pgn.replace(/\s+/g, " ").trim() === activeReview.pgn.replace(/\s+/g, " ").trim()) ?? null
+        : null;
+
+  const listGames = pinnedGame
+    ? filteredGames.filter((g) => g.id !== pinnedGame.id)
+    : filteredGames;
+
+  const showActivePin =
+    !!activeReview &&
+    !!activeReview.pgn.trim() &&
+    (activeReview.running || activeReview.done);
+
+  const handleRowSelect = (game: GameListItem) => {
+    onGameSelect(game.pgn, { id: game.id });
+  };
+
+  const renderActivePin = () => {
+    if (!showActivePin || !activeReview) return null;
+    const pct = Math.min(
+      100,
+      Math.max(0, Math.round(activeReview.progressPercent))
+    );
+    const fillPct = activeReview.done ? 100 : Math.max(pct, 4);
+    const statusLabel = activeReview.running
+      ? `Analyzing · ${pct}%`
+      : "Review ready";
+
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenActiveReview?.()}
+        className="mobile-list-row relative overflow-hidden mobile-list-row--active"
+        aria-label={`${activeReview.label}, ${statusLabel}. Open review.`}
+      >
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 bg-chess-accent/25 transition-[width] duration-300"
+          style={{ width: `${fillPct}%` }}
+          aria-hidden
+        />
+        <div className="relative z-10 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/20">
+          <span className="h-2 w-2 rounded-full bg-chess-accent animate-pulse" />
+        </div>
+        <div className="relative z-10 min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold text-chess-text">
+            {activeReview.label}
+          </div>
+          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-chess-accent">
+            {statusLabel}
+            {pinnedGame ? ` · ${pinnedGame.timeClass}` : ""}
+          </div>
+        </div>
+        <span className="relative z-10 flex-shrink-0 text-[11px] font-bold tabular-nums text-chess-accent">
+          {activeReview.done ? "Open" : `${pct}%`}
+        </span>
+      </button>
+    );
+  };
+
+  const renderSwitchConflict = () => {
+    if (!switchRequest || !activeReview?.running) return null;
+    return (
+      <div
+        className="border-b border-chess-border/80 bg-chess-bg/80 px-3 py-2.5"
+        role="alertdialog"
+        aria-label="Another review is already underway"
+      >
+        <p className="text-[12px] text-chess-text leading-snug">
+          Another review is already underway for{" "}
+          <span className="font-semibold">{activeReview.label}</span>
+          {" "}({Math.round(activeReview.progressPercent)}%).
+          Finish it first, or stop it to open{" "}
+          <span className="font-semibold">{switchRequest.label}</span>.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => onConfirmSwitchGame?.()}
+            className="inline-flex h-8 items-center rounded-md border border-chess-border-strong bg-chess-surface px-2.5 text-[11px] font-semibold text-chess-text hover:border-chess-accent/40 hover:text-chess-accent"
+          >
+            Stop &amp; open this game
+          </button>
+          <button
+            type="button"
+            onClick={() => onDismissSwitchGame?.()}
+            className="inline-flex h-8 items-center rounded-md bg-chess-accent px-2.5 text-[11px] font-bold text-white hover:bg-chess-accent-hover"
+          >
+            Wait for review
+          </button>
+          {onCancelAnalysis && (
+            <button
+              type="button"
+              onClick={() => onCancelAnalysis()}
+              className="inline-flex h-8 items-center rounded-md px-2.5 text-[11px] font-semibold text-chess-muted hover:text-chess-text"
+            >
+              Cancel review only
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 flex-1">
       {inputVal ? (
@@ -425,6 +559,8 @@ export const GameList: React.FC<GameListProps> = ({
             )}
 
             <div className="mobile-surface-list">
+              {renderSwitchConflict()}
+              {renderActivePin()}
               {games.length === 0 && !loading && (
                 <div className="mobile-surface-section py-4 flex flex-col gap-2 items-center">
                   <button type="button" onClick={handleGo} className="mobile-chip mobile-chip--active">
@@ -469,7 +605,7 @@ export const GameList: React.FC<GameListProps> = ({
                   </button>
                 </div>
               )}
-              {filteredGames.map((game) => {
+              {listGames.map((game) => {
                 const isWhite = game.white.toLowerCase() === activeUser.trim().toLowerCase();
                 const color = isWhite ? "white" : "black";
                 const opponent = isWhite ? game.black : game.white;
@@ -479,15 +615,19 @@ export const GameList: React.FC<GameListProps> = ({
                   color,
                   game
                 );
+                const blockedByReview =
+                  !!activeReview?.running &&
+                  game.pgn.replace(/\s+/g, " ").trim() !==
+                    activeReview.pgn.replace(/\s+/g, " ").trim();
 
                 return (
                   <button
                     key={game.id}
                     type="button"
-                    onClick={() => onGameSelect(game.pgn)}
+                    onClick={() => handleRowSelect(game)}
                     className={`mobile-list-row ${
                       selectedGameId === game.id ? "mobile-list-row--active" : ""
-                    }`}
+                    } ${blockedByReview ? "opacity-80" : ""}`}
                   >
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/5">
                       <TimeClassIcon timeClass={game.timeClass} size={13} />
@@ -509,7 +649,9 @@ export const GameList: React.FC<GameListProps> = ({
                         </span>
                       </div>
                       <div className="mt-0.5 text-[10px] capitalize text-chess-muted">
-                        {game.timeClass} · {formatDate(game.endTime)}
+                        {blockedByReview
+                          ? "Review elsewhere in progress"
+                          : `${game.timeClass} · ${formatDate(game.endTime)}`}
                       </div>
                     </div>
                     {resultBadge(result)}
@@ -522,6 +664,12 @@ export const GameList: React.FC<GameListProps> = ({
       ) : (
         <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-y-auto overscroll-contain">
           <div className="mobile-surface flex flex-col w-full">
+            {(showActivePin || (switchRequest && activeReview?.running)) && (
+              <div className="mobile-surface-list border-b border-chess-border/60">
+                {renderSwitchConflict()}
+                {renderActivePin()}
+              </div>
+            )}
             {onLinkProfile && (
               <div className="mobile-surface-section">
                 <AccountLinkPromo onConnect={onLinkProfile} embedded />
