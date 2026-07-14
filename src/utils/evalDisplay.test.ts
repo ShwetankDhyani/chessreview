@@ -3,8 +3,11 @@ import {
   formatSignedMate,
   formatSignedPawnsFromCp,
   formatWinChanceLoss,
+  formatWinChanceDelta,
   formatEvalForBoard,
   evalBarSegments,
+  moverWinChanceDeltaPercent,
+  whiteWinPercentFromEval,
   winChanceLossPercent,
 } from "./evalDisplay";
 
@@ -13,6 +16,44 @@ describe("evalDisplay", () => {
     expect(winChanceLossPercent(0.2)).toBe(20);
     expect(formatWinChanceLoss(0.2)).toBe("−20% win chance");
     expect(formatWinChanceLoss(0.005)).toBeNull();
+  });
+
+  it("formats signed win-chance fluctuation", () => {
+    expect(formatWinChanceDelta(-18.4)).toBe("−18%");
+    expect(formatWinChanceDelta(3.2)).toBe("+3%");
+    expect(formatWinChanceDelta(0.4)).toBe("0%");
+  });
+
+  it("computes mover win-chance delta from stored expected points", () => {
+    expect(
+      moverWinChanceDeltaPercent({
+        color: "w",
+        eBefore: 0.72,
+        eActual: 0.41,
+      })
+    ).toBeCloseTo(-31, 5);
+  });
+
+  it("computes mover win-chance delta from eval before/after", () => {
+    const delta = moverWinChanceDeltaPercent({
+      color: "w",
+      fenAfter: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      evalBefore: { cp: 400, depth: 18, source: "local" },
+      evalAfter: { cp: 50, depth: 18, source: "local" },
+    });
+    expect(delta).toBeLessThan(-10);
+    expect(formatWinChanceDelta(delta)).toMatch(/−/);
+  });
+
+  it("uses WDL for white win percent when present", () => {
+    expect(
+      whiteWinPercentFromEval({
+        cp: 0,
+        depth: 18,
+        source: "local",
+        wdl: { w: 800, d: 150, l: 50 },
+      })
+    ).toBeGreaterThan(70);
   });
 
   it("formats signed pawn eval from white POV", () => {

@@ -1,9 +1,9 @@
 import React from "react";
-import { normalizeEval } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
 import {
   evalBarSegments,
   formatEvalForBoard,
+  whiteWinPercentFromEval,
 } from "../utils/evalDisplay";
 import { MOBILE_LAYOUT } from "../utils/boardLayout";
 
@@ -30,18 +30,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({
   integrated = false,
   integratedWidth = MOBILE_LAYOUT.evalBar,
 }) => {
-  let whitePercent = 50;
-
-  if (evalResult) {
-    if (evalResult.mate !== undefined) {
-      whitePercent = evalResult.mate > 0 ? 95 : 5;
-    } else {
-      const cp = evalResult.cp ?? 0;
-      const norm = normalizeEval(cp);
-      whitePercent = 50 + norm / 2;
-      whitePercent = Math.min(95, Math.max(5, whitePercent));
-    }
-  }
+  const whitePercent = whiteWinPercentFromEval(evalResult);
 
   const { text, favorable } = formatEvalForBoard(evalResult, boardFlipped);
   const segments = evalBarSegments(whitePercent, boardFlipped);

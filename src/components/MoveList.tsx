@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import type { AnalyzedMove } from "../types";
 import { getMeta } from "../utils/classificationMeta";
-import { formatWinChanceLoss } from "../utils/evalDisplay";
+import { formatWinChanceDeltaLong, moverWinChanceDeltaPercent } from "../utils/evalDisplay";
 import { computeOpeningChapter } from "../utils/openingContext";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { OpeningChapter } from "./OpeningChapter";
@@ -173,11 +173,12 @@ const MoveToken = React.forwardRef<HTMLButtonElement, MoveTokenProps>(
         onClick={onClick}
         title={
           meta
-            ? `${meta.label}${
-                !inBook && move.deltaE !== undefined && move.deltaE > 0
-                  ? ` (${formatWinChanceLoss(move.deltaE) ?? ""})`
-                  : ""
-              }`
+            ? `${meta.label}${(() => {
+                const tip = formatWinChanceDeltaLong(
+                  moverWinChanceDeltaPercent(move)
+                );
+                return tip ? ` (${tip})` : "";
+              })()}`
             : undefined
         }
         className={`
