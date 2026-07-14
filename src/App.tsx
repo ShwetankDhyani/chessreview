@@ -603,6 +603,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     const { fen, highlight } = resolveBoardNavStep(moves, fromIdx, idx);
 
     if (idx < 0) {
+      if (fromIdx !== -1) hapticSoft();
       setCurrentMoveIdx(-1);
       currentMoveIdxRef.current = -1;
       setCurrentEval(null);
@@ -616,8 +617,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setCurrentEval(m.evalAfter);
 
     const moveHighlight = highlightFromUci(m.uci);
-    if (animate && m.san) {
+    if (m.san) {
       playMoveFeedback(m.san);
+    } else if (fromIdx !== idx) {
+      hapticSoft();
     }
 
     setBoardToFen(fen, highlight, animate && onePly);
@@ -769,19 +772,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setReviewJob(null);
 
         setTab("moves");
-        // Snap with the fresh moves array (navigateToMove would see a stale []).
+        // Open finished reviews at the start of the game.
         if (result.moves.length > 0) {
-          const idx = result.moves.length - 1;
-          const m = result.moves[idx]!;
-          setCurrentMoveIdx(idx);
-          currentMoveIdxRef.current = idx;
-          setCurrentEval(m.evalAfter ?? null);
-          const highlight = highlightFromUci(m.uci);
+          const startFen = result.moves[0]!.fenBefore || "start";
+          setCurrentMoveIdx(-1);
+          currentMoveIdxRef.current = -1;
+          setCurrentEval(null);
           setBoardPieceAnimMs(0);
-          setCurrentFen(m.fenAfter);
-          currentFenRef.current = m.fenAfter;
-          lastRenderedFenRef.current = m.fenAfter;
-          setMoveAnim(highlight);
+          setCurrentFen(startFen);
+          currentFenRef.current = startFen;
+          lastRenderedFenRef.current = startFen;
+          setMoveAnim(null);
         }
         notifySuccess();
       } catch (e) {
@@ -898,7 +899,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       hapticTapStrong();
       setTab("moves");
       if (currentMoveIdxRef.current < 0) {
-        navigateToMove(moves.length - 1, false);
+        navigateToMove(-1, false);
       }
       return;
     }
@@ -954,19 +955,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setContinuationFen(null);
       setContinuationEval(null);
       setContinuationArrow(null);
-      // Snap with the new moves array — don't call navigateToMove (stale closure).
+      // Snap finished / restored reviews to the start of the game.
       if (nextMoves.length > 0) {
-        const idx = nextMoves.length - 1;
-        const m = nextMoves[idx]!;
-        setCurrentMoveIdx(idx);
-        currentMoveIdxRef.current = idx;
-        setCurrentEval(m.evalAfter ?? null);
-        const highlight = highlightFromUci(m.uci);
+        const startFen = nextMoves[0]!.fenBefore || "start";
+        setCurrentMoveIdx(-1);
+        currentMoveIdxRef.current = -1;
+        setCurrentEval(null);
         setBoardPieceAnimMs(0);
-        setCurrentFen(m.fenAfter);
-        currentFenRef.current = m.fenAfter;
-        lastRenderedFenRef.current = m.fenAfter;
-        setMoveAnim(highlight);
+        setCurrentFen(startFen);
+        currentFenRef.current = startFen;
+        lastRenderedFenRef.current = startFen;
+        setMoveAnim(null);
       } else {
         setCurrentMoveIdx(-1);
         currentMoveIdxRef.current = -1;
@@ -2055,7 +2054,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <div className="h-px bg-chess-border my-1" />
                     <button
                       onClick={() => {
-                        hapticSoft();
                         navigateToMove(-1, false);
                       }}
                       className="board-nav-btn"
@@ -2084,7 +2082,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     </button>
                     <button
                       onClick={() => {
-                        hapticSoft();
                         navigateToMove(moves.length - 1, false);
                       }}
                       className="board-nav-btn"

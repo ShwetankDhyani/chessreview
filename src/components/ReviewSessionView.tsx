@@ -14,7 +14,7 @@ import {
 } from "../utils/boardLayout";
 import { coachShowsBestWas } from "../utils/moveFactSheet";
 import type { ReviewBoardSession } from "../hooks/useReviewBoardSession";
-import { hapticSelection, hapticSoft } from "../utils/chessSounds";
+import { hapticSelection } from "../utils/chessSounds";
 
 function useViewport() {
   const [viewport, setViewport] = useState(() => ({
@@ -202,7 +202,7 @@ export function ReviewSessionView({
                   <div className="h-px bg-chess-border my-1" />
                   <button
                     type="button"
-                    onClick={() => { hapticSoft(); navigateToMove(-1, false); }}
+                    onClick={() => { navigateToMove(-1, false); }}
                     className="board-nav-btn"
                     title="Go to start"
                     aria-label="Go to start"
@@ -237,7 +237,7 @@ export function ReviewSessionView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { hapticSoft(); navigateToMove(moves.length - 1, false); }}
+                    onClick={() => { navigateToMove(moves.length - 1, false); }}
                     className="board-nav-btn"
                     title="Go to end"
                     aria-label="Go to end"

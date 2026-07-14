@@ -1,11 +1,10 @@
 /**
- * Sensory layer — classy chrome haptics + reserved chess/announcement audio.
+ * Sensory layer — strong chrome/move haptics + reserved rare audio.
  *
  * Policy:
- * - Navigation / chrome: haptics only (selection, light, soft, medium…).
- * - Chess board: distinctive low wood sounds + matching haptics by event.
- * - Website announcements: rare soft low tones (review start / done / warn / error).
- * - iOS Safari has no Vibration API; chrome uses a near-inaudible low thump as taptic proxy.
+ * - Almost every interaction: tangible haptics (tabs, buttons, board plies…).
+ * - Chess sound only for takes, checks, and promotions (plus rare review cues).
+ * - iOS Safari has no Vibration API — strong low thumps stand in for taptic.
  */
 
 export type MoveSoundKind = "move" | "capture" | "castle" | "check" | "promote";
@@ -274,17 +273,17 @@ export function announce(kind: AnnounceKind): void {
 
 /* ── Haptics (chrome) ─────────────────────────────────────────────────── */
 
-/** Android Vibration API — short, restrained, classy. */
+/** Android Vibration API — strong enough to feel on modern phones. */
 const VIBRATE: Record<SensoryKind, number | number[]> = {
-  selection: 7,
-  light: 10,
-  soft: 14,
-  medium: 18,
-  rigid: [8, 14, 14],
-  heavy: [14, 18, 24],
-  success: [8, 36, 12, 42],
-  warning: [14, 48, 16],
-  error: [22, 40, 28, 40],
+  selection: 18,
+  light: 24,
+  soft: 28,
+  medium: 36,
+  rigid: [20, 24, 32],
+  heavy: [28, 30, 48],
+  success: [18, 40, 24, 50],
+  warning: [24, 50, 28],
+  error: [36, 45, 40, 50],
 };
 
 function vibrate(pattern: number | number[]): void {
@@ -299,21 +298,21 @@ function vibrate(pattern: number | number[]): void {
 }
 
 /**
- * Near-inaudible low thump used as iOS taptic proxy (not a UI “click”).
+ * Strong low thump used as haptic feel (especially iOS Safari — no Vibration API).
  * Gated by haptics only — never by the Sounds preference.
  */
 function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
   const sampleRate = ctx.sampleRate;
   const profile: Record<SensoryKind, { hz: number; dur: number; peak: number }> = {
-    selection: { hz: 96, dur: 0.011, peak: 0.016 },
-    light: { hz: 88, dur: 0.013, peak: 0.018 },
-    soft: { hz: 78, dur: 0.02, peak: 0.02 },
-    medium: { hz: 72, dur: 0.018, peak: 0.024 },
-    rigid: { hz: 84, dur: 0.015, peak: 0.026 },
-    heavy: { hz: 64, dur: 0.028, peak: 0.032 },
-    success: { hz: 90, dur: 0.022, peak: 0.022 },
-    warning: { hz: 70, dur: 0.024, peak: 0.024 },
-    error: { hz: 58, dur: 0.03, peak: 0.028 },
+    selection: { hz: 110, dur: 0.022, peak: 0.07 },
+    light: { hz: 98, dur: 0.028, peak: 0.085 },
+    soft: { hz: 86, dur: 0.034, peak: 0.09 },
+    medium: { hz: 80, dur: 0.036, peak: 0.11 },
+    rigid: { hz: 92, dur: 0.032, peak: 0.125 },
+    heavy: { hz: 70, dur: 0.045, peak: 0.14 },
+    success: { hz: 100, dur: 0.038, peak: 0.1 },
+    warning: { hz: 78, dur: 0.04, peak: 0.11 },
+    error: { hz: 64, dur: 0.05, peak: 0.13 },
   };
   const p = profile[kind];
   const length = Math.max(1, Math.floor(sampleRate * p.dur));
@@ -321,16 +320,19 @@ function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
   const data = buffer.getChannelData(0);
   for (let i = 0; i < length; i++) {
     const t = i / sampleRate;
-    const env = (1 - Math.exp(-t * 1600)) * Math.exp(-t * 110);
-    const body = Math.sin(2 * Math.PI * p.hz * t) * 0.85 + (Math.random() * 2 - 1) * 0.12;
+    const env = (1 - Math.exp(-t * 1400)) * Math.exp(-t * 70);
+    const body =
+      Math.sin(2 * Math.PI * p.hz * t) * 0.8 +
+      Math.sin(2 * Math.PI * p.hz * 0.5 * t) * 0.2 +
+      (Math.random() * 2 - 1) * 0.08;
     data[i] = body * env * p.peak;
   }
   const src = ctx.createBufferSource();
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 280;
-  filter.Q.value = 0.5;
+  filter.frequency.value = 360;
+  filter.Q.value = 0.55;
   src.buffer = buffer;
   src.connect(filter);
   filter.connect(gain);
@@ -342,40 +344,42 @@ function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
 function sensoryGap(kind: SensoryKind): number {
   switch (kind) {
     case "selection":
-      return 14;
+      return 12;
     case "light":
     case "soft":
-      return 28;
+      return 20;
     case "medium":
     case "rigid":
-      return 40;
+      return 28;
     case "heavy":
-      return 80;
+      return 60;
     case "success":
     case "warning":
     case "error":
-      return 320;
+      return 280;
     default:
-      return 30;
+      return 24;
   }
 }
 
 /**
  * Chrome / navigation feel — haptics only.
- * Never plays musical UI clicks; on iPhone uses a muted low thump as taptic proxy.
+ * Always fires a tangible proxy on touch devices (iPhone has no vibrate).
  */
 export function sensate(kind: SensoryKind): void {
   if (!hapticsEnabled()) return;
   if (!canFire(`s:${kind}`, sensoryGap(kind))) return;
 
   vibrate(VIBRATE[kind]);
-
-  // iOS has no Vibration API — keep feel alive with a haptic-channel proxy only.
-  if (!isTouchFeelDevice()) return;
   unlockChessAudio();
   void ensureAudioReady().then((ctx) => {
     if (!ctx) return;
-    playHapticProxy(ctx, kind);
+    // Prefer proxy on any device when vibrate is unavailable; always on touch.
+    const vibrateOk =
+      typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+    if (isTouchFeelDevice() || !vibrateOk) {
+      playHapticProxy(ctx, kind);
+    }
   });
 }
 
@@ -431,34 +435,47 @@ export function notifyReviewStart(): void {
 }
 
 const MOVE_VIBRATE: Record<MoveSoundKind, number | number[]> = {
-  move: [8, 10, 12],
-  capture: [14, 22, 18, 28],
-  castle: [10, 16, 12, 14],
-  check: [16, 28, 18],
-  promote: [10, 18, 12, 22, 12],
+  move: [16, 18, 24],
+  capture: [24, 30, 32, 40],
+  castle: [18, 22, 20, 26],
+  check: [28, 34, 32],
+  promote: [20, 26, 22, 34, 24],
 };
 
-/** Board step: low wood sound (if enabled) + importance-matched haptics. */
+function moveSoundWorthy(kind: MoveSoundKind): boolean {
+  return kind === "capture" || kind === "check" || kind === "promote";
+}
+
+/**
+ * Board step feedback.
+ * - Haptics on every ply (strong, consistent).
+ * - Sound only for takes, checks, and promotions.
+ */
 export function playMoveFeedback(san: string): void {
+  if (!san) return;
   const kind = soundKindFromSan(san);
   unlockChessAudio();
-  void playMoveSound(kind);
+
+  if (moveSoundWorthy(kind) && soundsEnabled()) {
+    void playMoveSound(kind);
+  }
 
   if (!hapticsEnabled()) return;
-  if (!canFire(`move:${kind}`, 28)) return;
+  // Allow rapid scrubbing while still letting most steps feel.
+  if (!canFire(`move:${kind}`, 16)) return;
   vibrate(MOVE_VIBRATE[kind]);
 
-  // Soft taptic under the wood knock on phones (haptic channel only).
-  if (isTouchFeelDevice()) {
-    void ensureAudioReady().then((ctx) => {
-      if (!ctx) return;
-      const proxy: SensoryKind =
-        kind === "capture" || kind === "check" || kind === "promote"
-          ? "rigid"
-          : kind === "castle"
-            ? "medium"
-            : "light";
-      playHapticProxy(ctx, proxy);
-    });
-  }
+  void ensureAudioReady().then((ctx) => {
+    if (!ctx) return;
+    const vibrateOk =
+      typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+    if (!(isTouchFeelDevice() || !vibrateOk)) return;
+    const proxy: SensoryKind =
+      kind === "capture" || kind === "check" || kind === "promote"
+        ? "rigid"
+        : kind === "castle"
+          ? "medium"
+          : "light";
+    playHapticProxy(ctx, proxy);
+  });
 }

@@ -6,7 +6,7 @@ import {
   highlightFromUci,
   resolveBoardNavStep,
 } from "../utils/boardPosition";
-import { playMoveFeedback } from "../utils/chessSounds";
+import { hapticSoft, playMoveFeedback } from "../utils/chessSounds";
 import { getGameEndInfo } from "../utils/gameEnd";
 import { extractClocks, extractGameMeta } from "../utils/gameMeta";
 import type { ContinuationNavHandlers } from "../utils/continuationNav";
@@ -45,7 +45,7 @@ export function useReviewBoardSession({
   pgn,
   whiteName = "White",
   blackName = "Black",
-  startAtLastMove = true,
+  startAtLastMove = false,
 }: UseReviewBoardSessionOptions) {
   const gameMeta = useMemo(() => (pgn ? extractGameMeta(pgn) : null), [pgn]);
   const clocks = useMemo(() => (pgn ? extractClocks(pgn) : []), [pgn]);
@@ -129,6 +129,7 @@ export function useReviewBoardSession({
       const { fen, highlight } = resolveBoardNavStep(moves, fromIdx, idx);
 
       if (idx < 0) {
+        if (fromIdx !== -1) hapticSoft();
         setCurrentMoveIdx(-1);
         currentMoveIdxRef.current = -1;
         setCurrentEval(null);
@@ -142,8 +143,10 @@ export function useReviewBoardSession({
       setCurrentEval(m.evalAfter);
 
       const moveHighlight = highlightFromUci(m.uci);
-      if (animate && m.san) {
+      if (m.san) {
         playMoveFeedback(m.san);
+      } else if (fromIdx !== idx) {
+        hapticSoft();
       }
 
       setBoardToFen(fen, highlight, animate && onePly);
