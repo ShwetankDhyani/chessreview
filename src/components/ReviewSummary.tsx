@@ -155,7 +155,7 @@ function AccuracyExcludeToggle({
           : "border-chess-border-strong bg-chess-surface/80"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-h-[2.5rem]">
         <div className="min-w-0 flex-1">
           <p
             className={`text-[11px] font-semibold leading-snug tracking-tight ${
@@ -165,9 +165,7 @@ function AccuracyExcludeToggle({
             Exclude book &amp; forced moves
           </p>
           <p className="mt-0.5 text-[10px] leading-snug text-chess-muted">
-            {checked
-              ? "Accuracy from real decisions only"
-              : "Book & forced currently count as perfect"}
+            Applies to overall &amp; phase accuracy
           </p>
         </div>
         <button
@@ -342,19 +340,23 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             color="white"
             showName={false}
           />
-          <div className="flex flex-col items-center justify-center px-1.5 min-w-[2.75rem]">
+          <div className="flex flex-col items-center justify-center px-1.5 min-w-[3.25rem]">
             <span className="text-[9px] text-chess-muted uppercase tracking-wider">
               Gap
             </span>
-            <span
-              className={`text-sm font-bold tabular-nums ${
-                accLeader ? "text-chess-accent" : "text-chess-muted"
-              }`}
-            >
-              {accGap.toFixed(0)}%
-            </span>
-            {accLeader && (
+            {nearTie ? (
+              <span className="text-[11px] font-semibold text-chess-muted leading-tight text-center mt-0.5">
+                So close
+              </span>
+            ) : (
+              <span className="text-sm font-bold tabular-nums text-chess-accent">
+                {accGap.toFixed(0)}%
+              </span>
+            )}
+            {accLeader ? (
               <PieceIndicator side={accLeader} className="mt-1 h-3 w-3" />
+            ) : (
+              <span className="mt-1 h-3 w-3" aria-hidden />
             )}
           </div>
           <AccuracyWheel
