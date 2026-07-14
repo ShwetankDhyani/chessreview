@@ -27,11 +27,21 @@ const dryRun = process.argv.includes("--dry-run");
  * Prefer unique zones; multi-country zones map to the primary/default territory.
  */
 const TZ_TO_COUNTRY = {
+  "Asia/Katmandu": "NP",
+  "Asia/Kathmandu": "NP",
+  "Asia/Tbilisi": "GE",
+  "Asia/Yerevan": "AM",
+  "Asia/Baku": "AZ",
+  "Asia/Almaty": "KZ",
+  "Africa/Kampala": "UG",
+  "Africa/Dar_es_Salaam": "TZ",
+  "Africa/Khartoum": "SD",
+  "Africa/Maputo": "MZ",
+  "Africa/Harare": "ZW",
   // India / South Asia
   "Asia/Kolkata": "IN",
   "Asia/Calcutta": "IN",
   "Asia/Colombo": "LK",
-  "Asia/Kathmandu": "NP",
   "Asia/Dhaka": "BD",
   "Asia/Karachi": "PK",
   "Asia/Tashkent": "UZ",
@@ -181,14 +191,14 @@ function countryFromLocale(locale) {
 
 function inferCountry(event) {
   const tz = event.timezone ? String(event.timezone).trim() : "";
-  if (tz && TZ_TO_COUNTRY[tz]) return { country: TZ_TO_COUNTRY[tz], source: "timezone" };
-
-  // Prefix fallbacks for unlisted but namespaced zones
-  if (tz.startsWith("Asia/Kolkata") || tz === "Asia/Calcutta") {
-    return { country: "IN", source: "timezone" };
+  if (tz && TZ_TO_COUNTRY[tz]) {
+    return { country: TZ_TO_COUNTRY[tz], source: "timezone" };
   }
-  if (tz.startsWith("Europe/") && !TZ_TO_COUNTRY[tz]) {
-    // leave unset rather than guess wrong European country
+
+  // Don't guess from locale when a real timezone is set but unmapped —
+  // locale often reflects language pack (en-GB, en-IN), not location.
+  if (tz && tz !== "UTC" && !tz.startsWith("Etc/")) {
+    return { country: null, source: null };
   }
 
   const fromLocale = countryFromLocale(event.locale);
@@ -224,24 +234,25 @@ const byNew = new Map();
 for (const e of events) {
   scanned += 1;
   const code = e.country_code ? String(e.country_code).toUpperCase() : null;
-  // Only rewrite rows that look like the bad US stamp (or missing country).
-  if (code && code !== "US") continue;
-
   const { country, source } = inferCountry(e);
   if (!country) {
-    unknown += 1;
+    // Only count unknowns among still-US / missing rows for summary.
+    if (!code || code === "US") unknown += 1;
     continue;
   }
 
   if (country === "US") {
-    keptUs += 1;
+    if (!code || code === "US") keptUs += 1;
     continue;
   }
 
+  // Rewrite US/null stamps, or correct earlier backfill mistakes when
+  // timezone now maps to a better country (e.g. Tbilisi → GE not GB).
+  if (code === country) continue;
+  if (code && code !== "US" && source !== "timezone") continue;
+
   const prev = code ?? "(null)";
   e.country_code = country;
-  // City/region came from the US egress — drop them so admin doesn't show
-  // "Ashburn, Virginia, India".
   e.city = null;
   e.region = null;
   e.latitude = null;
