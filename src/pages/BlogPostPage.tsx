@@ -22,7 +22,7 @@ function initialOf(name: string) {
 }
 
 function fieldClass() {
-  return "w-full rounded-xl border border-chess-border/80 bg-chess-bg/70 px-3 py-2.5 text-sm text-chess-text placeholder:text-chess-muted/60 focus:outline-none focus:border-chess-accent/50 focus:ring-1 focus:ring-chess-accent/20 transition-shadow";
+  return "w-full rounded-lg border border-chess-border/70 bg-chess-bg/60 px-2.5 py-1.5 text-sm text-chess-text placeholder:text-chess-muted/55 focus:outline-none focus:border-chess-accent/45 focus:ring-1 focus:ring-chess-accent/15";
 }
 
 export default function BlogPostPage() {
@@ -34,8 +34,6 @@ export default function BlogPostPage() {
 
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
-  const [chesscom, setChesscom] = useState("");
-  const [lichess, setLichess] = useState("");
   const [hp, setHp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -75,8 +73,6 @@ export default function BlogPostPage() {
       await postBlogReply(slug, {
         name,
         body,
-        chesscom: chesscom.trim() || undefined,
-        lichess: lichess.trim() || undefined,
         hp,
       });
       setBody("");
@@ -166,26 +162,19 @@ export default function BlogPostPage() {
           )}
 
           {post && !loading && (
-            <section
-              id="replies"
-              className="rounded-2xl border border-chess-border/80 bg-gradient-to-br from-chess-panel via-chess-panel to-chess-bg p-4 sm:p-6 space-y-5 shadow-[0_12px_40px_rgba(0,0,0,0.22)]"
-            >
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-chess-text tracking-tight">Replies</h2>
-                  <p className="text-xs text-chess-muted mt-1">
-                    Leave a name — Chess.com or Lichess optional.
-                  </p>
-                </div>
-                <span className="rounded-full border border-chess-border/70 bg-chess-bg/50 px-2.5 py-1 text-[11px] tabular-nums text-chess-muted">
-                  {replies.length}
-                </span>
+            <section id="replies" className="pt-2 border-t border-chess-border/50 space-y-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="text-sm font-semibold text-chess-text">
+                  Replies
+                  {replies.length > 0 && (
+                    <span className="ml-1.5 text-chess-muted font-normal tabular-nums">
+                      ({replies.length})
+                    </span>
+                  )}
+                </h2>
               </div>
 
-              <form
-                onSubmit={onReply}
-                className="rounded-xl border border-chess-border/60 bg-chess-bg/40 p-3.5 sm:p-4 space-y-3"
-              >
+              <form onSubmit={onReply} className="space-y-2">
                 <label className="absolute -left-[9999px] opacity-0 h-0 w-0 overflow-hidden">
                   Website
                   <input
@@ -196,149 +185,64 @@ export default function BlogPostPage() {
                   />
                 </label>
 
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      htmlFor="reply-name"
-                      className="block text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5"
-                    >
-                      Name
-                    </label>
-                    <input
-                      id="reply-name"
-                      required
-                      maxLength={40}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="How should we show you?"
-                      className={fieldClass()}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label
-                        htmlFor="reply-chesscom"
-                        className="block text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5"
-                      >
-                        Chess.com
-                      </label>
-                      <input
-                        id="reply-chesscom"
-                        maxLength={40}
-                        value={chesscom}
-                        onChange={(e) => setChesscom(e.target.value)}
-                        placeholder="optional"
-                        className={fieldClass()}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="reply-lichess"
-                        className="block text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5"
-                      >
-                        Lichess
-                      </label>
-                      <input
-                        id="reply-lichess"
-                        maxLength={40}
-                        value={lichess}
-                        onChange={(e) => setLichess(e.target.value)}
-                        placeholder="optional"
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="reply-body"
-                    className="block text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5"
-                  >
-                    Reply
-                  </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    id="reply-name"
+                    required
+                    maxLength={40}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Name"
+                    aria-label="Name"
+                    className={`${fieldClass()} sm:w-40 sm:flex-shrink-0`}
+                  />
                   <textarea
                     id="reply-body"
                     required
                     maxLength={800}
-                    rows={3}
+                    rows={2}
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     placeholder="Write a reply…"
-                    className={`${fieldClass()} resize-y min-h-[5.5rem]`}
+                    aria-label="Reply"
+                    className={`${fieldClass()} resize-y min-h-[2.75rem] flex-1`}
                   />
-                  <p className="text-[10px] text-chess-muted mt-1.5 text-right tabular-nums">
-                    {body.length}/800
-                  </p>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="sm:self-start rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3.5 py-1.5 text-xs font-semibold text-chess-accent
+                      hover:bg-chess-accent/25 disabled:opacity-50 transition-colors whitespace-nowrap"
+                  >
+                    {submitting ? "…" : "Post"}
+                  </button>
                 </div>
 
                 {submitError && <p className="text-xs text-red-400/90">{submitError}</p>}
                 {submitOk && <p className="text-xs text-chess-accent">{submitOk}</p>}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full sm:w-auto rounded-xl border border-chess-accent/45 bg-chess-accent/20 px-5 py-2.5 text-sm font-semibold text-chess-accent
-                    hover:bg-chess-accent/30 hover:border-chess-accent/60 disabled:opacity-50 transition-colors"
-                >
-                  {submitting ? "Posting…" : "Post reply"}
-                </button>
               </form>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {replies.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-chess-border/70 px-4 py-8 text-center">
-                    <p className="text-xs text-chess-muted">No replies yet — start the thread.</p>
-                  </div>
+                  <p className="text-xs text-chess-muted py-1">No replies yet.</p>
                 ) : (
                   replies.map((r) => (
-                    <div
-                      key={r.id}
-                      className="rounded-xl border border-chess-border/60 bg-chess-bg/45 px-3.5 py-3.5
-                        hover:border-chess-border-strong transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-chess-accent/30 to-chess-accent/5 border border-chess-accent/25 text-xs font-bold text-chess-accent">
-                          {initialOf(r.name)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2 mb-1">
-                            <div className="min-w-0">
-                              <span className="text-sm font-semibold text-chess-text">{r.name}</span>
-                              <span className="ml-2 inline-flex flex-wrap gap-2 text-[10px]">
-                                {r.chesscom && (
-                                  <a
-                                    href={`https://www.chess.com/member/${encodeURIComponent(r.chesscom)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-chess-accent hover:underline"
-                                  >
-                                    chess.com/{r.chesscom}
-                                  </a>
-                                )}
-                                {r.lichess && (
-                                  <a
-                                    href={`https://lichess.org/@/${encodeURIComponent(r.lichess)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-chess-accent hover:underline"
-                                  >
-                                    lichess/{r.lichess}
-                                  </a>
-                                )}
-                              </span>
-                            </div>
-                            <time
-                              dateTime={r.createdAt}
-                              className="text-[10px] text-chess-muted flex-shrink-0 tabular-nums"
-                            >
-                              {formatBlogDate(r.createdAt)}
-                            </time>
-                          </div>
-                          <p className="text-sm text-chess-subtext leading-relaxed whitespace-pre-wrap break-words">
-                            {r.body}
-                          </p>
+                    <div key={r.id} className="flex items-start gap-2.5 py-2 border-b border-chess-border/40 last:border-0">
+                      <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
+                        {initialOf(r.name)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-xs font-semibold text-chess-text">{r.name}</span>
+                          <time
+                            dateTime={r.createdAt}
+                            className="text-[10px] text-chess-muted flex-shrink-0 tabular-nums"
+                          >
+                            {formatBlogDate(r.createdAt)}
+                          </time>
                         </div>
+                        <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
+                          {r.body}
+                        </p>
                       </div>
                     </div>
                   ))
