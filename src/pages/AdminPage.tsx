@@ -90,7 +90,8 @@ export default function AdminPage() {
   }, [stats?.recent, recentPage]);
 
   const countryRows = stats?.countries ?? [];
-  const countryChartHeight = Math.min(Math.max(countryRows.length * 28, 160), 560);
+  // One row per country; container scrolls so the SVG can grow with the count.
+  const countryChartHeight = Math.max(countryRows.length * 28, 160);
 
   useEffect(() => {
     if (recentPage > 0 && recentPage >= recentPageCount) {
@@ -197,46 +198,45 @@ export default function AdminPage() {
                 {countryRows.length === 0 ? (
                   <p className="text-sm text-chess-muted">No country data yet.</p>
                 ) : (
-                  <div
-                    className="overflow-y-auto max-h-[28rem]"
-                    style={{ height: countryChartHeight }}
-                  >
-                    <ResponsiveContainer width="100%" height={countryChartHeight}>
-                      <BarChart
-                        layout="vertical"
-                        data={countryRows}
-                        margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
-                      >
-                        <XAxis
-                          type="number"
-                          allowDecimals={false}
-                          tick={{ fill: "#666", fontSize: 10 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="countryCode"
-                          width={88}
-                          tick={{ fill: "#888", fontSize: 10 }}
-                          tickFormatter={(code) => countryLabel(String(code))}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.[0]) return null;
-                            const row = payload[0].payload as { countryCode: string; count: number };
-                            return (
-                              <div className="rounded-lg border border-chess-border bg-chess-panel px-2 py-1 text-xs">
-                                {countryLabel(row.countryCode)}: {row.count}
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="count" fill="#96bc4b" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="overflow-y-auto max-h-[28rem]">
+                    <div style={{ height: countryChartHeight, minHeight: countryChartHeight }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={countryRows}
+                          margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                        >
+                          <XAxis
+                            type="number"
+                            allowDecimals={false}
+                            tick={{ fill: "#666", fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="countryCode"
+                            width={88}
+                            tick={{ fill: "#888", fontSize: 10 }}
+                            tickFormatter={(code) => countryLabel(String(code))}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.[0]) return null;
+                              const row = payload[0].payload as { countryCode: string; count: number };
+                              return (
+                                <div className="rounded-lg border border-chess-border bg-chess-panel px-2 py-1 text-xs">
+                                  {countryLabel(row.countryCode)}: {row.count}
+                                </div>
+                              );
+                            }}
+                          />
+                          <Bar dataKey="count" fill="#96bc4b" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 )}
               </section>
