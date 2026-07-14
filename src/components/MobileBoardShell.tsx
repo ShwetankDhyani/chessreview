@@ -5,6 +5,7 @@ import { useHoldToRepeat } from "../hooks/useHoldToRepeat";
 import { MOBILE_LAYOUT } from "../utils/boardLayout";
 import { prepareChessAudio } from "../utils/chessSounds";
 import { AnalyzeBoardStack } from "./AnalyzeBoardStack";
+import type { BoardReviewConflict } from "./BoardAnalyzeOverlay";
 import { EvalBar } from "./EvalBar";
 import type { ReviewChessboardProps } from "./ReviewChessboard";
 
@@ -31,6 +32,7 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   showProgressOrb?: boolean;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
+  reviewConflict?: BoardReviewConflict | null;
 }
 
 function MoveTapZone({
@@ -124,6 +126,7 @@ export function MobileBoardShell({
   showProgressOrb = false,
   analyzingPly,
   analyzingTotalPlies,
+  reviewConflict = null,
   ...boardProps
 }: MobileBoardShellProps) {
   const barWidth = MOBILE_LAYOUT.evalBar;
@@ -215,6 +218,7 @@ export function MobileBoardShell({
               showProgressOrb={showProgressOrb}
               analyzingPly={analyzingPly}
               analyzingTotalPlies={analyzingTotalPlies}
+              reviewConflict={reviewConflict}
             />
 
             {emphasizeZones && (

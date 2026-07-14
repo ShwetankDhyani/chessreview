@@ -5,7 +5,7 @@ import { ReviewSummaryPanel } from "./components/ReviewSummary";
 import { ReviewEmptyState } from "./components/ReviewEmptyState";
 import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
-import { GameList, type SwitchGameRequest } from "./components/GameList";
+import { GameList } from "./components/GameList";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
 import type {
@@ -155,10 +155,26 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
-  /** List-row id for the PGN currently loaded / under review (Games pin). */
+  /** List-row id for the PGN currently shown on the board. */
   const [sessionGameId, setSessionGameId] = useState<string | null>(null);
-  /** User tried to open another game while analysis is still running. */
-  const [switchRequest, setSwitchRequest] = useState<SwitchGameRequest | null>(null);
+  /**
+   * In-flight (or just-finished, parked) review job. Stays pinned on Games even
+   * if the user opens a different board without canceling.
+   */
+  const [reviewJob, setReviewJob] = useState<{
+    pgn: string;
+    label: string;
+    gameId: string | null;
+  } | null>(null);
+  const reviewJobRef = useRef<{
+    pgn: string;
+    label: string;
+    gameId: string | null;
+  } | null>(null);
+  /** Completed review for `reviewJob` while the user was viewing another game. */
+  const [parkedResult, setParkedResult] = useState<ReviewResult | null>(null);
+  const displayPgnRef = useRef("");
+  const sessionGameIdRef = useRef<string | null>(null);
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [currentFen, setCurrentFen] = useState("start");
   const currentFenRef = useRef("start");
@@ -590,6 +606,8 @@ export default function App() {
 
   useEffect(() => {
     currentFenRef.current = currentFen;
+  displayPgnRef.current = pgn;
+  sessionGameIdRef.current = sessionGameId;
   }, [currentFen]);
 
   useEffect(() => {
@@ -635,6 +653,16 @@ export default function App() {
       setContinuationEval(null);
       setContinuationArrow(null);
 
+      const meta = extractGameMeta(pgnStr);
+      const job = {
+        pgn: pgnStr,
+        label: `${meta.white} vs ${meta.black}`,
+        gameId: sessionGameIdRef.current,
+      };
+      reviewJobRef.current = job;
+      setReviewJob(job);
+      setParkedResult(null);
+
       const visible = options.visible;
       if (visible) {
         showAnalysisProgressRef.current = true;
@@ -647,7 +675,6 @@ export default function App() {
         setCurrentFen("start");
         setCurrentEval(null);
         setProgress({ done: 2, total: 100 });
-        const meta = extractGameMeta(pgnStr);
         setPlayerNames({ white: meta.white, black: meta.black });
         setGameMeta(meta);
         setClocks(extractClocks(pgnStr));
@@ -669,36 +696,19 @@ export default function App() {
           },
           depth,
           {
-            whiteRating: gameMeta?.whiteRating ?? null,
-            blackRating: gameMeta?.blackRating ?? null,
+            whiteRating: meta.whiteRating ?? null,
+            blackRating: meta.blackRating ?? null,
           }
         );
         if (abortRef.current || gen !== analysisGenerationRef.current) return;
 
-        setMoves(result.moves);
-        setSummary(result.summary);
-        setReviewResult(result);
-        setSaveReviewMessage(null);
-        const openReview = showAnalysisProgressRef.current;
+        const viewingAway = !samePgn(displayPgnRef.current, pgnStr);
         setProgress({ done: 100, total: 100 });
-        setAnalysisState("done");
-        setReviewReady(true);
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisStartedAt(null);
 
-        if (openReview) {
-          setTab("moves");
-          navigateToMove(
-            result.moves.length > 0 ? result.moves.length - 1 : -1,
-            false
-          );
-        } else if (result.moves.length > 0 && currentMoveIdxRef.current < 0) {
-          navigateToMove(result.moves.length - 1, false);
-        }
-
-        const meta = extractGameMeta(pgnStr);
         const durationMs = Math.max(0, Date.now() - analysisStartedAt);
         recordReviewCompleted({
           runId: result.run.runId,
@@ -720,6 +730,27 @@ export default function App() {
           durationMs,
         });
         window.dispatchEvent(new CustomEvent("cr_review_logged"));
+
+        if (viewingAway) {
+          setParkedResult(result);
+          return;
+        }
+
+        setMoves(result.moves);
+        setSummary(result.summary);
+        setReviewResult(result);
+        setSaveReviewMessage(null);
+        setAnalysisState("done");
+        setReviewReady(true);
+        setParkedResult(null);
+        reviewJobRef.current = null;
+        setReviewJob(null);
+
+        setTab("moves");
+        navigateToMove(
+          result.moves.length > 0 ? result.moves.length - 1 : -1,
+          false
+        );
       } catch (e) {
         if (gen !== analysisGenerationRef.current) return;
         console.error(e);
@@ -733,11 +764,20 @@ export default function App() {
         setShowAnalysisProgress(false);
         showAnalysisProgressRef.current = false;
         setAnalysisStartedAt(null);
+        setParkedResult(null);
+        reviewJobRef.current = null;
+        setReviewJob(null);
         setAnalysisState("loading");
       }
     },
     [navigateToMove, depth, recheckEngine, activeUser, noteCompletedReview]
   );
+
+  const clearReviewJob = useCallback(() => {
+    reviewJobRef.current = null;
+    setReviewJob(null);
+    setParkedResult(null);
+  }, []);
 
   const cancelAnalysis = useCallback(() => {
     abortRef.current = true;
@@ -746,13 +786,60 @@ export default function App() {
     setShowAnalysisProgress(false);
     showAnalysisProgressRef.current = false;
     setAnalysisStartedAt(null);
-    setSwitchRequest(null);
+    clearReviewJob();
     if (pgn.trim()) {
       setAnalysisState("loading");
     } else {
       setAnalysisState("idle");
     }
-  }, [pgn]);
+  }, [pgn, clearReviewJob]);
+
+  /** Soft-load a PGN onto the board without aborting an in-flight review job. */
+  const loadPgn = useCallback((pgnStr: string, opts?: { keepAnalysis?: boolean }) => {
+    const parsed = parseGameText(pgnStr);
+    if (!parsed.ok) {
+      setLoadError(parsed.error);
+      return false;
+    }
+    const keepAnalysis = opts?.keepAnalysis === true;
+    setLoadError(null);
+    setShareUrl(null);
+    setShareError(null);
+
+    if (!keepAnalysis) {
+      abortRef.current = true;
+      analysisGenerationRef.current += 1;
+      setAnalysisRunning(false);
+      setShowAnalysisProgress(false);
+      showAnalysisProgressRef.current = false;
+      setAnalysisStartedAt(null);
+      reviewJobRef.current = null;
+      setReviewJob(null);
+      setParkedResult(null);
+      setAnalysisState("loading");
+      setReviewReady(false);
+    }
+
+    setPgn(parsed.pgn);
+    displayPgnRef.current = parsed.pgn;
+    setReplayFrames(buildPgnReplayFrames(parsed.pgn));
+    setGamePlyCount(parsed.moveCount);
+    setMoves([]);
+    setSummary(null);
+    setReviewResult(null);
+    setCurrentMoveIdx(-1);
+    setCurrentFen("start");
+    setCurrentEval(null);
+    setTab("moves");
+    setBoardRemountKey((k) => k + 1);
+    setBoardPieceAnimMs(0);
+    lastRenderedFenRef.current = "start";
+    const meta = extractGameMeta(parsed.pgn);
+    setPlayerNames({ white: meta.white, black: meta.black });
+    setGameMeta(meta);
+    setClocks(extractClocks(parsed.pgn));
+    return true;
+  }, []);
 
   /** User pressed Analyze — reveal progress UI or open review if already finished. */
   const requestAnalysisUi = useCallback(() => {
@@ -765,13 +852,23 @@ export default function App() {
       return;
     }
     if (analysisRunning) {
+      // Another game is analyzing — board conflict plaque handles Cancel & analyze.
+      if (reviewJob && !samePgn(pgn, reviewJob.pgn)) return;
       showAnalysisProgressRef.current = true;
       setShowAnalysisProgress(true);
       setAnalysisState("analyzing");
       return;
     }
     void runAnalysis(pgn, { visible: true });
-  }, [pgn, analysisState, moves.length, analysisRunning, runAnalysis, navigateToMove]);
+  }, [
+    pgn,
+    analysisState,
+    moves.length,
+    analysisRunning,
+    reviewJob,
+    runAnalysis,
+    navigateToMove,
+  ]);
 
   /** Re-run full analysis (e.g. after depth change or accuracy formula update). */
   const requestReanalysis = useCallback(() => {
@@ -796,58 +893,91 @@ export default function App() {
       showAnalysisProgressRef.current = false;
       setAnalysisStartedAt(null);
       setSaveReviewMessage(null);
-      setSwitchRequest(null);
+      clearReviewJob();
       if (result.moves.length > 0) {
         navigateToMove(result.moves.length - 1, false);
       }
     },
-    [navigateToMove]
+    [navigateToMove, clearReviewJob]
   );
 
-  const loadPgn = useCallback((pgnStr: string) => {
-    const parsed = parseGameText(pgnStr);
-    if (!parsed.ok) {
-      setLoadError(parsed.error);
-      return false;
+  const dismissWelcome = useCallback(() => {
+    localStorage.setItem("cr_welcome_dismissed", "1");
+    setShowWelcome(false);
+  }, []);
+
+  const returnToActiveReview = useCallback(() => {
+    const job = reviewJob;
+    if (!job) {
+      setTab("moves");
+      return;
     }
-    setLoadError(null);
-    setShareUrl(null);
-    setShareError(null);
+    setSessionGameId(job.gameId);
+    if (analysisRunning) {
+      loadPgn(job.pgn, { keepAnalysis: true });
+      showAnalysisProgressRef.current = true;
+      setShowAnalysisProgress(true);
+      setAnalysisState("analyzing");
+      setTab("moves");
+      return;
+    }
+    if (parkedResult) {
+      const parked = parkedResult;
+      loadPgn(job.pgn, { keepAnalysis: true });
+      applyReviewResult(parked);
+      setTab("moves");
+      return;
+    }
+    loadPgn(job.pgn);
+    setTab("moves");
+  }, [reviewJob, analysisRunning, parkedResult, loadPgn, applyReviewResult]);
+
+  const cancelAndAnalyzeCurrent = useCallback(() => {
+    if (!pgn.trim()) return;
     abortRef.current = true;
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);
     setShowAnalysisProgress(false);
     showAnalysisProgressRef.current = false;
     setAnalysisStartedAt(null);
-    setSwitchRequest(null);
-    setPgn(parsed.pgn);
-    setReplayFrames(buildPgnReplayFrames(parsed.pgn));
-    setGamePlyCount(parsed.moveCount);
-    setMoves([]);
-    setSummary(null);
-    setReviewResult(null);
-    setCurrentMoveIdx(-1);
-    setCurrentFen("start");
-    setCurrentEval(null);
-    setAnalysisState("loading");
-    setReviewReady(false);
-    setTab("moves");
-    // Remount the board only on game change so any lingering animation state
-    // from the previous game is dropped. Per-move navigation never remounts.
-    setBoardRemountKey((k) => k + 1);
-    setBoardPieceAnimMs(0);
-    lastRenderedFenRef.current = "start";
-    const meta = extractGameMeta(parsed.pgn);
-    setPlayerNames({ white: meta.white, black: meta.black });
-    setGameMeta(meta);
-    setClocks(extractClocks(parsed.pgn));
-    return true;
-  }, []);
+    clearReviewJob();
+    void runAnalysis(pgn, { visible: true });
+  }, [pgn, clearReviewJob, runAnalysis]);
 
-  const dismissWelcome = useCallback(() => {
-    localStorage.setItem("cr_welcome_dismissed", "1");
-    setShowWelcome(false);
-  }, []);
+  const selectGame = useCallback(
+    (pgnStr: string, meta?: { id?: string }) => {
+      // Jump back to the game that is already analyzing / parked.
+      if (reviewJob && samePgn(pgnStr, reviewJob.pgn)) {
+        if (meta?.id) setSessionGameId(meta.id);
+        returnToActiveReview();
+        return;
+      }
+      // Open another board without killing the in-flight review.
+      if (analysisRunning && reviewJob && !samePgn(pgnStr, reviewJob.pgn)) {
+        setSessionGameId(meta?.id ?? null);
+        const loaded = loadPgn(pgnStr, { keepAnalysis: true });
+        if (!loaded) return;
+        setSaveReviewMessage(null);
+        return;
+      }
+      if (pgn.trim() && samePgn(pgnStr, pgn)) {
+        if (meta?.id) setSessionGameId(meta.id);
+        setTab("moves");
+        if (analysisRunning) {
+          showAnalysisProgressRef.current = true;
+          setShowAnalysisProgress(true);
+        }
+        return;
+      }
+      setSessionGameId(meta?.id ?? null);
+      const loaded = loadPgn(pgnStr);
+      if (!loaded) return;
+      setSaveReviewMessage(null);
+    },
+    [analysisRunning, pgn, loadPgn, reviewJob, returnToActiveReview]
+  );
+
+  const openActiveReview = returnToActiveReview;
 
   const handleShareReview = useCallback(async () => {
     if (!pgn || !summary || moves.length === 0) return;
@@ -875,68 +1005,6 @@ export default function App() {
       setSharing(false);
     }
   }, [pgn, summary, moves, playerNames, reviewResult]);
-
-  const selectGame = useCallback(
-    (pgnStr: string, meta?: { id?: string }) => {
-      if (analysisRunning && pgn.trim() && !samePgn(pgnStr, pgn)) {
-        const gm = extractGameMeta(pgnStr);
-        setSwitchRequest({
-          pgn: pgnStr,
-          gameId: meta?.id ?? null,
-          label: `${gm.white} vs ${gm.black}`,
-        });
-        setTab("games");
-        return;
-      }
-      if (pgn.trim() && samePgn(pgnStr, pgn)) {
-        setSwitchRequest(null);
-        if (meta?.id) setSessionGameId(meta.id);
-        setTab("moves");
-        if (analysisRunning) {
-          showAnalysisProgressRef.current = true;
-          setShowAnalysisProgress(true);
-        }
-        return;
-      }
-      setSwitchRequest(null);
-      setSessionGameId(meta?.id ?? null);
-      const loaded = loadPgn(pgnStr);
-      if (!loaded) return;
-      setSaveReviewMessage(null);
-    },
-    [analysisRunning, pgn, loadPgn]
-  );
-
-  const openActiveReview = useCallback(() => {
-    setSwitchRequest(null);
-    setTab("moves");
-    if (analysisRunning) {
-      showAnalysisProgressRef.current = true;
-      setShowAnalysisProgress(true);
-    }
-  }, [analysisRunning]);
-
-  const confirmSwitchGame = useCallback(() => {
-    if (!switchRequest) return;
-    const next = switchRequest;
-    setSwitchRequest(null);
-    setSessionGameId(next.gameId);
-    const loaded = loadPgn(next.pgn);
-    if (!loaded) return;
-    setSaveReviewMessage(null);
-  }, [switchRequest, loadPgn]);
-
-  const dismissSwitchGame = useCallback(() => {
-    setSwitchRequest(null);
-  }, []);
-
-  // If the blocked review finishes while the conflict banner is up, drop it —
-  // the user can open the other game normally.
-  useEffect(() => {
-    if (!analysisRunning && switchRequest) {
-      setSwitchRequest(null);
-    }
-  }, [analysisRunning, switchRequest]);
 
   const refreshSavedReviews = useCallback(async () => {
     if (!activeUser?.name) {
@@ -1139,7 +1207,13 @@ export default function App() {
         ? (progress.done / progress.total) * 100
         : 0;
 
-  const isAnalyzing = analysisRunning && analysisState === "analyzing";
+  const isViewingAway = !!(
+    reviewJob &&
+    analysisRunning &&
+    !samePgn(pgn, reviewJob.pgn)
+  );
+
+  const isAnalyzing = analysisRunning && analysisState === "analyzing" && !isViewingAway;
 
   const analysisPlyCount = gamePlyCount || replayFrames.length;
 
@@ -1166,27 +1240,48 @@ export default function App() {
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const activeReview = useMemo(() => {
+    if (reviewJob && (analysisRunning || parkedResult)) {
+      return {
+        gameId: reviewJob.gameId,
+        label: reviewJob.label,
+        pgn: reviewJob.pgn,
+        running: analysisRunning,
+        done: !analysisRunning && !!parkedResult,
+        progressPercent:
+          !analysisRunning && parkedResult ? 100 : progressPercent,
+      };
+    }
     if (!pgn.trim()) return null;
-    const running = analysisRunning;
     const done = analysisState === "done" && moves.length > 0;
-    if (!running && !done) return null;
+    if (!analysisRunning && !done) return null;
     return {
       gameId: sessionGameId,
       label: vsLabel,
       pgn,
-      running,
+      running: analysisRunning,
       done,
       progressPercent: done ? 100 : progressPercent,
     };
   }, [
-    pgn,
+    reviewJob,
     analysisRunning,
+    parkedResult,
+    progressPercent,
+    pgn,
     analysisState,
     moves.length,
     sessionGameId,
     vsLabel,
-    progressPercent,
   ]);
+
+  const reviewConflict = isViewingAway
+    ? {
+        runningLabel: reviewJob!.label,
+        progressPercent,
+        onWait: returnToActiveReview,
+        onCancelAndAnalyze: cancelAndAnalyzeCurrent,
+      }
+    : null;
 
   const boardPositionFen = continuationFen ?? currentFen;
   const engineLineGlow =
@@ -1271,9 +1366,9 @@ export default function App() {
   const showBoardAnalyzeOverlay =
     !!pgn &&
     (!isMobileLayout || tab === "moves") &&
-    (isAnalyzing ||
-      (moves.length === 0 &&
-        analysisState === "loading"));
+    (isViewingAway ||
+      isAnalyzing ||
+      (moves.length === 0 && analysisState === "loading"));
 
   const showBoardProgressOrb = false;
 
@@ -1593,11 +1688,7 @@ export default function App() {
                   onLinkProfile={openProfilePanel}
                   selectedGameId={sessionGameId ?? undefined}
                   activeReview={activeReview}
-                  switchRequest={switchRequest}
                   onOpenActiveReview={openActiveReview}
-                  onCancelAnalysis={cancelAnalysis}
-                  onConfirmSwitchGame={confirmSwitchGame}
-                  onDismissSwitchGame={dismissSwitchGame}
                 />
               </>
             )}
@@ -1611,12 +1702,20 @@ export default function App() {
                       <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider truncate min-w-0">
                         {playerNames.white} vs {playerNames.black}
                       </span>
-                      {analysisState === "loading" && (
+                      {isViewingAway ? (
+                        <button
+                          type="button"
+                          onClick={returnToActiveReview}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent hover:border-chess-accent/40"
+                        >
+                          Wait · {Math.round(progressPercent)}%
+                        </button>
+                      ) : analysisState === "loading" ? (
                         <AnalyzeNowButton
                           variant="compact"
                           onClick={() => requestAnalysisUi()}
                         />
-                      )}
+                      ) : null}
                       {isAnalyzing && (
                         <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] text-chess-accent font-semibold tabular-nums">
                           <span className="h-1.5 w-1.5 rounded-full bg-chess-accent animate-pulse" />
@@ -1638,6 +1737,13 @@ export default function App() {
                           frames={replayFrames}
                           currentPly={analyzingReplayPly}
                         />
+                      ) : isViewingAway ? (
+                        <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
+                          <span>
+                            Another review is running. Cancel it on the board to
+                            analyze this game, or wait for it to finish.
+                          </span>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           {analysisState === "loading" && (
@@ -1770,6 +1876,7 @@ export default function App() {
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
                   showProgressOrb={showBoardProgressOrb}
+                  reviewConflict={reviewConflict}
                 />
                 </div>
                 <div className="pl-[34px]">
@@ -1941,11 +2048,7 @@ export default function App() {
                   onLinkProfile={openProfilePanel}
                   selectedGameId={sessionGameId ?? undefined}
                   activeReview={activeReview}
-                  switchRequest={switchRequest}
                   onOpenActiveReview={openActiveReview}
-                  onCancelAnalysis={cancelAnalysis}
-                  onConfirmSwitchGame={confirmSwitchGame}
-                  onDismissSwitchGame={dismissSwitchGame}
                 />
             </div>
 
@@ -2026,6 +2129,7 @@ export default function App() {
                   showProgressOrb={showBoardProgressOrb}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
+                  reviewConflict={reviewConflict}
                   onPrev={(animate = true) => stepBoardMove(-1, animate)}
                   onNext={(animate = true) => stepBoardMove(1, animate)}
                   canPrev={canBoardStepBack}
