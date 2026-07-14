@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
   fetchBlogList,
@@ -32,20 +33,15 @@ export default function BlogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-chess-bg text-chess-text">
-      <header className="border-b border-chess-border bg-chess-panel/80">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <a href="/" className="text-sm font-bold text-chess-accent hover:underline">
-            ← ChessReview
-          </a>
-          <h1 className="text-lg font-bold mt-2">Blog</h1>
+    <SiteChrome title="Blog">
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 space-y-4">
+        <div className="mb-2">
+          <h1 className="text-lg font-bold text-chess-text">Blog</h1>
           <p className="text-xs text-chess-muted mt-1">
             Notes from the builder — updates, thoughts, and messages to players.
           </p>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 pb-16 space-y-4">
         {loading && (
           <p className="text-sm text-chess-muted text-center py-10">Loading…</p>
         )}
@@ -61,7 +57,7 @@ export default function BlogPage() {
         {posts.map((post) => (
           <a
             key={post.id}
-            href={`/blog/${encodeURIComponent(post.slug)}`}
+            href={`/blog/${post.slug}`}
             className="block rounded-xl border border-chess-border bg-chess-panel/60 overflow-hidden
               hover:border-chess-accent/35 hover:bg-chess-accent/[0.04] transition-colors"
           >
@@ -98,6 +94,6 @@ export default function BlogPage() {
           </a>
         ))}
       </main>
-    </div>
+    </SiteChrome>
   );
 }

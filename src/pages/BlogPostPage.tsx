@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
   fetchBlogPost,
@@ -80,16 +81,15 @@ export default function BlogPostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-chess-bg text-chess-text">
-      <header className="border-b border-chess-border bg-chess-panel/80">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <a href="/blog" className="text-sm font-bold text-chess-accent hover:underline">
-            ← Blog
-          </a>
-        </div>
-      </header>
+    <SiteChrome title="Blog">
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-10 space-y-8">
+        <a
+          href="/blog"
+          className="inline-block text-xs text-chess-muted hover:text-chess-accent transition-colors"
+        >
+          ← All posts
+        </a>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 pb-20 space-y-10">
         {loading && <p className="text-sm text-chess-muted text-center py-12">Loading…</p>}
         {error && !loading && (
           <p className="text-sm text-chess-muted text-center py-12">{error}</p>
@@ -130,8 +130,7 @@ export default function BlogPostPage() {
             <div>
               <h2 className="text-base font-bold text-chess-text">Replies</h2>
               <p className="text-xs text-chess-muted mt-1">
-                Join the conversation. Add a Chess.com or Lichess handle if you like —
-                or just leave a name.
+                Add a Chess.com or Lichess handle if you like — or just leave a name.
               </p>
             </div>
 
@@ -288,6 +287,6 @@ export default function BlogPostPage() {
           </section>
         )}
       </main>
-    </div>
+    </SiteChrome>
   );
 }

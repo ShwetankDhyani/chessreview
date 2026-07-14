@@ -6,7 +6,7 @@ import {
   listBlogPosts,
   updateBlogPost,
   uploadBlogMedia,
-} from "../server/blogApi.mjs";
+} from "../../server/blogApi.mjs";
 
 function adminKey(req) {
   return (

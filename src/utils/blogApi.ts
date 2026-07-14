@@ -31,33 +31,66 @@ function adminHeaders(adminKey?: string): HeadersInit {
   return h;
 }
 
+export async function fetchBlogPost(
+  slug: string,
+  adminKey?: string
+): Promise<{ post: BlogPost; replies: BlogReply[] }> {
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const sources = [
+    `/api/blog/${encodeURIComponent(slug)}`,
+    engineUrl ? `${engineUrl}/blog/${encodeURIComponent(slug)}` : null,
+  ].filter(Boolean) as string[];
+
+  let lastError = "Post not found";
+  for (const url of sources) {
+    try {
+      const res = await fetch(url, { headers: adminHeaders(adminKey) });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        lastError = "Post API unavailable";
+        continue;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        lastError = typeof data.error === "string" ? data.error : "Post not found";
+        continue;
+      }
+      return data;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(lastError);
+}
+
 export async function fetchBlogList(opts?: {
   drafts?: boolean;
   adminKey?: string;
 }): Promise<BlogPostSummary[]> {
   const qs = opts?.drafts ? "?drafts=1" : "";
-  const res = await fetch(`/api/blog${qs}`, {
-    headers: adminHeaders(opts?.adminKey),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(typeof data.error === "string" ? data.error : "Could not load blog");
-  }
-  return Array.isArray(data.posts) ? data.posts : [];
-}
+  const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
+  const sources = [
+    `/api/blog${qs}`,
+    engineUrl ? `${engineUrl}/blog${qs}` : null,
+  ].filter(Boolean) as string[];
 
-export async function fetchBlogPost(
-  slug: string,
-  adminKey?: string
-): Promise<{ post: BlogPost; replies: BlogReply[] }> {
-  const res = await fetch(`/api/blog/${encodeURIComponent(slug)}`, {
-    headers: adminHeaders(adminKey),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(typeof data.error === "string" ? data.error : "Post not found");
+  let lastError = "Could not load blog";
+  for (const url of sources) {
+    try {
+      const res = await fetch(url, { headers: adminHeaders(opts?.adminKey) });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) continue;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        lastError = typeof data.error === "string" ? data.error : lastError;
+        continue;
+      }
+      return Array.isArray(data.posts) ? data.posts : [];
+    } catch {
+      continue;
+    }
   }
-  return data;
+  throw new Error(lastError);
 }
 
 export async function createBlogPost(
