@@ -6,7 +6,6 @@ import { createShareMiddleware } from "./server/reviewSharesApi.mjs";
 import { createSavedReviewsMiddleware } from "./server/reviewSavesApi.mjs";
 import { createAboutCommentsMiddleware } from "./server/aboutCommentsApi.mjs";
 import { createBlogMiddleware } from "./server/blogApi.mjs";
-import { createDemoReviewMiddleware } from "./server/demoReviewApi.mjs";
 
 export default defineConfig({
   plugins: [
@@ -20,7 +19,6 @@ export default defineConfig({
         server.middlewares.use(createSavedReviewsMiddleware());
         server.middlewares.use(createAboutCommentsMiddleware());
         server.middlewares.use(createBlogMiddleware());
-        server.middlewares.use(createDemoReviewMiddleware());
       },
     },
   ],
