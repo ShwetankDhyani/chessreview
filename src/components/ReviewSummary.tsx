@@ -49,8 +49,8 @@ const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
   "good",
   "book",
   "inaccuracy",
-  "mistake",
   "miss",
+  "mistake",
   "blunder",
 ];
 

@@ -62,19 +62,20 @@ export const CLASSIFICATION_META: Record<
     glyph: "!?",
     symbol: "!?",
   },
+  miss: {
+    label: "Miss",
+    // Chess.com-style magenta — missed chance, not blunder-red
+    color: "#e26eaa",
+    bgColor: "bg-move-miss",
+    glyph: "Ø",
+    symbol: "Ø",
+  },
   mistake: {
     label: "Mistake",
     color: "#e69045",
     bgColor: "bg-move-mistake",
     glyph: "?",
     symbol: "?",
-  },
-  miss: {
-    label: "Miss",
-    color: "#c45c26",
-    bgColor: "bg-move-miss",
-    glyph: "✗",
-    symbol: "✗",
   },
   blunder: {
     label: "Blunder",

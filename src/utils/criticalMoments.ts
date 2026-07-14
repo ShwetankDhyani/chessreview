@@ -57,11 +57,12 @@ function severityRank(c: MoveClassification): number {
   switch (c) {
     case "blunder":
       return 6;
-    case "miss":
-      return 5;
-    case "brilliant":
-      return 4;
     case "mistake":
+      return 5;
+    case "miss":
+      // Missed chance ≈ mistake band, not blunder-tier
+      return 4;
+    case "brilliant":
       return 3;
     case "great":
       return 2;
