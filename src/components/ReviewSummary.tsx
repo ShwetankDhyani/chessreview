@@ -148,24 +148,46 @@ function AccuracyExcludeToggle({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <label className="mt-3 flex items-start gap-2.5 cursor-pointer select-none">
-      <input
-        type="checkbox"
-        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-chess-border bg-chess-surface accent-chess-accent"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className="min-w-0">
-        <span className="block text-[11px] font-medium text-chess-text leading-snug">
-          Exclude book &amp; forced moves
-        </span>
-        <span className="block text-[10px] text-chess-muted leading-snug mt-0.5">
-          {checked
-            ? "Accuracy from real decisions only"
-            : "Book & forced count as perfect"}
-        </span>
-      </span>
-    </label>
+    <div
+      className={`mt-3 rounded-lg border px-3 py-2.5 transition-colors ${
+        checked
+          ? "border-chess-accent/45 bg-chess-accent/10"
+          : "border-chess-border-strong bg-chess-surface/80"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-[11px] font-semibold leading-snug tracking-tight ${
+              checked ? "text-chess-accent" : "text-chess-text"
+            }`}
+          >
+            Exclude book &amp; forced moves
+          </p>
+          <p className="mt-0.5 text-[10px] leading-snug text-chess-muted">
+            {checked
+              ? "Accuracy from real decisions only"
+              : "Book & forced currently count as perfect"}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          aria-label="Exclude book and forced moves from accuracy"
+          onClick={() => onChange(!checked)}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chess-accent/50 ${
+            checked ? "bg-chess-accent" : "bg-chess-border-strong"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+              checked ? "translate-x-[22px]" : "translate-x-[3px]"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
   );
 }
 
