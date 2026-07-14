@@ -1,16 +1,9 @@
 /**
- * Demo review API — engine file store with local fallback for non-Vercel.
+ * Demo review API — engine file store with bundled fixture fallback.
  */
 
 import { engineStatsUrl } from "./reviewStats.mjs";
 import { fileGetDemoReview } from "./demoReview.mjs";
-
-function isWritableStore() {
-  if (process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return false;
-  }
-  return true;
-}
 
 async function readEngineJson(path) {
   const base = engineStatsUrl();
@@ -42,8 +35,8 @@ export async function getDemoReview() {
       if (engine?.pgn && Array.isArray(engine.moves) && engine.summary) {
         return engine;
       }
-    } catch (e) {
-      if (!isWritableStore()) throw e;
+    } catch {
+      // Fall through to local data file or bundled fixture.
     }
   }
   return fileGetDemoReview();

@@ -67,5 +67,5 @@ const payload = {
 mkdirSync(join(OUT, ".."), { recursive: true });
 writeFileSync(OUT, JSON.stringify(payload, null, 2), "utf8");
 console.log(
-  `Wrote ${OUT} (${result.moves.length} moves, accuracy W ${result.summary.whiteAccuracy} / B ${result.summary.blackAccuracy})`
+  `Wrote ${OUT} (${result.moves.length} moves, accuracy W ${result.summary.accuracy?.white} / B ${result.summary.accuracy?.black})`
 );

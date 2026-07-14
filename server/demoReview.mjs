@@ -1,5 +1,5 @@
 /**
- * Precomputed Morphy Opera demo review (engine file store).
+ * Precomputed Morphy Opera demo review (engine file store + bundled fixture).
  */
 
 import {
@@ -9,16 +9,21 @@ import {
   renameSync,
   writeFileSync,
 } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
 const DEMO_FILE = join(DATA_DIR, "demo-review.json");
+const FIXTURE_FILE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "fixtures",
+  "demo-review.json"
+);
 const MAX_BYTES = 480_000;
 
-export function fileGetDemoReview() {
+function parseDemo(raw) {
   try {
-    if (!existsSync(DEMO_FILE)) return null;
-    const parsed = JSON.parse(readFileSync(DEMO_FILE, "utf8"));
+    const parsed = JSON.parse(raw);
     if (!parsed?.pgn || !Array.isArray(parsed.moves) || !parsed.summary) {
       return null;
     }
@@ -26,6 +31,17 @@ export function fileGetDemoReview() {
   } catch {
     return null;
   }
+}
+
+export function fileGetDemoReview() {
+  if (existsSync(DEMO_FILE)) {
+    const fromData = parseDemo(readFileSync(DEMO_FILE, "utf8"));
+    if (fromData) return fromData;
+  }
+  if (existsSync(FIXTURE_FILE)) {
+    return parseDemo(readFileSync(FIXTURE_FILE, "utf8"));
+  }
+  return null;
 }
 
 export function fileSaveDemoReview(payload) {
