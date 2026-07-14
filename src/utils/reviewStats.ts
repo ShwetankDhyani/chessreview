@@ -65,7 +65,10 @@ export function formatReviewsServed(n: number): string {
   return n.toLocaleString();
 }
 
-export async function fetchReviewCount(): Promise<number> {
+export async function fetchPublicReviewStats(): Promise<{
+  count: number;
+  countryCount: number;
+}> {
   const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
   const sources = [
     "/api/stats/public",
@@ -78,12 +81,20 @@ export async function fetchReviewCount(): Promise<number> {
       if (!res.ok) continue;
       const data = await res.json();
       const count = data.count ?? data.reviewsServed;
-      if (typeof count === "number") return count;
+      if (typeof count !== "number") continue;
+      const countryCount =
+        typeof data.countryCount === "number" ? data.countryCount : 0;
+      return { count, countryCount };
     } catch {
       /* try next source */
     }
   }
-  return 0;
+  return { count: 0, countryCount: 0 };
+}
+
+export async function fetchReviewCount(): Promise<number> {
+  const { count } = await fetchPublicReviewStats();
+  return count;
 }
 
 export async function fetchAdminStats(adminKey: string): Promise<AdminReviewStats> {

@@ -58,7 +58,11 @@ function saveState(state) {
 
 export function filePublicStats() {
   const s = loadState();
-  return { count: s.baseline + s.liveCount };
+  const countries = countryBreakdown(s.events);
+  return {
+    count: s.baseline + s.liveCount,
+    countryCount: countries.length,
+  };
 }
 
 function countryBreakdown(events) {

@@ -194,15 +194,22 @@ function withBaseline(stats) {
 export async function getPublicStats() {
   const engine = await fetchEngineJson("/stats");
   if (engine?.count != null) {
-    return { count: engine.count };
+    return {
+      count: engine.count,
+      countryCount:
+        typeof engine.countryCount === "number" ? engine.countryCount : 0,
+    };
   }
 
   if (isSupabaseConfigured()) {
     const stats = withBaseline(await dbPublicStats());
-    return { count: stats.reviewsServed ?? 0 };
+    return {
+      count: stats.reviewsServed ?? 0,
+      countryCount: stats.countryCount ?? 0,
+    };
   }
 
-  return { count: reviewsBaseline() };
+  return { count: reviewsBaseline(), countryCount: 0 };
 }
 
 export async function getTimingStats() {
