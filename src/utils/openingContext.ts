@@ -1,4 +1,9 @@
 import type { AnalyzedMove } from "../types";
+import {
+  matchOpeningEco,
+  type OpeningEcoEntry,
+  type OpeningEcoMatch,
+} from "./openingEcoLookup";
 
 export interface OpeningEntry {
   moves: string[];
@@ -62,12 +67,57 @@ export const OPENINGS_DB: OpeningEntry[] = [
 
 export interface OpeningChapter {
   openingName: string;
+  /** ECO code when matched from the deep opening database. */
+  eco?: string;
+  /** Full variation name from ECO (may be deeper than openingName from local DB). */
+  variationName?: string;
   ideas?: string;
   startIdx: number;
   endIdx: number;
   leftBookIdx: number | null;
   bookPlyCount: number;
   throughLabel: string;
+  /** Ply count of the deepest ECO prefix match at this point in the line. */
+  ecoPlyCount?: number;
+}
+
+function bookPrefixEnd(moves: AnalyzedMove[]): number {
+  let endIdx = -1;
+  for (let i = 0; i < moves.length; i++) {
+    if (moves[i].classification === "book" || moves[i].inOpeningBook) {
+      endIdx = i;
+    } else {
+      break;
+    }
+  }
+  return endIdx;
+}
+
+function resolveOpeningAt(
+  moves: AnalyzedMove[],
+  upToIdx: number,
+  ecoEntries?: OpeningEcoEntry[] | null
+): {
+  openingName: string;
+  eco?: string;
+  variationName?: string;
+  ideas?: string;
+  ecoMatch: OpeningEcoMatch | null;
+} {
+  const sans = moves.slice(0, upToIdx + 1).map((m) => m.san);
+  const ecoMatch = ecoEntries?.length ? matchOpeningEco(sans, ecoEntries) : null;
+  const local = detectOpeningProgressive(moves, upToIdx);
+
+  const variationName = ecoMatch?.name;
+  const openingName = variationName ?? local?.name ?? "Known theory";
+
+  return {
+    openingName,
+    eco: ecoMatch?.eco,
+    variationName,
+    ideas: local?.ideas,
+    ecoMatch,
+  };
 }
 
 export function detectOpeningProgressive(
@@ -88,49 +138,123 @@ export function detectOpeningProgressive(
   return bestMatch;
 }
 
-export function computeOpeningChapter(moves: AnalyzedMove[]): OpeningChapter | null {
+export function computeOpeningChapter(
+  moves: AnalyzedMove[],
+  ecoEntries?: OpeningEcoEntry[] | null
+): OpeningChapter | null {
   if (!moves.length) return null;
 
-  let endIdx = -1;
-  for (let i = 0; i < moves.length; i++) {
-    if (moves[i].classification === "book" || moves[i].inOpeningBook) {
-      endIdx = i;
-    } else {
-      break;
-    }
-  }
-  if (endIdx < 0) return null;
+  const bookEnd = bookPrefixEnd(moves);
+  if (bookEnd < 0) return null;
 
-  const opening = detectOpeningProgressive(moves, endIdx);
-  const last = moves[endIdx];
+  const resolved = resolveOpeningAt(moves, bookEnd, ecoEntries);
+  const last = moves[bookEnd];
   const throughLabel =
     last.color === "w"
       ? `${last.moveNumber}. ${last.san}`
       : `${last.moveNumber}...${last.san}`;
 
   return {
-    openingName: opening?.name ?? "Known theory",
-    ideas: opening?.ideas,
+    openingName: resolved.openingName,
+    eco: resolved.eco,
+    variationName: resolved.variationName,
+    ideas: resolved.ideas,
     startIdx: 0,
-    endIdx,
-    leftBookIdx: endIdx + 1 < moves.length ? endIdx + 1 : null,
-    bookPlyCount: endIdx + 1,
+    endIdx: bookEnd,
+    leftBookIdx: bookEnd + 1 < moves.length ? bookEnd + 1 : null,
+    bookPlyCount: bookEnd + 1,
     throughLabel,
+    ecoPlyCount: resolved.ecoMatch?.plyCount,
+  };
+}
+
+/** Opening theory snapshot at the current move (uses deep ECO when loaded). */
+export function computeOpeningChapterAt(
+  moves: AnalyzedMove[],
+  moveIdx: number,
+  ecoEntries?: OpeningEcoEntry[] | null
+): OpeningChapter | null {
+  if (!moves.length || moveIdx < 0 || moveIdx >= moves.length) return null;
+
+  const resolved = resolveOpeningAt(moves, moveIdx, ecoEntries);
+  const hasEco = !!resolved.ecoMatch;
+  const inLocalBook =
+    moves[moveIdx].classification === "book" || moves[moveIdx].inOpeningBook;
+  const bookEnd = bookPrefixEnd(moves);
+
+  if (!hasEco && !inLocalBook && bookEnd < 0) return null;
+  if (!hasEco && moveIdx > bookEnd && bookEnd >= 0) {
+    // After leaving local book — still show last known chapter at book end unless ECO extends.
+    return computeOpeningChapter(moves, ecoEntries);
+  }
+
+  const last = moves[moveIdx];
+  const throughLabel =
+    last.color === "w"
+      ? `${last.moveNumber}. ${last.san}`
+      : `${last.moveNumber}...${last.san}`;
+
+  return {
+    openingName: resolved.openingName,
+    eco: resolved.eco,
+    variationName: resolved.variationName,
+    ideas: resolved.ideas,
+    startIdx: 0,
+    endIdx: Math.max(bookEnd, moveIdx),
+    leftBookIdx: bookEnd >= 0 && bookEnd + 1 < moves.length ? bookEnd + 1 : null,
+    bookPlyCount: bookEnd >= 0 ? bookEnd + 1 : moveIdx + 1,
+    throughLabel,
+    ecoPlyCount: resolved.ecoMatch?.plyCount,
   };
 }
 
 export function openingHintForMove(
   moveIdx: number,
-  moves?: AnalyzedMove[]
+  moves?: AnalyzedMove[],
+  ecoEntries?: OpeningEcoEntry[] | null
 ): string | undefined {
   if (!moves || moveIdx < 0) return undefined;
-  const opening = detectOpeningProgressive(moves, moveIdx);
-  if (!opening) return undefined;
-  const prev = moveIdx > 0 ? detectOpeningProgressive(moves, moveIdx - 1) : null;
-  if (!prev || prev.name !== opening.name) {
-    return `${opening.name}: ${opening.ideas}`;
+
+  const resolved = resolveOpeningAt(moves, moveIdx, ecoEntries);
+  if (!resolved.ecoMatch && !detectOpeningProgressive(moves, moveIdx)) {
+    return undefined;
   }
-  return opening.name;
+
+  const label = resolved.eco
+    ? `${resolved.eco} · ${resolved.openingName}`
+    : resolved.openingName;
+
+  const prev =
+    moveIdx > 0 ? resolveOpeningAt(moves, moveIdx - 1, ecoEntries) : null;
+  const prevLabel = prev?.eco
+    ? `${prev.eco} · ${prev.openingName}`
+    : prev?.openingName;
+
+  if (!prev || prevLabel !== label) {
+    return resolved.ideas ? `${label}: ${resolved.ideas}` : label;
+  }
+  return label;
+}
+
+export function shouldShowOpeningTheory(
+  moveIdx: number,
+  moves: AnalyzedMove[],
+  ecoEntries?: OpeningEcoEntry[] | null
+): boolean {
+  if (!moves.length || moveIdx < 0) return false;
+  const move = moves[moveIdx];
+  if (move.classification === "book" || move.inOpeningBook) return true;
+
+  const bookEnd = bookPrefixEnd(moves);
+  if (bookEnd >= 0 && moveIdx === bookEnd + 1) return true;
+
+  if (ecoEntries?.length) {
+    const sans = moves.slice(0, moveIdx + 1).map((m) => m.san);
+    const match = matchOpeningEco(sans, ecoEntries);
+    if (match && match.plyCount >= 2 && moveIdx < 40) return true;
+  }
+
+  return false;
 }
 
 export function isLeftBookMove(moveIdx: number, moves: AnalyzedMove[]): boolean {

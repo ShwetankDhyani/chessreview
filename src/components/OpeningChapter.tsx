@@ -17,7 +17,8 @@ export function OpeningChapter({
 
   const inTheory =
     currentMoveIndex >= chapter.startIdx &&
-    currentMoveIndex <= chapter.endIdx;
+    (currentMoveIndex <= chapter.endIdx ||
+      (chapter.ecoPlyCount != null && currentMoveIndex + 1 <= chapter.ecoPlyCount));
 
   return (
     <div
@@ -33,11 +34,22 @@ export function OpeningChapter({
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-xs font-semibold text-chess-text truncate">
+            {chapter.eco ? (
+              <span className="font-mono text-[10px] text-chess-accent/90 mr-1.5">
+                {chapter.eco}
+              </span>
+            ) : null}
             {chapter.openingName}
           </div>
           <div className="text-[10px] text-chess-muted mt-0.5">
             Theory through {chapter.throughLabel}
-            {chapter.bookPlyCount > 1 && (
+            {chapter.ecoPlyCount != null && chapter.ecoPlyCount > 0 && (
+              <span className="text-chess-muted/80">
+                {" "}
+                · {chapter.ecoPlyCount}-move line
+              </span>
+            )}
+            {chapter.bookPlyCount > 1 && !chapter.ecoPlyCount && (
               <span className="text-chess-muted/80">
                 {" "}
                 · {chapter.bookPlyCount} plies

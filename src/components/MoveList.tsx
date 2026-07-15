@@ -6,7 +6,8 @@ import {
 } from "../analysis/gamePhases";
 import { getMeta } from "../utils/classificationMeta";
 import { formatWinChanceDeltaLong, moverWinChanceDeltaPercent } from "../utils/evalDisplay";
-import { computeOpeningChapter } from "../utils/openingContext";
+import { computeOpeningChapterAt } from "../utils/openingContext";
+import { useOpeningEco } from "../hooks/useOpeningEco";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { OpeningChapter } from "./OpeningChapter";
 
@@ -40,7 +41,11 @@ export const MoveList: React.FC<MoveListProps> = ({
   scrollActiveIntoView = true,
 }) => {
   const activeRef = useRef<HTMLButtonElement>(null);
-  const chapter = useMemo(() => computeOpeningChapter(moves), [moves]);
+  const ecoEntries = useOpeningEco();
+  const chapter = useMemo(
+    () => computeOpeningChapterAt(moves, currentMoveIndex, ecoEntries),
+    [moves, currentMoveIndex, ecoEntries]
+  );
   const phases = useMemo(() => assignGamePhases(moves), [moves]);
 
   /** First ply index of each phase that actually appears (skip empty leading). */

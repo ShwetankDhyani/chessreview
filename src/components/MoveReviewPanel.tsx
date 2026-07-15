@@ -5,7 +5,12 @@ import { getMeta } from "../utils/classificationMeta";
 import { ClassificationIcon } from "./ClassificationIcon";
 import { CoachIcon } from "./CoachIcon";
 import { OpeningChapter } from "./OpeningChapter";
-import { openingHintForMove, computeOpeningChapter } from "../utils/openingContext";
+import {
+  openingHintForMove,
+  computeOpeningChapterAt,
+  shouldShowOpeningTheory,
+} from "../utils/openingContext";
+import { useOpeningEco } from "../hooks/useOpeningEco";
 import { evaluateFen, isNativeEngineActive } from "../engine/evaluationService";
 import { shouldSuggestBestMove } from "../utils/bestMoveSuggestion";
 import { buildMoveFactSheet } from "../utils/moveFactSheet";
@@ -298,9 +303,14 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   embedded = false,
   onRegisterContinuationNav,
 }) => {
+  const ecoEntries = useOpeningEco();
+
   const chapter = useMemo(
-    () => (moves?.length ? computeOpeningChapter(moves) : null),
-    [moves]
+    () =>
+      moves?.length
+        ? computeOpeningChapterAt(moves, moveIdx, ecoEntries)
+        : null,
+    [moves, moveIdx, ecoEntries]
   );
 
   const leftBookLabel = useMemo(() => {
@@ -314,9 +324,14 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
 
   const factSheet = useMemo(() => {
     if (!move?.classification) return null;
-    const hint = openingHintForMove(moveIdx, moves);
-    return buildMoveFactSheet(move, { openingHint: hint, moveIdx, moves });
-  }, [move, moveIdx, moves]);
+    const hint = openingHintForMove(moveIdx, moves, ecoEntries);
+    return buildMoveFactSheet(move, {
+      openingHint: hint,
+      moveIdx,
+      moves,
+      ecoEntries,
+    });
+  }, [move, moveIdx, moves, ecoEntries]);
 
   const [tablebase, setTablebase] = useState<TablebaseResult | null>(null);
 
@@ -359,10 +374,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   const suggestBest = shouldSuggestBestMove(move);
   const showContinuation = suggestBest && !!move.bestMoveSan;
   const showOpeningChapter =
-    !!chapter &&
-    (move.inOpeningBook ||
-      move.classification === "book" ||
-      chapter.leftBookIdx === moveIdx);
+    !!moves?.length && shouldShowOpeningTheory(moveIdx, moves, ecoEntries);
 
   return (
     <div

@@ -11,6 +11,7 @@ import {
   isLeftBookMove,
   openingHintForMove,
 } from "./openingContext";
+import type { OpeningEcoEntry } from "./openingEcoLookup";
 
 export interface MoveFactSheet {
   classification: string;
@@ -26,6 +27,7 @@ export interface MoveFactSheetOptions {
   openingHint?: string;
   moveIdx?: number;
   moves?: AnalyzedMove[];
+  ecoEntries?: OpeningEcoEntry[] | null;
 }
 
 const EMPTY = "—";
@@ -109,7 +111,9 @@ function openingLabel(
   const moves = options.moves;
   const hint =
     options.openingHint ??
-    (moves ? openingHintForMove(moveIdx, moves) : undefined);
+    (moves
+      ? openingHintForMove(moveIdx, moves, options.ecoEntries)
+      : undefined);
   const chapter = moves ? computeOpeningChapter(moves) : null;
 
   if (moves && isLeftBookMove(moveIdx, moves)) {
