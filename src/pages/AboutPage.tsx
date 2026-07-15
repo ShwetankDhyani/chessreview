@@ -34,8 +34,7 @@ export default function AboutPage() {
             </h1>
             <p className="text-sm sm:text-[15px] text-chess-subtext leading-relaxed max-w-md">
               Free online chess game analysis for people who play for the love
-              of the game — club nights, weekend tournaments, and returning
-              adults who want clear feedback after a match.
+              of the game and want clear feedback after a match.
             </p>
             <div className="h-px w-16 bg-gradient-to-r from-chess-accent/70 to-transparent" />
           </header>

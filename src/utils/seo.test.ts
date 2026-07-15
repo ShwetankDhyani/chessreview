@@ -32,10 +32,18 @@ describe("seo", () => {
     const nodes = graph["@graph"] as Array<Record<string, unknown>>;
     expect(nodes.map((n) => n["@type"])).toEqual(["AboutPage", "FAQPage"]);
     const faq = nodes.find((n) => n["@type"] === "FAQPage") as {
-      mainEntity: Array<{ name: string }>;
+      mainEntity: Array<{
+        name: string;
+        acceptedAnswer: { text: string };
+      }>;
     };
     expect(faq.mainEntity.length).toBeGreaterThanOrEqual(3);
     expect(faq.mainEntity[0]!.name).toMatch(/free/i);
+    const who = faq.mainEntity.find((q) => /who is/i.test(q.name));
+    expect(who?.acceptedAnswer.text).toMatch(/club level/i);
+    expect(who?.acceptedAnswer.text).not.toMatch(
+      /United States|Australia|Canada/
+    );
   });
 
   it("builds share review JSON-LD with accuracy", () => {

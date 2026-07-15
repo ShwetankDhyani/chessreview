@@ -112,7 +112,7 @@ export default function BlogPage() {
   usePageSeo({
     title: "Chess Blog — Tips & Updates from ChessReview",
     description:
-      "Notes and updates from ChessReview for amateur and club chess players in the US, Canada, UK, Europe, and Australia.",
+      "Notes and updates from ChessReview — free chess game review, ideas, and messages for players who use it.",
     path: "/blog",
   });
 

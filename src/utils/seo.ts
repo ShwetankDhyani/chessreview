@@ -4,8 +4,7 @@ export const SITE_NAME = "ChessReview";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 
 /**
- * Primary English SEO copy aiming at club / amateur chess players
- * in the US, Canada, UK, Europe, and Australia.
+ * Primary English SEO copy for free chess game review / analysis queries.
  */
 export const DEFAULT_SEO = {
   title: "ChessReview — Free Chess Game Analysis Online (No Sign-up)",
@@ -94,7 +93,7 @@ export const HOME_FAQ = [
   {
     question: "Who is ChessReview for?",
     answer:
-      "Club players, weekend tournament players, and returning adults who want clear feedback after a game — especially in the United States, Canada, the United Kingdom, Europe, and Australia.",
+      "Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall.",
   },
   {
     question: "How is this different from Chess.com Game Review?",
@@ -117,8 +116,7 @@ export function homeJsonLdGraph(): Record<string, unknown> {
         inLanguage: "en",
         audience: {
           "@type": "Audience",
-          audienceType:
-            "Amateur and club chess players in the Americas, Europe, and Australia",
+          audienceType: "Amateur and club chess players",
         },
       },
       {
