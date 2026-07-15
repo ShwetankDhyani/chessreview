@@ -43,14 +43,10 @@ interface ReviewSummaryProps {
 }
 
 const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
-  "brilliant",
-  "great",
   "best",
-  "excellent",
   "good",
   "book",
   "inaccuracy",
-  "miss",
   "mistake",
   "blunder",
 ];

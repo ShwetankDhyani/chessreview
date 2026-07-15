@@ -29,23 +29,24 @@ Entry: `analyzePgn()` → `analyzeGameReview()`. Banner: `v3.1-hybrid-batch` whe
 ```
 Win% = 50 + 50 * (2 / (1 + exp(-0.00368208 * cp)) - 1)
 E = Win% / 100
-E_loss = E_afterBest − E_afterPlayed  (0 when engine best is played)
+E_loss (accuracy) = E_afterBest − E_afterPlayed  (0 when engine best is played)
+E_loss (classification) = max(vs-best, E_before − E_afterPlayed)
 ```
 
-## Classification bands (E_loss)
+## Classification bands (core labels only)
 
-- Best: 0
-- Excellent: ≤ 0.02
-- Good: ≤ 0.05
-- Inaccuracy: ≤ 0.10
-- Mistake: ≤ 0.20
-- Blunder: > 0.20 **and** not a “still winning” initiative slip (see below)
+- **Best**: engine best (or forced / delivered mate)
+- **Good**: ≤ 0.05 class loss
+- **Inaccuracy**: ≤ 0.10
+- **Mistake**: ≤ 0.20 (or initiative slip while still winning)
+- **Blunder**: > 0.20 with a real collapse
+- **Book**: opening theory
 
-**Winning-position cap:** If you were clearly better (`E_before ≥ 0.55`), still at least equal after (`E_after ≥ 0.50`), and ep loss is below 0.32, a raw >0.20 band is labeled **mistake** (lost initiative, not the game). True blunders in won games need a bigger collapse (e.g. 85% → 45%).
+No Brilliant / Great / Excellent / Miss — those confused people when a losing move was “excellent” only because it matched a shallow second-best line.
 
-**Miss (failed punish):** After opponent mistake/inaccuracy, only counts when you return to equal or lose ≥20% ep. Small slips while still ahead stay inaccuracy/mistake — not blunder.
+**Why absolute loss in classification:** Accuracy stays Chess.com-style vs-best so bullet noise doesn’t crush scores. Labels use absolute win-chance change too, so walking into mate from a playable/won position is never “good.”
 
-Special overrides (before bands): Book, Great, Miss (failed capitalize → blunder), Brilliant.
+**Winning-position cap:** If you were clearly better (`E_before ≥ 0.55`), still at least equal after (`E_after ≥ 0.50`), and ep loss is below 0.32, a raw >0.20 band is labeled **mistake** (lost initiative, not the game).
 
 ## Opening book
 

@@ -9,9 +9,9 @@ export interface ClassificationMeta {
 }
 
 /**
- * Glanceable report-card palette on dark UI.
- * Spread across hue (not a green cluster) so Best / Excellent / Good
- * and Inaccuracy / Mistake / Blunder separate at a distance.
+ * Core palette for today’s classifier: Best / Good / Book /
+ * Inaccuracy / Mistake / Blunder. Legacy keys (brilliant, great,
+ * excellent, miss) remain for older shared reviews only.
  */
 export const CLASSIFICATION_META: Record<
   NonNullable<MoveClassification>,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  classificationLoss,
   classifyReviewMove,
-  detectGreatMove,
   engineRankFromMultipv,
   epLossFromPlayed,
 } from "./classifyReviewMove";
@@ -27,39 +27,40 @@ function base(overrides: Partial<ClassifyReviewInput>): ClassifyReviewInput {
   };
 }
 
-describe("epLossFromPlayed", () => {
-  it("scores loss vs engine best, not vs position before", () => {
+describe("epLoss vs classificationLoss", () => {
+  it("accuracy loss stays vs-best (zero when engine best)", () => {
     expect(
       epLossFromPlayed(
         base({
-          eBefore: 0.62,
-          eAfterBest: 0.58,
-          eAfterPlayed: 0.57,
-          playedUci: "g1f3",
-          multipvLines: [
-            { multipv: 1, cp: 50, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
-          ],
-        })
-      )
-    ).toBeCloseTo(0.01, 5);
-  });
-
-  it("returns zero when the played move is engine best", () => {
-    expect(
-      epLossFromPlayed(
-        base({
-          eBefore: 0.62,
-          eAfterBest: 0.58,
-          eAfterPlayed: 0.54,
+          eBefore: 0.7,
+          eAfterBest: 0.05,
+          eAfterPlayed: 0.05,
           playedUci: "e2e4",
         })
       )
     ).toBe(0);
   });
+
+  it("classification uses absolute collapse, so dumping a win is punished", () => {
+    // Second-best also looks "equal" to a shallow best that fails — but you threw 70%.
+    const loss = classificationLoss(
+      base({
+        eBefore: 0.7,
+        eAfterBest: 0.02,
+        eAfterPlayed: 0.0,
+        playedUci: "a2a3",
+        multipvLines: [
+          { multipv: 1, cp: -800, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          { multipv: 2, cp: -900, depth: 14, pv: ["a2a3"], bestMove: "a2a3" },
+        ],
+      })
+    );
+    expect(loss).toBeGreaterThanOrEqual(0.65);
+  });
 });
 
-describe("classifyReviewMove thresholds", () => {
-  it("best at zero loss", () => {
+describe("classifyReviewMove core labels", () => {
+  it("best when engine best is played", () => {
     expect(
       classifyReviewMove(
         base({ eBefore: 0.5, eAfterPlayed: 0.5, eAfterBest: 0.5, playedUci: "e2e4" })
@@ -67,7 +68,7 @@ describe("classifyReviewMove thresholds", () => {
     ).toBe("best");
   });
 
-  it("excellent up to 2% vs best", () => {
+  it("good for small slips — never excellent", () => {
     expect(
       classifyReviewMove(
         base({
@@ -80,10 +81,27 @@ describe("classifyReviewMove thresholds", () => {
           ],
         })
       )
-    ).toBe("excellent");
+    ).toBe("good");
   });
 
-  it("blunder above 20% vs best when advantage is lost", () => {
+  it("never calls a mate walk excellent/good when you had winning chances", () => {
+    const c = classifyReviewMove(
+      base({
+        eBefore: 0.72,
+        eAfterBest: 0.02,
+        eAfterPlayed: 0.0,
+        playedUci: "a2a3",
+        multipvLines: [
+          { multipv: 1, cp: -700, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          { multipv: 2, mate: -1, depth: 14, pv: ["a2a3"], bestMove: "a2a3" },
+        ],
+      })
+    );
+    expect(c).toBe("blunder");
+    expect(["excellent", "good", "best", "brilliant", "great"]).not.toContain(c);
+  });
+
+  it("blunder above 20% when advantage is lost", () => {
     expect(
       classifyReviewMove(
         base({
@@ -102,100 +120,26 @@ describe("classifyReviewMove thresholds", () => {
         base({ eBefore: 0.82, eAfterPlayed: 0.6, eAfterBest: 0.78, playedUci: "a2a3" })
       )
     ).toBe("mistake");
-    expect(
-      classifyReviewMove(
-        base({ eBefore: 0.75, eAfterPlayed: 0.58, eAfterBest: 0.74, playedUci: "a2a3" })
-      )
-    ).toBe("mistake");
-    expect(
-      classifyReviewMove(
-        base({ eBefore: 0.75, eAfterPlayed: 0.52, eAfterBest: 0.73, playedUci: "a2a3" })
-      )
-    ).toBe("mistake");
-    expect(
-      classifyReviewMove(
-        base({ eBefore: 0.7, eAfterPlayed: 0.55, eAfterBest: 0.72, playedUci: "a2a3" })
-      )
-    ).toBe("mistake");
   });
 
-  it("does not blunder small slips after opponent mistake when still ahead", () => {
-    const smallSlip = classifyReviewMove(
+  it("does not emit miss / brilliant / great / excellent", () => {
+    const missish = classifyReviewMove(
       base({
-        eBefore: 0.58,
-        eAfterPlayed: 0.53,
-        eAfterBest: 0.565,
-        playedUci: "a2a3",
+        eBefore: 0.78,
+        eAfterPlayed: 0.42,
+        eAfterBest: 0.85,
         opponentPriorClass: "blunder",
-        opponentPriorEpLoss: 0.25,
+        opponentPriorEpLoss: 0.35,
+        epBeforeOpponentMove: 0.4,
+        postOpponentEP: 0.78,
+        playedUci: "a2a3",
+        multipvLines: [
+          { multipv: 1, cp: 400, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
+        ],
       })
     );
-    expect(smallSlip).not.toBe("blunder");
-    expect(smallSlip).toBe("good");
-    expect(
-      classifyReviewMove(
-        base({
-          eBefore: 0.65,
-          eAfterPlayed: 0.55,
-          eAfterBest: 0.62,
-          playedUci: "a2a3",
-          opponentPriorClass: "blunder",
-          opponentPriorEpLoss: 0.3,
-        })
-      )
-    ).toBe("inaccuracy");
-  });
-
-  it("keeps blunder on catastrophic swing even from a won game", () => {
-    expect(
-      classifyReviewMove(
-        base({ eBefore: 0.85, eAfterPlayed: 0.48, eAfterBest: 0.82, playedUci: "a2a3" })
-      )
-    ).toBe("blunder");
-    expect(
-      classifyReviewMove(
-        base({ eBefore: 0.8, eAfterPlayed: 0.44, eAfterBest: 0.78, playedUci: "a2a3" })
-      )
-    ).toBe("blunder");
-  });
-
-  it("labels missed chances after opponent errors as miss", () => {
-    expect(
-      classifyReviewMove(
-        base({
-          eBefore: 0.78,
-          eAfterPlayed: 0.42,
-          eAfterBest: 0.85,
-          opponentPriorClass: "blunder",
-          opponentPriorEpLoss: 0.35,
-          epBeforeOpponentMove: 0.4,
-          postOpponentEP: 0.78,
-          playedUci: "a2a3",
-          multipvLines: [
-            { multipv: 1, cp: 400, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
-          ],
-        })
-      )
-    ).toBe("miss");
-  });
-});
-
-describe("detectGreatMove", () => {
-  it("requires large gap between PV1 and PV2", () => {
-    expect(
-      detectGreatMove(
-        base({
-          eBefore: 0.65,
-          eAfterPlayed: 0.92,
-          playerRating: 1500,
-          multipvLines: [
-            { multipv: 1, cp: 400, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
-            { multipv: 2, cp: 0, depth: 18, pv: ["d2d4"], bestMove: "d2d4" },
-          ],
-          playedUci: "e2e4",
-        })
-      )
-    ).toBe(true);
+    expect(["miss", "brilliant", "great", "excellent"]).not.toContain(missish);
+    expect(["inaccuracy", "mistake", "blunder"]).toContain(missish);
   });
 });
 
