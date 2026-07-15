@@ -5,9 +5,10 @@ export type SiteSettings = {
 const engineUrl = () =>
   import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "") || "";
 
+/** Reads Testing Mode from public stats (no extra serverless function). */
 export async function fetchSiteSettings(): Promise<SiteSettings> {
   const sources = [
-    "/api/site-settings",
+    "/api/stats/public",
     engineUrl() ? `${engineUrl()}/site-settings` : null,
   ].filter(Boolean) as string[];
 
@@ -16,7 +17,13 @@ export async function fetchSiteSettings(): Promise<SiteSettings> {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) continue;
       const data = await res.json();
-      return { testingMode: !!data.testingMode };
+      if (typeof data.testingMode === "boolean") {
+        return { testingMode: data.testingMode };
+      }
+      // Engine /site-settings shape
+      if (url.includes("/site-settings")) {
+        return { testingMode: !!data.testingMode };
+      }
     } catch {
       /* try next */
     }
@@ -30,12 +37,14 @@ export async function updateSiteSettings(
 ): Promise<SiteSettings> {
   const trimmed = adminKey.trim();
   const sources = [
-    "/api/site-settings",
-    engineUrl() ? `${engineUrl()}/site-settings` : null,
-  ].filter(Boolean) as string[];
+    { url: "/api/stats/admin", viaStats: true },
+    engineUrl()
+      ? { url: `${engineUrl()}/site-settings`, viaStats: false }
+      : null,
+  ].filter(Boolean) as Array<{ url: string; viaStats: boolean }>;
 
   let lastError: Error | null = null;
-  for (const url of sources) {
+  for (const { url, viaStats } of sources) {
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -43,7 +52,9 @@ export async function updateSiteSettings(
           "Content-Type": "application/json",
           "X-Admin-Key": trimmed,
         },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(
+          viaStats ? { action: "site-settings", ...patch } : patch
+        ),
       });
       if (res.status === 401) {
         throw new Error("Invalid admin key");

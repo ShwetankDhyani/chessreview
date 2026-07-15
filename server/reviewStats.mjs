@@ -301,13 +301,85 @@ export function createReviewStatsMiddleware() {
     if (url === "/api/stats/public" && req.method === "GET") {
       res.setHeader("Content-Type", "application/json");
       res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "no-store");
       void (async () => {
         try {
-          const stats = await getPublicStats();
+          const { getSiteSettings } = await import("./siteSettings.mjs");
+          const [stats, settings] = await Promise.all([
+            getPublicStats(),
+            getSiteSettings().catch(() => ({ testingMode: false })),
+          ]);
           res.statusCode = 200;
-          res.end(JSON.stringify(stats));
+          res.end(
+            JSON.stringify({
+              ...stats,
+              testingMode: !!settings?.testingMode,
+            })
+          );
         } catch (e) {
           res.statusCode = 500;
+          res.end(
+            JSON.stringify({
+              error: e instanceof Error ? e.message : "Stats failed",
+            })
+          );
+        }
+      })();
+      return;
+    }
+
+    if (url === "/api/stats/admin" && req.method === "OPTIONS") {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Admin-Key"
+      );
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
+    if (url === "/api/stats/admin" && req.method === "POST") {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      void (async () => {
+        const key =
+          req.headers["x-admin-key"] ??
+          String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+        const expected = process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY;
+        if (!expected || key !== expected) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: "Unauthorized" }));
+          return;
+        }
+        try {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const raw = Buffer.concat(chunks).toString("utf8");
+          const body = raw ? JSON.parse(raw) : {};
+          if (
+            body?.action === "site-settings" ||
+            typeof body?.testingMode === "boolean"
+          ) {
+            const { setSiteSettings } = await import("./siteSettings.mjs");
+            const settings = await setSiteSettings(
+              {
+                testingMode:
+                  typeof body.testingMode === "boolean"
+                    ? body.testingMode
+                    : undefined,
+              },
+              key
+            );
+            res.statusCode = 200;
+            res.end(JSON.stringify(settings));
+            return;
+          }
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: "Unknown admin action" }));
+        } catch (e) {
+          res.statusCode = e?.status === 401 ? 401 : 500;
           res.end(
             JSON.stringify({
               error: e instanceof Error ? e.message : "Stats failed",
