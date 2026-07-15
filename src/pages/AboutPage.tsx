@@ -3,9 +3,6 @@ import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { HOME_FAQ, aboutJsonLd } from "../utils/seo";
 
-const CHESSCOM_USERNAME = "ShwetankDhyani";
-const CHESSCOM_CHALLENGE = `https://www.chess.com/play/online/new?isInvited=1&opponent=${CHESSCOM_USERNAME}`;
-
 export default function AboutPage() {
   usePageSeo({
     title: "About ChessReview — Free Chess Analysis for Club Players",
