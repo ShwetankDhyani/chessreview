@@ -35,6 +35,17 @@
       "destination": "/api/blog/:slug?format=html"
     },
     {
+      "source": "/about",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/about-crawler.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
