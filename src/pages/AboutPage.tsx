@@ -111,10 +111,6 @@ export default function AboutPage() {
                 />
               </span>
             </a>
-            <p className="text-xs text-chess-muted mt-3">
-              Optional Chess.com challenge against {CHESSCOM_USERNAME} —
-              separate from reviewing your own games.
-            </p>
           </section>
         </main>
       </div>
