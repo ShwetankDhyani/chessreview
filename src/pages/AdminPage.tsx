@@ -20,8 +20,13 @@ import {
 } from "../utils/siteSettings";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { AdminBlogPanel } from "../components/AdminBlogPanel";
-import { TestingModeBanner, TESTING_MODE_CHANGED } from "../components/TestingModeBanner";
-import { hapticToggle } from "../utils/chessSounds";
+import {
+  TestingModeBanner,
+  TESTING_MODE_CHANGED,
+} from "../components/TestingModeBanner";
+import { AdminSection } from "../components/admin/AdminSection";
+import { AdminSwitch } from "../components/admin/AdminSwitch";
+import { hapticSoft } from "../utils/chessSounds";
 
 const KEY_STORAGE = "cr_admin_key";
 const RECENT_PAGE_SIZE = 10;
@@ -40,25 +45,33 @@ function formatDuration(ms: number) {
 }
 
 function locationLabel(row: RecentReviewRow) {
-  const parts = [row.city, row.region, countryLabel(row.country_code)].filter(Boolean);
+  const parts = [row.city, row.region, countryLabel(row.country_code)].filter(
+    Boolean
+  );
   return parts.join(", ") || "—";
 }
 
 function playersLabel(row: RecentReviewRow) {
-  const w = row.white_rating ? `${row.white_player} (${row.white_rating})` : row.white_player;
-  const b = row.black_rating ? `${row.black_player} (${row.black_rating})` : row.black_player;
+  const w = row.white_rating
+    ? `${row.white_player} (${row.white_rating})`
+    : row.white_player;
+  const b = row.black_rating
+    ? `${row.black_player} (${row.black_rating})`
+    : row.black_player;
   return `${w} vs ${b}`;
 }
 
 export default function AdminPage() {
   usePageSeo({
     title: "Admin — ChessReview",
-    description: "ChessReview admin dashboard.",
+    description: "ChessReview control panel.",
     path: "/admin",
     noindex: true,
   });
 
-  const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem(KEY_STORAGE) ?? "");
+  const [adminKey, setAdminKey] = useState(
+    () => sessionStorage.getItem(KEY_STORAGE) ?? ""
+  );
   const [inputKey, setInputKey] = useState("");
   const [stats, setStats] = useState<AdminReviewStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +96,7 @@ export default function AdminPage() {
         setTestingMode(!!settings.testingMode);
         setTestingError(null);
       } catch {
-        /* settings are optional relative to analytics */
+        /* settings optional relative to analytics */
       }
     } catch (e) {
       setStats(null);
@@ -93,26 +106,39 @@ export default function AdminPage() {
     }
   };
 
-  const toggleTestingMode = async () => {
+  const setTestingModeValue = async (next: boolean) => {
     if (!adminKey || testingBusy) return;
-    const next = !testingMode;
-    hapticToggle();
+    const prev = testingMode;
+    setTestingMode(next);
     setTestingBusy(true);
     setTestingError(null);
     try {
-      const settings = await updateSiteSettings(adminKey, { testingMode: next });
-      setTestingMode(!!settings.testingMode);
+      const settings = await updateSiteSettings(adminKey, {
+        testingMode: next,
+      });
+      const live = !!settings.testingMode;
+      setTestingMode(live);
       setTestingBannerKey((k) => k + 1);
       window.dispatchEvent(
         new CustomEvent(TESTING_MODE_CHANGED, {
-          detail: { testingMode: !!settings.testingMode },
+          detail: { testingMode: live },
         })
       );
     } catch (e) {
+      setTestingMode(prev);
       setTestingError(e instanceof Error ? e.message : "Could not update");
     } finally {
       setTestingBusy(false);
     }
+  };
+
+  const signOut = () => {
+    hapticSoft();
+    sessionStorage.removeItem(KEY_STORAGE);
+    setAdminKey("");
+    setStats(null);
+    setInputKey("");
+    setError(null);
   };
 
   useEffect(() => {
@@ -121,7 +147,10 @@ export default function AdminPage() {
   }, []);
 
   const recentTotal = stats?.recent?.length ?? 0;
-  const recentPageCount = Math.max(1, Math.ceil(recentTotal / RECENT_PAGE_SIZE));
+  const recentPageCount = Math.max(
+    1,
+    Math.ceil(recentTotal / RECENT_PAGE_SIZE)
+  );
 
   const recentSlice = useMemo(() => {
     const all = stats?.recent ?? [];
@@ -130,7 +159,6 @@ export default function AdminPage() {
   }, [stats?.recent, recentPage]);
 
   const countryRows = stats?.countries ?? [];
-  // One row per country; container scrolls so the SVG can grow with the count.
   const countryChartHeight = Math.max(countryRows.length * 28, 160);
 
   useEffect(() => {
@@ -143,18 +171,24 @@ export default function AdminPage() {
     return (
       <div className="page-scroll-root bg-chess-bg text-chess-text flex items-center justify-center p-6">
         <form
-          className="w-full max-w-xs space-y-3"
+          className="w-full max-w-xs space-y-3 rounded-xl border border-chess-border bg-chess-panel p-5"
           onSubmit={(e) => {
             e.preventDefault();
             void load(inputKey.trim());
           }}
         >
+          <div>
+            <h1 className="text-base font-bold text-chess-text">Control panel</h1>
+            <p className="mt-1 text-[11px] text-chess-muted">
+              Sign in with your admin password.
+            </p>
+          </div>
           <input
             type="password"
             value={inputKey}
             onChange={(e) => setInputKey(e.target.value)}
             placeholder="Password"
-            className="w-full rounded-lg border border-chess-border bg-chess-panel px-3 py-2.5 text-sm"
+            className="w-full rounded-lg border border-chess-border bg-chess-bg px-3 py-2.5 text-sm"
             autoComplete="current-password"
             autoFocus
           />
@@ -171,109 +205,170 @@ export default function AdminPage() {
           >
             {loading ? "…" : "Enter"}
           </button>
-          <a href="/" className="block text-center text-xs text-chess-muted hover:text-chess-accent">
-            ← Back
+          <a
+            href="/"
+            className="block text-center text-xs text-chess-muted hover:text-chess-accent"
+          >
+            ← Back to site
           </a>
         </form>
       </div>
     );
   }
 
-  const recentStart = recentTotal === 0 ? 0 : recentPage * RECENT_PAGE_SIZE + 1;
+  const recentStart =
+    recentTotal === 0 ? 0 : recentPage * RECENT_PAGE_SIZE + 1;
   const recentEnd = Math.min(recentTotal, (recentPage + 1) * RECENT_PAGE_SIZE);
 
   return (
     <div className="page-scroll-root bg-chess-bg text-chess-text">
       <TestingModeBanner key={testingBannerKey} />
-      <header className="border-b border-chess-border bg-chess-panel/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <h1 className="text-base font-bold">Analytics</h1>
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-10 border-b border-chess-border bg-chess-panel/90 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-muted">
+              ChessReview
+            </p>
+            <h1 className="text-base font-bold tracking-tight text-chess-text">
+              Control panel
+            </h1>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => void load(adminKey)}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
+              className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold text-chess-subtext hover:bg-chess-hover disabled:opacity-50"
             >
-              Refresh
+              {loading ? "…" : "Refresh"}
             </button>
-            <a href="/" className="text-xs text-chess-muted hover:text-chess-accent">
+            <a
+              href="/"
+              className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold text-chess-subtext hover:bg-chess-hover hover:text-chess-accent"
+            >
               Site
             </a>
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold text-chess-muted hover:bg-chess-hover hover:text-chess-text"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 pb-12 space-y-6">
-        <section className="rounded-xl border border-chess-border bg-chess-panel px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
+      <main className="mx-auto max-w-5xl space-y-3 px-4 py-5 pb-14">
+        <AdminSection
+          id="site"
+          title="Site"
+          description="Live flags visitors see on the site."
+          defaultOpen
+          badge={testingMode ? "Testing on" : undefined}
+        >
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-chess-border/70 bg-chess-bg/35 px-3 py-2.5">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-chess-text">Testing Mode</h2>
-              <p className="mt-0.5 text-[11px] text-chess-muted">
-                Shows a site-wide notice that features may glitch.
+              <p
+                className={`text-[12px] font-semibold leading-snug ${
+                  testingMode ? "text-chess-accent" : "text-chess-text"
+                }`}
+              >
+                Testing Mode
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-chess-muted">
+                Shows a top banner: features may glitch.
               </p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={testingMode}
-              aria-label="Testing Mode"
+            <AdminSwitch
+              label="Testing Mode"
+              checked={testingMode}
               disabled={testingBusy}
-              onClick={() => void toggleTestingMode()}
-              className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-                testingMode ? "bg-amber-500" : "bg-chess-border-strong"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  testingMode ? "translate-x-[22px]" : "translate-x-0.5"
-                }`}
-              />
-            </button>
+              onChange={(next) => void setTestingModeValue(next)}
+            />
           </div>
           {testingError ? (
             <p className="mt-2 text-[11px] text-red-400">{testingError}</p>
           ) : null}
-        </section>
+        </AdminSection>
 
-        <AdminBlogPanel adminKey={adminKey} />
-
-        {loading && !stats ? (
-          <p className="text-sm text-chess-muted">Loading analytics…</p>
-        ) : !stats?.configured ? (
-          <p className="text-sm text-chess-muted">Could not load analytics stats.</p>
-        ) : (
-          <>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <StatCard label="Reviews served" value={formatReviewsServed(stats.reviewsServed ?? 0)} accent />
-              <StatCard label="Countries" value={String(stats.countryCount ?? 0)} />
+        <AdminSection
+          id="overview"
+          title="Overview"
+          description="High-level review volume and reach."
+          defaultOpen
+          badge={
+            stats?.reviewsServed != null
+              ? formatReviewsServed(stats.reviewsServed)
+              : undefined
+          }
+        >
+          {loading && !stats ? (
+            <p className="text-sm text-chess-muted">Loading…</p>
+          ) : !stats?.configured ? (
+            <p className="text-sm text-chess-muted">
+              Could not load analytics stats.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Reviews served"
+                value={formatReviewsServed(stats.reviewsServed ?? 0)}
+                accent
+              />
+              <StatCard
+                label="Countries"
+                value={String(stats.countryCount ?? 0)}
+              />
               <StatCard
                 label="Avg white rating"
-                value={stats.ratingSummary?.avgWhite ? String(stats.ratingSummary.avgWhite) : "—"}
+                value={
+                  stats.ratingSummary?.avgWhite
+                    ? String(stats.ratingSummary.avgWhite)
+                    : "—"
+                }
               />
               <StatCard
                 label="Avg black rating"
-                value={stats.ratingSummary?.avgBlack ? String(stats.ratingSummary.avgBlack) : "—"}
+                value={
+                  stats.ratingSummary?.avgBlack
+                    ? String(stats.ratingSummary.avgBlack)
+                    : "—"
+                }
               />
             </div>
+          )}
+        </AdminSection>
 
-            <div className="grid lg:grid-cols-2 gap-6">
-              <section className="rounded-xl border border-chess-border bg-chess-panel p-4">
-                <div className="flex items-baseline justify-between gap-3 mb-3">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
-                    By country
-                  </h2>
-                  {countryRows.length > 0 && (
-                    <span className="text-[10px] text-chess-muted tabular-nums">
-                      {countryRows.length} countries
-                    </span>
-                  )}
-                </div>
+        <AdminSection
+          id="analytics"
+          title="Analytics"
+          description="Breakdowns by country and engine depth."
+          defaultOpen={false}
+          badge={
+            countryRows.length > 0
+              ? `${countryRows.length} countries`
+              : undefined
+          }
+        >
+          {!stats?.configured ? (
+            <p className="text-sm text-chess-muted">No analytics yet.</p>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+                  By country
+                </h3>
                 {countryRows.length === 0 ? (
                   <p className="text-sm text-chess-muted">No country data yet.</p>
                 ) : (
-                  <div className="overflow-y-auto max-h-[28rem]">
-                    <div style={{ height: countryChartHeight, minHeight: countryChartHeight }}>
+                  <div className="max-h-[28rem] overflow-y-auto">
+                    <div
+                      style={{
+                        height: countryChartHeight,
+                        minHeight: countryChartHeight,
+                      }}
+                    >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           layout="vertical"
@@ -292,14 +387,19 @@ export default function AdminPage() {
                             dataKey="countryCode"
                             width={88}
                             tick={{ fill: "#888", fontSize: 10 }}
-                            tickFormatter={(code) => countryLabel(String(code))}
+                            tickFormatter={(code) =>
+                              countryLabel(String(code))
+                            }
                             axisLine={false}
                             tickLine={false}
                           />
                           <Tooltip
                             content={({ active, payload }) => {
                               if (!active || !payload?.[0]) return null;
-                              const row = payload[0].payload as { countryCode: string; count: number };
+                              const row = payload[0].payload as {
+                                countryCode: string;
+                                count: number;
+                              };
                               return (
                                 <div className="rounded-lg border border-chess-border bg-chess-panel px-2 py-1 text-xs">
                                   {countryLabel(row.countryCode)}: {row.count}
@@ -307,25 +407,31 @@ export default function AdminPage() {
                               );
                             }}
                           />
-                          <Bar dataKey="count" fill="#96bc4b" radius={[0, 4, 4, 0]} />
+                          <Bar
+                            dataKey="count"
+                            fill="#96bc4b"
+                            radius={[0, 4, 4, 0]}
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
                 )}
-              </section>
+              </div>
 
-              <section className="rounded-xl border border-chess-border bg-chess-panel p-4">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted mb-3">
+              <div>
+                <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
                   By engine depth
-                </h2>
+                </h3>
                 {(stats.byDepth?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-chess-muted">No depth breakdown yet.</p>
+                  <p className="text-sm text-chess-muted">
+                    No depth breakdown yet.
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="text-chess-muted text-left border-b border-chess-border/50">
+                        <tr className="border-b border-chess-border/50 text-left text-chess-muted">
                           <th className="py-2 pr-3">Depth</th>
                           <th className="py-2 pr-3">Reviews</th>
                           <th className="py-2">Avg time</th>
@@ -333,78 +439,106 @@ export default function AdminPage() {
                       </thead>
                       <tbody>
                         {stats.byDepth?.map((d) => (
-                          <tr key={d.depth} className="border-b border-chess-border/30">
-                            <td className="py-2 pr-3 tabular-nums">D{d.depth}</td>
-                            <td className="py-2 pr-3 tabular-nums">{d.count}</td>
-                            <td className="py-2 tabular-nums">{formatDuration(d.avgDurationMs)}</td>
+                          <tr
+                            key={d.depth}
+                            className="border-b border-chess-border/30"
+                          >
+                            <td className="py-2 pr-3 tabular-nums">
+                              D{d.depth}
+                            </td>
+                            <td className="py-2 pr-3 tabular-nums">
+                              {d.count}
+                            </td>
+                            <td className="py-2 tabular-nums">
+                              {formatDuration(d.avgDurationMs)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 )}
-              </section>
-            </div>
-
-            <section className="rounded-xl border border-chess-border bg-chess-panel overflow-hidden">
-              <div className="px-4 py-3 border-b border-chess-border/50 flex items-center justify-between gap-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
-                  Recent reviews
-                </h2>
-                {recentTotal > 0 && (
-                  <span className="text-[10px] text-chess-muted tabular-nums">
-                    {recentStart}–{recentEnd} of {recentTotal}
-                  </span>
-                )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[720px]">
+            </div>
+          )}
+        </AdminSection>
+
+        <AdminSection
+          id="recent"
+          title="Recent reviews"
+          description="Latest completed analyses."
+          defaultOpen={false}
+          badge={recentTotal > 0 ? String(recentTotal) : undefined}
+        >
+          {!stats?.configured ? (
+            <p className="text-sm text-chess-muted">No reviews yet.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-chess-border/60">
+                <table className="w-full min-w-[720px] text-xs">
                   <thead>
-                    <tr className="text-chess-muted text-left bg-chess-bg/40">
-                      <th className="py-2 px-3">When</th>
-                      <th className="py-2 px-3">Match</th>
-                      <th className="py-2 px-3">Result</th>
-                      <th className="py-2 px-3">Reviewer</th>
-                      <th className="py-2 px-3">Location</th>
-                      <th className="py-2 px-3">Depth</th>
+                    <tr className="bg-chess-bg/40 text-left text-chess-muted">
+                      <th className="px-3 py-2">When</th>
+                      <th className="px-3 py-2">Match</th>
+                      <th className="px-3 py-2">Result</th>
+                      <th className="px-3 py-2">Reviewer</th>
+                      <th className="px-3 py-2">Location</th>
+                      <th className="px-3 py-2">Depth</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentTotal === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 px-3 text-chess-muted text-center">
+                        <td
+                          colSpan={6}
+                          className="px-3 py-6 text-center text-chess-muted"
+                        >
                           No reviews yet.
                         </td>
                       </tr>
                     ) : (
                       recentSlice.map((row, i) => (
-                        <tr key={`${row.reviewed_at}-${i}`} className="border-t border-chess-border/30 hover:bg-chess-hover/20">
-                          <td className="py-2 px-3 text-chess-muted whitespace-nowrap">
+                        <tr
+                          key={`${row.reviewed_at}-${i}`}
+                          className="border-t border-chess-border/30 hover:bg-chess-hover/20"
+                        >
+                          <td className="whitespace-nowrap px-3 py-2 text-chess-muted">
                             {formatWhen(row.reviewed_at)}
                           </td>
-                          <td className="py-2 px-3">
-                            <div className="font-medium text-chess-text truncate max-w-[200px]">
+                          <td className="px-3 py-2">
+                            <div className="max-w-[200px] truncate font-medium text-chess-text">
                               {playersLabel(row)}
                             </div>
                             {row.plies != null && (
-                              <div className="text-chess-muted">{row.plies} plies</div>
+                              <div className="text-chess-muted">
+                                {row.plies} plies
+                              </div>
                             )}
                           </td>
-                          <td className="py-2 px-3 tabular-nums">{row.result ?? "—"}</td>
-                          <td className="py-2 px-3">
+                          <td className="px-3 py-2 tabular-nums">
+                            {row.result ?? "—"}
+                          </td>
+                          <td className="px-3 py-2">
                             {row.username ? (
                               <span>
                                 {row.username}
                                 {row.reviewer_platform ? (
-                                  <span className="text-chess-muted"> · {row.reviewer_platform}</span>
+                                  <span className="text-chess-muted">
+                                    {" "}
+                                    · {row.reviewer_platform}
+                                  </span>
                                 ) : null}
                               </span>
                             ) : (
                               "—"
                             )}
                           </td>
-                          <td className="py-2 px-3 text-chess-muted">{locationLabel(row)}</td>
-                          <td className="py-2 px-3 tabular-nums">D{row.depth}</td>
+                          <td className="px-3 py-2 text-chess-muted">
+                            {locationLabel(row)}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            D{row.depth}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -412,31 +546,44 @@ export default function AdminPage() {
                 </table>
               </div>
               {recentTotal > RECENT_PAGE_SIZE && (
-                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-chess-border/50 bg-chess-bg/30">
+                <div className="mt-3 flex items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => setRecentPage((p) => Math.max(0, p - 1))}
                     disabled={recentPage <= 0}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-40 disabled:pointer-events-none"
+                    className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold hover:bg-chess-hover disabled:pointer-events-none disabled:opacity-40"
                   >
                     ← Previous
                   </button>
-                  <span className="text-[11px] text-chess-muted tabular-nums">
-                    Page {recentPage + 1} of {recentPageCount}
+                  <span className="text-[11px] tabular-nums text-chess-muted">
+                    {recentStart}–{recentEnd} of {recentTotal}
                   </span>
                   <button
                     type="button"
-                    onClick={() => setRecentPage((p) => Math.min(recentPageCount - 1, p + 1))}
+                    onClick={() =>
+                      setRecentPage((p) =>
+                        Math.min(recentPageCount - 1, p + 1)
+                      )
+                    }
                     disabled={recentPage >= recentPageCount - 1}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-40 disabled:pointer-events-none"
+                    className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold hover:bg-chess-hover disabled:pointer-events-none disabled:opacity-40"
                   >
                     Next →
                   </button>
                 </div>
               )}
-            </section>
-          </>
-        )}
+            </>
+          )}
+        </AdminSection>
+
+        <AdminSection
+          id="blog"
+          title="Blog"
+          description="Write, edit, and publish posts."
+          defaultOpen={false}
+        >
+          <AdminBlogPanel adminKey={adminKey} embedded />
+        </AdminSection>
       </main>
     </div>
   );
@@ -452,10 +599,12 @@ function StatCard({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-chess-border bg-chess-panel px-4 py-3">
-      <div className="text-[10px] uppercase tracking-wider text-chess-muted font-semibold">{label}</div>
+    <div className="rounded-lg border border-chess-border/70 bg-chess-bg/35 px-3 py-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+        {label}
+      </div>
       <div
-        className={`text-2xl font-bold tabular-nums mt-1 ${
+        className={`mt-1 text-2xl font-bold tabular-nums ${
           accent ? "text-chess-accent" : "text-chess-text"
         }`}
       >

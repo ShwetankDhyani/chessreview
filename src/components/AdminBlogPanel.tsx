@@ -10,8 +10,9 @@ import {
   type BlogPostSummary,
 } from "../utils/blogApi";
 import { renderBlogMarkdown } from "../utils/blogMarkdown";
+import { hapticToggle } from "../utils/chessSounds";
 
-type Props = { adminKey: string };
+type Props = { adminKey: string; embedded?: boolean };
 
 const emptyForm = {
   id: "",
@@ -23,7 +24,7 @@ const emptyForm = {
   authorName: "ChessReview",
 };
 
-export function AdminBlogPanel({ adminKey }: Props) {
+export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,11 +174,23 @@ export function AdminBlogPanel({ adminKey }: Props) {
     "px-2 py-1 rounded border border-chess-border text-[10px] font-semibold text-chess-muted hover:text-chess-accent hover:border-chess-accent/40 transition-colors";
 
   return (
-    <section className="rounded-xl border border-chess-border bg-chess-panel p-4 space-y-5">
+    <div
+      className={
+        embedded
+          ? "space-y-5"
+          : "rounded-xl border border-chess-border bg-chess-panel p-4 space-y-5"
+      }
+    >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
-          Blog
-        </h2>
+        {!embedded ? (
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-chess-muted">
+            Blog
+          </h2>
+        ) : (
+          <p className="text-[11px] text-chess-muted">
+            Posts and drafts for chessreview.org/blog
+          </p>
+        )}
         <a
           href="/blog"
           className="text-[11px] text-chess-accent hover:underline"
@@ -292,13 +305,26 @@ export function AdminBlogPanel({ adminKey }: Props) {
 
         <div className="flex flex-wrap items-center gap-4">
           <label className="inline-flex items-center gap-2 text-xs text-chess-subtext">
-            <input
-              type="checkbox"
-              checked={form.published}
-              onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))}
-              className="rounded border-chess-border"
-            />
-            Published
+            <span>Published</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.published}
+              aria-label="Published"
+              onClick={() => {
+                hapticToggle();
+                setForm((f) => ({ ...f, published: !f.published }));
+              }}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                form.published ? "bg-chess-accent" : "bg-chess-border-strong"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                  form.published ? "translate-x-[18px]" : "translate-x-[3px]"
+                }`}
+              />
+            </button>
           </label>
           <input
             value={form.authorName}
@@ -364,6 +390,6 @@ export function AdminBlogPanel({ adminKey }: Props) {
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
