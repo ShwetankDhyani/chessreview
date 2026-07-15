@@ -30,6 +30,7 @@ function defaultState() {
     baseline: parseBaseline(),
     liveCount: 0,
     events: [],
+    testingMode: false,
   };
 }
 
@@ -43,6 +44,7 @@ function loadState() {
       baseline: parsed.baseline ?? parseBaseline(),
       events: Array.isArray(parsed.events) ? parsed.events : [],
       liveCount: Number(parsed.liveCount) || 0,
+      testingMode: !!parsed.testingMode,
     };
   } catch {
     return defaultState();
@@ -62,6 +64,7 @@ export function filePublicStats() {
   return {
     count: s.baseline + s.liveCount,
     countryCount: countries.length,
+    testingMode: !!s.testingMode,
   };
 }
 
@@ -129,7 +132,15 @@ export function fileAdminStats() {
     ratingSummary: ratingSummary(events),
     recent: events.slice(0, 80),
     tracking: "engine-file",
+    testingMode: !!s.testingMode,
   };
+}
+
+export function fileSetTestingMode(testingMode) {
+  const s = loadState();
+  s.testingMode = !!testingMode;
+  saveState(s);
+  return { testingMode: s.testingMode };
 }
 
 const GEO_FIELDS = ["country_code", "region", "city", "latitude", "longitude"];
@@ -202,6 +213,38 @@ export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonB
         const result = fileLogReview(row);
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true, ...result }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
+  if (url.pathname === "/stats/admin" && req.method === "POST") {
+    const key = (
+      req.headers["x-admin-key"] ??
+      String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "")
+    ).trim();
+    if (!adminSecret || key !== adminSecret) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return true;
+    }
+    void (async () => {
+      try {
+        const body = await readJsonBody(req);
+        if (
+          body?.action === "site-settings" ||
+          typeof body?.testingMode === "boolean"
+        ) {
+          const result = fileSetTestingMode(!!body.testingMode);
+          res.writeHead(200);
+          res.end(JSON.stringify(result));
+          return;
+        }
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Unknown admin action" }));
       } catch (e) {
         res.writeHead(400);
         res.end(JSON.stringify({ error: e.message }));

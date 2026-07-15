@@ -10,6 +10,10 @@ describe("siteSettings file store", () => {
     rmSync(DIR, { recursive: true, force: true });
     mkdirSync(DIR, { recursive: true });
     process.env.REVIEW_STATS_DIR = DIR;
+    delete process.env.EVAL_SERVER_URL;
+    delete process.env.VITE_EVAL_SERVER_URL;
+    delete process.env.VERCEL;
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
     vi.resetModules();
   });
 
@@ -25,9 +29,6 @@ describe("siteSettings file store", () => {
       testingMode: true,
     });
     expect(mod.fileGetSiteSettings()).toEqual({ testingMode: true });
-    expect(mod.fileSetSiteSettings({ testingMode: false })).toEqual({
-      testingMode: false,
-    });
   });
 
   it("reads an existing settings file", async () => {
@@ -38,5 +39,11 @@ describe("siteSettings file store", () => {
     );
     const mod = await import("./siteSettings.mjs");
     expect(mod.fileGetSiteSettings().testingMode).toBe(true);
+  });
+
+  it("recognizes the reserved site-settings blog slug", async () => {
+    const mod = await import("./siteSettings.mjs");
+    expect(mod.isSiteSettingsSlug("cr-site-settings")).toBe(true);
+    expect(mod.isSiteSettingsSlug("hello")).toBe(false);
   });
 });

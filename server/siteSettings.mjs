@@ -1,9 +1,10 @@
 /**
- * Site-wide settings (engine file store + Vercel/local helpers).
- * Currently: testingMode banner for visitors.
+ * Site-wide settings (testingMode banner).
  *
- * Intentionally self-contained (no reviewStats import) so public/admin
- * stats handlers can attach testingMode without circular deps.
+ * Persistence order:
+ * 1) Engine review-stats.json via /stats + POST /stats/admin (preferred)
+ * 2) Reserved blog post slug `cr-site-settings` (works on older engines today)
+ * 3) Local file store (non-Vercel / local vitest)
  */
 
 import {
@@ -17,6 +18,10 @@ import { join } from "path";
 
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
 const SETTINGS_FILE = join(DATA_DIR, "site-settings.json");
+
+/** Reserved blog slug — filtered out of public blog listings. */
+export const SITE_SETTINGS_SLUG = "cr-site-settings";
+const SITE_SETTINGS_TITLE = "ChessReview site settings";
 
 function defaultState() {
   return { testingMode: false };
@@ -40,9 +45,7 @@ function loadState() {
   try {
     if (!existsSync(SETTINGS_FILE)) return defaultState();
     const parsed = JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
-    return {
-      testingMode: !!parsed.testingMode,
-    };
+    return { testingMode: !!parsed.testingMode };
   } catch {
     return defaultState();
   }
@@ -70,7 +73,11 @@ export function fileSetSiteSettings(patch = {}) {
   return next;
 }
 
-async function engineJson(path, options = {}) {
+export function isSiteSettingsSlug(slug) {
+  return String(slug ?? "").trim() === SITE_SETTINGS_SLUG;
+}
+
+async function engineFetch(path, options = {}) {
   const base = engineBase();
   if (!base) return null;
   const res = await fetch(`${base}${path}`, {
@@ -83,30 +90,167 @@ async function engineJson(path, options = {}) {
   } catch {
     data = null;
   }
-  if (!res.ok) {
-    const message =
-      (data && typeof data.error === "string" && data.error) ||
-      `Site settings failed (${res.status})`;
-    const err = new Error(message);
-    err.status = res.status;
+  return { ok: res.ok, status: res.status, data };
+}
+
+function parseTestingMode(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (typeof payload.testingMode === "boolean") return payload.testingMode;
+  if (typeof payload.body === "string") {
+    try {
+      const parsed = JSON.parse(payload.body);
+      if (typeof parsed?.testingMode === "boolean") return parsed.testingMode;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (payload.post && typeof payload.post.body === "string") {
+    try {
+      const parsed = JSON.parse(payload.post.body);
+      if (typeof parsed?.testingMode === "boolean") return parsed.testingMode;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+async function readFromEngineStats() {
+  const res = await engineFetch("/stats");
+  if (!res?.ok) return null;
+  const mode = parseTestingMode(res.data);
+  return mode == null ? null : { testingMode: mode };
+}
+
+async function writeToEngineStats(testingMode, adminKey) {
+  const res = await engineFetch("/stats/admin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Key": adminKey,
+    },
+    body: JSON.stringify({ action: "site-settings", testingMode }),
+  });
+  if (!res) return null;
+  if (res.status === 401) {
+    const err = new Error("Unauthorized");
+    err.status = 401;
     throw err;
   }
-  return data;
+  if (!res.ok) return null;
+  const mode = parseTestingMode(res.data);
+  return { testingMode: mode == null ? !!testingMode : mode };
+}
+
+async function writeToEngineSiteSettings(testingMode, adminKey) {
+  const res = await engineFetch("/site-settings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Key": adminKey,
+    },
+    body: JSON.stringify({ testingMode }),
+  });
+  if (!res) return null;
+  if (res.status === 401) {
+    const err = new Error("Unauthorized");
+    err.status = 401;
+    throw err;
+  }
+  if (!res.ok) return null;
+  return { testingMode: !!res.data?.testingMode };
+}
+
+async function readFromBlog() {
+  const res = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
+  if (!res?.ok) return null;
+  const mode = parseTestingMode(res.data);
+  return mode == null ? null : { testingMode: mode };
+}
+
+async function writeToBlog(testingMode, adminKey) {
+  const base = engineBase();
+  if (!base) return null;
+
+  const body = JSON.stringify({ testingMode: !!testingMode });
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Admin-Key": adminKey,
+  };
+
+  // Update existing reserved post when present.
+  const existing = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
+  if (existing?.ok && existing.data?.post?.id) {
+    const res = await engineFetch("/blog", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: "update",
+        id: existing.data.post.id,
+        title: SITE_SETTINGS_TITLE,
+        slug: SITE_SETTINGS_SLUG,
+        excerpt: "Internal site flag — hidden from the blog.",
+        body,
+        published: true,
+      }),
+    });
+    if (res?.status === 401) {
+      const err = new Error("Unauthorized");
+      err.status = 401;
+      throw err;
+    }
+    if (res?.ok) return { testingMode: !!testingMode };
+  }
+
+  const created = await engineFetch("/blog", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      title: SITE_SETTINGS_TITLE,
+      slug: SITE_SETTINGS_SLUG,
+      excerpt: "Internal site flag — hidden from the blog.",
+      body,
+      published: true,
+    }),
+  });
+  if (created?.status === 401) {
+    const err = new Error("Unauthorized");
+    err.status = 401;
+    throw err;
+  }
+  if (!created?.ok) return null;
+  return { testingMode: !!testingMode };
 }
 
 export async function getSiteSettings() {
-  const base = engineBase();
-  if (base) {
-    try {
-      return await engineJson("/site-settings");
-    } catch (e) {
-      if (isReadOnlyDeploy()) throw e;
-    }
+  try {
+    const fromStats = await readFromEngineStats();
+    if (fromStats) return fromStats;
+  } catch {
+    /* continue */
   }
-  if (isReadOnlyDeploy() && !base) {
+
+  try {
+    const fromBlog = await readFromBlog();
+    if (fromBlog) return fromBlog;
+  } catch {
+    /* continue */
+  }
+
+  try {
+    const res = await engineFetch("/site-settings");
+    if (res?.ok) return { testingMode: !!res.data?.testingMode };
+  } catch {
+    /* continue */
+  }
+
+  if (isReadOnlyDeploy() && !engineBase()) {
     return { testingMode: false };
   }
-  return fileGetSiteSettings();
+  if (!isReadOnlyDeploy()) {
+    return fileGetSiteSettings();
+  }
+  return { testingMode: false };
 }
 
 export async function setSiteSettings(body, adminKey) {
@@ -121,24 +265,40 @@ export async function setSiteSettings(body, adminKey) {
     throw err;
   }
 
-  const base = engineBase();
-  if (base) {
-    return engineJson("/site-settings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Admin-Key": adminKey,
-      },
-      body: JSON.stringify(body ?? {}),
-    });
+  const testingMode =
+    typeof body?.testingMode === "boolean" ? body.testingMode : undefined;
+  if (typeof testingMode !== "boolean") {
+    throw new Error("testingMode boolean required");
   }
 
-  if (isReadOnlyDeploy()) {
-    throw new Error(
-      "Site settings storage unavailable. Set EVAL_SERVER_URL on Vercel and update the analysis server."
-    );
+  try {
+    const viaStats = await writeToEngineStats(testingMode, adminKey);
+    if (viaStats) return viaStats;
+  } catch (e) {
+    if (e?.status === 401) throw e;
   }
-  return fileSetSiteSettings(body ?? {});
+
+  try {
+    const viaLegacy = await writeToEngineSiteSettings(testingMode, adminKey);
+    if (viaLegacy) return viaLegacy;
+  } catch (e) {
+    if (e?.status === 401) throw e;
+  }
+
+  try {
+    const viaBlog = await writeToBlog(testingMode, adminKey);
+    if (viaBlog) return viaBlog;
+  } catch (e) {
+    if (e?.status === 401) throw e;
+  }
+
+  if (!isReadOnlyDeploy()) {
+    return fileSetSiteSettings({ testingMode });
+  }
+
+  throw new Error(
+    "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+  );
 }
 
 function writeJson(res, status, body) {
@@ -155,7 +315,7 @@ function adminKeyFrom(req) {
 }
 
 /**
- * Engine routes:
+ * Engine routes (optional / kept for direct clients):
  *   GET  /site-settings
  *   POST /site-settings  { testingMode: boolean }  (admin)
  */

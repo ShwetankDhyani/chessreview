@@ -59,17 +59,22 @@ async function engineJson(path, options = {}) {
 
 export async function listBlogPosts({ includeDrafts = false, adminKey = "" } = {}) {
   const base = engineStatsUrl();
+  let data = null;
   if (base) {
     try {
       const qs = includeDrafts ? "?drafts=1" : "";
       const headers = {};
       if (includeDrafts && adminKey) headers["X-Admin-Key"] = adminKey;
-      return await engineJson(`/blog${qs}`, { headers });
+      data = await engineJson(`/blog${qs}`, { headers });
     } catch (e) {
       if (!isWritableStore()) throw e;
     }
   }
-  return { posts: fileListPosts({ includeDrafts }) };
+  if (!data) data = { posts: fileListPosts({ includeDrafts }) };
+  return {
+    ...data,
+    posts: (data.posts ?? []).filter((p) => p?.slug !== "cr-site-settings"),
+  };
 }
 
 export async function getBlogPost(slug, { adminKey = "" } = {}) {

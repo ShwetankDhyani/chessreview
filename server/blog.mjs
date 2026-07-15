@@ -121,6 +121,7 @@ export function fileListPosts({ includeDrafts = false } = {}) {
   const s = loadState();
   return s.posts
     .filter((p) => includeDrafts || p.published)
+    .filter((p) => p.slug !== "cr-site-settings")
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .map((p) => {
       const { body, ...rest } = publicPost(p, replyCount(s, p.id));
