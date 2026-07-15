@@ -12,6 +12,26 @@
   --page-pad-inline: max(1.25rem, env(safe-area-inset-left, 0px));
   --page-pad-inline-end: max(1.25rem, env(safe-area-inset-right, 0px));
   --app-header-h: 3rem;
+  --testing-banner-h: 0px;
+}
+
+html[data-testing-mode="1"] {
+  --testing-banner-h: 2rem;
+}
+
+.testing-mode-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  height: var(--testing-banner-h);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 1023px) {
@@ -51,6 +71,7 @@
 .page-scroll-root {
   position: fixed;
   inset: 0;
+  top: var(--testing-banner-h, 0px);
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;

@@ -14,8 +14,14 @@ import {
   type AdminReviewStats,
   type RecentReviewRow,
 } from "../utils/reviewStats";
+import {
+  fetchSiteSettings,
+  updateSiteSettings,
+} from "../utils/siteSettings";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { AdminBlogPanel } from "../components/AdminBlogPanel";
+import { TestingModeBanner, TESTING_MODE_CHANGED } from "../components/TestingModeBanner";
+import { hapticToggle } from "../utils/chessSounds";
 
 const KEY_STORAGE = "cr_admin_key";
 const RECENT_PAGE_SIZE = 10;
@@ -58,6 +64,10 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recentPage, setRecentPage] = useState(0);
+  const [testingMode, setTestingMode] = useState(false);
+  const [testingBusy, setTestingBusy] = useState(false);
+  const [testingError, setTestingError] = useState<string | null>(null);
+  const [testingBannerKey, setTestingBannerKey] = useState(0);
 
   const load = async (key: string) => {
     setLoading(true);
@@ -68,11 +78,40 @@ export default function AdminPage() {
       setRecentPage(0);
       sessionStorage.setItem(KEY_STORAGE, key);
       setAdminKey(key);
+      try {
+        const settings = await fetchSiteSettings();
+        setTestingMode(!!settings.testingMode);
+        setTestingError(null);
+      } catch {
+        /* settings are optional relative to analytics */
+      }
     } catch (e) {
       setStats(null);
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleTestingMode = async () => {
+    if (!adminKey || testingBusy) return;
+    const next = !testingMode;
+    hapticToggle();
+    setTestingBusy(true);
+    setTestingError(null);
+    try {
+      const settings = await updateSiteSettings(adminKey, { testingMode: next });
+      setTestingMode(!!settings.testingMode);
+      setTestingBannerKey((k) => k + 1);
+      window.dispatchEvent(
+        new CustomEvent(TESTING_MODE_CHANGED, {
+          detail: { testingMode: !!settings.testingMode },
+        })
+      );
+    } catch (e) {
+      setTestingError(e instanceof Error ? e.message : "Could not update");
+    } finally {
+      setTestingBusy(false);
     }
   };
 
@@ -145,6 +184,7 @@ export default function AdminPage() {
 
   return (
     <div className="page-scroll-root bg-chess-bg text-chess-text">
+      <TestingModeBanner key={testingBannerKey} />
       <header className="border-b border-chess-border bg-chess-panel/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <h1 className="text-base font-bold">Analytics</h1>
@@ -165,6 +205,37 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 pb-12 space-y-6">
+        <section className="rounded-xl border border-chess-border bg-chess-panel px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-chess-text">Testing Mode</h2>
+              <p className="mt-0.5 text-[11px] text-chess-muted">
+                Shows a site-wide notice that features may glitch.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={testingMode}
+              aria-label="Testing Mode"
+              disabled={testingBusy}
+              onClick={() => void toggleTestingMode()}
+              className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                testingMode ? "bg-amber-500" : "bg-chess-border-strong"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  testingMode ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+          {testingError ? (
+            <p className="mt-2 text-[11px] text-red-400">{testingError}</p>
+          ) : null}
+        </section>
+
         <AdminBlogPanel adminKey={adminKey} />
 
         {loading && !stats ? (
