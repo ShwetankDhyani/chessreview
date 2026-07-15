@@ -25,6 +25,8 @@ export function usePageSeo(options: PageSeoOptions) {
     options.ogType,
     options.ogImage,
     options.noindex,
+    options.articlePublished,
+    options.articleModified,
     jsonLdKey,
   ]);
 }

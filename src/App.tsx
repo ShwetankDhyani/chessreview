@@ -84,6 +84,7 @@ import { WelcomeBanner } from "./components/WelcomeBanner";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
+import { DEFAULT_SEO, homeJsonLd } from "./utils/seo";
 import { InlineErrorNotice } from "./components/InlineErrorNotice";
 import { SavedGamesModal } from "./components/SavedGamesModal";
 import {
@@ -160,7 +161,12 @@ function useMediaQuery(query: string): boolean {
 }
 
 export default function App({ isCovered = false }: { isCovered?: boolean }) {
-  usePageSeo({ path: "/" });
+  usePageSeo({
+    path: "/",
+    title: DEFAULT_SEO.title,
+    description: DEFAULT_SEO.description,
+    jsonLd: homeJsonLd(),
+  });
 
   const [tab, setTab] = useState<SidebarTab>("games");
   const [pgn, setPgn] = useState("");
@@ -1680,7 +1686,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   return (
     <div className="h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
-      <h1 className="sr-only">ChessReview — Free chess game review and engine analysis</h1>
+      <h1 className="sr-only">
+        ChessReview — Free chess game analysis online for club and amateur players
+      </h1>
       <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span

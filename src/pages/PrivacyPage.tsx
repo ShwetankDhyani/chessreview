@@ -5,7 +5,7 @@ export default function PrivacyPage() {
   usePageSeo({
     title: "Privacy Policy — ChessReview",
     description:
-      "How ChessReview handles your data, share links, third-party services, and anonymous usage stats.",
+      "Privacy policy for ChessReview: how free chess game reviews handle PGNs, share links, Chess.com/Lichess imports, and anonymous usage stats.",
     path: "/privacy",
   });
 

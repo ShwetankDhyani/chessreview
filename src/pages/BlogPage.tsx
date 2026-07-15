@@ -110,8 +110,9 @@ function PostCard({
 
 export default function BlogPage() {
   usePageSeo({
-    title: "Blog — ChessReview",
-    description: "Notes, updates, and messages from ChessReview.",
+    title: "Chess Blog — Tips & Updates from ChessReview",
+    description:
+      "Notes and updates from ChessReview for amateur and club chess players in the US, Canada, UK, Europe, and Australia.",
     path: "/blog",
   });
 

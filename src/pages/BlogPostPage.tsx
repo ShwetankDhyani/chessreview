@@ -22,6 +22,7 @@ import {
   type BlogReplyNode,
 } from "../utils/blogApi";
 import { renderBlogMarkdown } from "../utils/blogMarkdown";
+import { blogPostJsonLd, SITE_ORIGIN } from "../utils/seo";
 
 function initialOf(name: string) {
   const t = name.trim();
@@ -241,8 +242,29 @@ export default function BlogPostPage() {
 
   usePageSeo({
     title: post ? `${post.title} — ChessReview Blog` : "Blog — ChessReview",
-    description: post?.excerpt || "ChessReview blog post",
+    description:
+      post?.excerpt ||
+      "Articles and notes from ChessReview for amateur and club chess players.",
     path: `/blog/${slug}`,
+    ogType: post ? "article" : "website",
+    ogImage: post?.coverImage
+      ? post.coverImage.startsWith("http")
+        ? post.coverImage
+        : `${SITE_ORIGIN}${post.coverImage}`
+      : undefined,
+    articlePublished: post?.createdAt,
+    articleModified: post?.updatedAt || post?.createdAt,
+    jsonLd: post
+      ? blogPostJsonLd({
+          slug: post.slug,
+          title: post.title,
+          excerpt: post.excerpt,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+          authorName: post.authorName,
+          coverImage: post.coverImage,
+        })
+      : undefined,
   });
 
   const load = useCallback(async () => {

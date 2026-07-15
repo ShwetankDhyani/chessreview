@@ -24,15 +24,13 @@ export function SiteFooter() {
           pb-[env(safe-area-inset-bottom,0px)]"
       >
         <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
-          <div className="flex items-center gap-3">
-            <a
-              href="https://www.chess.com/play/online/new?isInvited=1&opponent=ShwetankDhyani"
-              target="_blank"
-              rel="noopener noreferrer"
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <Link
+              to="/about"
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              Play Me!
-            </a>
+              About
+            </Link>
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
             </span>
@@ -41,6 +39,15 @@ export function SiteFooter() {
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
               Blog
+            </Link>
+            <span className="text-chess-border-strong text-[10px]" aria-hidden>
+              ·
+            </span>
+            <Link
+              to="/privacy"
+              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+            >
+              Privacy
             </Link>
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·

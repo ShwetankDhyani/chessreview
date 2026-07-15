@@ -1,5 +1,7 @@
+# ChessReview — https://www.chessreview.org
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /api/
 
 Sitemap: https://www.chessreview.org/sitemap.xml

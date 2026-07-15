@@ -3,25 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChessReview — Free Chess Game Review & Engine Analysis</title>
+    <title>ChessReview — Free Chess Game Analysis Online (No Sign-up)</title>
     <meta
       name="description"
-      content="Review chess games for free. Import from Lichess or Chess.com for move classifications, accuracy scores, eval charts, and Stockfish-powered analysis."
+      content="Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription."
     />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="author" content="ChessReview" />
     <meta name="theme-color" content="#312e2b" />
     <link rel="canonical" href="https://www.chessreview.org/" />
+    <link rel="alternate" hreflang="en" href="https://www.chessreview.org/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.chessreview.org/" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.chessreview.org/" />
     <meta property="og:site_name" content="ChessReview" />
     <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="en_GB" />
+    <meta property="og:locale:alternate" content="en_CA" />
+    <meta property="og:locale:alternate" content="en_AU" />
     <meta
       property="og:title"
-      content="ChessReview — Free Chess Game Review & Engine Analysis"
+      content="ChessReview — Free Chess Game Analysis Online (No Sign-up)"
     />
     <meta
       property="og:description"
-      content="Paste a Lichess or Chess.com link. Get Chess.com-style move ratings, accuracy, eval graph, and engine lines — free."
+      content="Paste a Chess.com or Lichess link. Get readable move ratings, accuracy, an eval graph, and engine lines — free for amateur and club players."
     />
     <meta property="og:image" content="https://www.chessreview.org/og-image.png" />
     <meta property="og:image:width" content="1200" />
@@ -30,11 +36,11 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="ChessReview — Free Chess Game Review & Engine Analysis"
+      content="ChessReview — Free Chess Game Analysis Online (No Sign-up)"
     />
     <meta
       name="twitter:description"
-      content="Free chess game review with move classifications, accuracy scores, and Stockfish analysis."
+      content="Free online chess game review for club players — Chess.com and Lichess import, move ratings, accuracy, Stockfish. No sign-up."
     />
     <meta name="twitter:image" content="https://www.chessreview.org/og-image.png" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -49,8 +55,12 @@
             "@id": "https://www.chessreview.org/#website",
             "name": "ChessReview",
             "url": "https://www.chessreview.org/",
-            "description": "Free chess game review with engine analysis, move classifications, and accuracy scores.",
-            "inLanguage": "en"
+            "description": "Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription.",
+            "inLanguage": "en",
+            "audience": {
+              "@type": "Audience",
+              "audienceType": "Amateur and club chess players in the Americas, Europe, and Australia"
+            }
           },
           {
             "@type": "WebApplication",
@@ -58,16 +68,35 @@
             "name": "ChessReview",
             "url": "https://www.chessreview.org/",
             "applicationCategory": "GameApplication",
-            "operatingSystem": "Web",
+            "operatingSystem": "Web Browser",
+            "browserRequirements": "Requires JavaScript",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-            "description": "Review chess games for free. Import from Lichess or Chess.com for move classifications, accuracy scores, eval charts, and Stockfish-powered analysis.",
+            "description": "Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription.",
             "featureList": [
-              "Chess game review",
-              "Move classification",
-              "Accuracy scores",
+              "Free chess game review online",
+              "Chess.com and Lichess game import",
+              "PGN paste support",
+              "Move classification and accuracy scores",
               "Stockfish engine analysis",
-              "Lichess and Chess.com import"
+              "Eval graph and critical moments",
+              "No account required"
+            ],
+            "areaServed": [
+              "United States",
+              "Canada",
+              "United Kingdom",
+              "European Union",
+              "Australia",
+              "New Zealand"
             ]
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://www.chessreview.org/#org",
+            "name": "ChessReview",
+            "url": "https://www.chessreview.org",
+            "logo": "https://www.chessreview.org/apple-touch-icon.png",
+            "description": "Free online chess game analysis for enthusiasts and club players."
           }
         ]
       }
@@ -80,6 +109,20 @@
     />
   </head>
   <body>
+    <noscript>
+      <main style="max-width:40rem;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;line-height:1.5">
+        <h1>ChessReview — Free Chess Game Analysis Online</h1>
+        <p>
+          Review Chess.com and Lichess games for free. Paste a game link or PGN to see
+          clear move ratings, accuracy scores, an evaluation graph, and Stockfish engine
+          lines — no account and no subscription. Built for amateur and club players in
+          the United States, Canada, the United Kingdom, Europe, and Australia.
+        </p>
+        <p><a href="https://www.chessreview.org/about">About ChessReview</a> ·
+          <a href="https://www.chessreview.org/blog">Blog</a> ·
+          <a href="https://www.chessreview.org/privacy">Privacy</a></p>
+      </main>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
