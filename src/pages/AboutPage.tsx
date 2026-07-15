@@ -65,7 +65,7 @@ export default function AboutPage() {
             </p>
           </section>
 
-          <section className="space-y-4" aria-labelledby="faq-heading">
+          <section className="space-y-4 pb-4" aria-labelledby="faq-heading">
             <h2
               id="faq-heading"
               className="text-base font-semibold text-chess-text"
@@ -88,60 +88,8 @@ export default function AboutPage() {
               ))}
             </dl>
           </section>
-
-          <section className="pt-1 pb-4" aria-labelledby="play-heading">
-            <h2 id="play-heading" className="sr-only">
-              Challenge the creator
-            </h2>
-            <a
-              href={CHESSCOM_CHALLENGE}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group inline-flex items-center gap-3 rounded-2xl border border-chess-border/80 bg-chess-panel/50 px-5 py-3.5 text-chess-text hover:border-chess-accent/40 hover:bg-chess-accent/[0.08] transition-colors"
-            >
-              <span className="text-base font-bold tracking-wide">Play Me!</span>
-              <span
-                className="flex items-center gap-1 text-chess-accent"
-                aria-hidden
-              >
-                <SwordIcon className="group-hover:translate-x-0.5 transition-transform" />
-                <SwordIcon
-                  mirrored
-                  className="group-hover:-translate-x-0.5 transition-transform"
-                />
-              </span>
-            </a>
-          </section>
         </main>
       </div>
     </SiteChrome>
-  );
-}
-
-function SwordIcon({
-  mirrored = false,
-  className = "",
-}: {
-  mirrored?: boolean;
-  className?: string;
-}) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`${mirrored ? "scale-x-[-1]" : ""} ${className}`}
-      aria-hidden
-    >
-      <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
-      <path d="M13 19l6-6" />
-      <path d="M16 16l4 4" />
-      <path d="M19 21l2-2" />
-    </svg>
   );
 }
