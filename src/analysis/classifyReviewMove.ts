@@ -8,7 +8,11 @@ import {
   WAS_WINNING_EP,
 } from "./types";
 import { expectedPointsLoss } from "./expectedPoints";
-import { isDeliveredCheckmate } from "./mateDetection";
+import {
+  everyMoveWalksIntoMateInOne,
+  isDeliveredCheckmate,
+  walksIntoMateInOne,
+} from "./mateDetection";
 
 export interface ClassifyReviewInput {
   fenBefore: string;
@@ -46,8 +50,7 @@ export function epLossFromPlayed(input: ClassifyReviewInput): number {
 
 /**
  * Classification input: never ignore real win-chance collapse.
- * A move that walks into mate / dumps a won game cannot be "good"
- * just because the engine's best line was also bad in a shallow search.
+ * A move that dumps a won game cannot hide behind a shallow “best also bad.”
  */
 export function classificationLoss(input: ClassifyReviewInput): number {
   const vsBest = epLossFromPlayed(input);
@@ -92,6 +95,16 @@ function classifyByLoss(
   return "blunder";
 }
 
+/**
+ * Hard rule: hanging mate-in-1 is never Good.
+ * Only Best when every legal move also hangs mate-in-1 (truly lost).
+ */
+function classifyMateInOneHang(input: ClassifyReviewInput): MoveClassification | null {
+  if (!walksIntoMateInOne(input.fenAfter)) return null;
+  if (everyMoveWalksIntoMateInOne(input.fenBefore)) return "best";
+  return "blunder";
+}
+
 export function classifyReviewMove(input: ClassifyReviewInput): MoveClassification {
   if (input.forced) return "best";
 
@@ -102,6 +115,9 @@ export function classifyReviewMove(input: ClassifyReviewInput): MoveClassificati
   if (isDeliveredCheckmate(input.fenAfter)) {
     return "best";
   }
+
+  const mateHang = classifyMateInOneHang(input);
+  if (mateHang) return mateHang;
 
   const engineBest = isExactBestMove(input);
   const eLoss = classificationLoss(input);
