@@ -29,7 +29,7 @@ Entry: `analyzePgn()` → `analyzeGameReview()`. Banner: `v3.1-hybrid-batch` whe
 ```
 Win% = 50 + 50 * (2 / (1 + exp(-0.00368208 * cp)) - 1)
 E = Win% / 100
-E_loss = E_before - E_after
+E_loss = E_afterBest − E_afterPlayed  (0 when engine best is played)
 ```
 
 ## Classification bands (E_loss)

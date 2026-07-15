@@ -3,6 +3,7 @@ import {
   classifyReviewMove,
   detectGreatMove,
   engineRankFromMultipv,
+  epLossFromPlayed,
 } from "./classifyReviewMove";
 import type { ClassifyReviewInput } from "./classifyReviewMove";
 
@@ -26,6 +27,37 @@ function base(overrides: Partial<ClassifyReviewInput>): ClassifyReviewInput {
   };
 }
 
+describe("epLossFromPlayed", () => {
+  it("scores loss vs engine best, not vs position before", () => {
+    expect(
+      epLossFromPlayed(
+        base({
+          eBefore: 0.62,
+          eAfterBest: 0.58,
+          eAfterPlayed: 0.57,
+          playedUci: "g1f3",
+          multipvLines: [
+            { multipv: 1, cp: 50, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
+          ],
+        })
+      )
+    ).toBeCloseTo(0.01, 5);
+  });
+
+  it("returns zero when the played move is engine best", () => {
+    expect(
+      epLossFromPlayed(
+        base({
+          eBefore: 0.62,
+          eAfterBest: 0.58,
+          eAfterPlayed: 0.54,
+          playedUci: "e2e4",
+        })
+      )
+    ).toBe(0);
+  });
+});
+
 describe("classifyReviewMove thresholds", () => {
   it("best at zero loss", () => {
     expect(
@@ -35,12 +67,13 @@ describe("classifyReviewMove thresholds", () => {
     ).toBe("best");
   });
 
-  it("excellent up to 2%", () => {
+  it("excellent up to 2% vs best", () => {
     expect(
       classifyReviewMove(
         base({
           eBefore: 0.5,
           eAfterPlayed: 0.49,
+          eAfterBest: 0.505,
           playedUci: "g1f3",
           multipvLines: [
             { multipv: 1, cp: 50, depth: 18, pv: ["e2e4"], bestMove: "e2e4" },
@@ -50,15 +83,40 @@ describe("classifyReviewMove thresholds", () => {
     ).toBe("excellent");
   });
 
-  it("blunder above 20% when advantage is lost", () => {
-    expect(classifyReviewMove(base({ eBefore: 0.7, eAfterPlayed: 0.45 }))).toBe("blunder");
+  it("blunder above 20% vs best when advantage is lost", () => {
+    expect(
+      classifyReviewMove(
+        base({
+          eBefore: 0.7,
+          eAfterPlayed: 0.45,
+          eAfterBest: 0.7,
+          playedUci: "a2a3",
+        })
+      )
+    ).toBe("blunder");
   });
 
   it("downgrades to mistake when still winning after initiative slip", () => {
-    expect(classifyReviewMove(base({ eBefore: 0.82, eAfterPlayed: 0.6 }))).toBe("mistake");
-    expect(classifyReviewMove(base({ eBefore: 0.75, eAfterPlayed: 0.58 }))).toBe("mistake");
-    expect(classifyReviewMove(base({ eBefore: 0.75, eAfterPlayed: 0.52 }))).toBe("mistake");
-    expect(classifyReviewMove(base({ eBefore: 0.7, eAfterPlayed: 0.55 }))).toBe("mistake");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.82, eAfterPlayed: 0.6, eAfterBest: 0.78, playedUci: "a2a3" })
+      )
+    ).toBe("mistake");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.75, eAfterPlayed: 0.58, eAfterBest: 0.74, playedUci: "a2a3" })
+      )
+    ).toBe("mistake");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.75, eAfterPlayed: 0.52, eAfterBest: 0.73, playedUci: "a2a3" })
+      )
+    ).toBe("mistake");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.7, eAfterPlayed: 0.55, eAfterBest: 0.72, playedUci: "a2a3" })
+      )
+    ).toBe("mistake");
   });
 
   it("does not blunder small slips after opponent mistake when still ahead", () => {
@@ -66,6 +124,8 @@ describe("classifyReviewMove thresholds", () => {
       base({
         eBefore: 0.58,
         eAfterPlayed: 0.53,
+        eAfterBest: 0.565,
+        playedUci: "a2a3",
         opponentPriorClass: "blunder",
         opponentPriorEpLoss: 0.25,
       })
@@ -77,6 +137,8 @@ describe("classifyReviewMove thresholds", () => {
         base({
           eBefore: 0.65,
           eAfterPlayed: 0.55,
+          eAfterBest: 0.62,
+          playedUci: "a2a3",
           opponentPriorClass: "blunder",
           opponentPriorEpLoss: 0.3,
         })
@@ -85,8 +147,16 @@ describe("classifyReviewMove thresholds", () => {
   });
 
   it("keeps blunder on catastrophic swing even from a won game", () => {
-    expect(classifyReviewMove(base({ eBefore: 0.85, eAfterPlayed: 0.48 }))).toBe("blunder");
-    expect(classifyReviewMove(base({ eBefore: 0.8, eAfterPlayed: 0.44 }))).toBe("blunder");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.85, eAfterPlayed: 0.48, eAfterBest: 0.82, playedUci: "a2a3" })
+      )
+    ).toBe("blunder");
+    expect(
+      classifyReviewMove(
+        base({ eBefore: 0.8, eAfterPlayed: 0.44, eAfterBest: 0.78, playedUci: "a2a3" })
+      )
+    ).toBe("blunder");
   });
 
   it("labels missed chances after opponent errors as miss", () => {

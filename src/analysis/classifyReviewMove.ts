@@ -42,13 +42,19 @@ export interface ClassifyReviewInput {
   forced?: boolean;
 }
 
-function epLossFromPlayed(input: ClassifyReviewInput): number {
-  return expectedPointsLoss(input.eBefore, input.eAfterPlayed);
+/** Expected points lost vs engine best: E_afterBest − E_afterPlayed (Chess.com-style). */
+export function epLossFromPlayed(input: ClassifyReviewInput): number {
+  const best =
+    input.multipvLines[0]?.bestMove ?? input.multipvLines[0]?.pv[0];
+  if (best && input.playedUci.toLowerCase() === best.toLowerCase()) {
+    return 0;
+  }
+  return expectedPointsLoss(input.eAfterBest, input.eAfterPlayed);
 }
 
 function isExactBestMove(input: ClassifyReviewInput): boolean {
   const best = input.multipvLines[0]?.bestMove ?? input.multipvLines[0]?.pv[0];
-  if (!best) return epLossFromPlayed(input) <= 1e-6;
+  if (!best) return false;
   return input.playedUci.toLowerCase() === best.toLowerCase();
 }
 
@@ -203,5 +209,3 @@ export function engineRankFromMultipv(
   }
   return null;
 }
-
-export { epLossFromPlayed };
