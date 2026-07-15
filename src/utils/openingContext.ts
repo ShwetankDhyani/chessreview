@@ -67,18 +67,22 @@ export const OPENINGS_DB: OpeningEntry[] = [
 
 export interface OpeningChapter {
   openingName: string;
-  /** ECO code when matched from the deep opening database. */
   eco?: string;
-  /** Full variation name from ECO (may be deeper than openingName from local DB). */
   variationName?: string;
+  /** Side-aware note for this exact ply (White/Black + ideas/threats). */
   ideas?: string;
+  /** e.g. "White played 1.e4" */
+  moveSummary: string;
+  /** Whose move this theory card is about. */
+  side: "w" | "b";
   startIdx: number;
   endIdx: number;
   leftBookIdx: number | null;
   bookPlyCount: number;
   throughLabel: string;
-  /** Ply count of the deepest ECO prefix match at this point in the line. */
   ecoPlyCount?: number;
+  /** True when this card is the first move that left named theory. */
+  leftTheory?: boolean;
 }
 
 function bookPrefixEnd(moves: AnalyzedMove[]): number {
@@ -93,31 +97,38 @@ function bookPrefixEnd(moves: AnalyzedMove[]): number {
   return endIdx;
 }
 
-function resolveOpeningAt(
+function formatMoveLabel(move: AnalyzedMove): string {
+  return move.color === "w"
+    ? `${move.moveNumber}. ${move.san}`
+    : `${move.moveNumber}...${move.san}`;
+}
+
+function ecoMatchAt(
   moves: AnalyzedMove[],
   upToIdx: number,
   ecoEntries?: OpeningEcoEntry[] | null
-): {
-  openingName: string;
-  eco?: string;
-  variationName?: string;
-  ideas?: string;
-  ecoMatch: OpeningEcoMatch | null;
-} {
+): OpeningEcoMatch | null {
+  if (!ecoEntries?.length || upToIdx < 0) return null;
   const sans = moves.slice(0, upToIdx + 1).map((m) => m.san);
-  const ecoMatch = ecoEntries?.length ? matchOpeningEco(sans, ecoEntries) : null;
-  const local = detectOpeningProgressive(moves, upToIdx);
+  return matchOpeningEco(sans, ecoEntries);
+}
 
-  const variationName = ecoMatch?.name;
-  const openingName = variationName ?? local?.name ?? "Known theory";
+/**
+ * Still in theory when this ply itself is covered by a named ECO line
+ * or by the local book flag — not merely when an older prefix still matches.
+ */
+export function isMoveInTheory(
+  moveIdx: number,
+  moves: AnalyzedMove[],
+  ecoEntries?: OpeningEcoEntry[] | null
+): boolean {
+  if (!moves.length || moveIdx < 0 || moveIdx >= moves.length) return false;
+  const move = moves[moveIdx];
+  if (move.classification === "book" || move.inOpeningBook) return true;
 
-  return {
-    openingName,
-    eco: ecoMatch?.eco,
-    variationName,
-    ideas: local?.ideas,
-    ecoMatch,
-  };
+  const match = ecoMatchAt(moves, moveIdx, ecoEntries);
+  // Current ply must sit on the ECO line (match reaches this move).
+  return !!match && match.plyCount >= moveIdx + 1;
 }
 
 export function detectOpeningProgressive(
@@ -138,37 +149,106 @@ export function detectOpeningProgressive(
   return bestMatch;
 }
 
+function sideAwareNote(
+  local: OpeningEntry | null,
+  color: "w" | "b",
+  nameChanged: boolean
+): string | undefined {
+  if (!local) return undefined;
+  // Fresh name: lead with the opening idea.
+  if (nameChanged) return local.ideas;
+  // Later plies: speak to the side that just moved.
+  if (color === "w") return local.threats ?? local.ideas;
+  return local.ideas;
+}
+
+function resolveAt(
+  moves: AnalyzedMove[],
+  moveIdx: number,
+  ecoEntries?: OpeningEcoEntry[] | null
+) {
+  const move = moves[moveIdx];
+  const ecoMatch = ecoMatchAt(moves, moveIdx, ecoEntries);
+  const local = detectOpeningProgressive(moves, moveIdx);
+  const prevLocal =
+    moveIdx > 0 ? detectOpeningProgressive(moves, moveIdx - 1) : null;
+  const prevEco =
+    moveIdx > 0 ? ecoMatchAt(moves, moveIdx - 1, ecoEntries) : null;
+
+  const openingName = ecoMatch?.name ?? local?.name ?? "Known theory";
+  const prevName = prevEco?.name ?? prevLocal?.name;
+  const nameChanged = !prevName || prevName !== openingName;
+
+  const side = move.color === "w" ? "White" : "Black";
+  const moveSummary = `${side} played ${formatMoveLabel(move)}`;
+
+  return {
+    openingName,
+    eco: ecoMatch?.eco,
+    variationName: ecoMatch?.name,
+    ideas: sideAwareNote(local, move.color, nameChanged),
+    moveSummary,
+    side: move.color,
+    throughLabel: formatMoveLabel(move),
+    ecoPlyCount: ecoMatch?.plyCount,
+    ecoMatch,
+    local,
+  };
+}
+
+/** Whole-game book-prefix chapter (move list header). */
 export function computeOpeningChapter(
   moves: AnalyzedMove[],
   ecoEntries?: OpeningEcoEntry[] | null
 ): OpeningChapter | null {
   if (!moves.length) return null;
-
   const bookEnd = bookPrefixEnd(moves);
-  if (bookEnd < 0) return null;
+  if (bookEnd < 0) {
+    // Fall back to deepest ECO covered by early theory if book flags missing.
+    let lastIn = -1;
+    for (let i = 0; i < moves.length; i++) {
+      if (isMoveInTheory(i, moves, ecoEntries)) lastIn = i;
+      else break;
+    }
+    if (lastIn < 0) return null;
+    const r = resolveAt(moves, lastIn, ecoEntries);
+    return {
+      openingName: r.openingName,
+      eco: r.eco,
+      variationName: r.variationName,
+      ideas: r.ideas,
+      moveSummary: r.moveSummary,
+      side: r.side,
+      startIdx: 0,
+      endIdx: lastIn,
+      leftBookIdx: lastIn + 1 < moves.length ? lastIn + 1 : null,
+      bookPlyCount: lastIn + 1,
+      throughLabel: r.throughLabel,
+      ecoPlyCount: r.ecoPlyCount,
+    };
+  }
 
-  const resolved = resolveOpeningAt(moves, bookEnd, ecoEntries);
-  const last = moves[bookEnd];
-  const throughLabel =
-    last.color === "w"
-      ? `${last.moveNumber}. ${last.san}`
-      : `${last.moveNumber}...${last.san}`;
-
+  const r = resolveAt(moves, bookEnd, ecoEntries);
   return {
-    openingName: resolved.openingName,
-    eco: resolved.eco,
-    variationName: resolved.variationName,
-    ideas: resolved.ideas,
+    openingName: r.openingName,
+    eco: r.eco,
+    variationName: r.variationName,
+    ideas: r.ideas,
+    moveSummary: r.moveSummary,
+    side: r.side,
     startIdx: 0,
     endIdx: bookEnd,
     leftBookIdx: bookEnd + 1 < moves.length ? bookEnd + 1 : null,
     bookPlyCount: bookEnd + 1,
-    throughLabel,
-    ecoPlyCount: resolved.ecoMatch?.plyCount,
+    throughLabel: r.throughLabel,
+    ecoPlyCount: r.ecoPlyCount,
   };
 }
 
-/** Opening theory snapshot at the current move (uses deep ECO when loaded). */
+/**
+ * Per-move theory card for the coach panel.
+ * Only returns a chapter while this ply is still in theory, or on the first exit move.
+ */
 export function computeOpeningChapterAt(
   moves: AnalyzedMove[],
   moveIdx: number,
@@ -176,35 +256,52 @@ export function computeOpeningChapterAt(
 ): OpeningChapter | null {
   if (!moves.length || moveIdx < 0 || moveIdx >= moves.length) return null;
 
-  const resolved = resolveOpeningAt(moves, moveIdx, ecoEntries);
-  const hasEco = !!resolved.ecoMatch;
-  const inLocalBook =
-    moves[moveIdx].classification === "book" || moves[moveIdx].inOpeningBook;
+  const inTheory = isMoveInTheory(moveIdx, moves, ecoEntries);
+  const prevInTheory =
+    moveIdx > 0 ? isMoveInTheory(moveIdx - 1, moves, ecoEntries) : false;
+  const leftTheory = !inTheory && prevInTheory;
+
+  if (!inTheory && !leftTheory) return null;
+
+  const focusIdx = inTheory ? moveIdx : moveIdx - 1;
+  if (focusIdx < 0) return null;
+
+  const r = resolveAt(moves, focusIdx, ecoEntries);
   const bookEnd = bookPrefixEnd(moves);
 
-  if (!hasEco && !inLocalBook && bookEnd < 0) return null;
-  if (!hasEco && moveIdx > bookEnd && bookEnd >= 0) {
-    // After leaving local book — still show last known chapter at book end unless ECO extends.
-    return computeOpeningChapter(moves, ecoEntries);
+  if (leftTheory) {
+    const leave = moves[moveIdx];
+    return {
+      openingName: r.openingName,
+      eco: r.eco,
+      variationName: r.variationName,
+      ideas: `Left theory — ${leave.color === "w" ? "White" : "Black"} played ${formatMoveLabel(leave)}.`,
+      moveSummary: `${leave.color === "w" ? "White" : "Black"} played ${formatMoveLabel(leave)}`,
+      side: leave.color,
+      startIdx: 0,
+      endIdx: focusIdx,
+      leftBookIdx: moveIdx,
+      bookPlyCount: focusIdx + 1,
+      throughLabel: formatMoveLabel(leave),
+      ecoPlyCount: r.ecoPlyCount,
+      leftTheory: true,
+    };
   }
 
-  const last = moves[moveIdx];
-  const throughLabel =
-    last.color === "w"
-      ? `${last.moveNumber}. ${last.san}`
-      : `${last.moveNumber}...${last.san}`;
-
   return {
-    openingName: resolved.openingName,
-    eco: resolved.eco,
-    variationName: resolved.variationName,
-    ideas: resolved.ideas,
+    openingName: r.openingName,
+    eco: r.eco,
+    variationName: r.variationName,
+    ideas: r.ideas,
+    moveSummary: r.moveSummary,
+    side: r.side,
     startIdx: 0,
-    endIdx: Math.max(bookEnd, moveIdx),
+    endIdx: moveIdx,
     leftBookIdx: bookEnd >= 0 && bookEnd + 1 < moves.length ? bookEnd + 1 : null,
     bookPlyCount: bookEnd >= 0 ? bookEnd + 1 : moveIdx + 1,
-    throughLabel,
-    ecoPlyCount: resolved.ecoMatch?.plyCount,
+    throughLabel: r.throughLabel,
+    ecoPlyCount: r.ecoPlyCount,
+    leftTheory: false,
   };
 }
 
@@ -214,26 +311,28 @@ export function openingHintForMove(
   ecoEntries?: OpeningEcoEntry[] | null
 ): string | undefined {
   if (!moves || moveIdx < 0) return undefined;
-
-  const resolved = resolveOpeningAt(moves, moveIdx, ecoEntries);
-  if (!resolved.ecoMatch && !detectOpeningProgressive(moves, moveIdx)) {
-    return undefined;
+  if (!isMoveInTheory(moveIdx, moves, ecoEntries)) {
+    const prevIn =
+      moveIdx > 0 ? isMoveInTheory(moveIdx - 1, moves, ecoEntries) : false;
+    if (!prevIn) return undefined;
+    const chapter = computeOpeningChapterAt(moves, moveIdx, ecoEntries);
+    return chapter ? `Left theory (${chapter.openingName})` : "Left theory";
   }
 
-  const label = resolved.eco
-    ? `${resolved.eco} · ${resolved.openingName}`
-    : resolved.openingName;
-
+  const r = resolveAt(moves, moveIdx, ecoEntries);
+  const label = r.eco ? `${r.eco} · ${r.openingName}` : r.openingName;
   const prev =
-    moveIdx > 0 ? resolveOpeningAt(moves, moveIdx - 1, ecoEntries) : null;
-  const prevLabel = prev?.eco
-    ? `${prev.eco} · ${prev.openingName}`
-    : prev?.openingName;
+    moveIdx > 0 ? resolveAt(moves, moveIdx - 1, ecoEntries) : null;
+  const prevLabel = prev
+    ? prev.eco
+      ? `${prev.eco} · ${prev.openingName}`
+      : prev.openingName
+    : null;
 
-  if (!prev || prevLabel !== label) {
-    return resolved.ideas ? `${label}: ${resolved.ideas}` : label;
+  if (!prevLabel || prevLabel !== label) {
+    return r.ideas ? `${label}: ${r.ideas}` : label;
   }
-  return label;
+  return `${r.moveSummary} — ${label}`;
 }
 
 export function shouldShowOpeningTheory(
@@ -241,20 +340,10 @@ export function shouldShowOpeningTheory(
   moves: AnalyzedMove[],
   ecoEntries?: OpeningEcoEntry[] | null
 ): boolean {
-  if (!moves.length || moveIdx < 0) return false;
-  const move = moves[moveIdx];
-  if (move.classification === "book" || move.inOpeningBook) return true;
-
-  const bookEnd = bookPrefixEnd(moves);
-  if (bookEnd >= 0 && moveIdx === bookEnd + 1) return true;
-
-  if (ecoEntries?.length) {
-    const sans = moves.slice(0, moveIdx + 1).map((m) => m.san);
-    const match = matchOpeningEco(sans, ecoEntries);
-    if (match && match.plyCount >= 2 && moveIdx < 40) return true;
-  }
-
-  return false;
+  if (!moves.length || moveIdx < 0 || moveIdx >= moves.length) return false;
+  if (isMoveInTheory(moveIdx, moves, ecoEntries)) return true;
+  // One card on the move that left theory.
+  return moveIdx > 0 && isMoveInTheory(moveIdx - 1, moves, ecoEntries);
 }
 
 export function isLeftBookMove(moveIdx: number, moves: AnalyzedMove[]): boolean {

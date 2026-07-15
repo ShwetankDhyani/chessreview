@@ -15,10 +15,8 @@ export function OpeningChapter({
 }: OpeningChapterProps) {
   if (!chapter) return null;
 
-  const inTheory =
-    currentMoveIndex >= chapter.startIdx &&
-    (currentMoveIndex <= chapter.endIdx ||
-      (chapter.ecoPlyCount != null && currentMoveIndex + 1 <= chapter.ecoPlyCount));
+  const inTheory = !chapter.leftTheory && currentMoveIndex <= chapter.endIdx;
+  const sideLabel = chapter.side === "w" ? "White" : "Black";
 
   return (
     <div
@@ -33,7 +31,13 @@ export function OpeningChapter({
           📖
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold text-chess-text truncate">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-[#b58863]/90">
+            {chapter.leftTheory ? "Left theory" : "In theory"}
+            <span className="text-chess-muted font-medium normal-case tracking-normal ml-1.5">
+              · {sideLabel}
+            </span>
+          </div>
+          <div className="text-xs font-semibold text-chess-text mt-0.5 leading-snug">
             {chapter.eco ? (
               <span className="font-mono text-[10px] text-chess-accent/90 mr-1.5">
                 {chapter.eco}
@@ -42,22 +46,10 @@ export function OpeningChapter({
             {chapter.openingName}
           </div>
           <div className="text-[10px] text-chess-muted mt-0.5">
-            Theory through {chapter.throughLabel}
-            {chapter.ecoPlyCount != null && chapter.ecoPlyCount > 0 && (
-              <span className="text-chess-muted/80">
-                {" "}
-                · {chapter.ecoPlyCount}-move line
-              </span>
-            )}
-            {chapter.bookPlyCount > 1 && !chapter.ecoPlyCount && (
-              <span className="text-chess-muted/80">
-                {" "}
-                · {chapter.bookPlyCount} plies
-              </span>
-            )}
+            {chapter.moveSummary}
           </div>
-          {chapter.ideas && inTheory && (
-            <p className="text-[10px] text-chess-subtext mt-1 leading-snug line-clamp-2">
+          {chapter.ideas && (
+            <p className="text-[10px] text-chess-subtext mt-1 leading-snug line-clamp-3">
               {chapter.ideas}
             </p>
           )}
