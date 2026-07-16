@@ -114,7 +114,10 @@ export function HelpModal({
           </div>
         ) : (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
-            <p>Keep ChessReview running fast. Two quick options:</p>
+            <p>
+              ChessReview runs on an overworked personal server. If it’s helped you,
+              we could use a hand — either a small donation or access to server capacity.
+            </p>
           </div>
         )}
 
@@ -133,17 +136,17 @@ export function HelpModal({
                 </a>
               ))}
               <a
-                href="mailto:admin@chessreview.org"
+                href={`mailto:admin@chessreview.org?subject=${encodeURIComponent("Offer: server capacity for ChessReview")}`}
                 className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
               >
-                Message (Email)
+                Offer server capacity
               </a>
-              <a
-                href={CHESSCOM_MESSAGE}
-                className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-              >
-                Message (Chess.com)
-              </a>
+              <div className="text-center text-[11px] text-chess-muted">
+                or{" "}
+                <a href={CHESSCOM_MESSAGE} className="underline underline-offset-2 hover:text-chess-accent">
+                  message on Chess.com
+                </a>
+              </div>
             </div>
           </div>
         )}
