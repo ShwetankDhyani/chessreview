@@ -456,80 +456,59 @@ export default function BlogPostPage() {
   return (
     <SiteChrome title="Blog">
       <div className="relative">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-60
-            bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.10),transparent_60%)]"
-          aria-hidden
-        />
-
-        <main className="relative max-w-2xl mx-auto px-4 py-5 sm:py-7 pb-10 space-y-7">
+        <main className="relative max-w-xl mx-auto px-4 py-4 pb-8 space-y-4">
           <Link
             to="/blog"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-chess-muted hover:text-chess-accent transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors"
           >
             <span aria-hidden>←</span> All posts
           </Link>
 
           {loading && (
-            <div className="space-y-4 py-6">
-              <div className="h-10 w-3/4 rounded-lg bg-chess-panel/60 animate-pulse" />
-              <div className="h-4 w-1/3 rounded bg-chess-panel/40 animate-pulse" />
-              <div className="h-40 rounded-2xl bg-chess-panel/30 animate-pulse" />
+            <div className="space-y-2.5 py-3">
+              <div className="h-7 w-3/4 rounded bg-chess-panel/60 animate-pulse" />
+              <div className="h-3 w-1/3 rounded bg-chess-panel/40 animate-pulse" />
+              <div className="h-28 rounded-lg bg-chess-panel/30 animate-pulse" />
             </div>
           )}
           {error && !loading && (
-            <p className="text-sm text-chess-muted text-center py-12">{error}</p>
+            <p className="text-xs text-chess-muted text-center py-8">{error}</p>
           )}
 
           {post && !loading && (
-            <article className="relative">
+            <article className="relative space-y-3">
               {post.coverImage ? (
-                <div className="relative mb-6 overflow-hidden rounded-xl border border-chess-border/80 shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
+                <div className="overflow-hidden rounded-lg border border-chess-border/60">
                   <img
                     src={post.coverImage}
                     alt=""
-                    className="w-full max-h-80 object-cover"
+                    className="w-full max-h-44 object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-chess-bg/80 via-transparent to-transparent" />
                 </div>
-              ) : (
-                <div className="mb-6 h-1.5 w-14 rounded-full bg-gradient-to-r from-chess-accent to-chess-accent/20" />
-              )}
+              ) : null}
 
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-chess-accent/90 mb-3">
-                Journal
-              </p>
-              {post.pinned && (
-                <div className="mb-3">
-                  <BlogPinnedBadge />
+              <div className="space-y-1.5">
+                {post.pinned && <BlogPinnedBadge />}
+                <h1 className="text-xl font-bold text-chess-text leading-snug tracking-tight">
+                  {post.title}
+                </h1>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-chess-muted">
+                  <span className="font-medium text-chess-subtext">{post.authorName}</span>
+                  <span aria-hidden>·</span>
+                  <time dateTime={post.createdAt} className="tabular-nums">
+                    {formatBlogDate(post.createdAt)}
+                  </time>
+                  {post.updatedAt !== post.createdAt && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span>Updated {formatBlogDate(post.updatedAt)}</span>
+                    </>
+                  )}
                 </div>
-              )}
-              <h1 className="text-[26px] sm:text-[30px] font-bold text-chess-text leading-[1.15] tracking-tight">
-                {post.title}
-              </h1>
-
-              <div className="mt-3.5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-chess-border/70 bg-chess-panel/70 px-2 py-0.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-chess-accent/20 text-[10px] font-bold text-chess-accent">
-                    {initialOf(post.authorName)}
-                  </span>
-                  <span className="text-[11px] font-medium text-chess-subtext">{post.authorName}</span>
-                </span>
-                <time
-                  dateTime={post.createdAt}
-                  className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2 py-0.5 text-[11px] tabular-nums text-chess-muted"
-                >
-                  {formatBlogDate(post.createdAt)}
-                </time>
-                {post.updatedAt !== post.createdAt && (
-                  <span className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2 py-0.5 text-[11px] text-chess-muted">
-                    Updated {formatBlogDate(post.updatedAt)}
-                  </span>
-                )}
               </div>
 
-              <div className="mt-6 rounded-xl border border-chess-border/70 bg-gradient-to-b from-chess-panel/50 to-transparent px-4 py-5 sm:px-5 sm:py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-                <div className="blog-prose">{renderBlogMarkdown(post.body)}</div>
+              <div className="blog-prose border-t border-chess-border/40 pt-3">
+                {renderBlogMarkdown(post.body)}
               </div>
             </article>
           )}
@@ -537,10 +516,10 @@ export default function BlogPostPage() {
           {post && !loading && (
             <section
               id="replies"
-              className="pt-6 mt-2 border-t border-chess-border/40 space-y-3"
+              className="pt-3 border-t border-chess-border/40 space-y-2.5"
             >
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-chess-muted">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.12em] text-chess-muted">
                   Comments
                   {replies.length > 0 && (
                     <span className="ml-1.5 normal-case tracking-normal font-normal tabular-nums text-chess-muted/80">
