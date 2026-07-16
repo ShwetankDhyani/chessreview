@@ -103,7 +103,7 @@ export function HelpModal({
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
             <p>
               I host ChessReview on a personal server to keep it free and accessible for everyone.
-              As the community grows, so do the hosting costs. If you find the platform helpful,
+              As the community grows, so do the computation costs. If you find the platform helpful,
               please consider chipping in! Whether it&apos;s a small donation or sharing server space,
               your support goes a long way in keeping us fast and reliable.
             </p>
