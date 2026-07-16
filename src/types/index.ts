@@ -95,7 +95,7 @@ export interface ReviewSummary {
 }
 
 export interface AccuracyMeta {
-  method: "chesscom_ep_v3" | "chesscom_wdl_v4";
+  method: "chesscom_ep_v3" | "chesscom_wdl_v4" | "lichess_caps2_v5";
   formulaVersion: string;
 }
 

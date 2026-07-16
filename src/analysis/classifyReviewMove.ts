@@ -36,8 +36,15 @@ export interface ClassifyReviewInput {
 }
 
 /**
- * Accuracy input: expected points lost vs engine best only
- * (CAPS2 / Chess.com-style). Zero when the played move is PV1.
+ * Lichess-style accuracy loss: Win% before → after the played move.
+ * (Not vs-best — deep engines otherwise punish “reasonable” moves too hard.)
+ */
+export function accuracyEpLoss(input: ClassifyReviewInput): number {
+  return expectedPointsLoss(input.eBefore, input.eAfterPlayed);
+}
+
+/**
+ * Vs-best EP loss (Chess.com CAPS2 style). Zero when the played move is PV1.
  */
 export function epLossFromPlayed(input: ClassifyReviewInput): number {
   const best =
@@ -49,12 +56,18 @@ export function epLossFromPlayed(input: ClassifyReviewInput): number {
 }
 
 /**
- * Classification input: never ignore real win-chance collapse.
- * A move that dumps a won game cannot hide behind a shallow “best also bad.”
+ * Classification: vs-best when the engine line is trustworthy; otherwise absolute
+ * win% drop so a dumped win still counts when “best” also looks ruined.
  */
 export function classificationLoss(input: ClassifyReviewInput): number {
   const vsBest = epLossFromPlayed(input);
   const absolute = expectedPointsLoss(input.eBefore, input.eAfterPlayed);
+  const bestDepth = input.multipvLines[0]?.depth ?? 0;
+  // Trust vs-best when we actually searched; avoid double-punishing with absolute
+  // on every noisy swing (that was inflating blunder counts vs Lichess).
+  if (bestDepth >= 12 && input.fenAfterBest) {
+    return vsBest;
+  }
   return Math.max(vsBest, absolute);
 }
 
