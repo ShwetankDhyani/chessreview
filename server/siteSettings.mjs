@@ -1,10 +1,9 @@
 /**
  * Site-wide settings (testingMode banner).
  *
- * Persistence order:
- * 1) Engine review-stats.json via /stats + POST /stats/admin (preferred)
- * 2) Reserved blog post slug `cr-site-settings` (works on older engines today)
- * 3) Local file store (non-Vercel / local vitest)
+ * Persistence:
+ * - Vercel / production: engine review-stats.json via GET /stats + POST /stats/admin
+ * - Local dev / vitest: data/site-settings.json when EVAL_SERVER_URL is unset
  */
 
 import {
@@ -223,30 +222,16 @@ async function writeToBlog(testingMode, adminKey) {
 }
 
 export async function getSiteSettings() {
-  try {
-    const fromStats = await readFromEngineStats();
-    if (fromStats) return fromStats;
-  } catch {
-    /* continue */
-  }
-
-  try {
-    const fromBlog = await readFromBlog();
-    if (fromBlog) return fromBlog;
-  } catch {
-    /* continue */
-  }
-
-  try {
-    const res = await engineFetch("/site-settings");
-    if (res?.ok) return { testingMode: !!res.data?.testingMode };
-  } catch {
-    /* continue */
-  }
-
-  if (isReadOnlyDeploy() && !engineBase()) {
+  if (engineBase()) {
+    try {
+      const fromStats = await readFromEngineStats();
+      if (fromStats) return fromStats;
+    } catch {
+      /* fall through */
+    }
     return { testingMode: false };
   }
+
   if (!isReadOnlyDeploy()) {
     return fileGetSiteSettings();
   }
@@ -271,25 +256,16 @@ export async function setSiteSettings(body, adminKey) {
     throw new Error("testingMode boolean required");
   }
 
-  try {
-    const viaStats = await writeToEngineStats(testingMode, adminKey);
-    if (viaStats) return viaStats;
-  } catch (e) {
-    if (e?.status === 401) throw e;
-  }
-
-  try {
-    const viaLegacy = await writeToEngineSiteSettings(testingMode, adminKey);
-    if (viaLegacy) return viaLegacy;
-  } catch (e) {
-    if (e?.status === 401) throw e;
-  }
-
-  try {
-    const viaBlog = await writeToBlog(testingMode, adminKey);
-    if (viaBlog) return viaBlog;
-  } catch (e) {
-    if (e?.status === 401) throw e;
+  if (engineBase()) {
+    try {
+      const viaStats = await writeToEngineStats(testingMode, adminKey);
+      if (viaStats) return viaStats;
+    } catch (e) {
+      if (e?.status === 401) throw e;
+    }
+    throw new Error(
+      "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+    );
   }
 
   if (!isReadOnlyDeploy()) {
@@ -297,7 +273,7 @@ export async function setSiteSettings(body, adminKey) {
   }
 
   throw new Error(
-    "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+    "Could not save Testing Mode. Set EVAL_SERVER_URL to your engine tunnel URL on Vercel."
   );
 }
 
@@ -315,7 +291,7 @@ function adminKeyFrom(req) {
 }
 
 /**
- * Engine routes (optional / kept for direct clients):
+ * Engine routes (legacy alias — testingMode lives in review-stats.json):
  *   GET  /site-settings
  *   POST /site-settings  { testingMode: boolean }  (admin)
  */
@@ -328,7 +304,9 @@ export function handleEngineSiteSettingsRequest(
   if (url.pathname !== "/site-settings") return false;
 
   if (req.method === "GET") {
-    return writeJson(res, 200, fileGetSiteSettings());
+    return import("./reviewStatsFile.mjs").then((stats) =>
+      writeJson(res, 200, { testingMode: !!stats.filePublicStats().testingMode })
+    );
   }
 
   if (req.method === "POST") {
@@ -338,8 +316,9 @@ export function handleEngineSiteSettingsRequest(
       return writeJson(res, 401, { error: "Unauthorized" });
     }
     return readJsonBody(req)
-      .then((body) => {
-        const updated = fileSetSiteSettings(body ?? {});
+      .then(async (body) => {
+        const { fileSetTestingMode } = await import("./reviewStatsFile.mjs");
+        const updated = fileSetTestingMode(!!body?.testingMode);
         writeJson(res, 200, updated);
       })
       .catch((e) => {
