@@ -247,6 +247,14 @@ html[data-testing-mode="1"] {
   animation: engineLinePulseRing 2.4s ease-in-out infinite;
 }
 
+/* Desktop boards read the bloom as stronger — dial intensity to ~half. */
+@media (min-width: 1024px) {
+  .board-engine-line-glow {
+    inset: -2px;
+    opacity: 0.5;
+  }
+}
+
 @keyframes engineLineBloom {
   0%,
   100% {
