@@ -49,8 +49,8 @@ export const CLASSIFICATION_META: Record<
   },
   good: {
     label: "Good",
-    // Olive sage — quiet positive, not another neon green
-    color: "#8fbc5a",
+    // Muted olive — distinct from Best lime; icon is a checkmark
+    color: "#8aa24b",
     bgColor: "bg-move-good",
     glyph: "",
     symbol: "✓",
