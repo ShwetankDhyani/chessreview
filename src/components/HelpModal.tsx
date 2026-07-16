@@ -124,22 +124,23 @@ export function HelpModal({
                   PayPal
                 </a>
               ))}
+              <p className="text-center text-[11px] text-chess-muted mt-1">Or get in touch</p>
               <div className="grid grid-cols-2 gap-2">
                 <a
                   href="mailto:admin@chessreview.org"
                   className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-                  title="Email"
+                  title="Send an email"
                 >
-                  ✉️ <span>Email</span>
+                  ✉️ <span>Email us</span>
                 </a>
                 <a
                   href={CHESSCOM_MESSAGE}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-                  title="Chess.com Message"
+                  title="Send a Chess.com message"
                 >
-                  ♟️ <span>Chess.com</span>
+                  ♟️ <span>Chess.com message</span>
                 </a>
               </div>
             </div>
