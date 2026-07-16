@@ -41,6 +41,7 @@ export function HelpModal({
   if (!open) return null;
 
   const links = parseSupportLinks();
+  const paypalHref = links[0]?.href ?? DEFAULT_SUPPORT_LINKS[0]!.href;
   const [tab, setTab] = useState<"contact" | "support">(initial);
   const showSupport = tab === "support";
   const readOnlyContact = initial === "contact";
@@ -107,47 +108,25 @@ export function HelpModal({
             <p>
               If you find the tool helpful, please consider lending a hand. Whether it's sharing technical expertise, spare server space, or chipping in to offset the bills, your support keeps things running smoothly for all of us.
             </p>
-          </div>
-        )}
 
-        {showSupport && (
-          <div className="mt-4">
-            <div className="flex flex-col gap-2">
-              {links.slice(0, 1).map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-accent hover:bg-chess-hover hover:border-chess-accent/40 transition-colors"
-                >
-                  PayPal
-                </a>
-              ))}
-              <p className="text-center text-[11px] text-chess-muted mt-1">Or get in touch</p>
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href="mailto:admin@chessreview.org"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-                  title="Send an email"
-                >
-                  ✉️ <span>Email us</span>
-                </a>
-                <a
-                  href={CHESSCOM_MESSAGE}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-                  title="Send a Chess.com message"
-                >
-                  ♟️ <span>Chess.com message</span>
-                </a>
-              </div>
+            <div className="mt-1 flex overflow-hidden rounded-lg border border-chess-border divide-x divide-chess-border">
+              <a
+                href={paypalHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 text-center text-sm font-medium text-chess-accent hover:bg-chess-hover transition-colors"
+              >
+                PayPal
+              </a>
+              <a
+                href="mailto:admin@chessreview.org"
+                className="flex-1 py-2.5 text-center text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:text-chess-accent transition-colors"
+              >
+                Email us
+              </a>
             </div>
           </div>
         )}
-
-        {/* End */}
       </div>
     </div>
   );
