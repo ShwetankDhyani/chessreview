@@ -73,21 +73,40 @@ describe("epLoss vs classificationLoss", () => {
     expect(loss).toBeGreaterThanOrEqual(0.65);
   });
 
-  it("classification prefers vs-best when deep best-line fen exists", () => {
+  it("classification prefers vs-best when the best line holds", () => {
     const loss = classificationLoss(
       base({
         eBefore: 0.7,
-        eAfterBest: 0.02,
-        eAfterPlayed: 0.0,
+        eAfterBest: 0.68,
+        eAfterPlayed: 0.45,
         fenAfterBest: "after-best",
         playedUci: "a2a3",
         multipvLines: [
-          { multipv: 1, cp: -800, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
-          { multipv: 2, cp: -900, depth: 14, pv: ["a2a3"], bestMove: "a2a3" },
+          { multipv: 1, cp: 200, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          { multipv: 2, cp: -50, depth: 14, pv: ["a2a3"], bestMove: "a2a3" },
         ],
       })
     );
-    expect(loss).toBeCloseTo(0.02, 5);
+    expect(loss).toBeCloseTo(0.23, 5);
+  });
+
+  it("does not trust vs-best when the best line also collapses", () => {
+    // Depth-14 horizon: PV and played both dump ~27% → vs-best ≈ 0, but the
+    // move must not be labeled Good while Critical Moments show −27%.
+    const loss = classificationLoss(
+      base({
+        eBefore: 0.62,
+        eAfterBest: 0.36,
+        eAfterPlayed: 0.35,
+        fenAfterBest: "after-best",
+        playedUci: "d1d4",
+        multipvLines: [
+          { multipv: 1, cp: -40, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          { multipv: 2, cp: -50, depth: 14, pv: ["d1d4"], bestMove: "d1d4" },
+        ],
+      })
+    );
+    expect(loss).toBeGreaterThanOrEqual(0.2);
   });
 });
 
@@ -141,6 +160,23 @@ describe("classifyReviewMove core labels", () => {
           eAfterPlayed: 0.45,
           eAfterBest: 0.7,
           playedUci: "a2a3",
+        })
+      )
+    ).toBe("blunder");
+  });
+
+  it("blunders a big absolute dump even if shallow PV also looks ruined", () => {
+    expect(
+      classifyReviewMove(
+        base({
+          eBefore: 0.62,
+          eAfterBest: 0.36,
+          eAfterPlayed: 0.35,
+          fenAfterBest: "after-best",
+          playedUci: "d1d4",
+          multipvLines: [
+            { multipv: 1, cp: -40, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          ],
         })
       )
     ).toBe("blunder");
