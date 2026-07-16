@@ -80,6 +80,7 @@ import {
 } from "./utils/analysisProgressUi";
 import { coachShowsBestWas } from "./utils/moveFactSheet";
 import { boardMoveClassification } from "./utils/boardMoveClassification";
+import { shouldShowEngineLineGlow } from "./utils/engineLineGlow";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
@@ -1573,8 +1574,12 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       : null;
 
   const boardPositionFen = continuationFen ?? currentFen;
-  const engineLineGlow =
-    continuationActive || !!continuationFen || !!continuationArrow;
+  // Glow only while browsing the engine line — not when a best-move arrow is
+  // merely previewed for inaccuracy/mistake/blunder.
+  const engineLineGlow = shouldShowEngineLineGlow({
+    continuationActive,
+    continuationFen,
+  });
 
   const boardLastMoveHighlight = useMemo(() => {
     // Only leave the game-move highlight when the board fen is actually on a

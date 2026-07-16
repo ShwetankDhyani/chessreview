@@ -27,7 +27,7 @@ export interface ReviewChessboardProps {
   remountKey?: number;
   dimmed: boolean;
   continuationActive: boolean;
-  /** When true, show the green engine-line border glow (defaults to continuationActive). */
+  /** When true, show the pulsating engine-line edge glow (defaults to continuationActive). */
   engineLineGlow?: boolean;
   /** from/to squares for the move currently shown (always when available). */
   lastMoveHighlight: { from: string; to: string } | null;
@@ -130,7 +130,10 @@ export function ReviewChessboard({
           />
         ) : null}
         {showEngineLineGlow ? (
-          <div className="board-engine-line-glow" aria-hidden />
+          <div className="board-engine-line-glow" aria-hidden>
+            <span className="board-engine-line-glow__bloom" />
+            <span className="board-engine-line-glow__pulse" />
+          </div>
         ) : null}
         {arrow ? (
           <BoardArrowOverlay

@@ -11,6 +11,7 @@ import { hapticSoft, playMoveFeedback } from "../utils/chessSounds";
 import { getGameEndInfo } from "../utils/gameEnd";
 import { extractClocks, extractGameMeta } from "../utils/gameMeta";
 import type { ContinuationNavHandlers } from "../utils/continuationNav";
+import { shouldShowEngineLineGlow } from "../utils/engineLineGlow";
 
 const BOARD_PLAY_MOVE_MS = 380;
 
@@ -259,8 +260,11 @@ export function useReviewBoardSession({
   const currentMove = currentMoveIdx >= 0 ? moves[currentMoveIdx] : null;
   const boardPositionFen = continuationFen ?? currentFen;
   const displayEval = continuationEval ?? currentEval;
-  const engineLineGlow =
-    continuationActive || !!continuationFen || !!continuationArrow;
+  // Glow only while browsing the engine line — not for a preview arrow alone.
+  const engineLineGlow = shouldShowEngineLineGlow({
+    continuationActive,
+    continuationFen,
+  });
 
   const boardLastMoveHighlight = useMemo(() => {
     // Only leave the game-move highlight when browsing a continuation fen.
