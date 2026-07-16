@@ -37,7 +37,7 @@ import {
   shouldSoftBrowseOtherGame,
   type SessionReviewPin,
 } from "./utils/sessionReviewPin";
-import { countPgnPlies, formatChessMoveCounter } from "./utils/pgnPlies";
+import { formatChessMoveCounter } from "./utils/pgnPlies";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
@@ -188,7 +188,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const analysisGenerationRef = useRef(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
-  const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
   /** List-row id for the PGN currently shown on the board. */
   const [sessionGameId, setSessionGameId] = useState<string | null>(null);
   /**
@@ -287,32 +286,18 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [continuationNav, setContinuationNav] = useState<ContinuationNavHandlers | null>(null);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(null);
-  const [boardDimmed, setBoardDimmed] = useState(false);
   const [boardPieceAnimMs, setBoardPieceAnimMs] = useState(0);
-  const [boardRemountKey, setBoardRemountKey] = useState(0);
   const boardTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const boardAnimGenRef = useRef(0);
   /** FEN the Chessboard last actually rendered (updated post-paint). */
   const lastRenderedFenRef = useRef("start");
 
   // Slow enough that the eye can follow the piece travelling between squares.
   const BOARD_PLAY_MOVE_MS = 380;
-  const HIGHLIGHT_HOLD_MS = 700;
 
   const clearBoardTimers = useCallback(() => {
     boardTimersRef.current.forEach(clearTimeout);
     boardTimersRef.current = [];
   }, []);
-
-  const scheduleBoard = useCallback(
-    (fn: () => void, ms: number, gen: number) => {
-      const id = setTimeout(() => {
-        if (boardAnimGenRef.current === gen) fn();
-      }, ms);
-      boardTimersRef.current.push(id);
-    },
-    []
-  );
 
   /**
    * Set board to `fen`.
@@ -328,7 +313,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       animate: boolean
     ) => {
       clearBoardTimers();
-      setBoardDimmed(false);
       // Persist the from/to highlight for as long as the user stays on this
       // move. The next navigate call overwrites it; clearing it explicitly
       // happens for start-position / new-game / continuation.
@@ -704,19 +688,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     showAnalysisProgressRef.current = showAnalysisProgress;
   }, [showAnalysisProgress]);
 
-  useEffect(() => {
-    if (!analysisRunning || !analysisStartedAt) {
-      setAnalysisElapsedSec(0);
-      return;
-    }
-    const tick = () => {
-      setAnalysisElapsedSec(Math.max(0, Math.floor((Date.now() - analysisStartedAt) / 1000)));
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [analysisRunning, analysisStartedAt]);
-
   const runAnalysis = useCallback(
     async (pgnStr: string, options: { visible: boolean }) => {
       if (!pgnStr.trim()) return;
@@ -954,7 +925,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     currentFenRef.current = targetFen;
     lastRenderedFenRef.current = targetFen;
     setMoveAnim(highlight);
-    setBoardDimmed(false);
     const meta = extractGameMeta(parsed.pgn);
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
@@ -1681,8 +1651,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       isAnalyzing ||
       (moves.length === 0 && analysisState === "loading"));
 
-  const showBoardProgressOrb = false;
-
   const showBoardMoveNav = !isAnalyzing && moves.length > 0;
   const canBoardStepBack = showBoardMoveNav && currentMoveIdx > -1;
   const canBoardStepForward =
@@ -2048,8 +2016,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   boardWidth={desktopBoardSize}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
-                  remountKey={boardRemountKey}
-                  dimmed={boardDimmed && !continuationFen && !isAnalyzing}
+                  remountKey={0}
+                  dimmed={false}
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
@@ -2078,7 +2046,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
-                  showProgressOrb={showBoardProgressOrb}
                   reviewConflict={reviewConflict}
                 />
                 </div>
@@ -2245,10 +2212,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
           {/* ── Mobile: one shell for Games / Moves / Review (shared header padding) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
+            {tab === "games" && (
             <div
-              className={`flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar ${
-                tab === "games" ? "" : "hidden"
-              }`}
+              className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
               style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
             >
                 {showWelcome && !pgn && (
@@ -2267,6 +2233,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   />
                 </div>
             </div>
+            )}
 
             <div
               className={`flex-1 overflow-y-auto min-h-0 page-inline-pad pt-2 mobile-review-scroll ${
@@ -2320,8 +2287,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   boardWidth={boardWidth}
                   boardOrientation={boardFlipped ? "black" : "white"}
                   animationDuration={boardPieceAnimMs}
-                  remountKey={boardRemountKey}
-                  dimmed={boardDimmed && !continuationFen && !isAnalyzing}
+                  remountKey={0}
+                  dimmed={false}
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
@@ -2349,7 +2316,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
                   analysisEtaLabel={analysisEtaLabel}
-                  showProgressOrb={showBoardProgressOrb}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
                   reviewConflict={reviewConflict}

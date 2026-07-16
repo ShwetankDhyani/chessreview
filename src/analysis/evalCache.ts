@@ -1,7 +1,4 @@
-import {
-  evaluateFensConsensus,
-  refreshNativeEngineProbe,
-} from "../engine/evaluationService";
+import { evaluateFensConsensus } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
 import type { PositionAnalysis, MultiPvLine } from "./types";
 import { analyzePositionMultiPv } from "./stockfishClient";
@@ -35,8 +32,6 @@ export async function buildBatchPositionCache(
 ): Promise<Map<string, PositionAnalysis>> {
   const unique = [...new Set(fens)];
   if (!unique.length) return new Map();
-
-  await refreshNativeEngineProbe();
 
   const fastDepth = Math.max(10, Math.min(depth, 12));
   const deepDepth = Math.max(fastDepth + 2, depth);

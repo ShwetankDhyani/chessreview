@@ -20,7 +20,6 @@ interface AnalyzeBoardStackProps extends ReviewChessboardProps {
   analysisStageLabel?: string;
   analyzingMoveSan?: string;
   analysisEtaLabel?: string | null;
-  showProgressOrb?: boolean;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
   reviewConflict?: BoardReviewConflict | null;
@@ -40,7 +39,6 @@ export function AnalyzeBoardStack({
   analysisStageLabel,
   analyzingMoveSan,
   analysisEtaLabel,
-  showProgressOrb = false,
   analyzingPly,
   analyzingTotalPlies,
   reviewConflict = null,
@@ -77,7 +75,6 @@ export function AnalyzeBoardStack({
             stageLabel={analysisStageLabel}
             currentSan={analyzingMoveSan}
             etaLabel={analysisEtaLabel}
-            showProgressOrb={showProgressOrb}
             currentPly={analyzingPly}
             totalPlies={analyzingTotalPlies}
             onCancel={onCancelAnalysis}
