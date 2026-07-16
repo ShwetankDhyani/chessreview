@@ -79,6 +79,7 @@ import {
   remainingEtaSeconds,
 } from "./utils/analysisProgressUi";
 import { coachShowsBestWas } from "./utils/moveFactSheet";
+import { boardMoveClassification } from "./utils/boardMoveClassification";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
@@ -1576,7 +1577,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     continuationActive || !!continuationFen || !!continuationArrow;
 
   const boardLastMoveHighlight = useMemo(() => {
-    if (continuationActive) return null;
+    // Only leave the game-move highlight when the board fen is actually on a
+    // continuation (user stepped into the better line). Mounting the viewer
+    // alone used to clear highlights via continuationActive and hid badges.
     if (continuationFen) {
       if (currentMoveIdx > 0) {
         return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
@@ -1587,7 +1590,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
     }
     return moveAnim;
-  }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
+  }, [continuationFen, moveAnim, currentMoveIdx, moves]);
 
   useAnalysisBoardReplay({
     active: isAnalyzing,
@@ -2182,11 +2185,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
-                  moveClassification={
-                    !continuationActive && !isAnalyzing
-                      ? currentMove?.classification ?? null
-                      : null
-                  }
+                  moveClassification={boardMoveClassification(
+                    currentMove?.classification,
+                    { continuationFen, isAnalyzing }
+                  )}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !continuationActive &&
@@ -2454,11 +2456,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
-                  moveClassification={
-                    !continuationActive && !isAnalyzing
-                      ? currentMove?.classification ?? null
-                      : null
-                  }
+                  moveClassification={boardMoveClassification(
+                    currentMove?.classification,
+                    { continuationFen, isAnalyzing }
+                  )}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !isAnalyzing &&

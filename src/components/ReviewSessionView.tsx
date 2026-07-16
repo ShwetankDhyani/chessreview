@@ -13,6 +13,7 @@ import {
   computeMobileBoardSize,
 } from "../utils/boardLayout";
 import { coachShowsBestWas } from "../utils/moveFactSheet";
+import { boardMoveClassification } from "../utils/boardMoveClassification";
 import type { ReviewBoardSession } from "../hooks/useReviewBoardSession";
 import { hapticToggle } from "../utils/chessSounds";
 
@@ -59,6 +60,7 @@ export function ReviewSessionView({
     showBestMove,
     setShowBestMove,
     continuationActive,
+    continuationFen,
     continuationArrow,
     engineLineGlow,
     continuationNav,
@@ -147,11 +149,10 @@ export function ReviewSessionView({
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
-                  moveClassification={
-                    !continuationActive
-                      ? currentMove?.classification ?? null
-                      : null
-                  }
+                  moveClassification={boardMoveClassification(
+                    currentMove?.classification,
+                    { continuationFen }
+                  )}
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={showBestMoveArrow}
                   bestMove={currentMove?.bestMove}
@@ -333,9 +334,10 @@ export function ReviewSessionView({
             continuationActive={continuationActive}
             engineLineGlow={engineLineGlow}
             lastMoveHighlight={boardLastMoveHighlight}
-            moveClassification={
-              !continuationActive ? currentMove?.classification ?? null : null
-            }
+            moveClassification={boardMoveClassification(
+              currentMove?.classification,
+              { continuationFen }
+            )}
             continuationArrow={continuationArrow}
             showBestMoveArrow={showBestMoveArrow}
             bestMove={currentMove?.bestMove}

@@ -157,6 +157,8 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         onArrowChangeRef.current?.(null);
       }
     } else {
+      // Preview only: keep the board on the played game move so classification
+      // badges / last-move highlights stay visible for inaccuracy/mistake/blunder.
       onFenChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
       setEvalWarning(null);
@@ -170,7 +172,9 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
         onArrowChangeRef.current?.(null);
       }
     }
-    setContinuationActive(true);
+    // Active only once the user steps into the line (or returns to its root
+    // after exploring). Mounting the viewer must NOT hide move badges.
+    setContinuationActive(step > 0 || hasBeenInLineRef.current);
   }, [step, stepFens, stepUcis, startFen, evalBefore, firstMove, line.join(",")]);
 
   // Reset when the line changes
@@ -178,7 +182,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     setStep(0);
     hasBeenInLineRef.current = false;
     evalCache.current.clear();
-    setContinuationActive(true);
+    setContinuationActive(false);
     return () => {
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
       setContinuationActive(false);

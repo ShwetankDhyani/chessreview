@@ -263,7 +263,7 @@ export function useReviewBoardSession({
     continuationActive || !!continuationFen || !!continuationArrow;
 
   const boardLastMoveHighlight = useMemo(() => {
-    if (continuationActive) return null;
+    // Only leave the game-move highlight when browsing a continuation fen.
     if (continuationFen) {
       if (currentMoveIdx > 0) {
         return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
@@ -274,7 +274,7 @@ export function useReviewBoardSession({
       return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
     }
     return moveAnim;
-  }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
+  }, [continuationFen, moveAnim, currentMoveIdx, moves]);
 
   const gameEnd = useMemo(() => {
     if (!gameMeta?.result || gameMeta.result === "*") return null;
@@ -322,6 +322,7 @@ export function useReviewBoardSession({
     showBestMove,
     setShowBestMove,
     continuationActive,
+    continuationFen,
     continuationArrow,
     engineLineGlow,
     continuationNav,

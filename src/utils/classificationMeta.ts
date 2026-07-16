@@ -64,8 +64,8 @@ export const CLASSIFICATION_META: Record<
   },
   inaccuracy: {
     label: "Inaccuracy",
-    // Amber — distinct from last-move yellow tint on the board
-    color: "#e6b422",
+    // Deep amber — stays visible on yellow last-move squares
+    color: "#d4920a",
     bgColor: "bg-move-inaccuracy",
     glyph: "!?",
     symbol: "!?",
@@ -86,7 +86,7 @@ export const CLASSIFICATION_META: Record<
   },
   blunder: {
     label: "Blunder",
-    color: "#f24552",
+    color: "#e83545",
     bgColor: "bg-move-blunder",
     glyph: "??",
     symbol: "??",
