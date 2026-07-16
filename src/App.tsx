@@ -62,6 +62,7 @@ import { computeDesktopBoardSize, computeMobileBoardSize, MOBILE_LAYOUT } from "
 import {
   BOARD_START_FEN,
   canAnimateBoardStep,
+  highlightFromMove,
   highlightFromUci,
   resolveBoardNavStep,
 } from "./utils/boardPosition";
@@ -645,7 +646,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     currentMoveIdxRef.current = idx;
     setCurrentEval(m.evalAfter);
 
-    const moveHighlight = highlightFromUci(m.uci);
+    const moveHighlight = highlightFromMove(m);
     if (m.san) {
       playMoveFeedback(m.san);
     } else if (fromIdx !== idx) {
@@ -1578,18 +1579,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     if (continuationActive) return null;
     if (continuationFen) {
       if (currentMoveIdx > 0) {
-        const prev = moves[currentMoveIdx - 1];
-        if (prev?.uci && prev.uci.length >= 4) {
-          return { from: prev.uci.slice(0, 2), to: prev.uci.slice(2, 4) };
-        }
+        return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
       }
       return null;
     }
-    if (moveAnim) return moveAnim;
-    if (currentMoveIdx < 0) return null;
-    const m = moves[currentMoveIdx];
-    if (!m?.uci || m.uci.length < 4) return null;
-    return { from: m.uci.slice(0, 2), to: m.uci.slice(2, 4) };
+    if (currentMoveIdx >= 0) {
+      return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
+    }
+    return moveAnim;
   }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
 
   useAnalysisBoardReplay({
@@ -2185,6 +2182,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
+                  moveClassification={
+                    !continuationActive && !isAnalyzing
+                      ? currentMove?.classification ?? null
+                      : null
+                  }
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !continuationActive &&
@@ -2452,6 +2454,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
+                  moveClassification={
+                    !continuationActive && !isAnalyzing
+                      ? currentMove?.classification ?? null
+                      : null
+                  }
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={
                     !isAnalyzing &&

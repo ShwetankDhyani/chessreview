@@ -4,6 +4,7 @@ import {
   BOARD_START_FEN,
   canAnimateBoardStep,
   canAnimateUndoStep,
+  highlightFromMove,
   highlightFromUci,
   resolveBoardNavStep,
 } from "./boardPosition";
@@ -54,6 +55,25 @@ describe("resolveBoardNavStep", () => {
     const { moves } = buildSampleMoves();
     const { highlight } = resolveBoardNavStep(moves, -1, 0);
     expect(highlight).toEqual(highlightFromUci(moves[0].uci));
+  });
+});
+
+describe("highlightFromMove", () => {
+  it("uses UCI when present", () => {
+    expect(highlightFromMove({ uci: "e2e4" })).toEqual({ from: "e2", to: "e4" });
+  });
+
+  it("falls back to SAN on fenBefore when UCI is missing", () => {
+    const hl = highlightFromMove({
+      san: "e4",
+      fenBefore: new Chess().fen(),
+    });
+    expect(hl).toEqual({ from: "e2", to: "e4" });
+  });
+
+  it("rejects malformed UCI", () => {
+    expect(highlightFromUci("zz")).toBeNull();
+    expect(highlightFromUci("e2e9")).toBeNull();
   });
 });
 

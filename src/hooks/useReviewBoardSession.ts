@@ -3,6 +3,7 @@ import type { AnalyzedMove, EvalResult } from "../types";
 import {
   BOARD_START_FEN,
   canAnimateBoardStep,
+  highlightFromMove,
   highlightFromUci,
   resolveBoardNavStep,
 } from "../utils/boardPosition";
@@ -142,7 +143,7 @@ export function useReviewBoardSession({
       currentMoveIdxRef.current = idx;
       setCurrentEval(m.evalAfter);
 
-      const moveHighlight = highlightFromUci(m.uci);
+      const moveHighlight = highlightFromMove(m);
       if (m.san) {
         playMoveFeedback(m.san);
       } else if (fromIdx !== idx) {
@@ -214,7 +215,7 @@ export function useReviewBoardSession({
       setCurrentFen(m.fenAfter);
       currentFenRef.current = m.fenAfter;
       lastRenderedFenRef.current = m.fenAfter;
-      setMoveAnim(highlightFromUci(m.uci));
+      setMoveAnim(highlightFromMove(m));
       setBoardPieceAnimMs(0);
     } else {
       const startFen = moves[0]?.fenBefore ?? BOARD_START_FEN;
@@ -265,18 +266,14 @@ export function useReviewBoardSession({
     if (continuationActive) return null;
     if (continuationFen) {
       if (currentMoveIdx > 0) {
-        const prev = moves[currentMoveIdx - 1];
-        if (prev?.uci && prev.uci.length >= 4) {
-          return { from: prev.uci.slice(0, 2), to: prev.uci.slice(2, 4) };
-        }
+        return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
       }
       return null;
     }
-    if (moveAnim) return moveAnim;
-    if (currentMoveIdx < 0) return null;
-    const m = moves[currentMoveIdx];
-    if (!m?.uci || m.uci.length < 4) return null;
-    return { from: m.uci.slice(0, 2), to: m.uci.slice(2, 4) };
+    if (currentMoveIdx >= 0) {
+      return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
+    }
+    return moveAnim;
   }, [continuationFen, continuationActive, moveAnim, currentMoveIdx, moves]);
 
   const gameEnd = useMemo(() => {

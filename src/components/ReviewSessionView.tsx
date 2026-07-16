@@ -147,6 +147,11 @@ export function ReviewSessionView({
                   continuationActive={continuationActive}
                   engineLineGlow={engineLineGlow}
                   lastMoveHighlight={boardLastMoveHighlight}
+                  moveClassification={
+                    !continuationActive
+                      ? currentMove?.classification ?? null
+                      : null
+                  }
                   continuationArrow={continuationArrow}
                   showBestMoveArrow={showBestMoveArrow}
                   bestMove={currentMove?.bestMove}
@@ -328,6 +333,9 @@ export function ReviewSessionView({
             continuationActive={continuationActive}
             engineLineGlow={engineLineGlow}
             lastMoveHighlight={boardLastMoveHighlight}
+            moveClassification={
+              !continuationActive ? currentMove?.classification ?? null : null
+            }
             continuationArrow={continuationArrow}
             showBestMoveArrow={showBestMoveArrow}
             bestMove={currentMove?.bestMove}

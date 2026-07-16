@@ -1,14 +1,17 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
+import type { MoveClassification } from "../types";
 import { BoardArrowOverlay } from "./BoardArrowOverlay";
+import { LastMoveSquareOverlay } from "./LastMoveSquareOverlay";
+import { MoveClassificationBadge } from "./MoveClassificationBadge";
 
 export const LAST_MOVE_FROM_STYLE = {
-  backgroundColor: "rgba(247, 201, 72, 0.55)",
+  backgroundColor: "rgba(247, 201, 72, 0.72)",
   borderRadius: "0px",
 } as const;
 
 export const LAST_MOVE_TO_STYLE = {
-  backgroundColor: "rgba(247, 201, 72, 0.38)",
+  backgroundColor: "rgba(247, 201, 72, 0.52)",
   borderRadius: "0px",
 } as const;
 
@@ -28,6 +31,8 @@ export interface ReviewChessboardProps {
   engineLineGlow?: boolean;
   /** from/to squares for the move currently shown (always when available). */
   lastMoveHighlight: { from: string; to: string } | null;
+  /** Classification for the move on the board — badge sits on the destination piece. */
+  moveClassification?: MoveClassification;
   continuationArrow: { from: string; to: string } | null;
   showBestMoveArrow: boolean;
   bestMove?: string;
@@ -43,6 +48,7 @@ export function ReviewChessboard({
   continuationActive,
   engineLineGlow,
   lastMoveHighlight,
+  moveClassification,
   continuationArrow,
   showBestMoveArrow,
   bestMove,
@@ -76,6 +82,8 @@ export function ReviewChessboard({
           variant: "hint" as const,
         })
       : null;
+  // Prefer engine continuation; otherwise show best-move hint when present,
+  // falling back to the played-move arrow so from→to is always marked.
   const arrow = continuationArrow
     ? { ...continuationArrow, variant: "continuation" as const }
     : hintArrow ?? playedArrow;
@@ -113,6 +121,14 @@ export function ReviewChessboard({
           customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
           customSquareStyles={squareStyles}
         />
+        {lastMoveHighlight ? (
+          <LastMoveSquareOverlay
+            from={lastMoveHighlight.from}
+            to={lastMoveHighlight.to}
+            boardWidth={renderedWidth}
+            boardOrientation={boardOrientation}
+          />
+        ) : null}
         {showEngineLineGlow ? (
           <div className="board-engine-line-glow" aria-hidden />
         ) : null}
@@ -123,6 +139,14 @@ export function ReviewChessboard({
             boardWidth={renderedWidth}
             boardOrientation={boardOrientation}
             variant={arrow.variant}
+          />
+        ) : null}
+        {lastMoveHighlight && moveClassification ? (
+          <MoveClassificationBadge
+            square={lastMoveHighlight.to}
+            classification={moveClassification}
+            boardWidth={renderedWidth}
+            boardOrientation={boardOrientation}
           />
         ) : null}
       </div>

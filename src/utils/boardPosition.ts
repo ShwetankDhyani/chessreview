@@ -91,7 +91,29 @@ export function highlightFromUci(
   uci: string | undefined
 ): { from: string; to: string } | null {
   if (!uci || uci.length < 4) return null;
-  return { from: uci.slice(0, 2), to: uci.slice(2, 4) };
+  const from = uci.slice(0, 2).toLowerCase();
+  const to = uci.slice(2, 4).toLowerCase();
+  if (!/^[a-h][1-8]$/.test(from) || !/^[a-h][1-8]$/.test(to)) return null;
+  return { from, to };
+}
+
+/** Prefer UCI; fall back to replaying SAN on fenBefore when UCI is missing. */
+export function highlightFromMove(move: {
+  uci?: string;
+  san?: string;
+  fenBefore?: string;
+}): { from: string; to: string } | null {
+  const fromUci = highlightFromUci(move.uci);
+  if (fromUci) return fromUci;
+  if (!move.fenBefore || !move.san) return null;
+  try {
+    const c = new Chess(normalizeFen(move.fenBefore));
+    const result = c.move(move.san);
+    if (!result?.from || !result?.to) return null;
+    return { from: result.from, to: result.to };
+  } catch {
+    return null;
+  }
 }
 
 /** FEN + last-move highlight for a one-ply board step (forward or back). */
