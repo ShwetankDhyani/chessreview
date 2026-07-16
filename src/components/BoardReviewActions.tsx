@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ReanalyzeButton } from "./ReanalyzeButton";
 import { hapticSelection, hapticTap } from "../utils/chessSounds";
 
@@ -99,7 +100,9 @@ function CopyIcon({ size }: { size: number }) {
   );
 }
 
-/** Export control: one tap opens Download / Copy choices. */
+type MenuPos = { top: number; left: number; placeAbove: boolean };
+
+/** Export control: one tap opens Download / Copy (portaled so overflow parents can't clip it). */
 function PgnExportMenu({
   disabled,
   compact,
@@ -112,18 +115,55 @@ function PgnExportMenu({
   onCopy: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<MenuPos | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const sizeClass = compact ? "h-8 w-8" : "h-9 w-9";
   const iconSize = compact ? 14 : 16;
+
+  const updatePos = () => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const menuW = 176;
+    const menuH = 112;
+    const gap = 6;
+    const pad = 8;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const placeAbove = compact || spaceBelow < menuH + gap + pad;
+    let top = placeAbove ? r.top - gap - menuH : r.bottom + gap;
+    let left = compact ? r.left : r.left + r.width / 2 - menuW / 2;
+    left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad));
+    top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
+    setPos({ top, left, placeAbove });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    updatePos();
+  }, [open, compact]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScrollOrResize = () => updatePos();
+    window.addEventListener("resize", onScrollOrResize);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    return () => {
+      window.removeEventListener("resize", onScrollOrResize);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+    };
+  }, [open, compact]);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent | TouchEvent) => {
-      const el = rootRef.current;
-      if (!el) return;
-      if (e.target instanceof Node && !el.contains(e.target)) {
-        setOpen(false);
-      }
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -142,9 +182,66 @@ function PgnExportMenu({
     if (disabled) setOpen(false);
   }, [disabled]);
 
+  const menu =
+    open && pos
+      ? createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label="Export PGN"
+            className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-chess-border/90 bg-chess-panel shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                hapticTap();
+                setOpen(false);
+                onDownload();
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[12px] font-semibold text-chess-text transition-colors hover:bg-chess-hover touch-manipulation"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-chess-accent/15 text-chess-accent">
+                <DownloadIcon size={14} />
+              </span>
+              <span>
+                <span className="block leading-tight">Download</span>
+                <span className="block text-[10px] font-medium text-chess-muted">
+                  Save .pgn file
+                </span>
+              </span>
+            </button>
+            <div className="h-px bg-chess-border/70" aria-hidden />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                hapticTap();
+                setOpen(false);
+                onCopy();
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[12px] font-semibold text-chess-text transition-colors hover:bg-chess-hover touch-manipulation"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-chess-surface text-chess-subtext ring-1 ring-chess-border">
+                <CopyIcon size={14} />
+              </span>
+              <span>
+                <span className="block leading-tight">Copy</span>
+                <span className="block text-[10px] font-medium text-chess-muted">
+                  Paste anywhere
+                </span>
+              </span>
+            </button>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
-    <div ref={rootRef} className="relative flex-shrink-0">
+    <div className="relative flex-shrink-0">
       <button
+        ref={btnRef}
         type="button"
         onClick={() => {
           if (disabled) return;
@@ -164,60 +261,7 @@ function PgnExportMenu({
       >
         <DownloadIcon size={iconSize} />
       </button>
-
-      {open && (
-        <div
-          role="menu"
-          aria-label="Export PGN"
-          className={`absolute z-40 min-w-[10.5rem] overflow-hidden rounded-xl border border-chess-border/90 bg-chess-panel shadow-[0_14px_36px_rgba(0,0,0,0.45)] ${
-            compact
-              ? "bottom-[calc(100%+0.35rem)] left-0"
-              : "top-[calc(100%+0.35rem)] left-1/2 -translate-x-1/2"
-          }`}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              hapticTap();
-              setOpen(false);
-              onDownload();
-            }}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[12px] font-semibold text-chess-text transition-colors hover:bg-chess-hover touch-manipulation"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-chess-accent/15 text-chess-accent">
-              <DownloadIcon size={14} />
-            </span>
-            <span>
-              <span className="block leading-tight">Download</span>
-              <span className="block text-[10px] font-medium text-chess-muted">
-                Save .pgn file
-              </span>
-            </span>
-          </button>
-          <div className="h-px bg-chess-border/70" aria-hidden />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              hapticTap();
-              setOpen(false);
-              onCopy();
-            }}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[12px] font-semibold text-chess-text transition-colors hover:bg-chess-hover touch-manipulation"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-chess-surface text-chess-subtext ring-1 ring-chess-border">
-              <CopyIcon size={14} />
-            </span>
-            <span>
-              <span className="block leading-tight">Copy</span>
-              <span className="block text-[10px] font-medium text-chess-muted">
-                Paste anywhere
-              </span>
-            </span>
-          </button>
-        </div>
-      )}
+      {menu}
     </div>
   );
 }
