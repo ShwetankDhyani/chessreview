@@ -270,7 +270,7 @@ function cleanupBatchJobs() {
 
   // Remove stale ids from the queue array.
   for (let i = batchQueue.length - 1; i >= 0; i--) {
-    const id = batchQueue[i]!;
+    const id = batchQueue[i];
     if (!batchJobs.has(id)) batchQueue.splice(i, 1);
   }
 
@@ -380,7 +380,7 @@ function queueStatusFor(jobId) {
   // Sum time for runs ahead of this job's run.
   if (!isActiveRun && runIndex > 0) {
     for (let i = 0; i < runIndex; i++) {
-      const rid = plannedRuns[i]!;
+      const rid = plannedRuns[i];
       const jobs = pendingJobsForRunSorted(rid);
       for (const j of jobs) {
         if (j.status === "running") {
@@ -403,7 +403,7 @@ function queueStatusFor(jobId) {
     const orderedIds = getRunJobIdsInOrder(String(job.runId));
     const idx = orderedIds.indexOf(jobId);
     for (let k = 0; k < idx; k++) {
-      const aheadId = orderedIds[k]!;
+      const aheadId = orderedIds[k];
       if (aheadId === jobId) break;
       const aheadJob = batchJobs.get(aheadId);
       if (!aheadJob) continue;
