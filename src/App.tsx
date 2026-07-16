@@ -444,9 +444,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   ): Promise<ProfileVerifyResult> => {
     try {
       if (platform === "chesscom") {
-        const { chesscomFetch, chesscomPlayerUrl } = await import(
-          "./utils/chesscomClient"
-        );
         const res = await chesscomFetch(chesscomPlayerUrl(name), { signal });
         if (res.status === 404) return { status: "not_found" };
         if (!res.ok) return { status: "network" };
