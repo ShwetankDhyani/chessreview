@@ -13,6 +13,28 @@ const BATCH_TIMEOUT_MS = 600_000;
 const BATCH_CHUNK_SIZE = 96;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
+const BATCH_QUEUE_POLL_MS = 1200;
+
+export interface EvalQueueStatus {
+  state: "idle" | "queued" | "running";
+  position: number | null;
+  etaMs: number | null;
+  chunkDone: number;
+  chunkTotal: number;
+}
+
+const queueListeners = new Set<(status: EvalQueueStatus) => void>();
+
+function emitQueueStatus(status: EvalQueueStatus) {
+  for (const fn of queueListeners) fn(status);
+}
+
+export function subscribeEvalQueueStatus(
+  listener: (status: EvalQueueStatus) => void
+): () => void {
+  queueListeners.add(listener);
+  return () => queueListeners.delete(listener);
+}
 
 type ProbeState = "unknown" | "up" | "down";
 let probeState: ProbeState = "unknown";
@@ -84,6 +106,98 @@ function rawToEvalResult(data: {
   };
 }
 
+type BatchRow = {
+  fen?: string;
+  cp?: number;
+  mate?: number;
+  depth?: number;
+  bestMove?: string;
+  pv?: string[];
+  wdl?: { w: number; d: number; l: number };
+  error?: string;
+};
+
+function applyBatchRows(
+  out: Map<string, EvalResult>,
+  chunk: string[],
+  rows: BatchRow[]
+) {
+  for (let j = 0; j < chunk.length; j++) {
+    const fen = chunk[j];
+    const row = rows[j];
+    if (!row || row.error) continue;
+    const ev = rawToEvalResult(row);
+    if (ev) out.set(fen, ev);
+  }
+}
+
+async function runBatchChunkLegacy(chunk: string[], depth: number): Promise<BatchRow[]> {
+  const res = await fetch(`${LOCAL_SERVER}/eval/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fens: chunk, depth }),
+    signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`batch failed (${res.status})`);
+  const data = await res.json();
+  return (data?.results ?? []) as BatchRow[];
+}
+
+async function runBatchChunkQueued(
+  chunk: string[],
+  depth: number,
+  chunkDone: number,
+  chunkTotal: number
+): Promise<BatchRow[]> {
+  const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fens: chunk, depth, async: true }),
+    signal: AbortSignal.timeout(60_000),
+    cache: "no-store",
+  });
+  if (!submit.ok) throw new Error(`batch submit failed (${submit.status})`);
+  const first = await submit.json();
+  if (!first?.jobId) throw new Error("batch queue unavailable");
+  const jobId = String(first.jobId);
+
+  let statusData = first;
+  while (true) {
+    const status = String(statusData?.status ?? "");
+    if (status === "done") {
+      emitQueueStatus({
+        state: "idle",
+        position: null,
+        etaMs: null,
+        chunkDone,
+        chunkTotal,
+      });
+      return (statusData?.results ?? []) as BatchRow[];
+    }
+    if (status === "error") {
+      throw new Error(statusData?.error || "batch queue failed");
+    }
+    emitQueueStatus({
+      state: status === "queued" ? "queued" : "running",
+      position:
+        typeof statusData?.queuePosition === "number"
+          ? statusData.queuePosition
+          : null,
+      etaMs: typeof statusData?.etaMs === "number" ? statusData.etaMs : null,
+      chunkDone,
+      chunkTotal,
+    });
+    await new Promise((r) => setTimeout(r, BATCH_QUEUE_POLL_MS));
+    const poll = await fetch(`${LOCAL_SERVER}/eval/batch/${encodeURIComponent(jobId)}`, {
+      signal: AbortSignal.timeout(30_000),
+      cache: "no-store",
+    });
+    if (!poll.ok) throw new Error(`batch poll failed (${poll.status})`);
+    statusData = await poll.json();
+  }
+}
+
 /** Batch eval via laptop server — one HTTP round-trip per chunk (fast over tunnel). */
 export async function evaluateFensBatch(
   fens: string[],
@@ -98,39 +212,25 @@ export async function evaluateFensBatch(
 
   const unique = [...new Set(fens)];
   let done = 0;
+  emitQueueStatus({
+    state: "idle",
+    position: null,
+    etaMs: null,
+    chunkDone: 0,
+    chunkTotal: unique.length,
+  });
 
   for (let i = 0; i < unique.length; i += BATCH_CHUNK_SIZE) {
     const chunk = unique.slice(i, i + BATCH_CHUNK_SIZE);
     try {
-      const res = await fetch(`${LOCAL_SERVER}/eval/batch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fens: chunk, depth }),
-        signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        probeState = "unknown";
-        break;
+      let rows: BatchRow[];
+      try {
+        rows = await runBatchChunkQueued(chunk, depth, done, unique.length);
+      } catch {
+        // Backward compatibility with older servers that only support blocking /eval/batch.
+        rows = await runBatchChunkLegacy(chunk, depth);
       }
-      const data = await res.json();
-      const results: Array<{
-        fen?: string;
-        cp?: number;
-        mate?: number;
-        depth?: number;
-        bestMove?: string;
-        pv?: string[];
-        wdl?: { w: number; d: number; l: number };
-        error?: string;
-      }> = data?.results ?? [];
-      for (let j = 0; j < chunk.length; j++) {
-        const fen = chunk[j];
-        const row = results[j];
-        if (!row || row.error) continue;
-        const ev = rawToEvalResult(row);
-        if (ev) out.set(fen, ev);
-      }
+      applyBatchRows(out, chunk, rows);
       done += chunk.length;
       onProgress?.(done, unique.length);
     } catch {
@@ -139,6 +239,13 @@ export async function evaluateFensBatch(
     }
   }
 
+  emitQueueStatus({
+    state: "idle",
+    position: null,
+    etaMs: null,
+    chunkDone: done,
+    chunkTotal: unique.length,
+  });
   nativeEngineExclusive = out.size > 0;
   return out;
 }

@@ -19,6 +19,7 @@ import {
   setCloudOnlyMode,
   getEvalBackend,
   refreshNativeEngineProbe,
+  subscribeEvalQueueStatus,
 } from "./engine/evaluationService";
 import { MoveReviewPanel } from "./components/MoveReviewPanel";
 import { EvalBadge } from "./components/EvalBadge";
@@ -189,6 +190,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [analysisElapsedSec, setAnalysisElapsedSec] = useState(0);
+  const [engineQueue, setEngineQueue] = useState<{
+    state: "idle" | "queued" | "running";
+    position: number | null;
+    etaMs: number | null;
+  }>({ state: "idle", position: null, etaMs: null });
   /** List-row id for the PGN currently shown on the board. */
   const [sessionGameId, setSessionGameId] = useState<string | null>(null);
   /**
@@ -716,6 +722,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [analysisRunning, analysisStartedAt]);
+
+  useEffect(() => {
+    return subscribeEvalQueueStatus((status) => {
+      setEngineQueue({
+        state: status.state,
+        position: status.position,
+        etaMs: status.etaMs,
+      });
+    });
+  }, []);
 
   const runAnalysis = useCallback(
     async (pgnStr: string, options: { visible: boolean }) => {
@@ -1539,10 +1555,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       : -1;
   const analyzingMoveSan =
     analyzingReplayPly >= 0 ? replayFrames[analyzingReplayPly]?.san : undefined;
-  const analysisStage = analysisStageLabel(progressPercent, depth);
-  const analysisEtaLabel = formatEtaGuess(
-    remainingEtaSeconds(analysisRemainingMs)
-  );
+  const analysisStage =
+    engineQueue.state === "queued"
+      ? `Queued for engine${engineQueue.position ? ` · #${engineQueue.position}` : ""}`
+      : analysisStageLabel(progressPercent, depth);
+  const queueEta =
+    engineQueue.state === "queued" && engineQueue.etaMs != null
+      ? remainingEtaSeconds(engineQueue.etaMs)
+      : null;
+  const analysisEtaLabel =
+    engineQueue.state === "queued"
+      ? queueEta != null
+        ? `Queue wait · ${formatEtaGuess(queueEta) ?? "estimate"}`
+        : "Queue wait · estimate"
+      : formatEtaGuess(remainingEtaSeconds(analysisRemainingMs));
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const activeReview = useMemo(() => {

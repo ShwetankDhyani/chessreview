@@ -12,6 +12,7 @@
 import { createServer } from "http";
 import { spawn } from "child_process";
 import { accessSync, constants, existsSync, readFileSync } from "fs";
+import { randomBytes } from "crypto";
 import { homedir } from "os";
 import { join } from "path";
 import { URL } from "url";
@@ -73,9 +74,9 @@ const DEDICATED =
 const LAPTOP_MODE = !DEDICATED && process.env.STOCKFISH_LAPTOP_MODE !== "0";
 
 function autoThreads() {
-  // i5 8th gen class: 4 cores — leave headroom for Node + cloudflared + GNOME
+  // Dedicated host: prioritize fastest single review while keeping one core free.
   if (DEDICATED) {
-    return Math.max(2, Math.min(3, CPU_COUNT - 2));
+    return Math.max(2, Math.min(6, CPU_COUNT - 1));
   }
   if (LAPTOP_MODE || RAM_GB < 8) {
     return Math.max(1, Math.min(2, Math.floor(CPU_COUNT / 2)));
@@ -84,7 +85,8 @@ function autoThreads() {
 }
 
 function autoHashMb() {
-  if (DEDICATED && RAM_GB >= 6) return 384;
+  if (DEDICATED && RAM_GB >= 12) return 1024;
+  if (DEDICATED && RAM_GB >= 6) return 768;
   if (RAM_GB < 4) return 64;
   if (RAM_GB < 8) return 128;
   if (LAPTOP_MODE) return 256;
@@ -184,6 +186,12 @@ async function init() {
 const evalCache = new Map();
 let cacheHits = 0;
 let cacheMisses = 0;
+let avgBatchMsPerFen = 220;
+
+const batchJobs = new Map();
+const batchQueue = [];
+let activeBatchJobId = null;
+const BATCH_JOB_TTL_MS = 10 * 60 * 1000;
 
 function cacheKey(fen, depth) {
   return `${depth}:${fen}`;
@@ -227,6 +235,142 @@ function evaluate(fen, depth = 16) {
       console.error("Eval error:", e.message);
       return { cp: 0, mate: undefined, depth: 0 };
     }));
+}
+
+function newJobId() {
+  return randomBytes(8).toString("base64url");
+}
+
+function estimateBatchMs(fenCount) {
+  const perFen = Math.max(80, avgBatchMsPerFen);
+  return Math.round(900 + perFen * Math.max(1, fenCount));
+}
+
+function cleanupBatchJobs() {
+  const now = Date.now();
+  for (const [id, job] of batchJobs) {
+    const ts = job.finishedAtMs ?? job.createdAtMs;
+    if (now - ts > BATCH_JOB_TTL_MS) {
+      batchJobs.delete(id);
+    }
+  }
+}
+
+function queueStatusFor(jobId) {
+  const queueIndex = batchQueue.indexOf(jobId);
+  const queuePosition = queueIndex >= 0 ? queueIndex + 1 : 0;
+  const queueAhead = queueIndex >= 0 ? queueIndex : 0;
+  const active = activeBatchJobId ? batchJobs.get(activeBatchJobId) : null;
+
+  let etaMs = 0;
+  if (queueIndex >= 0) {
+    if (active && active.status === "running") {
+      const elapsed = Date.now() - active.startedAtMs;
+      etaMs += Math.max(0, (active.estimatedMs ?? 0) - elapsed);
+    }
+    for (let i = 0; i < queueIndex; i++) {
+      const queued = batchJobs.get(batchQueue[i]);
+      if (queued) etaMs += queued.estimatedMs ?? estimateBatchMs(queued.fens.length);
+    }
+  } else if (activeBatchJobId === jobId && active && active.status === "running") {
+    const elapsed = Date.now() - active.startedAtMs;
+    etaMs = Math.max(0, (active.estimatedMs ?? 0) - elapsed);
+  }
+
+  return {
+    queuePosition,
+    queueAhead,
+    etaMs,
+  };
+}
+
+function batchJobPayload(job) {
+  const status = queueStatusFor(job.id);
+  return {
+    jobId: job.id,
+    status: job.status,
+    depth: job.depth,
+    total: job.fens.length,
+    done: job.done,
+    queuePosition: status.queuePosition,
+    queueAhead: status.queueAhead,
+    etaMs: status.etaMs,
+    estimatedMs: job.estimatedMs,
+    createdAtMs: job.createdAtMs,
+    startedAtMs: job.startedAtMs ?? null,
+    finishedAtMs: job.finishedAtMs ?? null,
+    results: job.status === "done" ? job.results : undefined,
+    error: job.status === "error" ? job.error : undefined,
+  };
+}
+
+async function processBatchJob(job) {
+  job.status = "running";
+  job.startedAtMs = Date.now();
+  const started = Date.now();
+  const results = [];
+
+  try {
+    for (const fen of job.fens) {
+      if (typeof fen !== "string" || !fen) {
+        results.push({ error: "invalid fen" });
+        job.done++;
+        continue;
+      }
+      const raw = await evaluate(fen, job.depth);
+      results.push({ fen, ...flipForWhite(fen, raw) });
+      job.done++;
+    }
+    job.results = results;
+    job.status = "done";
+    job.finishedAtMs = Date.now();
+  } catch (e) {
+    job.status = "error";
+    job.error = e instanceof Error ? e.message : "Batch failed";
+    job.finishedAtMs = Date.now();
+  } finally {
+    const elapsed = Math.max(1, Date.now() - started);
+    const perFen = elapsed / Math.max(1, job.fens.length);
+    avgBatchMsPerFen = Math.round(avgBatchMsPerFen * 0.7 + perFen * 0.3);
+  }
+}
+
+function pumpBatchQueue() {
+  if (activeBatchJobId || batchQueue.length === 0) return;
+  const nextId = batchQueue.shift();
+  const job = batchJobs.get(nextId);
+  if (!job) {
+    pumpBatchQueue();
+    return;
+  }
+  activeBatchJobId = nextId;
+  void processBatchJob(job).finally(() => {
+    activeBatchJobId = null;
+    cleanupBatchJobs();
+    pumpBatchQueue();
+  });
+}
+
+function enqueueBatchJob(fens, depth) {
+  cleanupBatchJobs();
+  const id = newJobId();
+  const job = {
+    id,
+    status: "queued",
+    fens,
+    depth,
+    done: 0,
+    results: null,
+    error: null,
+    createdAtMs: Date.now(),
+    startedAtMs: null,
+    finishedAtMs: null,
+    estimatedMs: estimateBatchMs(fens.length),
+  };
+  batchJobs.set(id, job);
+  batchQueue.push(id);
+  pumpBatchQueue();
+  return job;
 }
 
 async function _evaluate(fen, depth) {
@@ -406,6 +550,7 @@ const server = createServer(async (req, res) => {
         dedicated: DEDICATED,
         laptopMode: LAPTOP_MODE,
         ramGb: Math.floor(RAM_GB),
+        cpuCount: CPU_COUNT,
         maxBatch: MAX_BATCH,
         movetimeMs: MOVETIME_MS > 0 ? MOVETIME_MS : null,
         adminConfigured: adminSecret.length > 0,
@@ -429,6 +574,13 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify({ error: `max ${MAX_BATCH} fens per batch` }));
         return;
       }
+      if (body?.async === true || body?.async === 1 || body?.mode === "queue") {
+        const job = enqueueBatchJob(fens, depth);
+        const payload = batchJobPayload(job);
+        res.writeHead(202);
+        res.end(JSON.stringify(payload));
+        return;
+      }
       const results = [];
       for (const fen of fens) {
         if (typeof fen !== "string" || !fen) {
@@ -444,6 +596,22 @@ const server = createServer(async (req, res) => {
       res.writeHead(400);
       res.end(JSON.stringify({ error: e.message }));
     }
+    return;
+  }
+
+  const batchJobMatch = url.pathname.match(/^\/eval\/batch\/([^/]+)$/);
+  if (batchJobMatch && req.method === "GET") {
+    cleanupBatchJobs();
+    const id = decodeURIComponent(batchJobMatch[1]);
+    const job = batchJobs.get(id);
+    if (!job) {
+      res.writeHead(404);
+      res.end(JSON.stringify({ error: "Batch job not found" }));
+      return;
+    }
+    const payload = batchJobPayload(job);
+    res.writeHead(job.status === "queued" || job.status === "running" ? 202 : 200);
+    res.end(JSON.stringify(payload));
     return;
   }
 
