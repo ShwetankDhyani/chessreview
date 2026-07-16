@@ -55,7 +55,7 @@ export function SiteFooter() {
               }}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              Support Us
+              Free Coffee!
             </button>
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">

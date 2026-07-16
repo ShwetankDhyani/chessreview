@@ -59,7 +59,7 @@ export default function PrivacyPage() {
               Questions? Use{" "}
               <strong className="text-chess-subtext font-medium">Contact</strong>{" "}
               or{" "}
-              <strong className="text-chess-subtext font-medium">Support Us</strong>{" "}
+              <strong className="text-chess-subtext font-medium">Free Coffee!</strong>{" "}
               in the site footer.
             </p>
           </section>
