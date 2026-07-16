@@ -457,12 +457,12 @@ export default function BlogPostPage() {
     <SiteChrome title="Blog">
       <div className="relative">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-72
-            bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.11),transparent_60%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-60
+            bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.10),transparent_60%)]"
           aria-hidden
         />
 
-        <main className="relative max-w-2xl mx-auto px-4 py-6 sm:py-9 pb-12 space-y-8">
+        <main className="relative max-w-2xl mx-auto px-4 py-5 sm:py-7 pb-10 space-y-7">
           <Link
             to="/blog"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-chess-muted hover:text-chess-accent transition-colors"
@@ -484,7 +484,7 @@ export default function BlogPostPage() {
           {post && !loading && (
             <article className="relative">
               {post.coverImage ? (
-                <div className="relative mb-7 overflow-hidden rounded-2xl border border-chess-border/80 shadow-[0_16px_48px_rgba(0,0,0,0.3)]">
+                <div className="relative mb-6 overflow-hidden rounded-xl border border-chess-border/80 shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
                   <img
                     src={post.coverImage}
                     alt=""
@@ -504,31 +504,31 @@ export default function BlogPostPage() {
                   <BlogPinnedBadge />
                 </div>
               )}
-              <h1 className="text-3xl sm:text-[2.15rem] font-bold text-chess-text leading-[1.15] tracking-tight">
+              <h1 className="text-[26px] sm:text-[30px] font-bold text-chess-text leading-[1.15] tracking-tight">
                 {post.title}
               </h1>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-chess-border/70 bg-chess-panel/70 px-2.5 py-1">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-chess-accent/20 text-[11px] font-bold text-chess-accent">
+              <div className="mt-3.5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-chess-border/70 bg-chess-panel/70 px-2 py-0.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-chess-accent/20 text-[10px] font-bold text-chess-accent">
                     {initialOf(post.authorName)}
                   </span>
-                  <span className="text-xs font-medium text-chess-subtext">{post.authorName}</span>
+                  <span className="text-[11px] font-medium text-chess-subtext">{post.authorName}</span>
                 </span>
                 <time
                   dateTime={post.createdAt}
-                  className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2.5 py-1 text-[11px] tabular-nums text-chess-muted"
+                  className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2 py-0.5 text-[11px] tabular-nums text-chess-muted"
                 >
                   {formatBlogDate(post.createdAt)}
                 </time>
                 {post.updatedAt !== post.createdAt && (
-                  <span className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2.5 py-1 text-[11px] text-chess-muted">
+                  <span className="rounded-full border border-chess-border/60 bg-chess-bg/50 px-2 py-0.5 text-[11px] text-chess-muted">
                     Updated {formatBlogDate(post.updatedAt)}
                   </span>
                 )}
               </div>
 
-              <div className="mt-8 rounded-2xl border border-chess-border/70 bg-gradient-to-b from-chess-panel/50 to-transparent px-4 py-5 sm:px-6 sm:py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+              <div className="mt-6 rounded-xl border border-chess-border/70 bg-gradient-to-b from-chess-panel/50 to-transparent px-4 py-5 sm:px-5 sm:py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                 <div className="blog-prose">{renderBlogMarkdown(post.body)}</div>
               </div>
             </article>

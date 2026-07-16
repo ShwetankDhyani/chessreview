@@ -19,11 +19,11 @@ function PostCard({
   return (
     <Link
       to={`/blog/${post.slug}`}
-      className={`group relative block overflow-hidden rounded-2xl border border-chess-border/80
+      className={`group relative block overflow-hidden rounded-xl border border-chess-border/70
         bg-gradient-to-br from-chess-panel via-chess-panel to-chess-bg
-        shadow-[0_12px_40px_rgba(0,0,0,0.28)]
-        transition-all duration-300
-        hover:border-chess-accent/40 hover:shadow-[0_16px_48px_rgba(0,0,0,0.35),0_0_0_1px_rgba(150,188,75,0.12)]
+        shadow-[0_6px_22px_rgba(0,0,0,0.22)]
+        transition-all duration-200
+        hover:border-chess-accent/35 hover:shadow-[0_10px_28px_rgba(0,0,0,0.28)]
         hover:-translate-y-0.5`}
     >
       <div
@@ -33,7 +33,7 @@ function PostCard({
       />
 
       {post.coverImage ? (
-        <div className={`relative overflow-hidden ${featured ? "h-48 sm:h-56" : "h-36"}`}>
+        <div className={`relative overflow-hidden ${featured ? "h-40 sm:h-48" : "h-28"}`}>
           <img
             src={post.coverImage}
             alt=""
@@ -44,7 +44,7 @@ function PostCard({
         </div>
       ) : (
         <div
-          className={`relative overflow-hidden ${featured ? "h-28 sm:h-32" : "h-20"}
+          className={`relative overflow-hidden ${featured ? "h-24 sm:h-28" : "h-16"}
             bg-[linear-gradient(135deg,#3a3633_0%,#2a2825_45%,#1f3a12_100%)]`}
         >
           <div
@@ -52,7 +52,7 @@ function PostCard({
               bg-[radial-gradient(circle_at_20%_30%,rgba(150,188,75,0.9),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(150,188,75,0.35),transparent_40%)]"
             aria-hidden
           />
-          <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2 text-chess-accent/80">
+          <div className="absolute bottom-2 left-3 right-3 flex items-center gap-1.5 text-chess-accent/80">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M5.5 21h13l-.7-3.4H6.2L5.5 21zM6.5 16h11l-.5-2H7L6.5 16zM12 3a1 1 0 0 1 1 1v1h-2V4a1 1 0 0 1 1-1z" />
             </svg>
@@ -63,7 +63,7 @@ function PostCard({
         </div>
       )}
 
-      <div className={`relative ${featured ? "p-5 sm:p-6" : "p-4 sm:p-5"} space-y-3`}>
+      <div className={`relative ${featured ? "p-4 sm:p-5" : "p-3.5 sm:p-4"} space-y-2.5`}>
         <div className="flex flex-wrap items-center gap-2">
           {post.pinned && <BlogPinnedBadge />}
           {featured && !post.pinned && (
@@ -80,28 +80,28 @@ function PostCard({
 
         <h2
           className={`font-bold text-chess-text leading-snug tracking-tight group-hover:text-white transition-colors
-            ${featured ? "text-xl sm:text-2xl" : "text-base sm:text-lg"}`}
+            ${featured ? "text-lg sm:text-xl" : "text-[15px] sm:text-base"}`}
         >
           {post.title}
         </h2>
 
         <p
           className={`text-chess-subtext leading-relaxed ${
-            featured ? "text-sm sm:text-[15px] line-clamp-4" : "text-sm line-clamp-3"
+            featured ? "text-[13px] sm:text-sm line-clamp-3" : "text-[13px] line-clamp-2"
           }`}
         >
           {post.excerpt || post.bodyPreview}
         </p>
 
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-2 text-[11px] text-chess-muted">
+        <div className="flex items-center justify-between gap-3 pt-0.5">
+          <div className="flex items-center gap-2 text-[10px] text-chess-muted">
             <span className="tabular-nums">{formatBlogDate(post.createdAt)}</span>
             <span className="h-1 w-1 rounded-full bg-chess-border-strong" aria-hidden />
             <span>
               {post.replyCount} {post.replyCount === 1 ? "comment" : "comments"}
             </span>
           </div>
-          <span className="text-[11px] font-semibold text-chess-accent opacity-0 translate-x-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
+          <span className="text-[10px] font-semibold text-chess-accent opacity-0 translate-x-[-4px] transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0">
             Read →
           </span>
         </div>
@@ -142,20 +142,20 @@ export default function BlogPage() {
     <SiteChrome title="Blog">
       <div className="relative">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-64
+          className="pointer-events-none absolute inset-x-0 top-0 h-48
             bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.12),transparent_65%)]"
           aria-hidden
         />
 
-        <main className="relative max-w-2xl mx-auto px-4 py-7 sm:py-10 space-y-6">
-          <header className="space-y-3 pb-2">
+        <main className="relative max-w-2xl mx-auto px-4 py-5 sm:py-7 space-y-5">
+          <header className="space-y-2.5 pb-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90">
               Journal
             </p>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
+            <h1 className="text-[26px] sm:text-[30px] font-bold tracking-tight text-chess-text">
               From the board
             </h1>
-            <p className="text-sm sm:text-[15px] text-chess-subtext leading-relaxed max-w-md">
+            <p className="text-[13px] sm:text-sm text-chess-subtext leading-relaxed max-w-md">
               Notes on building ChessReview — updates, ideas, and messages for players who use it.
             </p>
             <div className="h-px w-16 bg-gradient-to-r from-chess-accent/70 to-transparent" />
@@ -166,7 +166,7 @@ export default function BlogPage() {
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-36 rounded-2xl border border-chess-border/60 bg-chess-panel/40 animate-pulse"
+                  className="h-28 rounded-xl border border-chess-border/60 bg-chess-panel/40 animate-pulse"
                 />
               ))}
             </div>
@@ -177,7 +177,7 @@ export default function BlogPage() {
           )}
 
           {!loading && !error && posts.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-chess-border bg-chess-panel/40 px-6 py-14 text-center">
+            <div className="rounded-xl border border-dashed border-chess-border bg-chess-panel/40 px-5 py-12 text-center">
               <p className="text-sm text-chess-subtext">No posts yet.</p>
               <p className="text-xs text-chess-muted mt-1">The first note is on its way.</p>
             </div>
@@ -185,7 +185,7 @@ export default function BlogPage() {
 
           {featured && <PostCard post={featured} featured />}
           {rest.length > 0 && (
-            <div className="space-y-4 pt-1">
+            <div className="space-y-3 pt-1">
               {rest.map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
