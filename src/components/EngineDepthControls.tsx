@@ -48,51 +48,61 @@ export function EngineDepthControls({
   const depths = depthOptions(hasRemoteEngine, engineBackend);
   const depthLabelRetry = ui.tone === "offline" && onRetry;
 
-  const depthLabelInner = (
-    <>
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${styles.dot} ${
-          ui.tone === "offline" ? "animate-pulse" : ""
-        }`}
-        aria-hidden
-      />
-      Depth
-      <span className="sr-only">{ui.shortLabel}</span>
-    </>
+  const statusDot = (
+    <span
+      className={`h-1.5 w-1.5 rounded-full ${styles.dot} ${
+        ui.tone === "offline" ? "animate-pulse" : ""
+      }`}
+      aria-hidden
+    />
   );
 
   const depthLabel = depthLabelRetry ? (
     <button
       type="button"
       onClick={onRetry}
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider ${styles.label} hover:underline`}
+      className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${styles.label} hover:underline`}
       title={ui.title}
     >
-      {depthLabelInner}
+      {statusDot}
+      Depth
+      <span className="sr-only">{ui.shortLabel}</span>
     </button>
   ) : (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider ${styles.label}`}
+      className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${styles.label}`}
       title={ui.title}
     >
-      {depthLabelInner}
+      {statusDot}
+      Depth
+      <span className="sr-only">{ui.shortLabel}</span>
     </span>
   );
 
   return (
     <>
-      <div className="hidden lg:inline-flex items-center gap-2 h-9 px-2.5 rounded-lg border border-chess-border bg-chess-surface">
+      {/* Desktop: segmented depth strip */}
+      <div className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-chess-border-strong bg-chess-surface/90 px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
         {depthLabel}
         <div className="h-4 w-px bg-chess-border" aria-hidden />
-        <div className="flex items-center gap-1">
+        <div
+          className="flex items-center gap-0.5 rounded-md bg-chess-bg/50 p-0.5"
+          role="group"
+          aria-label="Analysis depth"
+        >
           {depths.map((d) => (
             <button
               key={d}
               type="button"
-              onClick={() => { hapticSelection(); onDepthChange(d); }}
+              onClick={() => {
+                hapticSelection();
+                onDepthChange(d);
+              }}
               title={`${depthHint(d)} · ${ui.title}`}
-              className={`text-xs px-2 py-0.5 rounded font-mono font-semibold transition-colors border ${
-                depth === d ? styles.depthActive : styles.depthIdle
+              className={`min-w-[1.85rem] rounded px-1.5 py-0.5 font-mono text-[11px] font-bold transition-all ${
+                depth === d
+                  ? styles.depthActive
+                  : `${styles.depthIdle} border-transparent`
               }`}
             >
               {d}
@@ -101,32 +111,33 @@ export function EngineDepthControls({
         </div>
       </div>
 
-      <div className="lg:hidden relative">
+      {/* Mobile: compact depth chip */}
+      <div className="relative lg:hidden">
         <button
           type="button"
-          onClick={() => { hapticSelection(); (ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu)(); }}
-          className={`inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg border font-mono font-semibold text-xs transition-colors ${styles.mobileBtn}`}
+          onClick={() => {
+            hapticSelection();
+            (ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu)();
+          }}
+          aria-expanded={showDepthMenu}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 font-mono text-xs font-bold transition-colors ${styles.mobileBtn}`}
           title={ui.title}
         >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${styles.dot} ${
-              ui.tone === "offline" ? "animate-pulse" : ""
-            }`}
-            aria-hidden
-          />
+          {statusDot}
           D{depth}
         </button>
         {showDepthMenu && (
-          <div className="absolute right-0 top-full mt-1.5 bg-chess-panel border border-chess-border rounded-lg shadow-xl z-50 flex gap-1 p-1.5">
+          <div className="absolute right-0 top-[calc(100%+0.4rem)] z-50 flex gap-0.5 rounded-xl border border-chess-border bg-chess-panel p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
             {depths.map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => {
+                  hapticSelection();
                   onDepthChange(d);
                   onCloseDepthMenu();
                 }}
-                className={`text-xs px-2 py-1 rounded font-mono font-semibold border ${
+                className={`min-w-[2rem] rounded-md px-2 py-1.5 font-mono text-xs font-bold border ${
                   depth === d ? styles.depthActive : styles.depthIdle
                 }`}
               >

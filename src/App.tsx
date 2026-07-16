@@ -57,7 +57,7 @@ import {
   playMoveFeedback,
   unlockChessAudio,
 } from "./utils/chessSounds";
-import { FeedbackSettings } from "./components/FeedbackSettings";
+import { ProfileMenu } from "./components/ProfileMenu";
 import { computeDesktopBoardSize, computeMobileBoardSize, MOBILE_LAYOUT } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
@@ -1685,10 +1685,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     !continuationFen &&
     !showBoardAnalyzeOverlay;
 
-  const profileInitial = activeUser
-    ? activeUser.name.trim().charAt(0).toUpperCase() || "?"
-    : null;
-
   return (
     <div className="h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
       <h1 className="sr-only">
@@ -1714,199 +1710,50 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         </div>
         <div className="flex-1 min-w-0" />
 
-        <EngineDepthControls
-          depth={depth}
-          engineBackend={engineBackend}
-          hasRemoteEngine={hasRemoteEngine}
-          onDepthChange={handleDepthChange}
-          onRetry={hasRemoteEngine ? () => void recheckEngine() : undefined}
-          showDepthMenu={showDepth}
-          onToggleDepthMenu={() => setShowDepth((v) => !v)}
-          onCloseDepthMenu={() => setShowDepth(false)}
-        />
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <EngineDepthControls
+            depth={depth}
+            engineBackend={engineBackend}
+            hasRemoteEngine={hasRemoteEngine}
+            onDepthChange={handleDepthChange}
+            onRetry={hasRemoteEngine ? () => void recheckEngine() : undefined}
+            showDepthMenu={showDepth}
+            onToggleDepthMenu={() => setShowDepth((v) => !v)}
+            onCloseDepthMenu={() => setShowDepth(false)}
+          />
 
-        {/* ── Profile Dropdown ── */}
-        <div className="flex items-center relative flex-shrink-0">
-          <button
-            onClick={() => {
-              hapticSelection();
-              setShowAddProfile((v) => !v);
+          <ProfileMenu
+            open={showAddProfile}
+            onToggle={() => setShowAddProfile((v) => !v)}
+            onClose={() => setShowAddProfile(false)}
+            profiles={profiles}
+            activeProfileIdx={activeProfileIdx}
+            activeUser={activeUser}
+            onSwitchProfile={switchProfile}
+            onRemoveProfile={removeProfile}
+            addPlatform={addProfilePlatform}
+            onAddPlatformChange={(p) => {
+              setAddProfilePlatform(p);
+              setAddProfileError(null);
             }}
-            aria-label={activeUser ? `Profile: ${activeUser.name}` : "Sign in"}
-            className="flex items-center gap-1.5 sm:gap-2 h-9 px-1.5 sm:px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface hover:bg-chess-hover hover:border-chess-accent/40 transition-colors"
-          >
-            {activeUser ? (
-              <>
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-chess-accent text-white text-[11px] font-bold select-none shadow-sm">
-                  {profileInitial}
-                </span>
-                <span className="hidden sm:inline text-sm font-semibold text-chess-text max-w-[120px] truncate">
-                  {activeUser.name}
-                </span>
-                <span className="text-[9px] text-chess-muted flex-shrink-0">▼</span>
-              </>
-            ) : (
-              <>
-                <svg
-                  className="h-4 w-4 text-chess-subtext"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                </svg>
-                <span className="hidden sm:inline text-sm font-semibold text-chess-text">
-                  Sign in
-                </span>
-                <span className="text-[9px] text-chess-muted flex-shrink-0">▼</span>
-              </>
-            )}
-          </button>
-
-          {showAddProfile && (
-            <div
-              className="fixed inset-0 z-[60] bg-black/60 lg:hidden"
-              onClick={() => setShowAddProfile(false)}
-              aria-hidden
-            />
-          )}
-
-          {/* Dropdown — full-width sheet on mobile, anchored panel on desktop */}
-          {showAddProfile && (
-            <div className="fixed left-2 right-2 top-12 z-[70] max-h-[min(75dvh,520px)] overflow-y-auto rounded-xl border border-chess-border bg-chess-panel shadow-2xl flex flex-col lg:fixed lg:inset-auto lg:absolute lg:right-0 lg:top-full lg:left-auto lg:mt-2 lg:w-72 lg:max-h-96 lg:rounded-lg">
-              {profiles.length > 0 && (
-                <div className="flex flex-col border-b border-chess-border max-h-48 overflow-y-auto">
-                  <div className="text-xs font-semibold text-chess-muted px-3 py-2 bg-chess-bg">Your Profiles</div>
-                  {profiles.map((p, i) => (
-                    <div key={`${p.platform}-${p.name}`} className="flex flex-col">
-                      <div
-                        className={`flex items-center justify-between px-3 py-2 transition-colors ${
-                          i === activeProfileIdx ? "bg-move-best/15 border-l-2 border-move-best" : "hover:bg-chess-hover border-l-2 border-transparent"
-                        }`}
-                      >
-                        <button
-                          onClick={() => {
-                            hapticSelection();
-                            switchProfile(i);
-                            setShowAddProfile(false);
-                          }}
-                          className="flex items-center gap-2 flex-1 text-left min-w-0"
-                        >
-                          <span className="text-sm leading-none">{p.platform === "lichess" ? "🏳" : "♟"}</span>
-                          <span className={`text-sm font-semibold truncate ${i === activeProfileIdx ? "text-move-best" : "text-chess-text"}`}>
-                            {p.name}
-                          </span>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            notifyWarning();
-                            removeProfile(i);
-                          }}
-                          title="Remove profile"
-                          className="w-6 h-6 flex items-center justify-center rounded text-chess-muted hover:bg-move-blunder hover:text-white transition-colors"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      {i === activeProfileIdx && activeUser && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            hapticTap();
-                            setShowSavedGamesModal(true);
-                            void refreshSavedReviews();
-                          }}
-                          className="flex items-center justify-between gap-2 pl-9 pr-3 py-2 text-left border-l-2 border-move-best/40 bg-black/15 hover:bg-chess-hover/60 transition-colors"
-                        >
-                          <span className="text-xs text-chess-subtext">Saved games</span>
-                          <span className="text-[10px] text-chess-muted tabular-nums">
-                            {savedReviewsLoading ? "…" : savedReviews.length}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Add New Profile Section */}
-              {profiles.length < 5 ? (
-                <div className="p-3 bg-chess-panel">
-                  <div className="text-xs font-semibold text-chess-text mb-2">Add New Profile</div>
-                  <div className="flex rounded overflow-hidden border border-chess-border text-xs font-semibold mb-2">
-                    <button
-                      onClick={() => {
-                        hapticSelection();
-                        setAddProfilePlatform("chesscom");
-                        setAddProfileError(null);
-                      }}
-                      className={`flex-1 py-1.5 flex items-center justify-center gap-1 transition-colors ${
-                        addProfilePlatform === "chesscom" ? "bg-move-best text-white" : "bg-chess-bg text-chess-muted hover:text-chess-text"
-                      }`}
-                    >♟ Chess.com</button>
-                    <button
-                      onClick={() => {
-                        hapticSelection();
-                        setAddProfilePlatform("lichess");
-                        setAddProfileError(null);
-                      }}
-                      className={`flex-1 py-1.5 flex items-center justify-center gap-1 border-l border-chess-border transition-colors ${
-                        addProfilePlatform === "lichess" ? "bg-[#b58863] text-white" : "bg-chess-bg text-chess-muted hover:text-chess-text"
-                      }`}
-                    >🏳 Lichess</button>
-                  </div>
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (addProfileName.trim() && !addProfileLoading) {
-                      addProfile(addProfileName.trim(), addProfilePlatform);
-                    }
-                  }}>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          value={addProfileName}
-                          onChange={(e) => { setAddProfileName(e.target.value); setAddProfileError(null); }}
-                          placeholder="Username"
-                          className="flex-1 min-w-0 bg-chess-bg border border-chess-border rounded px-2 py-1.5 text-xs text-chess-text placeholder-chess-muted focus:outline-none focus:border-move-best"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!addProfileName.trim() || addProfileLoading}
-                          className="px-3 py-1.5 w-14 bg-move-best text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors disabled:opacity-40 flex justify-center items-center"
-                        >
-                          {addProfileLoading ? <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Add"}
-                        </button>
-                        {addProfileLoading && (
-                          <button
-                            type="button"
-                            onClick={cancelAddProfile}
-                            className="px-2 py-1.5 text-[11px] font-semibold rounded border border-chess-border text-chess-muted hover:text-chess-text"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                      {addProfileError && (
-                        <div className="text-[10px] text-move-blunder leading-tight px-1 font-semibold">{addProfileError}</div>
-                      )}
-                    </div>
-                  </form>
-                </div>
-              ) : (
-                <div className="p-3 text-xs text-chess-muted text-center italic bg-chess-bg">
-                  Maximum of 5 profiles reached.
-                </div>
-              )}
-              <FeedbackSettings />
-            </div>
-          )}
+            addName={addProfileName}
+            onAddNameChange={(v) => {
+              setAddProfileName(v);
+              setAddProfileError(null);
+            }}
+            addLoading={addProfileLoading}
+            addError={addProfileError}
+            onAddSubmit={() =>
+              void addProfile(addProfileName.trim(), addProfilePlatform)
+            }
+            onCancelAdd={cancelAddProfile}
+            savedCount={savedReviews.length}
+            savedLoading={savedReviewsLoading}
+            onOpenSavedGames={() => {
+              setShowSavedGamesModal(true);
+              void refreshSavedReviews();
+            }}
+          />
         </div>
       </header>
 
