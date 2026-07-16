@@ -3,7 +3,9 @@
  * Used by Vercel /api/game-import and Vite dev middleware.
  */
 
-const USER_AGENT = "ChessReviewApp/1.0";
+import { chesscomFetch, CHESSCOM_USER_AGENT } from "./chesscomClient.mjs";
+
+const USER_AGENT = CHESSCOM_USER_AGENT;
 
 /** Lichess game ids are 8 chars; review links may append a suffix (e.g. /dOgzWsouXS6w). */
 function parseLichessGameId(pathname) {
@@ -125,9 +127,8 @@ async function fetchLichessPgn(gameId) {
 
 async function fetchChessComMonth(username, year, month) {
   const mm = String(month).padStart(2, "0");
-  const res = await fetch(
-    `https://api.chess.com/pub/player/${username.toLowerCase()}/games/${year}/${mm}`,
-    { headers: { "User-Agent": USER_AGENT } }
+  const res = await chesscomFetch(
+    `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/${year}/${mm}`
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -143,9 +144,8 @@ async function fetchChessComMonth(username, year, month) {
 
 async function fetchChessComMeta(gameId, gameType) {
   const path = gameType === "daily" ? "daily" : "live";
-  const res = await fetch(
-    `https://www.chess.com/callback/${path}/game/${gameId}`,
-    { headers: { "User-Agent": USER_AGENT } }
+  const res = await chesscomFetch(
+    `https://www.chess.com/callback/${path}/game/${encodeURIComponent(gameId)}`
   );
   if (!res.ok) {
     throw new Error(
@@ -163,12 +163,16 @@ async function fetchChessComMeta(gameId, gameType) {
 
 async function findChessComPgn(white, black, endTime) {
   const d = new Date(endTime * 1000);
-  const months = [];
-  for (let i = 0; i < 6; i++) {
-    const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    months.push({ y: dt.getFullYear(), m: dt.getMonth() + 1 });
-  }
+  // Only the game month (+1 lookback) — avoid 6×2 archive hammering.
+  const months = [
+    { y: d.getFullYear(), m: d.getMonth() + 1 },
+    (() => {
+      const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+      return { y: prev.getFullYear(), m: prev.getMonth() + 1 };
+    })(),
+  ];
 
+  // Prefer white's archive first (one player per month) before trying black.
   for (const { y, m } of months) {
     for (const player of [white, black]) {
       const games = await fetchChessComMonth(player, y, m);

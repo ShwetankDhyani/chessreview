@@ -38,6 +38,7 @@ import {
   type SessionReviewPin,
 } from "./utils/sessionReviewPin";
 import { formatChessMoveCounter } from "./utils/pgnPlies";
+import { chesscomFetch, chesscomPlayerUrl } from "./utils/chesscomClient";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
@@ -443,29 +444,37 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     signal?: AbortSignal
   ): Promise<ProfileVerifyResult> => {
     try {
-      const url =
-        platform === "chesscom"
-          ? `https://api.chess.com/pub/player/${encodeURIComponent(name.toLowerCase())}`
-          : `https://lichess.org/api/user/${encodeURIComponent(name.toLowerCase())}`;
-      const res = await fetch(url, {
-        signal,
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
+      if (platform === "chesscom") {
+        const { chesscomFetch, chesscomPlayerUrl } = await import(
+          "./utils/chesscomClient"
+        );
+        const res = await chesscomFetch(chesscomPlayerUrl(name), { signal });
+        if (res.status === 404) return { status: "not_found" };
+        if (!res.ok) return { status: "network" };
+        const data = await res.json();
+        if (data?.url) {
+          // Chess.com API returns `username` in lowercase, but `url` preserves casing.
+          const parts = String(data.url).split("/");
+          return {
+            status: "ok",
+            name: parts[parts.length - 1] || data.username || name,
+          };
+        }
+        return { status: "ok", name: data.username || name };
+      }
+
+      const res = await fetch(
+        `https://lichess.org/api/user/${encodeURIComponent(name.toLowerCase())}`,
+        {
+          signal,
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        }
+      );
       if (res.status === 404) return { status: "not_found" };
       if (!res.ok) return { status: "network" };
       const data = await res.json();
-      if (platform === "chesscom" && data?.url) {
-        // Chess.com API returns `username` in lowercase, but `url` preserves casing.
-        const parts = String(data.url).split("/");
-        return {
-          status: "ok",
-          name: parts[parts.length - 1] || data.username || name,
-        };
-      }
-      if (platform === "lichess" && !data?.id && !data?.username) {
-        return { status: "not_found" };
-      }
+      if (!data?.id && !data?.username) return { status: "not_found" };
       return { status: "ok", name: data.username || data.id || name };
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
