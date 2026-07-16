@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { hapticSoft, hapticTap } from "../utils/chessSounds";
+import { hapticSoft } from "../utils/chessSounds";
 
 export interface SupportLink {
   label: string;
@@ -83,12 +83,10 @@ export function HelpModal({
   initial?: "contact" | "support";
 }) {
   const [tab, setTab] = useState<"contact" | "support">(initial);
-  const [coffeePrank, setCoffeePrank] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTab(initial);
-    setCoffeePrank(false);
   }, [open, initial]);
 
   if (!open) return null;
@@ -115,32 +113,13 @@ export function HelpModal({
         <div className="flex items-start justify-between gap-3 mb-3">
           {readOnlyContact ? (
             <h2 id="help-title" className="text-base font-bold text-chess-text">Contact</h2>
-          ) : coffeePrank ? (
+          ) : (
             <h2
               id="help-title"
               className="support-coffee-prank-title text-base font-bold text-chess-accent"
             >
               …For meee!
             </h2>
-          ) : (
-            <button
-              type="button"
-              id="help-title"
-              onClick={() => {
-                hapticTap();
-                setCoffeePrank(true);
-              }}
-              className="support-free-coffee-title group inline-flex items-center gap-2 text-left rounded-lg -ml-1 px-1 py-0.5 hover:bg-chess-accent/10 transition-colors"
-              aria-label="Free coffee — tap to claim"
-            >
-              <span className="text-base font-bold text-chess-text group-hover:text-white transition-colors">
-                Free
-              </span>
-              <CoffeeMugIcon size={28} />
-              <span className="text-base font-bold text-chess-text group-hover:text-white transition-colors">
-                Coffee!
-              </span>
-            </button>
           )}
           <button
             type="button"
@@ -178,10 +157,6 @@ export function HelpModal({
               </a>
             </div>
           </div>
-        ) : !coffeePrank ? (
-          <p className="text-sm text-chess-muted leading-relaxed">
-            Go on — tap the free coffee up top.
-          </p>
         ) : (
           <div className="support-coffee-reveal space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
