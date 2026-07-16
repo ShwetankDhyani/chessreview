@@ -13,35 +13,6 @@ const BATCH_TIMEOUT_MS = 600_000;
 const BATCH_CHUNK_SIZE = 96;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
-const BATCH_QUEUE_POLL_MS = 1200;
-const ENGINE_REVIEW_LOCK_KEY = "cr:engineReviewLock:v1";
-const ENGINE_REVIEW_LOCK_TTL_MS = parseInt(
-  ((import.meta.env.VITE_ENGINE_REVIEW_LOCK_TTL_MS as string | undefined) ??
-    "300000") as string,
-  10
-);
-const ENGINE_REVIEW_LOCK_POLL_MS = 200;
-
-export interface EvalQueueStatus {
-  state: "idle" | "queued" | "running";
-  position: number | null;
-  etaMs: number | null;
-  chunkDone: number;
-  chunkTotal: number;
-}
-
-const queueListeners = new Set<(status: EvalQueueStatus) => void>();
-
-function emitQueueStatus(status: EvalQueueStatus) {
-  for (const fn of queueListeners) fn(status);
-}
-
-export function subscribeEvalQueueStatus(
-  listener: (status: EvalQueueStatus) => void
-): () => void {
-  queueListeners.add(listener);
-  return () => queueListeners.delete(listener);
-}
 
 type ProbeState = "unknown" | "up" | "down";
 let probeState: ProbeState = "unknown";
@@ -113,117 +84,11 @@ function rawToEvalResult(data: {
   };
 }
 
-type BatchRow = {
-  fen?: string;
-  cp?: number;
-  mate?: number;
-  depth?: number;
-  bestMove?: string;
-  pv?: string[];
-  wdl?: { w: number; d: number; l: number };
-  error?: string;
-};
-
-type BatchJobStatusPayload = {
-  jobId?: string;
-  status?: string;
-  results?: BatchRow[];
-  error?: string;
-  queuePosition?: number;
-  queueAhead?: number;
-  etaMs?: number;
-  estimatedMs?: number;
-};
-
-function applyBatchRows(
-  out: Map<string, EvalResult>,
-  chunk: string[],
-  rows: BatchRow[]
-) {
-  for (let j = 0; j < chunk.length; j++) {
-    const fen = chunk[j];
-    const row = rows[j];
-    if (!row || row.error) continue;
-    const ev = rawToEvalResult(row);
-    if (ev) out.set(fen, ev);
-  }
-}
-
-async function runBatchChunkLegacy(chunk: string[], depth: number): Promise<BatchRow[]> {
-  const res = await fetch(`${LOCAL_SERVER}/eval/batch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fens: chunk, depth }),
-    signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`batch failed (${res.status})`);
-  const data = await res.json();
-  return (data?.results ?? []) as BatchRow[];
-}
-
-async function runBatchChunkQueued(
-  chunk: string[],
-  depth: number,
-  queuePriority: number,
-  chunkDone: number,
-  chunkTotal: number
-): Promise<BatchRow[]> {
-  const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fens: chunk, depth, async: true, queuePriority }),
-    signal: AbortSignal.timeout(60_000),
-    cache: "no-store",
-  });
-  if (!submit.ok) throw new Error(`batch submit failed (${submit.status})`);
-  const first = await submit.json();
-  if (!first?.jobId) throw new Error("batch queue unavailable");
-  const jobId = String(first.jobId);
-
-  let statusData = first;
-  while (true) {
-    const status = String(statusData?.status ?? "");
-    if (status === "done") {
-      emitQueueStatus({
-        state: "idle",
-        position: null,
-        etaMs: null,
-        chunkDone,
-        chunkTotal,
-      });
-      return (statusData?.results ?? []) as BatchRow[];
-    }
-    if (status === "error" || status === "cancelled") {
-      throw new Error(statusData?.error || "batch queue failed");
-    }
-    emitQueueStatus({
-      state: status === "queued" ? "queued" : "running",
-      position:
-        typeof statusData?.queuePosition === "number"
-          ? statusData.queuePosition
-          : null,
-      etaMs: typeof statusData?.etaMs === "number" ? statusData.etaMs : null,
-      chunkDone,
-      chunkTotal,
-    });
-    await new Promise((r) => setTimeout(r, BATCH_QUEUE_POLL_MS));
-    const poll = await fetch(`${LOCAL_SERVER}/eval/batch/${encodeURIComponent(jobId)}`, {
-      signal: AbortSignal.timeout(30_000),
-      cache: "no-store",
-    });
-    if (!poll.ok) throw new Error(`batch poll failed (${poll.status})`);
-    statusData = await poll.json();
-  }
-}
-
 /** Batch eval via laptop server — one HTTP round-trip per chunk (fast over tunnel). */
 export async function evaluateFensBatch(
   fens: string[],
   depth = 16,
-  onProgress?: (done: number, total: number) => void,
-  runId?: string,
-  runPriority?: number
+  onProgress?: (done: number, total: number) => void
 ): Promise<Map<string, EvalResult>> {
   const out = new Map<string, EvalResult>();
   if (!LOCAL_SERVER || fens.length === 0) return out;
@@ -233,143 +98,47 @@ export async function evaluateFensBatch(
 
   const unique = [...new Set(fens)];
   let done = 0;
-  emitQueueStatus({
-    state: "idle",
-    position: null,
-    etaMs: null,
-    chunkDone: 0,
-    chunkTotal: unique.length,
-  });
 
-  const chunks: string[][] = [];
   for (let i = 0; i < unique.length; i += BATCH_CHUNK_SIZE) {
-    chunks.push(unique.slice(i, i + BATCH_CHUNK_SIZE));
-  }
-
-  // Review-friendly scheduling: enqueue *all* chunk jobs for this batch stage
-  // immediately, so concurrent reviews can't ping-pong chunk-by-chunk.
-  const queuePriority = runPriority ?? Date.now();
-  const runIdFinal =
-    runId ?? `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  const submitQueued = async (chunk: string[]): Promise<BatchJobStatusPayload> => {
-    const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fens: chunk,
-        depth,
-        async: true,
-        queuePriority,
-        runId: runIdFinal,
-      }),
-      signal: AbortSignal.timeout(60_000),
-      cache: "no-store",
-    });
-    if (!submit.ok) throw new Error(`batch submit failed (${submit.status})`);
-    return (await submit.json()) as BatchJobStatusPayload;
-  };
-
-  const pollJobUntilDone = async (
-    jobId: string,
-    chunkDone: number,
-    chunkTotal: number,
-    statusData: BatchJobStatusPayload
-  ): Promise<BatchRow[]> => {
-    let current = statusData;
-    while (true) {
-      const status = String(current?.status ?? "");
-      if (status === "done") {
-        emitQueueStatus({
-          state: "idle",
-          position: null,
-          etaMs: null,
-          chunkDone,
-          chunkTotal,
-        });
-        return (current?.results ?? []) as BatchRow[];
-      }
-      if (status === "error" || status === "cancelled") {
-        throw new Error(current?.error || "batch queue failed");
-      }
-      emitQueueStatus({
-        state: status === "queued" ? "queued" : "running",
-        position: typeof current?.queuePosition === "number" ? current.queuePosition : null,
-        etaMs: typeof current?.etaMs === "number" ? current.etaMs : null,
-        chunkDone,
-        chunkTotal,
-      });
-      await new Promise((r) => setTimeout(r, BATCH_QUEUE_POLL_MS));
-      const poll = await fetch(`${LOCAL_SERVER}/eval/batch/${encodeURIComponent(jobId)}`, {
-        signal: AbortSignal.timeout(30_000),
+    const chunk = unique.slice(i, i + BATCH_CHUNK_SIZE);
+    try {
+      const res = await fetch(`${LOCAL_SERVER}/eval/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fens: chunk, depth }),
+        signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
         cache: "no-store",
       });
-      if (!poll.ok) throw new Error(`batch poll failed (${poll.status})`);
-      current = (await poll.json()) as BatchJobStatusPayload;
-    }
-  };
-
-  try {
-    if (chunks.length === 0) return out;
-
-    // Submit first chunk to detect whether async queue is supported.
-    const firstChunk = chunks[0]!;
-    const firstPayload = await submitQueued(firstChunk);
-    const firstJobId = firstPayload?.jobId ? String(firstPayload.jobId) : null;
-    if (!firstJobId) {
-      throw new Error("batch queue unavailable");
-    }
-
-    const jobStatuses: Array<{ jobId: string; statusData: BatchJobStatusPayload }> = [
-      { jobId: firstJobId, statusData: firstPayload },
-    ];
-
-    // Submit remaining chunks immediately to prevent chunk alternation.
-    for (let ci = 1; ci < chunks.length; ci++) {
-      const payload = await submitQueued(chunks[ci]!);
-      const jobId = payload?.jobId ? String(payload.jobId) : null;
-      if (!jobId) throw new Error("batch queue unavailable");
-      jobStatuses.push({ jobId, statusData: payload });
-    }
-
-    // Poll jobs in chunk order, applying results as they complete.
-    for (let ci = 0; ci < chunks.length; ci++) {
-      const chunk = chunks[ci]!;
-      const { jobId, statusData } = jobStatuses[ci]!;
-      try {
-        const rows = await pollJobUntilDone(jobId, done, unique.length, statusData);
-        applyBatchRows(out, chunk, rows);
-        done += chunk.length;
-        onProgress?.(done, unique.length);
-      } catch {
+      if (!res.ok) {
         probeState = "unknown";
         break;
       }
-    }
-  } catch {
-    // Backward compatibility with older servers that only support blocking /eval/batch.
-    out.clear();
-    done = 0;
-    for (const chunk of chunks) {
-      try {
-        const rows = await runBatchChunkLegacy(chunk, depth);
-        applyBatchRows(out, chunk, rows);
-        done += chunk.length;
-        onProgress?.(done, unique.length);
-      } catch {
-        probeState = "unknown";
-        break;
+      const data = await res.json();
+      const results: Array<{
+        fen?: string;
+        cp?: number;
+        mate?: number;
+        depth?: number;
+        bestMove?: string;
+        pv?: string[];
+        wdl?: { w: number; d: number; l: number };
+        error?: string;
+      }> = data?.results ?? [];
+      for (let j = 0; j < chunk.length; j++) {
+        const fen = chunk[j];
+        const row = results[j];
+        if (!row || row.error) continue;
+        const ev = rawToEvalResult(row);
+        if (ev) out.set(fen, ev);
       }
+      done += chunk.length;
+      onProgress?.(done, unique.length);
+    } catch {
+      probeState = "unknown";
+      break;
     }
   }
 
-  emitQueueStatus({
-    state: "idle",
-    position: null,
-    etaMs: null,
-    chunkDone: done,
-    chunkTotal: unique.length,
-  });
   nativeEngineExclusive = out.size > 0;
   return out;
 }
@@ -629,159 +398,43 @@ export async function evaluateFensConsensus(
   policy: ConsensusEvalPolicy,
   onProgress?: (done: number, total: number) => void
 ): Promise<ConsensusEvalOutput> {
-  const runWithEngineLock = async (): Promise<ConsensusEvalOutput> => {
-    const unique = [...new Set(fens)];
-    const total = unique.length;
-    // One queue runId for the whole review-stage (fast + deep) to prevent
-    // interleaving between concurrently running reviews.
-    const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const runPriority = Date.now();
-
-    const fastMap = await evaluateFensBatch(
-      unique,
-      policy.fastDepth,
-      onProgress,
-      runId,
-      runPriority
-    );
-    if (fastMap.size < unique.length) {
-      for (const fen of unique) {
-        if (fastMap.has(fen)) continue;
-        const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
-        if (fallback) fastMap.set(fen, fallback);
-      }
-    }
-
-    const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
-    const deepMap = await evaluateFensBatch(
-      deepenTargets,
-      policy.deepDepth,
-      undefined,
-      runId,
-      runPriority
-    );
-    if (deepMap.size < deepenTargets.length) {
-      for (const fen of deepenTargets) {
-        if (deepMap.has(fen)) continue;
-        const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
-        if (fallback) deepMap.set(fen, fallback);
-      }
-    }
-
-    const merged = new Map<string, EvalResult>();
-    let verified = 0;
+  const unique = [...new Set(fens)];
+  const total = unique.length;
+  const fastMap = await evaluateFensBatch(unique, policy.fastDepth, onProgress);
+  if (fastMap.size < unique.length) {
     for (const fen of unique) {
-      const finalEval = mergeConsensusEval(
-        fastMap.get(fen),
-        deepMap.get(fen),
-        policy
-      );
-      if (finalEval.verified) verified++;
-      merged.set(fen, finalEval);
+      if (fastMap.has(fen)) continue;
+      const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
+      if (fallback) fastMap.set(fen, fallback);
     }
+  }
 
-    return {
-      evals: merged,
-      meta: {
-        evaluated: total,
-        deepened: deepenTargets.length,
-        verified,
-      },
-    };
+  const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
+  const deepMap = await evaluateFensBatch(deepenTargets, policy.deepDepth);
+  if (deepMap.size < deepenTargets.length) {
+    for (const fen of deepenTargets) {
+      if (deepMap.has(fen)) continue;
+      const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
+      if (fallback) deepMap.set(fen, fallback);
+    }
+  }
+
+  const merged = new Map<string, EvalResult>();
+  let verified = 0;
+  for (const fen of unique) {
+    const finalEval = mergeConsensusEval(fastMap.get(fen), deepMap.get(fen), policy);
+    if (finalEval.verified) verified++;
+    merged.set(fen, finalEval);
+  }
+
+  return {
+    evals: merged,
+    meta: {
+      evaluated: total,
+      deepened: deepenTargets.length,
+      verified,
+    },
   };
-
-  // Extra protection: cross-tab lock so canceled/restarted reviews can't
-  // enqueue new engine batches while another review is still running.
-  // This prevents the "Queued #N keeps increasing" ping-pong UX.
-  const isBrowser =
-    typeof window !== "undefined" && typeof document !== "undefined";
-  if (!isBrowser) {
-    return runWithEngineLock();
-  }
-
-  // Best-effort: use the browser's lock manager if available.
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const locks = (navigator as any)?.locks as
-      | {
-          request: (
-            name: string,
-            options: { mode: "exclusive" },
-            callback: () => Promise<unknown>
-          ) => Promise<unknown>;
-        }
-      | undefined;
-    if (locks?.request) {
-      return (await locks.request(
-        "chessreview:engineReview",
-        { mode: "exclusive" },
-        runWithEngineLock
-      )) as ConsensusEvalOutput;
-    }
-  } catch {
-    // fall through to localStorage lock
-  }
-
-  // Fallback: localStorage-based mutex with TTL.
-  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  let contended = false;
-  while (true) {
-    const raw = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
-    let holder: { token: string; ts: number } | null = null;
-    if (raw) {
-      try {
-        holder = JSON.parse(raw);
-      } catch {
-        holder = null;
-      }
-    }
-
-    const now = Date.now();
-    const holderFresh = holder?.ts != null && now - holder.ts < ENGINE_REVIEW_LOCK_TTL_MS;
-    if (!holderFresh) {
-      localStorage.setItem(
-        ENGINE_REVIEW_LOCK_KEY,
-        JSON.stringify({ token, ts: now })
-      );
-      // Re-read to ensure we won.
-      const raw2 = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
-      if (raw2) {
-        try {
-          const holder2 = JSON.parse(raw2) as { token: string; ts: number };
-          if (holder2?.token === token) break;
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    if (!contended) {
-      contended = true;
-      // Show queue label while waiting for lock. No exact position available.
-      emitQueueStatus({
-        state: "queued",
-        position: null,
-        etaMs: null,
-        chunkDone: 0,
-        chunkTotal: 1,
-      });
-    }
-    await new Promise((r) => setTimeout(r, ENGINE_REVIEW_LOCK_POLL_MS));
-  }
-
-  try {
-    return await runWithEngineLock();
-  } finally {
-    const raw = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
-    if (raw) {
-      try {
-        const holder = JSON.parse(raw) as { token: string };
-        if (holder?.token === token) localStorage.removeItem(ENGINE_REVIEW_LOCK_KEY);
-      } catch {
-        // ignore
-      }
-    }
-  }
 }
 
 export let cloudOnlyMode = false;
