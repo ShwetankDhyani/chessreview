@@ -373,6 +373,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [addProfileName, setAddProfileName] = useState("");
   const [addProfileLoading, setAddProfileLoading] = useState(false);
   const [addProfileError, setAddProfileError] = useState<string | null>(null);
+  const [addProfileCanSkip, setAddProfileCanSkip] = useState(false);
   const addProfileReqGenRef = useRef(0);
   const addProfileAbortRef = useRef<AbortController | null>(null);
   const [savedReviews, setSavedReviews] = useState<SavedReviewListItem[]>([]);
@@ -430,32 +431,47 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     }
   };
 
+  type ProfileVerifyResult =
+    | { status: "ok"; name: string }
+    | { status: "not_found" }
+    | { status: "timeout" }
+    | { status: "network" };
+
   const verifyUserExists = async (
     name: string,
     platform: "chesscom" | "lichess",
     signal?: AbortSignal
-  ): Promise<string | "__aborted__" | null> => {
+  ): Promise<ProfileVerifyResult> => {
     try {
-      const url = platform === "chesscom" 
-        ? `https://api.chess.com/pub/player/${name.toLowerCase()}`
-        : `https://lichess.org/api/user/${name.toLowerCase()}`;
-      const res = await fetch(url, { signal });
-      if (res.status === 200) {
-        const data = await res.json();
-        if (platform === "chesscom" && data.url) {
-          // Chess.com API returns `username` in lowercase, but `url` preserves casing.
-          // e.g. "https://www.chess.com/member/MagnusCarlsen"
-          const parts = data.url.split("/");
-          return parts[parts.length - 1] || data.username || name;
-        }
-        return data.username || name;
+      const url =
+        platform === "chesscom"
+          ? `https://api.chess.com/pub/player/${encodeURIComponent(name.toLowerCase())}`
+          : `https://lichess.org/api/user/${encodeURIComponent(name.toLowerCase())}`;
+      const res = await fetch(url, {
+        signal,
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.status === 404) return { status: "not_found" };
+      if (!res.ok) return { status: "network" };
+      const data = await res.json();
+      if (platform === "chesscom" && data?.url) {
+        // Chess.com API returns `username` in lowercase, but `url` preserves casing.
+        const parts = String(data.url).split("/");
+        return {
+          status: "ok",
+          name: parts[parts.length - 1] || data.username || name,
+        };
       }
-      return null;
+      if (platform === "lichess" && !data?.id && !data?.username) {
+        return { status: "not_found" };
+      }
+      return { status: "ok", name: data.username || data.id || name };
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        return "__aborted__";
+        return { status: "timeout" };
       }
-      return null;
+      return { status: "network" };
     }
   };
 
@@ -465,7 +481,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     addProfileAbortRef.current = null;
     setAddProfileLoading(false);
     setAddProfileError(null);
+    setAddProfileCanSkip(false);
   }, []);
+
+  const PROFILE_VERIFY_TIMEOUT_MS = 12_000;
 
   const addProfile = async (name: string, platform: "chesscom" | "lichess", skipVerify = false) => {
     if (profiles.length >= 5) return;
@@ -473,6 +492,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     const exists = profiles.some(p => p.name.toLowerCase() === name.toLowerCase() && p.platform === platform);
     if (exists) {
       setAddProfileError("Profile already added");
+      setAddProfileCanSkip(false);
       notifyWarning();
       return;
     }
@@ -482,27 +502,43 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       const reqId = ++addProfileReqGenRef.current;
       setAddProfileLoading(true);
       setAddProfileError(null);
+      setAddProfileCanSkip(false);
       const controller = new AbortController();
       addProfileAbortRef.current = controller;
-      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-      const officialName = await verifyUserExists(name, platform, controller.signal);
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        PROFILE_VERIFY_TIMEOUT_MS
+      );
+      const result = await verifyUserExists(name, platform, controller.signal);
       window.clearTimeout(timeoutId);
       if (reqId !== addProfileReqGenRef.current) return;
       setAddProfileLoading(false);
       addProfileAbortRef.current = null;
-      if (officialName === "__aborted__") {
+      if (result.status === "timeout") {
         setAddProfileError(
-          "Profile check timed out after 5s. You can retry or paste PGN/game URL to keep reviewing."
+          "Chess.com/Lichess didn’t respond in time. You can add the profile anyway, or paste a PGN/game URL."
         );
+        setAddProfileCanSkip(true);
         notifyWarning();
         return;
       }
-      if (!officialName) {
-        setAddProfileError(`User not found on ${platform === "chesscom" ? "Chess.com" : "Lichess"}`);
+      if (result.status === "network") {
+        setAddProfileError(
+          "Couldn’t reach the profile API (network/CORS). You can add the profile anyway, or paste a PGN/game URL."
+        );
+        setAddProfileCanSkip(true);
+        notifyWarning();
+        return;
+      }
+      if (result.status === "not_found") {
+        setAddProfileError(
+          `User not found on ${platform === "chesscom" ? "Chess.com" : "Lichess"}`
+        );
+        setAddProfileCanSkip(false);
         notifyError();
         return;
       }
-      finalName = officialName;
+      finalName = result.name;
     }
 
     // Re-check duplicates after normalization/verification (e.g. casing changes).
@@ -511,6 +547,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     );
     if (normalizedExists) {
       setAddProfileError("Profile already added");
+      setAddProfileCanSkip(false);
       notifyWarning();
       return;
     }
@@ -520,6 +557,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setShowAddProfile(false);
     setAddProfileName("");
     setAddProfileError(null);
+    setAddProfileCanSkip(false);
     notifySuccess();
     // Clear games cache and trigger reload
     localStorage.removeItem("cr_games");
@@ -1719,16 +1757,22 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             onAddPlatformChange={(p) => {
               setAddProfilePlatform(p);
               setAddProfileError(null);
+              setAddProfileCanSkip(false);
             }}
             addName={addProfileName}
             onAddNameChange={(v) => {
               setAddProfileName(v);
               setAddProfileError(null);
+              setAddProfileCanSkip(false);
             }}
             addLoading={addProfileLoading}
             addError={addProfileError}
+            addCanSkip={addProfileCanSkip}
             onAddSubmit={() =>
               void addProfile(addProfileName.trim(), addProfilePlatform)
+            }
+            onAddAnyway={() =>
+              void addProfile(addProfileName.trim(), addProfilePlatform, true)
             }
             onCancelAdd={cancelAddProfile}
             savedCount={savedReviews.length}
