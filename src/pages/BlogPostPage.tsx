@@ -51,7 +51,7 @@ function toPublicReply(reply: BlogReply): BlogReply {
 }
 
 function fieldClass() {
-  return "w-full rounded-lg border border-chess-border/70 bg-chess-bg/60 px-2.5 py-1.5 text-sm text-chess-text placeholder:text-chess-muted/55 focus:outline-none focus:border-chess-accent/45 focus:ring-1 focus:ring-chess-accent/15";
+  return "w-full rounded-md border border-chess-border/50 bg-chess-bg/40 px-2 py-1.5 text-xs text-chess-subtext placeholder:text-chess-muted/50 focus:outline-none focus:border-chess-border-strong focus:ring-0";
 }
 
 function ReplyComposer({
@@ -96,16 +96,16 @@ function ReplyComposer({
       </label>
 
       {asAuthor ? (
-        <p className="text-[11px] text-chess-muted">
-          Replying as{" "}
-          <span className="font-semibold text-chess-accent">{name}</span>
-          <span className="ml-1.5 rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent align-middle">
+        <p className="text-[10px] text-chess-muted">
+          Commenting as{" "}
+          <span className="font-medium text-chess-accent/90">{name}</span>
+          <span className="ml-1 rounded border border-chess-accent/25 bg-chess-accent/8 px-1 py-px text-[8px] font-semibold uppercase tracking-wider text-chess-accent/80 align-middle">
             Author
           </span>
         </p>
       ) : null}
 
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col sm:flex-row gap-1.5">
         {!asAuthor && (
           <input
             required
@@ -114,7 +114,7 @@ function ReplyComposer({
             onChange={(e) => onNameChange(e.target.value)}
             placeholder="Name"
             aria-label="Name"
-            className={`${fieldClass()} sm:w-36 sm:flex-shrink-0`}
+            className={`${fieldClass()} sm:w-28 sm:flex-shrink-0`}
           />
         )}
         <textarea
@@ -123,16 +123,16 @@ function ReplyComposer({
           rows={2}
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
-          placeholder={placeholder ?? "Write a reply…"}
-          aria-label="Reply"
-          className={`${fieldClass()} resize-y min-h-[2.75rem] flex-1`}
+          placeholder={placeholder ?? "Write a comment…"}
+          aria-label="Comment"
+          className={`${fieldClass()} resize-y min-h-[2.5rem] flex-1`}
         />
-        <div className="flex gap-2 sm:flex-col">
+        <div className="flex gap-1.5 sm:flex-col">
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg border border-chess-accent/40 bg-chess-accent/15 px-3.5 py-1.5 text-xs font-semibold text-chess-accent
-              hover:bg-chess-accent/25 disabled:opacity-50 transition-colors whitespace-nowrap"
+            className="rounded-md border border-chess-border/60 bg-chess-panel/60 px-2.5 py-1.5 text-[11px] font-semibold text-chess-subtext
+              hover:text-chess-text hover:border-chess-border-strong disabled:opacity-50 transition-colors whitespace-nowrap"
           >
             {submitting ? "…" : submitLabel ?? "Post"}
           </button>
@@ -140,7 +140,7 @@ function ReplyComposer({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg px-2.5 py-1.5 text-xs text-chess-muted hover:text-chess-text transition-colors"
+              className="rounded-md px-2 py-1.5 text-[11px] text-chess-muted hover:text-chess-subtext transition-colors"
             >
               Cancel
             </button>
@@ -179,19 +179,26 @@ function ReplyThread({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className={depth === 0 ? "space-y-3" : "mt-2 space-y-2"}>
+    <div className={depth === 0 ? "space-y-2.5" : "mt-1.5 space-y-1.5"}>
       {nodes.map((r) => {
         const canDelete = isAdmin || Boolean(ownedTokens[r.id]);
         const canNest = depth + 1 < MAX_REPLY_DEPTH;
         const isAuthor = replyShowsAsAuthor(r, authorName);
         return (
-          <div key={r.id} className={depth > 0 ? "pl-3 sm:pl-4 border-l border-chess-border/50" : ""}>
-            <div className="flex items-start gap-2.5 py-1.5">
+          <div
+            key={r.id}
+            className={
+              depth > 0
+                ? "pl-2.5 sm:pl-3 border-l border-chess-border/35"
+                : ""
+            }
+          >
+            <div className="flex items-start gap-2 py-1">
               <span
-                className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${
                   isAuthor
-                    ? "bg-chess-accent/25 text-chess-accent ring-1 ring-chess-accent/40"
-                    : "bg-chess-accent/15 text-chess-accent"
+                    ? "bg-chess-accent/20 text-chess-accent/90 ring-1 ring-chess-accent/30"
+                    : "bg-chess-border/50 text-chess-muted"
                 }`}
               >
                 {initialOf(r.name)}
@@ -200,22 +207,22 @@ function ReplyThread({
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                     <span
-                      className={`text-xs font-semibold ${
-                        isAuthor ? "text-chess-accent" : "text-chess-text"
+                      className={`text-[11px] font-medium ${
+                        isAuthor ? "text-chess-accent/90" : "text-chess-muted"
                       }`}
                     >
                       {r.name}
                     </span>
                     {isAuthor ? (
-                      <span className="rounded border border-chess-accent/40 bg-chess-accent/15 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
+                      <span className="rounded border border-chess-accent/30 bg-chess-accent/10 px-1 py-px text-[8px] font-semibold uppercase tracking-wider text-chess-accent/80">
                         Author
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <time
                       dateTime={r.createdAt}
-                      className="text-[10px] text-chess-muted tabular-nums"
+                      className="text-[10px] text-chess-muted/80 tabular-nums"
                     >
                       {formatBlogDate(r.createdAt)}
                     </time>
@@ -224,14 +231,14 @@ function ReplyThread({
                         type="button"
                         disabled={deletingId === r.id}
                         onClick={() => onDelete(r.id)}
-                        className="text-[10px] font-medium text-red-400/90 hover:text-red-300 disabled:opacity-50 transition-colors"
+                        className="text-[10px] font-medium text-chess-muted/70 hover:text-red-400/90 disabled:opacity-50 transition-colors"
                       >
                         {deletingId === r.id ? "…" : "Delete"}
                       </button>
                     )}
                   </div>
                 </div>
-                <p className="mt-0.5 text-sm text-chess-subtext leading-snug whitespace-pre-wrap break-words">
+                <p className="mt-0.5 text-xs text-chess-muted leading-relaxed whitespace-pre-wrap break-words">
                   {r.body}
                 </p>
                 {canNest && (
@@ -240,12 +247,12 @@ function ReplyThread({
                     onClick={() =>
                       replyToId === r.id ? onCancelReply() : onStartReply(r.id)
                     }
-                    className="mt-1 text-[10px] font-medium text-chess-muted hover:text-chess-accent transition-colors"
+                    className="mt-0.5 text-[10px] font-medium text-chess-muted/70 hover:text-chess-muted transition-colors"
                   >
                     {replyToId === r.id ? "Cancel" : "Reply"}
                   </button>
                 )}
-                {replyToId === r.id && <div className="mt-2">{composer}</div>}
+                {replyToId === r.id && <div className="mt-1.5">{composer}</div>}
               </div>
             </div>
             {r.children.length > 0 && (
@@ -435,8 +442,8 @@ export default function BlogPostPage() {
       hp={hp}
       submitting={submitting}
       error={submitError}
-      placeholder={asAuthor ? "Write your author reply…" : "Write a reply…"}
-      submitLabel={asAuthor ? "Post as author" : replyToId ? "Reply" : "Post"}
+      placeholder={asAuthor ? "Write an author comment…" : "Add a comment…"}
+      submitLabel={asAuthor ? "Comment as author" : replyToId ? "Reply" : "Comment"}
       asAuthor={asAuthor}
       onNameChange={setName}
       onBodyChange={setBody}
@@ -528,12 +535,15 @@ export default function BlogPostPage() {
           )}
 
           {post && !loading && (
-            <section id="replies" className="pt-2 border-t border-chess-border/50 space-y-3">
+            <section
+              id="replies"
+              className="pt-6 mt-2 border-t border-chess-border/40 space-y-3"
+            >
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-sm font-semibold text-chess-text">
-                  Replies
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-chess-muted">
+                  Comments
                   {replies.length > 0 && (
-                    <span className="ml-1.5 text-chess-muted font-normal tabular-nums">
+                    <span className="ml-1.5 normal-case tracking-normal font-normal tabular-nums text-chess-muted/80">
                       ({replies.length})
                     </span>
                   )}
@@ -547,8 +557,8 @@ export default function BlogPostPage() {
                   hp={hp}
                   submitting={submitting}
                   error={submitError}
-                  placeholder={asAuthor ? "Write your author reply…" : "Write a reply…"}
-                  submitLabel={asAuthor ? "Post as author" : "Post"}
+                  placeholder={asAuthor ? "Write an author comment…" : "Add a comment…"}
+                  submitLabel={asAuthor ? "Comment as author" : "Comment"}
                   asAuthor={asAuthor}
                   onNameChange={setName}
                   onBodyChange={setBody}
@@ -562,7 +572,9 @@ export default function BlogPostPage() {
               )}
 
               {replies.length === 0 ? (
-                <p className="text-xs text-chess-muted py-1">No replies yet.</p>
+                <p className="text-[11px] text-chess-muted/80 py-0.5">
+                  No comments yet.
+                </p>
               ) : (
                 <ReplyThread
                   nodes={tree}

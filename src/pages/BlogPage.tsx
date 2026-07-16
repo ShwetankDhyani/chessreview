@@ -98,7 +98,7 @@ function PostCard({
             <span className="tabular-nums">{formatBlogDate(post.createdAt)}</span>
             <span className="h-1 w-1 rounded-full bg-chess-border-strong" aria-hidden />
             <span>
-              {post.replyCount} {post.replyCount === 1 ? "reply" : "replies"}
+              {post.replyCount} {post.replyCount === 1 ? "comment" : "comments"}
             </span>
           </div>
           <span className="text-[11px] font-semibold text-chess-accent opacity-0 translate-x-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
