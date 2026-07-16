@@ -43,6 +43,7 @@ export function HelpModal({
   const links = parseSupportLinks();
   const [tab, setTab] = useState<"contact" | "support">(initial);
   const showSupport = tab === "support";
+  const readOnlyContact = initial === "contact";
 
   return (
     <div
@@ -59,25 +60,11 @@ export function HelpModal({
       />
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setTab("contact")}
-              className={`text-sm font-semibold ${showSupport ? "text-chess-muted hover:text-chess-text" : "text-chess-text"}`}
-              aria-current={!showSupport}
-            >
-              Contact
-            </button>
-            <span className="text-chess-border-strong text-[10px]" aria-hidden>·</span>
-            <button
-              type="button"
-              onClick={() => setTab("support")}
-              className={`text-sm font-semibold ${showSupport ? "text-chess-text" : "text-chess-muted hover:text-chess-text"}`}
-              aria-current={showSupport}
-            >
-              Support
-            </button>
-          </div>
+          {readOnlyContact ? (
+            <h2 id="help-title" className="text-base font-bold text-chess-text">Contact</h2>
+          ) : (
+            <h2 id="help-title" className="text-base font-bold text-chess-text">Support Us</h2>
+          )}
           <button
             type="button"
             onClick={() => { hapticSoft(); onClose(); }}
@@ -88,7 +75,7 @@ export function HelpModal({
           </button>
         </div>
 
-        {!showSupport ? (
+        {readOnlyContact || !showSupport ? (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
             <p>Say hello or share feedback — we read every note.</p>
             <div className="flex flex-col gap-2 mt-2">
@@ -114,10 +101,7 @@ export function HelpModal({
           </div>
         ) : (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
-            <p>
-              ChessReview runs on an overworked personal server. If it’s helped you,
-              we could use a hand — either a small donation or access to server capacity.
-            </p>
+            <p>ChessReview runs on a personal server. Community support is how we keep it reliable — either a small donation or technical help.</p>
           </div>
         )}
 
@@ -136,13 +120,13 @@ export function HelpModal({
                 </a>
               ))}
               <a
-                href={`mailto:admin@chessreview.org?subject=${encodeURIComponent("Offer: server capacity for ChessReview")}`}
+                href={`mailto:admin@chessreview.org?subject=${encodeURIComponent("Technical help for ChessReview")}`}
                 className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
               >
-                Offer server capacity
+                Get in touch (technical help)
               </a>
               <div className="text-center text-[11px] text-chess-muted">
-                or{" "}
+                Or{" "}
                 <a href={CHESSCOM_MESSAGE} className="underline underline-offset-2 hover:text-chess-accent">
                   message on Chess.com
                 </a>
