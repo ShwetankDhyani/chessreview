@@ -120,7 +120,7 @@ export function HelpModal({
               id="help-title"
               className="support-coffee-prank-title text-base font-bold text-chess-accent"
             >
-              For mee
+              …For meee! ☕
             </h2>
           ) : (
             <button
@@ -185,11 +185,13 @@ export function HelpModal({
         ) : (
           <div className="support-coffee-reveal space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hey, I&apos;m Shwetank and I think I did a good job with the website. I know you agree ;)
+              Gotcha! Hey, I&apos;m Shwetank. I think I did a pretty killer job with this website, and
+              I know you agree.
             </p>
             <p>
-              I keep ChessReview up out of my own pocket for the love of chess and community, and if
-              you found this helpful, don&apos;t be shy of sending me a cup of coffee.
+              I keep ChessReview running out of my own pocket purely for the love of chess and this
+              community. If you forgive me for the prank—and found the site helpful—don&apos;t be shy
+              about sending some actual coffee love my way!
             </p>
 
             <a
