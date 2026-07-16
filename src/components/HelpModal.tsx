@@ -160,7 +160,7 @@ export function HelpModal({
         ) : (
           <div className="support-coffee-reveal space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hey, I&apos;m Shwetank. I think I did a pretty great job with this website, and I hope
+              Hey, I&apos;m Shwetank. I think I did a pretty good job with this website, and I hope
               you agree :)
             </p>
             <p>
