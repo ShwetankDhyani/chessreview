@@ -1,13 +1,21 @@
+/**
+ * Unified blog API — list, post-by-slug, media, sitemap, crawler HTML.
+ * Keeps Hobby serverless function count under the 12-function limit.
+ */
+
 import {
   addBlogReply,
   createBlogPost,
   deleteBlogPost,
   deleteBlogReply,
+  getBlogPost,
   listBlogPosts,
+  readBlogMedia,
   updateBlogPost,
   uploadBlogMedia,
 } from "../../server/blogApi.mjs";
-import { blogListHtml } from "../../server/blogCrawlerHtml.mjs";
+import { blogListHtml, blogPostHtml } from "../../server/blogCrawlerHtml.mjs";
+import { buildSitemapXml } from "../../server/sitemapXml.mjs";
 
 function adminKey(req) {
   return (
@@ -34,7 +42,74 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(204).end();
 
+  // Sitemap (rewrite from /sitemap.xml and /api/sitemap)
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    (req.query?.sitemap === "1" || req.query?.resource === "sitemap")
+  ) {
+    try {
+      const xml = await buildSitemapXml();
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=600, s-maxage=600");
+      if (req.method === "HEAD") return res.status(200).end();
+      return res.status(200).send(xml);
+    } catch (e) {
+      return res
+        .status(500)
+        .send(e instanceof Error ? e.message : "Sitemap failed");
+    }
+  }
+
+  // Blog media (rewrite from /api/blog-media/:id)
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    req.query?.media
+  ) {
+    try {
+      const file = await readBlogMedia(String(req.query.media));
+      if (!file) return res.status(404).end("Not found");
+      res.setHeader("Content-Type", file.contentType);
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      if (req.method === "HEAD") return res.status(200).end();
+      return res.status(200).send(file.buffer);
+    } catch {
+      return res.status(500).end("Error");
+    }
+  }
+
+  const slug = req.query?.slug ? String(req.query.slug).trim() : "";
+
   try {
+    // Single post (rewrite from /api/blog/:slug)
+    if (slug && (req.method === "GET" || req.method === "HEAD")) {
+      const data = await getBlogPost(slug, { adminKey: adminKey(req) });
+      if (!data) {
+        if (wantsHtml(req)) {
+          if (req.method === "HEAD") return res.status(404).end();
+          return res.status(404).send("Not found");
+        }
+        return res.status(404).json({ error: "Not found" });
+      }
+      if (wantsHtml(req)) {
+        const post = data.post ?? data;
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=300");
+        if (req.method === "HEAD") return res.status(200).end();
+        return res.status(200).send(blogPostHtml(post));
+      }
+      if (req.method === "HEAD") return res.status(200).end();
+      return res.status(200).json(data);
+    }
+
+    if (slug && req.method === "POST" && req.query?.replies === "1") {
+      const body =
+        typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
+      const result = await addBlogReply(slug, body, {
+        adminKey: adminKey(req),
+      });
+      return res.status(200).json(result);
+    }
+
     if (req.method === "GET" || req.method === "HEAD") {
       const drafts = req.query?.drafts === "1";
       const key = adminKey(req);
@@ -56,21 +131,23 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
-      // Public replies use the stable /api/blog route (dynamic /api/blog/:slug is easy to miss).
+      const body =
+        typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
       if (body.action === "reply") {
-        const slug = String(body.slug ?? "").trim();
-        if (!slug) return res.status(400).json({ error: "Missing slug" });
+        const replySlug = String(body.slug ?? slug ?? "").trim();
+        if (!replySlug) return res.status(400).json({ error: "Missing slug" });
         return res
           .status(200)
-          .json(await addBlogReply(slug, body, { adminKey: adminKey(req) }));
+          .json(await addBlogReply(replySlug, body, { adminKey: adminKey(req) }));
       }
       if (body.action === "delete-reply") {
-        const slug = String(body.slug ?? "").trim();
-        if (!slug) return res.status(400).json({ error: "Missing slug" });
+        const replySlug = String(body.slug ?? slug ?? "").trim();
+        if (!replySlug) return res.status(400).json({ error: "Missing slug" });
         return res
           .status(200)
-          .json(await deleteBlogReply(slug, body, { adminKey: adminKey(req) }));
+          .json(
+            await deleteBlogReply(replySlug, body, { adminKey: adminKey(req) })
+          );
       }
       const key = adminKey(req);
       if (key !== expectedAdmin()) {
