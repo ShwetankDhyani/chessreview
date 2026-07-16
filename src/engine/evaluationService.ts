@@ -117,6 +117,17 @@ type BatchRow = {
   error?: string;
 };
 
+type BatchJobStatusPayload = {
+  jobId?: string;
+  status?: string;
+  results?: BatchRow[];
+  error?: string;
+  queuePosition?: number;
+  queueAhead?: number;
+  etaMs?: number;
+  estimatedMs?: number;
+};
+
 function applyBatchRows(
   out: Map<string, EvalResult>,
   chunk: string[],
@@ -147,13 +158,14 @@ async function runBatchChunkLegacy(chunk: string[], depth: number): Promise<Batc
 async function runBatchChunkQueued(
   chunk: string[],
   depth: number,
+  queuePriority: number,
   chunkDone: number,
   chunkTotal: number
 ): Promise<BatchRow[]> {
   const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fens: chunk, depth, async: true }),
+    body: JSON.stringify({ fens: chunk, depth, async: true, queuePriority }),
     signal: AbortSignal.timeout(60_000),
     cache: "no-store",
   });
@@ -220,22 +232,122 @@ export async function evaluateFensBatch(
     chunkTotal: unique.length,
   });
 
+  const chunks: string[][] = [];
   for (let i = 0; i < unique.length; i += BATCH_CHUNK_SIZE) {
-    const chunk = unique.slice(i, i + BATCH_CHUNK_SIZE);
-    try {
-      let rows: BatchRow[];
-      try {
-        rows = await runBatchChunkQueued(chunk, depth, done, unique.length);
-      } catch {
-        // Backward compatibility with older servers that only support blocking /eval/batch.
-        rows = await runBatchChunkLegacy(chunk, depth);
+    chunks.push(unique.slice(i, i + BATCH_CHUNK_SIZE));
+  }
+
+  // Review-friendly scheduling: enqueue *all* chunk jobs for this batch stage
+  // immediately, so concurrent reviews can't ping-pong chunk-by-chunk.
+  const queuePriority = Date.now();
+
+  const submitQueued = async (chunk: string[]): Promise<BatchJobStatusPayload> => {
+    const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fens: chunk,
+        depth,
+        async: true,
+        queuePriority,
+      }),
+      signal: AbortSignal.timeout(60_000),
+      cache: "no-store",
+    });
+    if (!submit.ok) throw new Error(`batch submit failed (${submit.status})`);
+    return (await submit.json()) as BatchJobStatusPayload;
+  };
+
+  const pollJobUntilDone = async (
+    jobId: string,
+    chunkDone: number,
+    chunkTotal: number,
+    statusData: BatchJobStatusPayload
+  ): Promise<BatchRow[]> => {
+    let current = statusData;
+    while (true) {
+      const status = String(current?.status ?? "");
+      if (status === "done") {
+        emitQueueStatus({
+          state: "idle",
+          position: null,
+          etaMs: null,
+          chunkDone,
+          chunkTotal,
+        });
+        return (current?.results ?? []) as BatchRow[];
       }
-      applyBatchRows(out, chunk, rows);
-      done += chunk.length;
-      onProgress?.(done, unique.length);
-    } catch {
-      probeState = "unknown";
-      break;
+      if (status === "error") {
+        throw new Error(current?.error || "batch queue failed");
+      }
+      emitQueueStatus({
+        state: status === "queued" ? "queued" : "running",
+        position: typeof current?.queuePosition === "number" ? current.queuePosition : null,
+        etaMs: typeof current?.etaMs === "number" ? current.etaMs : null,
+        chunkDone,
+        chunkTotal,
+      });
+      await new Promise((r) => setTimeout(r, BATCH_QUEUE_POLL_MS));
+      const poll = await fetch(`${LOCAL_SERVER}/eval/batch/${encodeURIComponent(jobId)}`, {
+        signal: AbortSignal.timeout(30_000),
+        cache: "no-store",
+      });
+      if (!poll.ok) throw new Error(`batch poll failed (${poll.status})`);
+      current = (await poll.json()) as BatchJobStatusPayload;
+    }
+  };
+
+  try {
+    if (chunks.length === 0) return out;
+
+    // Submit first chunk to detect whether async queue is supported.
+    const firstChunk = chunks[0]!;
+    const firstPayload = await submitQueued(firstChunk);
+    const firstJobId = firstPayload?.jobId ? String(firstPayload.jobId) : null;
+    if (!firstJobId) {
+      throw new Error("batch queue unavailable");
+    }
+
+    const jobStatuses: Array<{ jobId: string; statusData: BatchJobStatusPayload }> = [
+      { jobId: firstJobId, statusData: firstPayload },
+    ];
+
+    // Submit remaining chunks immediately to prevent chunk alternation.
+    for (let ci = 1; ci < chunks.length; ci++) {
+      const payload = await submitQueued(chunks[ci]!);
+      const jobId = payload?.jobId ? String(payload.jobId) : null;
+      if (!jobId) throw new Error("batch queue unavailable");
+      jobStatuses.push({ jobId, statusData: payload });
+    }
+
+    // Poll jobs in chunk order, applying results as they complete.
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const chunk = chunks[ci]!;
+      const { jobId, statusData } = jobStatuses[ci]!;
+      try {
+        const rows = await pollJobUntilDone(jobId, done, unique.length, statusData);
+        applyBatchRows(out, chunk, rows);
+        done += chunk.length;
+        onProgress?.(done, unique.length);
+      } catch {
+        probeState = "unknown";
+        break;
+      }
+    }
+  } catch {
+    // Backward compatibility with older servers that only support blocking /eval/batch.
+    out.clear();
+    done = 0;
+    for (const chunk of chunks) {
+      try {
+        const rows = await runBatchChunkLegacy(chunk, depth);
+        applyBatchRows(out, chunk, rows);
+        done += chunk.length;
+        onProgress?.(done, unique.length);
+      } catch {
+        probeState = "unknown";
+        break;
+      }
     }
   }
 
