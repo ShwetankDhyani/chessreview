@@ -246,6 +246,12 @@ function estimateBatchMs(fenCount) {
   return Math.round(900 + perFen * Math.max(1, fenCount));
 }
 
+function normalizeQueuePriority(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return Date.now();
+  return Math.floor(n);
+}
+
 function cleanupBatchJobs() {
   const now = Date.now();
   for (const [id, job] of batchJobs) {
@@ -256,8 +262,23 @@ function cleanupBatchJobs() {
   }
 }
 
+function compareQueuedJobs(a, b) {
+  if (a.priority !== b.priority) return a.priority - b.priority;
+  if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
+  return a.id.localeCompare(b.id);
+}
+
+function getPlannedQueueIds() {
+  return batchQueue
+    .map((id) => batchJobs.get(id))
+    .filter(Boolean)
+    .sort(compareQueuedJobs)
+    .map((job) => job.id);
+}
+
 function queueStatusFor(jobId) {
-  const queueIndex = batchQueue.indexOf(jobId);
+  const planned = getPlannedQueueIds();
+  const queueIndex = planned.indexOf(jobId);
   const queuePosition = queueIndex >= 0 ? queueIndex + 1 : 0;
   const queueAhead = queueIndex >= 0 ? queueIndex : 0;
   const active = activeBatchJobId ? batchJobs.get(activeBatchJobId) : null;
@@ -269,7 +290,7 @@ function queueStatusFor(jobId) {
       etaMs += Math.max(0, (active.estimatedMs ?? 0) - elapsed);
     }
     for (let i = 0; i < queueIndex; i++) {
-      const queued = batchJobs.get(batchQueue[i]);
+      const queued = batchJobs.get(planned[i]);
       if (queued) etaMs += queued.estimatedMs ?? estimateBatchMs(queued.fens.length);
     }
   } else if (activeBatchJobId === jobId && active && active.status === "running") {
@@ -337,7 +358,10 @@ async function processBatchJob(job) {
 
 function pumpBatchQueue() {
   if (activeBatchJobId || batchQueue.length === 0) return;
-  const nextId = batchQueue.shift();
+  const planned = getPlannedQueueIds();
+  const nextId = planned[0];
+  const queueIdx = batchQueue.indexOf(nextId);
+  if (queueIdx >= 0) batchQueue.splice(queueIdx, 1);
   const job = batchJobs.get(nextId);
   if (!job) {
     pumpBatchQueue();
@@ -351,14 +375,16 @@ function pumpBatchQueue() {
   });
 }
 
-function enqueueBatchJob(fens, depth) {
+function enqueueBatchJob(fens, depth, priorityHint) {
   cleanupBatchJobs();
+  const priority = normalizeQueuePriority(priorityHint);
   const id = newJobId();
   const job = {
     id,
     status: "queued",
     fens,
     depth,
+    priority,
     done: 0,
     results: null,
     error: null,
@@ -575,7 +601,7 @@ const server = createServer(async (req, res) => {
         return;
       }
       if (body?.async === true || body?.async === 1 || body?.mode === "queue") {
-        const job = enqueueBatchJob(fens, depth);
+        const job = enqueueBatchJob(fens, depth, body?.queuePriority ?? body?.reviewPriority);
         const payload = batchJobPayload(job);
         res.writeHead(202);
         res.end(JSON.stringify(payload));

@@ -147,13 +147,14 @@ async function runBatchChunkLegacy(chunk: string[], depth: number): Promise<Batc
 async function runBatchChunkQueued(
   chunk: string[],
   depth: number,
+  queuePriority: number,
   chunkDone: number,
   chunkTotal: number
 ): Promise<BatchRow[]> {
   const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fens: chunk, depth, async: true }),
+    body: JSON.stringify({ fens: chunk, depth, async: true, queuePriority }),
     signal: AbortSignal.timeout(60_000),
     cache: "no-store",
   });
@@ -211,6 +212,7 @@ export async function evaluateFensBatch(
   if (!up) return out;
 
   const unique = [...new Set(fens)];
+  const queuePriority = Date.now();
   let done = 0;
   emitQueueStatus({
     state: "idle",
@@ -225,7 +227,13 @@ export async function evaluateFensBatch(
     try {
       let rows: BatchRow[];
       try {
-        rows = await runBatchChunkQueued(chunk, depth, done, unique.length);
+        rows = await runBatchChunkQueued(
+          chunk,
+          depth,
+          queuePriority,
+          done,
+          unique.length
+        );
       } catch {
         // Backward compatibility with older servers that only support blocking /eval/batch.
         rows = await runBatchChunkLegacy(chunk, depth);
