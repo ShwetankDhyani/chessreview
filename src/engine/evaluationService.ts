@@ -194,7 +194,7 @@ async function runBatchChunkQueued(
       });
       return (statusData?.results ?? []) as BatchRow[];
     }
-    if (status === "error") {
+    if (status === "error" || status === "cancelled") {
       throw new Error(statusData?.error || "batch queue failed");
     }
     emitQueueStatus({
@@ -289,7 +289,7 @@ export async function evaluateFensBatch(
         });
         return (current?.results ?? []) as BatchRow[];
       }
-      if (status === "error") {
+      if (status === "error" || status === "cancelled") {
         throw new Error(current?.error || "batch queue failed");
       }
       emitQueueStatus({
