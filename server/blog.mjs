@@ -45,6 +45,7 @@ function publicReply(row) {
     chesscom: row.chesscom || null,
     lichess: row.lichess || null,
     createdAt: row.createdAt,
+    isAuthor: !!row.isAuthor,
   };
 }
 
@@ -228,13 +229,11 @@ export function fileDeletePost(id) {
   return { ok: true };
 }
 
-export function fileAddReply(postId, input) {
+export function fileAddReply(postId, input, { asAuthor = false } = {}) {
   if (String(input?.website ?? "").trim() || String(input?.hp ?? "").trim()) {
     throw new Error("Rejected");
   }
-  const name = clip(input?.name, MAX_NAME);
   const body = clip(input?.body ?? input?.text, MAX_REPLY);
-  if (name.length < 2) throw new Error("Name must be at least 2 characters");
   if (body.length < 2) throw new Error("Reply is too short");
 
   const chesscom = clip(input?.chesscom ?? input?.chessCom, 40).replace(
@@ -247,6 +246,11 @@ export function fileAddReply(postId, input) {
   const s = loadState();
   const post = s.posts.find((p) => p.id === postId);
   if (!post || !post.published) throw new Error("Post not found");
+
+  // Author badge is server-set only (valid admin key). Spoof-proof vs typing the name.
+  const authorName = clip(post.authorName || "ChessReview", MAX_NAME) || "ChessReview";
+  const name = asAuthor ? authorName : clip(input?.name, MAX_NAME);
+  if (name.length < 2) throw new Error("Name must be at least 2 characters");
 
   const list = Array.isArray(s.replies[postId]) ? s.replies[postId] : [];
   if (parentId) {
@@ -272,6 +276,7 @@ export function fileAddReply(postId, input) {
     lichess: lichess || null,
     createdAt: new Date().toISOString(),
     deleteHash: hashDeleteToken(deleteToken),
+    isAuthor: !!asAuthor,
   };
   list.push(row);
   if (list.length > MAX_REPLIES_PER_POST) {
@@ -461,7 +466,12 @@ export function handleEngineBlogRequest(req, res, url, { readJsonBody, adminSecr
           return;
         }
         const body = await readJsonBody(req);
-        const reply = fileAddReply(post.id, body);
+        const key = (
+          req.headers["x-admin-key"] ??
+          String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "")
+        ).trim();
+        const asAuthor = !!(adminSecret && key && key === adminSecret);
+        const reply = fileAddReply(post.id, body, { asAuthor });
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true, reply }));
       } catch (e) {

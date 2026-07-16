@@ -44,7 +44,9 @@ export default async function handler(req, res) {
       if (body.action === "reply") {
         const slug = String(body.slug ?? "").trim();
         if (!slug) return res.status(400).json({ error: "Missing slug" });
-        return res.status(200).json(await addBlogReply(slug, body));
+        return res
+          .status(200)
+          .json(await addBlogReply(slug, body, { adminKey: adminKey(req) }));
       }
       if (body.action === "delete-reply") {
         const slug = String(body.slug ?? "").trim();

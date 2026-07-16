@@ -144,7 +144,9 @@ export default async function handler(req, res) {
       if (req.query?.replies === "1") {
         const body =
           typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
-        const result = await addBlogReply(String(slug), body);
+        const result = await addBlogReply(String(slug), body, {
+          adminKey: adminKey(req),
+        });
         return res.status(200).json(result);
       }
       return res.status(400).json({ error: "Unknown action" });

@@ -25,6 +25,8 @@ export type BlogReply = {
   lichess: string | null;
   createdAt: string;
   deleteToken?: string;
+  /** Server-set when posted with a valid admin key. */
+  isAuthor?: boolean;
 };
 
 export type BlogReplyNode = BlogReply & { children: BlogReplyNode[] };
@@ -272,10 +274,15 @@ export async function postBlogReply(
     chesscom?: string;
     lichess?: string;
     hp?: string;
-  }
+  },
+  adminKey?: string
 ): Promise<{ ok: boolean; reply: BlogReply }> {
   const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
   const body = JSON.stringify({ ...payload, action: "reply", slug });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (adminKey?.trim()) headers["X-Admin-Key"] = adminKey.trim();
   const sources = [
     { url: "/api/blog", body },
     {
@@ -295,7 +302,7 @@ export async function postBlogReply(
     try {
       const res = await fetch(src.url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: src.body,
       });
       const ct = res.headers.get("content-type") || "";

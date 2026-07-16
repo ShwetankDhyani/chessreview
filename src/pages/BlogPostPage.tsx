@@ -31,7 +31,7 @@ function initialOf(name: string) {
 
 function toPublicReply(reply: BlogReply): BlogReply {
   const { deleteToken: _token, ...rest } = reply;
-  return { ...rest, parentId: rest.parentId || null };
+  return { ...rest, parentId: rest.parentId || null, isAuthor: !!rest.isAuthor };
 }
 
 function fieldClass() {
@@ -46,6 +46,7 @@ function ReplyComposer({
   error,
   placeholder,
   submitLabel,
+  asAuthor = false,
   onNameChange,
   onBodyChange,
   onHpChange,
@@ -59,6 +60,7 @@ function ReplyComposer({
   error: string | null;
   placeholder?: string;
   submitLabel?: string;
+  asAuthor?: boolean;
   onNameChange: (v: string) => void;
   onBodyChange: (v: string) => void;
   onHpChange: (v: string) => void;
@@ -78,15 +80,27 @@ function ReplyComposer({
       </label>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          required
-          maxLength={40}
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Name"
-          aria-label="Name"
-          className={`${fieldClass()} sm:w-36 sm:flex-shrink-0`}
-        />
+        {asAuthor ? (
+          <div
+            className={`${fieldClass()} sm:w-40 sm:flex-shrink-0 flex items-center justify-between gap-2 pointer-events-none`}
+            aria-label={`Replying as author ${name}`}
+          >
+            <span className="truncate text-chess-text">{name}</span>
+            <span className="rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
+              Author
+            </span>
+          </div>
+        ) : (
+          <input
+            required
+            maxLength={40}
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Name"
+            aria-label="Name"
+            className={`${fieldClass()} sm:w-36 sm:flex-shrink-0`}
+          />
+        )}
         <textarea
           required
           maxLength={800}
@@ -159,7 +173,16 @@ function ReplyThread({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-semibold text-chess-text">{r.name}</span>
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span className="text-xs font-semibold text-chess-text">
+                      {r.name}
+                    </span>
+                    {r.isAuthor ? (
+                      <span className="rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
+                        Author
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="flex items-center gap-2.5 flex-shrink-0">
                     <time
                       dateTime={r.createdAt}
@@ -298,12 +321,16 @@ export default function BlogPostPage() {
     }
     setSubmitting(true);
     try {
-      const data = await postBlogReply(slug, {
-        name,
-        body,
-        parentId: parentId || undefined,
-        hp,
-      });
+      const data = await postBlogReply(
+        slug,
+        {
+          name: adminKey && post?.authorName ? post.authorName : name,
+          body,
+          parentId: parentId || undefined,
+          hp,
+        },
+        adminKey || undefined
+      );
       const reply = data.reply;
       if (!reply?.id) throw new Error("Could not post reply");
 
@@ -349,13 +376,14 @@ export default function BlogPostPage() {
 
   const composer = (
     <ReplyComposer
-      name={name}
+      name={adminKey && post?.authorName ? post.authorName : name}
       body={body}
       hp={hp}
       submitting={submitting}
       error={submitError}
       placeholder={replyToId ? "Write a reply…" : "Write a reply…"}
       submitLabel={replyToId ? "Reply" : "Post"}
+      asAuthor={Boolean(adminKey && post?.authorName)}
       onNameChange={setName}
       onBodyChange={setBody}
       onHpChange={setHp}

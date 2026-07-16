@@ -157,19 +157,26 @@ export async function uploadBlogMedia(body, adminKey) {
   return { ok: true, ...fileSaveBlogMedia(body) };
 }
 
-export async function addBlogReply(slug, body) {
+export async function addBlogReply(slug, body, { adminKey = "" } = {}) {
+  const asAuthor = !!(adminKey && adminKey === expectedAdmin());
   const base = engineStatsUrl();
   if (base) {
     return engineJson(`/blog/${encodeURIComponent(slug)}/replies`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(adminKey ? { "X-Admin-Key": adminKey } : {}),
+      },
       body: JSON.stringify(body),
     });
   }
   if (!isWritableStore()) throw new Error("Blog storage unavailable");
   const data = fileGetPostBySlug(slug);
   if (!data?.post) throw new Error("Post not found");
-  return { ok: true, reply: fileAddReply(data.post.id, body) };
+  return {
+    ok: true,
+    reply: fileAddReply(data.post.id, body, { asAuthor }),
+  };
 }
 
 export async function deleteBlogReply(slug, body, { adminKey = "" } = {}) {
@@ -276,7 +283,11 @@ export function createBlogMiddleware() {
         if (body.action === "reply") {
           const slug = String(body.slug ?? "").trim();
           if (!slug) return sendJson(res, 400, { error: "Missing slug" });
-          return sendJson(res, 200, await addBlogReply(slug, body));
+          return sendJson(
+            res,
+            200,
+            await addBlogReply(slug, body, { adminKey: adminKeyFrom(req) })
+          );
         }
         if (body.action === "delete-reply") {
           const slug = String(body.slug ?? "").trim();
@@ -311,7 +322,9 @@ export function createBlogMiddleware() {
         return sendJson(
           res,
           200,
-          await addBlogReply(decodeURIComponent(replyMatch[1]), body)
+          await addBlogReply(decodeURIComponent(replyMatch[1]), body, {
+            adminKey: adminKeyFrom(req),
+          })
         );
       }
 
