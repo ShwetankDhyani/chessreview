@@ -37,7 +37,7 @@ function hashDeleteToken(token) {
 }
 
 function publicReply(row) {
-  return {
+  const out = {
     id: row.id,
     name: row.name,
     body: row.body,
@@ -45,8 +45,13 @@ function publicReply(row) {
     chesscom: row.chesscom || null,
     lichess: row.lichess || null,
     createdAt: row.createdAt,
-    isAuthor: !!row.isAuthor,
   };
+  // Only emit isAuthor when the row was written with the flag. Legacy replies
+  // omit it so clients can fall back to matching the post author name.
+  if (Object.prototype.hasOwnProperty.call(row, "isAuthor")) {
+    out.isAuthor = !!row.isAuthor;
+  }
+  return out;
 }
 
 function tokensMatch(provided, expectedHash) {

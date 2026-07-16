@@ -29,9 +29,24 @@ function initialOf(name: string) {
   return t ? t[0]!.toUpperCase() : "?";
 }
 
+function replyShowsAsAuthor(reply: BlogReply, authorName?: string): boolean {
+  if (reply.isAuthor === true) return true;
+  if (reply.isAuthor === false) return false;
+  // Legacy replies (no isAuthor field yet): match the post byline.
+  if (!authorName) return false;
+  return reply.name.trim().toLowerCase() === authorName.trim().toLowerCase();
+}
+
 function toPublicReply(reply: BlogReply): BlogReply {
   const { deleteToken: _token, ...rest } = reply;
-  return { ...rest, parentId: rest.parentId || null, isAuthor: !!rest.isAuthor };
+  const out: BlogReply = {
+    ...rest,
+    parentId: rest.parentId || null,
+  };
+  if (rest.isAuthor === true) out.isAuthor = true;
+  else if (rest.isAuthor === false) out.isAuthor = false;
+  else delete out.isAuthor;
+  return out;
 }
 
 function fieldClass() {
@@ -79,18 +94,18 @@ function ReplyComposer({
         />
       </label>
 
+      {asAuthor ? (
+        <p className="text-[11px] text-chess-muted">
+          Replying as{" "}
+          <span className="font-semibold text-chess-accent">{name}</span>
+          <span className="ml-1.5 rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent align-middle">
+            Author
+          </span>
+        </p>
+      ) : null}
+
       <div className="flex flex-col sm:flex-row gap-2">
-        {asAuthor ? (
-          <div
-            className={`${fieldClass()} sm:w-40 sm:flex-shrink-0 flex items-center justify-between gap-2 pointer-events-none`}
-            aria-label={`Replying as author ${name}`}
-          >
-            <span className="truncate text-chess-text">{name}</span>
-            <span className="rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
-              Author
-            </span>
-          </div>
-        ) : (
+        {!asAuthor && (
           <input
             required
             maxLength={40}
@@ -142,6 +157,7 @@ function ReplyThread({
   depth,
   ownedTokens,
   isAdmin,
+  authorName,
   deletingId,
   replyToId,
   composer,
@@ -153,6 +169,7 @@ function ReplyThread({
   depth: number;
   ownedTokens: Record<string, string>;
   isAdmin: boolean;
+  authorName?: string;
   deletingId: string | null;
   replyToId: string | null;
   composer: ReactNode;
@@ -165,20 +182,31 @@ function ReplyThread({
       {nodes.map((r) => {
         const canDelete = isAdmin || Boolean(ownedTokens[r.id]);
         const canNest = depth + 1 < MAX_REPLY_DEPTH;
+        const isAuthor = replyShowsAsAuthor(r, authorName);
         return (
           <div key={r.id} className={depth > 0 ? "pl-3 sm:pl-4 border-l border-chess-border/50" : ""}>
             <div className="flex items-start gap-2.5 py-1.5">
-              <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chess-accent/15 text-[10px] font-bold text-chess-accent">
+              <span
+                className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                  isAuthor
+                    ? "bg-chess-accent/25 text-chess-accent ring-1 ring-chess-accent/40"
+                    : "bg-chess-accent/15 text-chess-accent"
+                }`}
+              >
                 {initialOf(r.name)}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                    <span className="text-xs font-semibold text-chess-text">
+                    <span
+                      className={`text-xs font-semibold ${
+                        isAuthor ? "text-chess-accent" : "text-chess-text"
+                      }`}
+                    >
                       {r.name}
                     </span>
-                    {r.isAuthor ? (
-                      <span className="rounded border border-chess-accent/35 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
+                    {isAuthor ? (
+                      <span className="rounded border border-chess-accent/40 bg-chess-accent/15 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
                         Author
                       </span>
                     ) : null}
@@ -225,6 +253,7 @@ function ReplyThread({
                 depth={depth + 1}
                 ownedTokens={ownedTokens}
                 isAdmin={isAdmin}
+                authorName={authorName}
                 deletingId={deletingId}
                 replyToId={replyToId}
                 composer={composer}
@@ -257,11 +286,25 @@ export default function BlogPostPage() {
   const [ownedTokens, setOwnedTokens] = useState<Record<string, string>>(() =>
     loadOwnedReplyTokens()
   );
-  const [adminKey] = useState(() => loadSessionAdminKey());
+  const [adminKey, setAdminKey] = useState(() => loadSessionAdminKey());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Keep admin session in sync if the key was set after this page mounted.
+  useEffect(() => {
+    const syncAdmin = () => setAdminKey(loadSessionAdminKey());
+    syncAdmin();
+    window.addEventListener("focus", syncAdmin);
+    document.addEventListener("visibilitychange", syncAdmin);
+    return () => {
+      window.removeEventListener("focus", syncAdmin);
+      document.removeEventListener("visibilitychange", syncAdmin);
+    };
+  }, []);
+
   const tree = useMemo(() => buildReplyTree(replies), [replies]);
+  const asAuthor = Boolean(adminKey);
+  const authorDisplayName = post?.authorName?.trim() || "Author";
 
   usePageSeo({
     title: post ? `${post.title} — ChessReview Blog` : "Blog — ChessReview",
@@ -319,31 +362,40 @@ export default function BlogPostPage() {
         return;
       }
     }
+    const key = loadSessionAdminKey() || adminKey;
+    const signingAsAuthor = Boolean(key);
     setSubmitting(true);
     try {
       const data = await postBlogReply(
         slug,
         {
-          name: adminKey && post?.authorName ? post.authorName : name,
+          name: signingAsAuthor ? authorDisplayName : name,
           body,
           parentId: parentId || undefined,
           hp,
         },
-        adminKey || undefined
+        signingAsAuthor ? key : undefined
       );
       const reply = data.reply;
       if (!reply?.id) throw new Error("Could not post reply");
 
-      saveReplyName(name);
+      if (!signingAsAuthor) saveReplyName(name);
       if (reply.deleteToken) {
         rememberReplyToken(reply.id, reply.deleteToken);
         setOwnedTokens(loadOwnedReplyTokens());
       }
 
-      setReplies((prev) => [...prev, toPublicReply(reply)]);
+      // Ensure author badge shows even if a stale engine omitted isAuthor.
+      const publicReply = toPublicReply(reply);
+      if (signingAsAuthor && publicReply.isAuthor !== true) {
+        publicReply.isAuthor = true;
+        publicReply.name = authorDisplayName;
+      }
+      setReplies((prev) => [...prev, publicReply]);
       setBody("");
       setHp("");
       setReplyToId(null);
+      if (key) setAdminKey(key);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Could not reply");
     } finally {
@@ -352,15 +404,16 @@ export default function BlogPostPage() {
   }
 
   async function onDeleteReply(replyId: string) {
+    const key = loadSessionAdminKey() || adminKey;
     const deleteToken = ownedTokens[replyId];
-    if (!adminKey && !deleteToken) return;
+    if (!key && !deleteToken) return;
     setDeleteError(null);
     setDeletingId(replyId);
     try {
       const result = await deleteBlogReply(
         slug,
         { replyId, deleteToken },
-        adminKey || undefined
+        key || undefined
       );
       const removed = new Set(result.deletedIds?.length ? result.deletedIds : [replyId]);
       for (const id of removed) forgetReplyToken(id);
@@ -376,14 +429,14 @@ export default function BlogPostPage() {
 
   const composer = (
     <ReplyComposer
-      name={adminKey && post?.authorName ? post.authorName : name}
+      name={asAuthor ? authorDisplayName : name}
       body={body}
       hp={hp}
       submitting={submitting}
       error={submitError}
-      placeholder={replyToId ? "Write a reply…" : "Write a reply…"}
-      submitLabel={replyToId ? "Reply" : "Post"}
-      asAuthor={Boolean(adminKey && post?.authorName)}
+      placeholder={asAuthor ? "Write your author reply…" : "Write a reply…"}
+      submitLabel={asAuthor ? "Post as author" : replyToId ? "Reply" : "Post"}
+      asAuthor={asAuthor}
       onNameChange={setName}
       onBodyChange={setBody}
       onHpChange={setHp}
@@ -483,11 +536,14 @@ export default function BlogPostPage() {
 
               {!replyToId && (
                 <ReplyComposer
-                  name={name}
+                  name={asAuthor ? authorDisplayName : name}
                   body={body}
                   hp={hp}
                   submitting={submitting}
                   error={submitError}
+                  placeholder={asAuthor ? "Write your author reply…" : "Write a reply…"}
+                  submitLabel={asAuthor ? "Post as author" : "Post"}
+                  asAuthor={asAuthor}
                   onNameChange={setName}
                   onBodyChange={setBody}
                   onHpChange={setHp}
@@ -507,6 +563,7 @@ export default function BlogPostPage() {
                   depth={0}
                   ownedTokens={ownedTokens}
                   isAdmin={Boolean(adminKey)}
+                  authorName={post.authorName}
                   deletingId={deletingId}
                   replyToId={replyToId}
                   composer={composer}
