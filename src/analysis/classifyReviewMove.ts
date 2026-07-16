@@ -56,17 +56,23 @@ export function epLossFromPlayed(input: ClassifyReviewInput): number {
 }
 
 /**
- * Classification: vs-best when the engine line is trustworthy; otherwise absolute
- * win% drop so a dumped win still counts when “best” also looks ruined.
+ * Classification: vs-best when the engine’s best line actually holds; otherwise
+ * absolute win% drop so a dumped position is not labeled “Good” when shallow
+ * search also ruins the PV (classic horizon: vs-best ≈ 0, bar shows −25%+).
  */
 export function classificationLoss(input: ClassifyReviewInput): number {
   const vsBest = epLossFromPlayed(input);
   const absolute = expectedPointsLoss(input.eBefore, input.eAfterPlayed);
   const bestDepth = input.multipvLines[0]?.depth ?? 0;
-  // Trust vs-best when we actually searched; avoid double-punishing with absolute
-  // on every noisy swing (that was inflating blunder counts vs Lichess).
+  // Trust vs-best only when we searched AND the best move preserves the
+  // position. If “best” also collapses (≥ mistake band), shallow/noisy eval —
+  // use absolute so Critical Moments and the glyph agree.
   if (bestDepth >= 12 && input.fenAfterBest) {
-    return vsBest;
+    const bestCollapse = expectedPointsLoss(input.eBefore, input.eAfterBest);
+    if (bestCollapse < EP_CLASS_THRESHOLDS.mistake) {
+      return vsBest;
+    }
+    return Math.max(vsBest, absolute);
   }
   return Math.max(vsBest, absolute);
 }
