@@ -2,12 +2,12 @@
 export function BlogPinnedBadge({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-chess-accent/35 bg-chess-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-chess-accent ${className}`}
+      className={`inline-flex items-center gap-0.5 rounded border border-chess-accent/30 bg-chess-accent/12 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-chess-accent ${className}`}
       title="Pinned"
     >
       <svg
-        width="10"
-        height="10"
+        width="9"
+        height="9"
         viewBox="0 0 24 24"
         fill="currentColor"
         aria-hidden
