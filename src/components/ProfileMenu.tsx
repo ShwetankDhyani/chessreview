@@ -26,10 +26,7 @@ interface ProfileMenuProps {
   onAddNameChange: (v: string) => void;
   addLoading: boolean;
   addError: string | null;
-  /** Soft failure (timeout/network) — allow linking without API confirm. */
-  addCanSkip?: boolean;
   onAddSubmit: () => void;
-  onAddAnyway?: () => void;
   onCancelAdd: () => void;
   savedCount: number;
   savedLoading: boolean;
@@ -125,9 +122,7 @@ export function ProfileMenu({
   onAddNameChange,
   addLoading,
   addError,
-  addCanSkip = false,
   onAddSubmit,
-  onAddAnyway,
   onCancelAdd,
   savedCount,
   savedLoading,
@@ -408,23 +403,9 @@ export function ProfileMenu({
                     </button>
                   )}
                   {addError && (
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-[11px] font-semibold leading-snug text-move-blunder">
-                        {addError}
-                      </p>
-                      {addCanSkip && onAddAnyway && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            hapticTap();
-                            onAddAnyway();
-                          }}
-                          className="self-start rounded-md bg-chess-surface px-2 py-1 text-[11px] font-bold text-chess-accent ring-1 ring-chess-accent/40 transition-colors hover:bg-chess-hover"
-                        >
-                          Add anyway
-                        </button>
-                      )}
-                    </div>
+                    <p className="rounded-lg border border-chess-border/70 bg-chess-bg/50 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-chess-subtext">
+                      {addError}
+                    </p>
                   )}
                 </form>
               </section>

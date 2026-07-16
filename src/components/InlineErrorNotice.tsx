@@ -7,6 +7,8 @@ interface InlineErrorNoticeProps {
   onDismiss?: () => void;
   className?: string;
   children?: ReactNode;
+  /** Soft = muted amber notice; error = red alert (default). */
+  tone?: "error" | "soft";
 }
 
 export function InlineErrorNotice({
@@ -15,20 +17,32 @@ export function InlineErrorNotice({
   onDismiss,
   className = "",
   children,
+  tone = "error",
 }: InlineErrorNoticeProps) {
+  const soft = tone === "soft";
   return (
     <div
-      className={`rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-2 text-xs text-red-200 ${className}`}
+      className={
+        soft
+          ? `rounded-xl border border-chess-border/70 bg-chess-panel/80 px-3 py-2 text-[11px] leading-snug text-chess-subtext ${className}`
+          : `rounded-xl border border-red-900/50 bg-red-950/35 px-3 py-2 text-[11px] leading-snug text-red-100/90 ${className}`
+      }
       role="alert"
     >
       <div className="flex items-start gap-2">
-        <span className="mt-[2px] inline-block h-1.5 w-1.5 rounded-full bg-red-300/90" />
+        <span
+          className={
+            soft
+              ? "mt-[4px] inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400/70"
+              : "mt-[4px] inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-300/80"
+          }
+        />
         <div className="min-w-0 flex-1">
-          <p>{message}</p>
-          {children ? <div className="mt-1.5">{children}</div> : null}
+          <p className="font-medium">{message}</p>
+          {children ? <div className="mt-1 opacity-80">{children}</div> : null}
         </div>
         {(onRetry || onDismiss) && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2.5">
             {onRetry ? (
               <button
                 type="button"
@@ -36,7 +50,11 @@ export function InlineErrorNotice({
                   hapticSelection();
                   onRetry();
                 }}
-                className="font-semibold text-red-100 hover:text-white"
+                className={
+                  soft
+                    ? "font-semibold text-chess-accent hover:text-chess-accent-hover"
+                    : "font-semibold text-red-100 hover:text-white"
+                }
               >
                 Retry
               </button>
@@ -48,7 +66,11 @@ export function InlineErrorNotice({
                   hapticSoft();
                   onDismiss();
                 }}
-                className="font-semibold text-red-300 hover:text-red-100"
+                className={
+                  soft
+                    ? "font-medium text-chess-muted hover:text-chess-text"
+                    : "font-medium text-red-300/90 hover:text-red-100"
+                }
               >
                 Dismiss
               </button>
