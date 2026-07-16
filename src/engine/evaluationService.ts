@@ -16,7 +16,8 @@ const PROBE_DOWN_RETRY_MS = 6_000;
 const BATCH_QUEUE_POLL_MS = 1200;
 const ENGINE_REVIEW_LOCK_KEY = "cr:engineReviewLock:v1";
 const ENGINE_REVIEW_LOCK_TTL_MS = parseInt(
-  process.env.ENGINE_REVIEW_LOCK_TTL_MS ?? "300000",
+  ((import.meta.env.VITE_ENGINE_REVIEW_LOCK_TTL_MS as string | undefined) ??
+    "300000") as string,
   10
 );
 const ENGINE_REVIEW_LOCK_POLL_MS = 200;
