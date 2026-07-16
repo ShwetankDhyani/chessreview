@@ -195,6 +195,10 @@ let activeRunId = null;
 let activeRunLockedUntilMs = 0;
 const runMeta = new Map(); // runId -> { priority, createdAtMs }
 const BATCH_JOB_TTL_MS = 10 * 60 * 1000;
+const ABANDONED_QUEUED_JOB_TTL_MS = parseInt(
+  process.env.ABANDONED_QUEUED_JOB_TTL_MS ?? "15000",
+  10
+);
 const RUN_LOCK_GRACE_MS = parseInt(
   process.env.RUN_LOCK_GRACE_MS ?? "8000",
   10
@@ -259,8 +263,30 @@ function normalizeQueuePriority(value) {
   return Math.floor(n);
 }
 
+function touchJob(job) {
+  job.lastTouchedMs = Date.now();
+}
+
+function markJobCancelled(job, reason) {
+  if (!job || job.status === "done" || job.status === "error" || job.status === "cancelled") {
+    return;
+  }
+  job.status = "cancelled";
+  job.error = reason || "Batch cancelled";
+  job.finishedAtMs = Date.now();
+}
+
 function cleanupBatchJobs() {
   const now = Date.now();
+  for (const job of batchJobs.values()) {
+    if (
+      job.status === "queued" &&
+      now - (job.lastTouchedMs ?? job.createdAtMs) > ABANDONED_QUEUED_JOB_TTL_MS
+    ) {
+      markJobCancelled(job, "Batch cancelled (client disconnected)");
+    }
+  }
+
   for (const [id, job] of batchJobs) {
     const ts = job.finishedAtMs ?? job.createdAtMs;
     if (now - ts > BATCH_JOB_TTL_MS) {
@@ -271,7 +297,8 @@ function cleanupBatchJobs() {
   // Remove stale ids from the queue array.
   for (let i = batchQueue.length - 1; i >= 0; i--) {
     const id = batchQueue[i];
-    if (!batchJobs.has(id)) batchQueue.splice(i, 1);
+    const job = batchJobs.get(id);
+    if (!job || job.status !== "queued") batchQueue.splice(i, 1);
   }
 
   // Drop run metadata for runs that no longer have pending jobs.
@@ -432,7 +459,7 @@ function batchJobPayload(job) {
     startedAtMs: job.startedAtMs ?? null,
     finishedAtMs: job.finishedAtMs ?? null,
     results: job.status === "done" ? job.results : undefined,
-    error: job.status === "error" ? job.error : undefined,
+    error: job.status === "error" || job.status === "cancelled" ? job.error : undefined,
   };
 }
 
@@ -549,6 +576,7 @@ function enqueueBatchJob(fens, depth, priorityHint, runIdHint) {
     results: null,
     error: null,
     createdAtMs,
+    lastTouchedMs: createdAtMs,
     startedAtMs: null,
     finishedAtMs: null,
     estimatedMs: estimateBatchMs(fens.length),
@@ -800,6 +828,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ error: "Batch job not found" }));
       return;
     }
+    touchJob(job);
     const payload = batchJobPayload(job);
     res.writeHead(job.status === "queued" || job.status === "running" ? 202 : 200);
     res.end(JSON.stringify(payload));
