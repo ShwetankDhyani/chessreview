@@ -1351,7 +1351,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           requestedDepth: depth,
           fastDepth: depth,
           deepDepth: depth,
-          backendPolicy: "consensus" as const,
+          backendPolicy: "full-depth" as const,
           pgnHash: "saved",
         };
         const loadedResult: ReviewResult = {

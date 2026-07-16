@@ -10,7 +10,7 @@ const mockReview: ReviewResult = {
     requestedDepth: 18,
     fastDepth: 18,
     deepDepth: 18,
-    backendPolicy: "consensus",
+    backendPolicy: "full-depth",
     pgnHash: "h1",
   },
   moves: [

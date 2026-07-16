@@ -9,8 +9,8 @@ const LOCAL_SERVER = EVAL_SERVER_URL;
 const HEALTH_TIMEOUT_MS = 8000;
 const EVAL_TIMEOUT_MS = 45000;
 const BATCH_TIMEOUT_MS = 600_000;
-/** Larger chunks = fewer tunnel round-trips per game on laptop server */
-const BATCH_CHUNK_SIZE = 96;
+/** Match server STOCKFISH_MAX_BATCH default — fewer tunnel round-trips */
+const BATCH_CHUNK_SIZE = 128;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
 
@@ -331,26 +331,6 @@ function cpFromEvalForDisagreement(e: EvalResult | undefined): number | null {
   return e.cp;
 }
 
-function prioritizeForDeepening(
-  fens: string[],
-  fastMap: Map<string, EvalResult>,
-  policy: ConsensusEvalPolicy
-): string[] {
-  const scored = fens.map((fen) => {
-    const ev = fastMap.get(fen);
-    if (!ev) return { fen, score: 1_000_000 };
-    const cpAbs = Math.abs(ev.cp ?? 0);
-    const nearEqualityBoost = Math.max(0, 180 - cpAbs);
-    const shallowPenalty = Math.max(0, policy.minVerifiedDepth - (ev.depth ?? 0)) * 120;
-    const mateBoost = ev.mate !== undefined ? 200 : 0;
-    return { fen, score: nearEqualityBoost + shallowPenalty + mateBoost };
-  });
-  scored.sort((a, b) => b.score - a.score);
-  return scored
-    .slice(0, Math.min(policy.maxDeepPositions, scored.length))
-    .map((x) => x.fen);
-}
-
 function mergeConsensusEval(
   fastEval: EvalResult | undefined,
   deepEval: EvalResult | undefined,
@@ -393,6 +373,10 @@ function mergeConsensusEval(
   };
 }
 
+/**
+ * Full-depth evaluation for every FEN (no shallow pass / deepen subset).
+ * Kept under the old name for callers; policy.fastDepth / maxDeepPositions are ignored.
+ */
 export async function evaluateFensConsensus(
   fens: string[],
   policy: ConsensusEvalPolicy,
@@ -400,29 +384,27 @@ export async function evaluateFensConsensus(
 ): Promise<ConsensusEvalOutput> {
   const unique = [...new Set(fens)];
   const total = unique.length;
-  const fastMap = await evaluateFensBatch(unique, policy.fastDepth, onProgress);
-  if (fastMap.size < unique.length) {
+  const depth = policy.requestedDepth;
+  const map = await evaluateFensBatch(unique, depth, onProgress);
+  if (map.size < unique.length) {
     for (const fen of unique) {
-      if (fastMap.has(fen)) continue;
-      const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
-      if (fallback) fastMap.set(fen, fallback);
-    }
-  }
-
-  const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
-  const deepMap = await evaluateFensBatch(deepenTargets, policy.deepDepth);
-  if (deepMap.size < deepenTargets.length) {
-    for (const fen of deepenTargets) {
-      if (deepMap.has(fen)) continue;
-      const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
-      if (fallback) deepMap.set(fen, fallback);
+      if (map.has(fen)) continue;
+      const fallback = await evaluateFen(fen, depth).catch(() => null);
+      if (fallback) map.set(fen, fallback);
     }
   }
 
   const merged = new Map<string, EvalResult>();
   let verified = 0;
   for (const fen of unique) {
-    const finalEval = mergeConsensusEval(fastMap.get(fen), deepMap.get(fen), policy);
+    const ev = map.get(fen);
+    const finalEval = mergeConsensusEval(ev, ev, {
+      ...policy,
+      fastDepth: depth,
+      deepDepth: depth,
+      maxDeepPositions: 0,
+      disagreementCpForLowConfidence: Number.POSITIVE_INFINITY,
+    });
     if (finalEval.verified) verified++;
     merged.set(fen, finalEval);
   }
@@ -431,7 +413,7 @@ export async function evaluateFensConsensus(
     evals: merged,
     meta: {
       evaluated: total,
-      deepened: deepenTargets.length,
+      deepened: total,
       verified,
     },
   };

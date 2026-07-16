@@ -27,17 +27,15 @@ import { DEFAULT_PLAYER_RATING } from "./ratingThresholds";
 import {
   batchCacheIsUsable,
   buildBatchPositionCache,
-  enrichGreatMoveCandidates,
+  fillMissingWithWasm,
 } from "./evalCache";
 import type { PositionAnalysis, ReviewEngineOptions } from "./types";
 import { detectPieceSacrifice } from "./detectPieceSacrifice";
 import { isDeliveredCheckmate } from "./mateDetection";
-import { GREAT_MIN_BEST_EP } from "./types";
 
 const DEFAULT_DEPTH = 16;
 const WASM_FALLBACK_MIN_DEPTH = 14;
 const DEFAULT_MULTIPV = 3;
-const MIN_VERIFY_DEPTH = 10;
 
 function hashText(value: string): string {
   let hash = 5381;
@@ -132,26 +130,32 @@ async function buildAnalysisCache(
   multiPv: number,
   onProgress?: (done: number, total: number) => void
 ): Promise<{ cache: Map<string, PositionAnalysis>; engineTag: string }> {
-  const batch = await buildBatchPositionCache(fens, depth, (done, total) => {
+  const unique = [...new Set(fens)];
+  const batch = await buildBatchPositionCache(unique, depth, (done, total) => {
     onProgress?.(Math.round((done / Math.max(total, 1)) * 88), 100);
   });
-  if (batchCacheIsUsable(batch, fens)) {
+  if (batchCacheIsUsable(batch, unique)) {
     onProgress?.(90, 100);
-    return { cache: batch, engineTag: "v3.2-wdl-hybrid-batch" };
+    return { cache: batch, engineTag: "v3.2-wdl-full-depth" };
   }
 
-  const cache = new Map<string, PositionAnalysis>();
+  // Native incomplete: fill ONLY missing FENs (never re-run the whole game in WASM).
   const wasmDepth = Math.max(WASM_FALLBACK_MIN_DEPTH, depth);
-  let done = 0;
-  for (const fen of fens) {
-    cache.set(
-      fen,
-      await analyzePositionMultiPv(fen, { depth: wasmDepth, multiPv })
-    );
-    done++;
-    onProgress?.(Math.round((done / fens.length) * 88), 100);
-  }
-  return { cache, engineTag: "v3.2-wasm-multipv" };
+  await fillMissingWithWasm(
+    batch,
+    unique,
+    wasmDepth,
+    multiPv,
+    analyzePositionMultiPv,
+    (done, total) => {
+      onProgress?.(88 + Math.round((done / Math.max(total, 1)) * 2), 100);
+    }
+  );
+  onProgress?.(90, 100);
+  const tag = batchCacheIsUsable(batch, unique)
+    ? "v3.2-wdl-full-depth-wasm-fill"
+    : "v3.2-wdl-partial";
+  return { cache: batch, engineTag: tag };
 }
 
 function collectExtraBestFens(
@@ -177,34 +181,8 @@ function collectExtraBestFens(
   return extra;
 }
 
-function collectGreatCandidates(
-  fens: string[],
-  history: Move[],
-  cache: Map<string, PositionAnalysis>
-): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < history.length; i++) {
-    const fenBefore = fens[i];
-    const before = cache.get(fenBefore);
-    const line = before?.lines[0];
-    if (!line) continue;
-    const mover = history[i].color;
-    const eBefore = expectedPointsFromLine(line, mover, fenBefore);
-    const bestUci = line.bestMove ?? line.pv[0];
-    const played = (
-      history[i].from +
-      history[i].to +
-      (history[i].promotion ?? "")
-    ).toLowerCase();
-    if (eBefore >= GREAT_MIN_BEST_EP && bestUci?.toLowerCase() === played) {
-      out.push(fenBefore);
-    }
-  }
-  return out;
-}
-
 /**
- * Fast hybrid review: batch eval all FENs, MultiPV WASM only for Great candidates.
+ * Full-depth review: every position evaluated once at the requested depth.
  */
 export async function analyzeGameReview(
   pgn: string,
@@ -242,22 +220,6 @@ export async function analyzeGameReview(
     for (const [fen, a] of extra) analysisCache.set(fen, a);
   } else {
     options.onProgress?.(94, 100);
-  }
-
-  const greatCandidates = collectGreatCandidates(fens, history, analysisCache);
-  if (greatCandidates.length > 0) {
-    await enrichGreatMoveCandidates(
-      analysisCache,
-      greatCandidates,
-      depth,
-      multiPv,
-      (d, t) => {
-        options.onProgress?.(
-          94 + Math.round((d / Math.max(t, 1)) * 4),
-          100
-        );
-      }
-    );
   }
 
   options.onProgress?.(98, 100);
@@ -420,7 +382,7 @@ export async function analyzeGameReview(
       }
     }
 
-    const verified = (beforeAnalysis?.depth ?? 0) >= MIN_VERIFY_DEPTH;
+    const verified = (beforeAnalysis?.depth ?? 0) >= depth;
     const multipvLines = beforeAnalysis?.lines ?? [];
     const engineRank =
       classification === "book" || forced
@@ -474,9 +436,9 @@ export async function analyzeGameReview(
     startedAt,
     finishedAt: nowIso(),
     requestedDepth: depth,
-    fastDepth: Math.min(12, depth),
+    fastDepth: depth,
     deepDepth: depth,
-    backendPolicy: "consensus",
+    backendPolicy: "full-depth",
     pgnHash: hashText(pgn),
   };
 

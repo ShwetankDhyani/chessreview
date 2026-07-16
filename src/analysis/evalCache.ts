@@ -1,10 +1,9 @@
-import { evaluateFensConsensus } from "../engine/evaluationService";
+import {
+  evaluateFensBatch,
+  evaluateFen,
+} from "../engine/evaluationService";
 import type { EvalResult } from "../types";
 import type { PositionAnalysis, MultiPvLine } from "./types";
-import { analyzePositionMultiPv } from "./stockfishClient";
-
-const MIN_VERIFY_DEPTH = 10;
-const MAX_MULTIPV_GREAT_PLIES = 12;
 
 export function evalResultToPositionAnalysis(
   fen: string,
@@ -22,8 +21,25 @@ export function evalResultToPositionAnalysis(
   return { fen, depth: ev.depth, lines: [line] };
 }
 
+function withFullDepthMeta(ev: EvalResult, requestedDepth: number): EvalResult {
+  const depth = ev.depth ?? 0;
+  const verified = depth >= requestedDepth;
+  return {
+    ...ev,
+    targetDepth: requestedDepth,
+    verified,
+    confidence: verified ? 0.95 : depth > 0 ? 0.7 : 0.2,
+    unverifiedReason: verified
+      ? undefined
+      : depth > 0
+        ? "shallow_depth"
+        : "missing_eval",
+  };
+}
+
 /**
- * Fast path: batch-eval all positions via native server / cloud / single-PV WASM.
+ * Full-depth path: evaluate every unique FEN once at the requested depth.
+ * No shallow pass, no 45% deepen subset. Misses are retried at the same depth.
  */
 export async function buildBatchPositionCache(
   fens: string[],
@@ -33,70 +49,74 @@ export async function buildBatchPositionCache(
   const unique = [...new Set(fens)];
   if (!unique.length) return new Map();
 
-  const fastDepth = Math.max(10, Math.min(depth, 12));
-  const deepDepth = Math.max(fastDepth + 2, depth);
-  const maxDeep = Math.max(24, Math.min(96, Math.floor(unique.length * 0.45)));
+  const evals = await evaluateFensBatch(unique, depth, onProgress);
 
-  const { evals } = await evaluateFensConsensus(
-    unique,
-    {
-      requestedDepth: depth,
-      fastDepth,
-      deepDepth,
-      minVerifiedDepth: MIN_VERIFY_DEPTH,
-      maxDeepPositions: maxDeep,
-      disagreementCpForLowConfidence: 90,
-    },
-    onProgress
-  );
+  const missing = unique.filter((fen) => {
+    const ev = evals.get(fen);
+    return !ev || !(ev.depth > 0);
+  });
+
+  for (const fen of missing) {
+    try {
+      const fallback = await evaluateFen(fen, depth);
+      if (fallback?.depth && fallback.depth > 0) {
+        evals.set(fen, fallback);
+      }
+    } catch {
+      /* leave missing — caller decides WASM / fail */
+    }
+    onProgress?.(evals.size, unique.length);
+  }
 
   const cache = new Map<string, PositionAnalysis>();
   for (const [fen, ev] of evals) {
-    if (ev.depth > 0) cache.set(fen, evalResultToPositionAnalysis(fen, ev));
+    if (!(ev.depth > 0)) continue;
+    const tagged = withFullDepthMeta(ev, depth);
+    cache.set(fen, evalResultToPositionAnalysis(fen, tagged));
   }
   return cache;
 }
 
-/** True if batch path likely has enough coverage to skip per-FEN WASM MultiPV. */
+/** True only when every required FEN has a usable eval (no 85% shortcut). */
 export function batchCacheIsUsable(
   cache: Map<string, PositionAnalysis>,
   requiredFens: string[]
 ): boolean {
+  if (requiredFens.length === 0) return true;
   if (cache.size === 0) return false;
-  let hit = 0;
   for (const fen of requiredFens) {
-    if (cache.has(fen)) hit++;
+    if (!cache.has(fen)) return false;
   }
-  return hit >= requiredFens.length * 0.85;
+  return true;
 }
 
 /**
- * MultiPV on a few plies only (Great-move detection) — not the whole game.
+ * Fill only missing FENs via WASM MultiPV — never re-analyze the whole game.
  */
-const GREAT_ENRICH_TIMEOUT_MS = 12_000;
-
-export async function enrichGreatMoveCandidates(
+export async function fillMissingWithWasm(
   cache: Map<string, PositionAnalysis>,
-  candidates: string[],
+  requiredFens: string[],
   depth: number,
-  multiPv = 3,
+  multiPv: number,
+  analyzePositionMultiPv: (
+    fen: string,
+    opts: { depth: number; multiPv: number }
+  ) => Promise<PositionAnalysis>,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
-  const unique = [...new Set(candidates)].slice(0, MAX_MULTIPV_GREAT_PLIES);
+  const missing = requiredFens.filter((fen) => !cache.has(fen));
   let done = 0;
-  for (const fen of unique) {
+  for (const fen of missing) {
     try {
       const analysis = await analyzePositionMultiPv(fen, {
-        depth: Math.min(depth, 14),
+        depth,
         multiPv,
-        timeoutMs: GREAT_ENRICH_TIMEOUT_MS,
       });
-      if (analysis.lines.length >= 2) cache.set(fen, analysis);
+      if (analysis.lines.length > 0) cache.set(fen, analysis);
     } catch {
-      /* skip — Great detection optional for this ply */
+      /* leave missing */
     }
     done++;
-    onProgress?.(done, unique.length);
+    onProgress?.(done, missing.length);
   }
 }
-
