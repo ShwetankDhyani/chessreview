@@ -191,7 +191,14 @@ let avgBatchMsPerFen = 220;
 const batchJobs = new Map();
 const batchQueue = [];
 let activeBatchJobId = null;
+let activeRunId = null;
+let activeRunLockedUntilMs = 0;
+const runMeta = new Map(); // runId -> { priority, createdAtMs }
 const BATCH_JOB_TTL_MS = 10 * 60 * 1000;
+const RUN_LOCK_GRACE_MS = parseInt(
+  process.env.RUN_LOCK_GRACE_MS ?? "8000",
+  10
+);
 
 function cacheKey(fen, depth) {
   return `${depth}:${fen}`;
@@ -260,49 +267,153 @@ function cleanupBatchJobs() {
       batchJobs.delete(id);
     }
   }
+
+  // Remove stale ids from the queue array.
+  for (let i = batchQueue.length - 1; i >= 0; i--) {
+    const id = batchQueue[i]!;
+    if (!batchJobs.has(id)) batchQueue.splice(i, 1);
+  }
+
+  // Drop run metadata for runs that no longer have pending jobs.
+  for (const [runId] of runMeta) {
+    if (
+      activeRunId != null &&
+      String(runId) === String(activeRunId) &&
+      now < activeRunLockedUntilMs
+    ) {
+      continue;
+    }
+    let hasPending = false;
+    if (activeBatchJobId) {
+      const activeJob = batchJobs.get(activeBatchJobId);
+      if (activeJob && activeJob.runId === runId) hasPending = true;
+    }
+    if (!hasPending) {
+      for (const job of batchJobs.values()) {
+        if (job.runId === runId && (job.status === "queued" || job.status === "running")) {
+          hasPending = true;
+          break;
+        }
+      }
+    }
+    if (!hasPending) runMeta.delete(runId);
+  }
 }
 
-function compareQueuedJobs(a, b) {
-  if (a.priority !== b.priority) return a.priority - b.priority;
-  if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
-  return a.id.localeCompare(b.id);
+function getPlannedRunIds() {
+  const runIds = [];
+  const seen = new Set();
+  for (const job of batchJobs.values()) {
+    if (!(job.status === "queued" || job.status === "running")) continue;
+    const rid = String(job.runId);
+    if (seen.has(rid)) continue;
+    seen.add(rid);
+    runIds.push(rid);
+  }
+  return runIds.sort((a, b) => {
+    const ma = runMeta.get(a);
+    const mb = runMeta.get(b);
+    const pa = ma?.priority ?? 0;
+    const pb = mb?.priority ?? 0;
+    if (pa !== pb) return pa - pb;
+    const ca = ma?.createdAtMs ?? 0;
+    const cb = mb?.createdAtMs ?? 0;
+    if (ca !== cb) return ca - cb;
+    return a.localeCompare(b);
+  });
 }
 
-function getPlannedQueueIds() {
-  return batchQueue
-    .map((id) => batchJobs.get(id))
-    .filter(Boolean)
-    .sort(compareQueuedJobs)
-    .map((job) => job.id);
+function hasPendingJobsForRun(runId) {
+  if (!runId) return false;
+  for (const job of batchJobs.values()) {
+    if (job.runId === runId && (job.status === "queued" || job.status === "running")) return true;
+  }
+  return false;
+}
+
+function getRunJobIdsInOrder(runId) {
+  const jobs = [];
+  for (const [id, job] of batchJobs) {
+    if (job.runId !== runId) continue;
+    if (job.status !== "queued" && job.status !== "running") continue;
+    jobs.push(job);
+  }
+  jobs.sort((a, b) => {
+    // Running job is "already started"; we still want it ordered first for ETA math.
+    const as = a.status === "running" ? 0 : 1;
+    const bs = b.status === "running" ? 0 : 1;
+    if (as !== bs) return as - bs;
+    if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
+    return a.id.localeCompare(b.id);
+  });
+  return jobs.map((j) => j.id);
+}
+
+function pendingJobsForRunSorted(runId) {
+  const jobs = [];
+  for (const job of batchJobs.values()) {
+    if (job.runId !== runId) continue;
+    if (job.status === "queued" || job.status === "running") jobs.push(job);
+  }
+  jobs.sort((a, b) => {
+    if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
+    return a.id.localeCompare(b.id);
+  });
+  return jobs;
 }
 
 function queueStatusFor(jobId) {
-  const planned = getPlannedQueueIds();
-  const queueIndex = planned.indexOf(jobId);
-  const queuePosition = queueIndex >= 0 ? queueIndex + 1 : 0;
-  const queueAhead = queueIndex >= 0 ? queueIndex : 0;
-  const active = activeBatchJobId ? batchJobs.get(activeBatchJobId) : null;
-
-  let etaMs = 0;
-  if (queueIndex >= 0) {
-    if (active && active.status === "running") {
-      const elapsed = Date.now() - active.startedAtMs;
-      etaMs += Math.max(0, (active.estimatedMs ?? 0) - elapsed);
-    }
-    for (let i = 0; i < queueIndex; i++) {
-      const queued = batchJobs.get(planned[i]);
-      if (queued) etaMs += queued.estimatedMs ?? estimateBatchMs(queued.fens.length);
-    }
-  } else if (activeBatchJobId === jobId && active && active.status === "running") {
-    const elapsed = Date.now() - active.startedAtMs;
-    etaMs = Math.max(0, (active.estimatedMs ?? 0) - elapsed);
+  const job = batchJobs.get(jobId);
+  if (!job) {
+    return { queuePosition: 0, queueAhead: 0, etaMs: 0 };
   }
 
-  return {
-    queuePosition,
-    queueAhead,
-    etaMs,
-  };
+  const plannedRuns = getPlannedRunIds();
+  const runIndex = plannedRuns.indexOf(String(job.runId));
+  const isActiveRun = activeRunId != null && String(activeRunId) === String(job.runId);
+
+  const queueAhead = runIndex >= 0 ? runIndex : 0;
+  const queuePosition = isActiveRun ? 0 : runIndex >= 0 ? runIndex + 1 : 0;
+
+  let etaMs = 0;
+
+  // Sum time for runs ahead of this job's run.
+  if (!isActiveRun && runIndex > 0) {
+    for (let i = 0; i < runIndex; i++) {
+      const rid = plannedRuns[i]!;
+      const jobs = pendingJobsForRunSorted(rid);
+      for (const j of jobs) {
+        if (j.status === "running") {
+          const elapsed = Date.now() - j.startedAtMs;
+          etaMs += Math.max(0, (j.estimatedMs ?? 0) - elapsed);
+        } else {
+          etaMs += j.estimatedMs ?? estimateBatchMs(j.fens.length);
+        }
+      }
+    }
+  } else if (isActiveRun) {
+    // Within the active run: account for the remaining time of the currently running chunk,
+    // then add estimated time for queued chunks ahead of this one.
+    const runningJob = activeBatchJobId ? batchJobs.get(activeBatchJobId) : null;
+    if (runningJob && runningJob.status === "running") {
+      const elapsed = Date.now() - runningJob.startedAtMs;
+      etaMs += Math.max(0, (runningJob.estimatedMs ?? 0) - elapsed);
+    }
+
+    const orderedIds = getRunJobIdsInOrder(String(job.runId));
+    const idx = orderedIds.indexOf(jobId);
+    for (let k = 0; k < idx; k++) {
+      const aheadId = orderedIds[k]!;
+      if (aheadId === jobId) break;
+      const aheadJob = batchJobs.get(aheadId);
+      if (!aheadJob) continue;
+      // running job already accounted above.
+      if (aheadJob.status === "running") continue;
+      etaMs += aheadJob.estimatedMs ?? estimateBatchMs(aheadJob.fens.length);
+    }
+  }
+
+  return { queuePosition, queueAhead, etaMs };
 }
 
 function batchJobPayload(job) {
@@ -358,37 +469,86 @@ async function processBatchJob(job) {
 
 function pumpBatchQueue() {
   if (activeBatchJobId || batchQueue.length === 0) return;
-  const planned = getPlannedQueueIds();
-  const nextId = planned[0];
-  const queueIdx = batchQueue.indexOf(nextId);
-  if (queueIdx >= 0) batchQueue.splice(queueIdx, 1);
-  const job = batchJobs.get(nextId);
-  if (!job) {
-    pumpBatchQueue();
-    return;
+  if (activeRunId == null) {
+    const plannedRuns = getPlannedRunIds();
+    activeRunId = plannedRuns[0] ?? null;
+    activeRunLockedUntilMs = 0;
   }
-  activeBatchJobId = nextId;
-  void processBatchJob(job).finally(() => {
-    activeBatchJobId = null;
-    cleanupBatchJobs();
-    pumpBatchQueue();
-  });
+
+  // If we have an active run, only run its jobs until it's drained.
+  if (activeRunId != null) {
+    // Find the next queued chunk job belonging to activeRunId.
+    let nextId = null;
+    for (const id of batchQueue) {
+      const job = batchJobs.get(id);
+      if (!job) continue;
+      if (job.runId === activeRunId) {
+        nextId = id;
+        break;
+      }
+    }
+
+    if (!nextId) {
+      // No more pending jobs for this run. Let it drain and move on.
+      const now = Date.now();
+      if (activeRunLockedUntilMs > now) {
+        // Within the grace window: wait for the client to enqueue additional chunks
+        // for the same review run (e.g. deepening stage), instead of starting a newer run.
+        return;
+      }
+      activeRunId = null;
+      activeRunLockedUntilMs = 0;
+      pumpBatchQueue();
+      return;
+    }
+
+    const queueIdx = batchQueue.indexOf(nextId);
+    if (queueIdx >= 0) batchQueue.splice(queueIdx, 1);
+
+    const job = batchJobs.get(nextId);
+    if (!job) {
+      pumpBatchQueue();
+      return;
+    }
+
+    activeBatchJobId = nextId;
+    void processBatchJob(job).finally(() => {
+      activeBatchJobId = null;
+      cleanupBatchJobs();
+      if (activeRunId != null && !hasPendingJobsForRun(activeRunId)) {
+        // Keep this run as the active run for a short time so its next stage
+        // can enqueue without being interleaved with another review.
+        activeRunLockedUntilMs = Date.now() + RUN_LOCK_GRACE_MS;
+      }
+      pumpBatchQueue();
+    });
+  }
 }
 
-function enqueueBatchJob(fens, depth, priorityHint) {
+function enqueueBatchJob(fens, depth, priorityHint, runIdHint) {
   cleanupBatchJobs();
-  const priority = normalizeQueuePriority(priorityHint);
   const id = newJobId();
+  const createdAtMs = Date.now();
+  const priority = normalizeQueuePriority(priorityHint);
+
+  // If runId isn't provided, treat this single job as its own run.
+  const runId = runIdHint != null ? String(runIdHint) : id;
+  const existing = runMeta.get(runId);
+  if (!existing) {
+    runMeta.set(runId, { priority, createdAtMs });
+  }
+
   const job = {
     id,
     status: "queued",
     fens,
     depth,
     priority,
+    runId,
     done: 0,
     results: null,
     error: null,
-    createdAtMs: Date.now(),
+    createdAtMs,
     startedAtMs: null,
     finishedAtMs: null,
     estimatedMs: estimateBatchMs(fens.length),
@@ -601,7 +761,12 @@ const server = createServer(async (req, res) => {
         return;
       }
       if (body?.async === true || body?.async === 1 || body?.mode === "queue") {
-        const job = enqueueBatchJob(fens, depth, body?.queuePriority ?? body?.reviewPriority);
+        const job = enqueueBatchJob(
+          fens,
+          depth,
+          body?.queuePriority ?? body?.reviewPriority,
+          body?.runId ?? body?.reviewRunId ?? body?.analysisRunId
+        );
         const payload = batchJobPayload(job);
         res.writeHead(202);
         res.end(JSON.stringify(payload));
