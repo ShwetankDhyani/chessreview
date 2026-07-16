@@ -214,7 +214,9 @@ async function runBatchChunkQueued(
 export async function evaluateFensBatch(
   fens: string[],
   depth = 16,
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  runId?: string,
+  runPriority?: number
 ): Promise<Map<string, EvalResult>> {
   const out = new Map<string, EvalResult>();
   if (!LOCAL_SERVER || fens.length === 0) return out;
@@ -239,7 +241,9 @@ export async function evaluateFensBatch(
 
   // Review-friendly scheduling: enqueue *all* chunk jobs for this batch stage
   // immediately, so concurrent reviews can't ping-pong chunk-by-chunk.
-  const queuePriority = Date.now();
+  const queuePriority = runPriority ?? Date.now();
+  const runIdFinal =
+    runId ?? `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const submitQueued = async (chunk: string[]): Promise<BatchJobStatusPayload> => {
     const submit = await fetch(`${LOCAL_SERVER}/eval/batch`, {
@@ -250,6 +254,7 @@ export async function evaluateFensBatch(
         depth,
         async: true,
         queuePriority,
+        runId: runIdFinal,
       }),
       signal: AbortSignal.timeout(60_000),
       cache: "no-store",
@@ -619,7 +624,18 @@ export async function evaluateFensConsensus(
 ): Promise<ConsensusEvalOutput> {
   const unique = [...new Set(fens)];
   const total = unique.length;
-  const fastMap = await evaluateFensBatch(unique, policy.fastDepth, onProgress);
+  // One queue runId for the whole review-stage (fast + deep) to prevent
+  // interleaving between concurrently running reviews.
+  const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const runPriority = Date.now();
+
+  const fastMap = await evaluateFensBatch(
+    unique,
+    policy.fastDepth,
+    onProgress,
+    runId,
+    runPriority
+  );
   if (fastMap.size < unique.length) {
     for (const fen of unique) {
       if (fastMap.has(fen)) continue;
@@ -629,7 +645,13 @@ export async function evaluateFensConsensus(
   }
 
   const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
-  const deepMap = await evaluateFensBatch(deepenTargets, policy.deepDepth);
+  const deepMap = await evaluateFensBatch(
+    deepenTargets,
+    policy.deepDepth,
+    undefined,
+    runId,
+    runPriority
+  );
   if (deepMap.size < deepenTargets.length) {
     for (const fen of deepenTargets) {
       if (deepMap.has(fen)) continue;
