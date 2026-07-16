@@ -57,8 +57,10 @@ export default function PrivacyPage() {
             <h2 className="text-sm font-semibold text-chess-text">Contact</h2>
             <p className="text-sm text-chess-muted leading-relaxed">
               Questions? Use{" "}
+              <strong className="text-chess-subtext font-medium">Contact</strong>{" "}
+              or{" "}
               <strong className="text-chess-subtext font-medium">Support Us</strong>{" "}
-              in the site footer — email or Chess.com message.
+              in the site footer.
             </p>
           </section>
         </main>
