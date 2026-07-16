@@ -3,11 +3,11 @@ import {
   createBlogPost,
   deleteBlogPost,
   deleteBlogReply,
-  getBlogPost,
   listBlogPosts,
   updateBlogPost,
   uploadBlogMedia,
 } from "../../server/blogApi.mjs";
+import { blogListHtml } from "../../server/blogCrawlerHtml.mjs";
 
 function adminKey(req) {
   return (
@@ -20,21 +20,38 @@ function expectedAdmin() {
   return (process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY ?? "").trim();
 }
 
+function wantsHtml(req) {
+  return (
+    req.query?.format === "html" ||
+    String(req.query?.preview ?? "") === "1"
+  );
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key");
 
   if (req.method === "OPTIONS") return res.status(204).end();
 
   try {
-    if (req.method === "GET") {
+    if (req.method === "GET" || req.method === "HEAD") {
       const drafts = req.query?.drafts === "1";
       const key = adminKey(req);
       if (drafts && key !== expectedAdmin()) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const data = await listBlogPosts({ includeDrafts: drafts, adminKey: key });
+
+      if (wantsHtml(req)) {
+        const posts = Array.isArray(data?.posts) ? data.posts : [];
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=300");
+        if (req.method === "HEAD") return res.status(200).end();
+        return res.status(200).send(blogListHtml(posts));
+      }
+
+      if (req.method === "HEAD") return res.status(200).end();
       return res.status(200).json(data);
     }
 

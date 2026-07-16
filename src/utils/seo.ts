@@ -1,4 +1,4 @@
-/** Canonical site URL — keep in sync with public/sitemap.xml and robots.txt */
+/** Canonical site URL — keep in sync with /api/sitemap and robots.txt */
 export const SITE_ORIGIN = "https://www.chessreview.org";
 export const SITE_NAME = "ChessReview";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
@@ -207,14 +207,20 @@ export function applyPageSeo(options: PageSeoOptions = {}): void {
 
   const title = options.title ?? DEFAULT_SEO.title;
   const description = options.description ?? DEFAULT_SEO.description;
-  const path = options.path ?? window.location.pathname;
+  const rawPath = options.path ?? window.location.pathname;
+  const path =
+    rawPath.length > 1 && rawPath.endsWith("/")
+      ? rawPath.replace(/\/+$/, "")
+      : rawPath || "/";
   const canonical = `${SITE_ORIGIN}${path === "/" ? "/" : path}`;
   const ogType = options.ogType ?? "website";
   const rawImage = options.ogImage ?? DEFAULT_OG_IMAGE;
   const ogImage = rawImage.startsWith("http")
     ? rawImage
     : `${SITE_ORIGIN}${rawImage.startsWith("/") ? rawImage : `/${rawImage}`}`;
-  const robots = options.noindex ? "noindex, nofollow" : "index, follow";
+  const robots = options.noindex
+    ? "noindex, nofollow"
+    : "index, follow, max-image-preview:large";
 
   document.title = title;
 
