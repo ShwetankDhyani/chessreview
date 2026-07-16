@@ -45,29 +45,29 @@ function CoffeeMugIcon() {
       <svg
         className="support-coffee-mug"
         viewBox="0 0 64 64"
-        width="44"
-        height="44"
+        width="40"
+        height="40"
         fill="none"
       >
         <path
           d="M12 26h32v18c0 5.5-4.5 10-10 10H22c-5.5 0-10-4.5-10-10V26z"
           fill="currentColor"
-          className="text-[#d4a574]"
+          className="text-chess-accent"
         />
         <path
           d="M14 28h28v14c0 4.4-3.6 8-8 8H22c-4.4 0-8-3.6-8-8V28z"
-          fill="#2a2118"
-          opacity="0.35"
+          fill="#161512"
+          opacity="0.28"
         />
         <path
           d="M44 30h6c4.4 0 8 3.6 8 8s-3.6 8-8 8h-6"
           stroke="currentColor"
-          className="text-[#d4a574]"
+          className="text-chess-accent"
           strokeWidth="3.5"
           strokeLinecap="round"
         />
-        <ellipse cx="28" cy="26" rx="16" ry="4" fill="#f0d5a8" />
-        <ellipse cx="28" cy="25.5" rx="12" ry="2.6" fill="#6b4423" />
+        <ellipse cx="28" cy="26" rx="16" ry="4" fill="#c5e09a" />
+        <ellipse cx="28" cy="25.5" rx="12" ry="2.6" fill="#3d5a24" />
       </svg>
     </span>
   );
@@ -155,11 +155,11 @@ export function HelpModal({
         ) : (
           <div className="space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hi, Shwetank here. I run and fund ChessReview out of pocket to keep it free.
+              Hey — Shwetank here. I keep ChessReview free out of pocket, no paywalls.
             </p>
             <p>
-              If you find the tool helpful, a small tip to offset the bills goes a long way —
-              and keeps reviews fast for everyone.
+              If a review helped you out, a coffee on Ko-fi is a chill way to help with the
+              server bills. Totally optional.
             </p>
 
             <a
@@ -169,18 +169,17 @@ export function HelpModal({
               onClick={() => hapticSoft()}
               className="support-coffee-cta group"
             >
-              <span className="support-coffee-cta-glow" aria-hidden />
               <CoffeeMugIcon />
               <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[15px] font-bold tracking-tight text-[#f3e6d0] group-hover:text-white transition-colors">
+                <span className="block text-[15px] font-bold tracking-tight text-chess-text group-hover:text-white transition-colors">
                   Buy me a coffee
                 </span>
-                <span className="mt-0.5 block text-[11px] font-medium text-[#c4a57a]/group-hover:text-[#e2c79a] transition-colors">
-                  Support on Ko-fi · thank you
+                <span className="mt-0.5 block text-[11px] font-medium text-chess-muted group-hover:text-chess-subtext transition-colors">
+                  Support on Ko-fi
                 </span>
               </span>
               <span
-                className="flex-shrink-0 text-lg font-semibold text-[#e2c79a] opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                className="flex-shrink-0 text-base font-semibold text-chess-accent opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
                 aria-hidden
               >
                 →
