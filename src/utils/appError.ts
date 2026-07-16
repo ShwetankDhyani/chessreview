@@ -10,6 +10,8 @@ export interface AppErrorEvent {
   context?: Record<string, unknown>;
 }
 
+export type GameSourcePlatform = "chesscom" | "lichess";
+
 function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -20,32 +22,40 @@ function extractMessage(error: unknown): string | null {
   return null;
 }
 
-export function normalizeGameLoadError(error: unknown): AppError {
+function platformLabel(platform?: GameSourcePlatform): string {
+  return platform === "lichess" ? "Lichess" : "Chess.com";
+}
+
+export function normalizeGameLoadError(
+  error: unknown,
+  platform?: GameSourcePlatform
+): AppError {
   const raw = (extractMessage(error) ?? "").toLowerCase();
+  const src = platformLabel(platform);
   if (raw.includes("timeout")) {
     return {
       code: "GAME_FETCH_TIMEOUT",
-      message: "Game fetch timed out. Retry or use PGN / game URL import.",
+      message: `${src} timed out — paste a game link or PGN.`,
       retryable: true,
     };
   }
   if (raw.includes("not found") || raw.includes("invalid")) {
     return {
       code: "GAME_SOURCE_NOT_FOUND",
-      message: "Profile not found on this platform. Check spelling.",
+      message: `No ${src} profile by that name.`,
       retryable: false,
     };
   }
   if (raw.includes("429") || raw.includes("rate")) {
     return {
       code: "GAME_RATE_LIMITED",
-      message: "Provider rate limit hit. Retry in a few seconds.",
+      message: `${src} is rate-limiting — wait a moment, or paste a link / PGN.`,
       retryable: true,
     };
   }
   return {
     code: "GAME_LOAD_FAILED",
-    message: "Couldn't load profile games right now. Retry shortly.",
+    message: `Couldn’t load ${src} games — paste a link or PGN.`,
     retryable: true,
   };
 }
@@ -55,20 +65,20 @@ export function normalizeAnalysisError(error: unknown): AppError {
   if (raw.includes("timeout")) {
     return {
       code: "ANALYSIS_TIMEOUT",
-      message: "Review is slow right now (engine/server load). Retry or lower depth.",
+      message: "Review is slow right now — retry or lower depth.",
       retryable: true,
     };
   }
   if (raw.includes("engine") || raw.includes("offline")) {
     return {
       code: "ANALYSIS_ENGINE_UNAVAILABLE",
-      message: "Review engine is unavailable right now. Retry in a moment.",
+      message: "Engine unavailable — retry in a moment.",
       retryable: true,
     };
   }
   return {
     code: "ANALYSIS_FAILED",
-    message: "Review couldn't finish this run. Please retry.",
+    message: "Review didn’t finish — please retry.",
     retryable: true,
   };
 }
@@ -85,13 +95,13 @@ export function normalizeShareError(error: unknown): AppError {
   if (raw.includes("timeout")) {
     return {
       code: "SHARE_TIMEOUT",
-      message: "Sharing timed out. Please retry.",
+      message: "Share timed out — please retry.",
       retryable: true,
     };
   }
   return {
     code: "SHARE_FAILED",
-    message: "Couldn't share right now. Please retry.",
+    message: "Couldn’t share right now — please retry.",
     retryable: true,
   };
 }
@@ -102,20 +112,20 @@ export function normalizeImportError(error: unknown): AppError {
   if (raw.includes("invalid") || raw.includes("supported") || raw.includes("empty")) {
     return {
       code: "IMPORT_INVALID_INPUT",
-      message: "Invalid input. Use a full PGN or finished game URL.",
+      message: "Use a full PGN or finished game URL.",
       retryable: false,
     };
   }
   if (raw.includes("not found")) {
     return {
       code: "IMPORT_GAME_NOT_FOUND",
-      message: "Game not found at that URL. Check link and retry.",
+      message: "Game not found — check the link.",
       retryable: true,
     };
   }
   return {
     code: "IMPORT_FAILED",
-    message: "Import failed this time. Retry or paste PGN manually.",
+    message: "Import failed — retry or paste PGN.",
     retryable: true,
   };
 }

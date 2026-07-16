@@ -374,7 +374,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [addProfileName, setAddProfileName] = useState("");
   const [addProfileLoading, setAddProfileLoading] = useState(false);
   const [addProfileError, setAddProfileError] = useState<string | null>(null);
-  const [addProfileCanSkip, setAddProfileCanSkip] = useState(false);
   const addProfileReqGenRef = useRef(0);
   const addProfileAbortRef = useRef<AbortController | null>(null);
   const [savedReviews, setSavedReviews] = useState<SavedReviewListItem[]>([]);
@@ -445,9 +444,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   ): Promise<ProfileVerifyResult> => {
     try {
       if (platform === "chesscom") {
-        const { chesscomFetch, chesscomPlayerUrl } = await import(
-          "./utils/chesscomClient"
-        );
         const res = await chesscomFetch(chesscomPlayerUrl(name), { signal });
         if (res.status === 404) return { status: "not_found" };
         if (!res.ok) return { status: "network" };
@@ -490,7 +486,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     addProfileAbortRef.current = null;
     setAddProfileLoading(false);
     setAddProfileError(null);
-    setAddProfileCanSkip(false);
   }, []);
 
   const PROFILE_VERIFY_TIMEOUT_MS = 12_000;
@@ -500,18 +495,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     // Don't add duplicates
     const exists = profiles.some(p => p.name.toLowerCase() === name.toLowerCase() && p.platform === platform);
     if (exists) {
-      setAddProfileError("Profile already added");
-      setAddProfileCanSkip(false);
+      setAddProfileError("Already linked");
       notifyWarning();
       return;
     }
 
+    const sourceLabel = platform === "chesscom" ? "Chess.com" : "Lichess";
     let finalName = name;
     if (!skipVerify) {
       const reqId = ++addProfileReqGenRef.current;
       setAddProfileLoading(true);
       setAddProfileError(null);
-      setAddProfileCanSkip(false);
       const controller = new AbortController();
       addProfileAbortRef.current = controller;
       const timeoutId = window.setTimeout(
@@ -523,27 +517,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       if (reqId !== addProfileReqGenRef.current) return;
       setAddProfileLoading(false);
       addProfileAbortRef.current = null;
-      if (result.status === "timeout") {
+      if (result.status === "timeout" || result.status === "network") {
         setAddProfileError(
-          "Chess.com/Lichess didn’t respond in time. You can add the profile anyway, or paste a PGN/game URL."
+          `${sourceLabel} isn’t responding — paste a game link or PGN instead.`
         );
-        setAddProfileCanSkip(true);
-        notifyWarning();
-        return;
-      }
-      if (result.status === "network") {
-        setAddProfileError(
-          "Couldn’t reach the profile API (network/CORS). You can add the profile anyway, or paste a PGN/game URL."
-        );
-        setAddProfileCanSkip(true);
         notifyWarning();
         return;
       }
       if (result.status === "not_found") {
-        setAddProfileError(
-          `User not found on ${platform === "chesscom" ? "Chess.com" : "Lichess"}`
-        );
-        setAddProfileCanSkip(false);
+        setAddProfileError(`No ${sourceLabel} user by that name.`);
         notifyError();
         return;
       }
@@ -555,8 +537,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       (p) => p.platform === platform && p.name.toLowerCase() === finalName.toLowerCase()
     );
     if (normalizedExists) {
-      setAddProfileError("Profile already added");
-      setAddProfileCanSkip(false);
+      setAddProfileError("Already linked");
       notifyWarning();
       return;
     }
@@ -566,7 +547,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setShowAddProfile(false);
     setAddProfileName("");
     setAddProfileError(null);
-    setAddProfileCanSkip(false);
     notifySuccess();
     // Clear games cache and trigger reload
     localStorage.removeItem("cr_games");
@@ -1766,22 +1746,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             onAddPlatformChange={(p) => {
               setAddProfilePlatform(p);
               setAddProfileError(null);
-              setAddProfileCanSkip(false);
             }}
             addName={addProfileName}
             onAddNameChange={(v) => {
               setAddProfileName(v);
               setAddProfileError(null);
-              setAddProfileCanSkip(false);
             }}
             addLoading={addProfileLoading}
             addError={addProfileError}
-            addCanSkip={addProfileCanSkip}
             onAddSubmit={() =>
               void addProfile(addProfileName.trim(), addProfilePlatform)
-            }
-            onAddAnyway={() =>
-              void addProfile(addProfileName.trim(), addProfilePlatform, true)
             }
             onCancelAdd={cancelAddProfile}
             savedCount={savedReviews.length}
