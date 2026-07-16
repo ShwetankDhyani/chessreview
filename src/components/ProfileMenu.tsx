@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
 import { FeedbackSettings } from "./FeedbackSettings";
 import {
   hapticSelection,
@@ -129,6 +129,29 @@ export function ProfileMenu({
   onOpenSavedGames,
 }: ProfileMenuProps) {
   const profileInitial = activeUser ? initialOf(activeUser.name) : null;
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent | TouchEvent) => {
+      const root = rootRef.current;
+      if (!root) return;
+      if (e.target instanceof Node && !root.contains(e.target)) {
+        onClose();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("touchstart", onDoc, { passive: true });
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("touchstart", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
 
   function submitAdd(e: FormEvent) {
     e.preventDefault();
@@ -136,7 +159,7 @@ export function ProfileMenu({
   }
 
   return (
-    <div className="relative flex-shrink-0">
+    <div ref={rootRef} className="relative flex-shrink-0">
       <button
         type="button"
         onClick={() => {
