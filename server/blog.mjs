@@ -102,7 +102,26 @@ function saveState(state) {
   renameSync(tmp, BLOG_FILE);
 }
 
+function normalizePinOrder(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(9999, Math.floor(n)));
+}
+
+function comparePostsForList(a, b) {
+  const aPinned = !!a.pinned;
+  const bPinned = !!b.pinned;
+  if (aPinned !== bPinned) return aPinned ? -1 : 1;
+  if (aPinned && bPinned) {
+    const ao = normalizePinOrder(a.pinOrder);
+    const bo = normalizePinOrder(b.pinOrder);
+    if (ao !== bo) return ao - bo;
+  }
+  return String(b.createdAt).localeCompare(String(a.createdAt));
+}
+
 function publicPost(p, replyCount = 0) {
+  const pinned = !!p.pinned;
   return {
     id: p.id,
     slug: p.slug,
@@ -111,6 +130,8 @@ function publicPost(p, replyCount = 0) {
     body: p.body,
     coverImage: p.coverImage || null,
     published: !!p.published,
+    pinned,
+    pinOrder: pinned ? normalizePinOrder(p.pinOrder) : 0,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
     authorName: p.authorName || "ChessReview",
@@ -128,7 +149,7 @@ export function fileListPosts({ includeDrafts = false } = {}) {
   return s.posts
     .filter((p) => includeDrafts || p.published)
     .filter((p) => p.slug !== "cr-site-settings")
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .sort(comparePostsForList)
     .map((p) => {
       const { body, ...rest } = publicPost(p, replyCount(s, p.id));
       return { ...rest, bodyPreview: clip(p.excerpt || p.body, 220) };
@@ -161,6 +182,7 @@ export function fileCreatePost(input) {
     slug = `${slugify(title)}-${newId(4)}`;
   }
   const now = new Date().toISOString();
+  const pinned = !!input.pinned;
   const post = {
     id: newId(12),
     slug,
@@ -169,6 +191,8 @@ export function fileCreatePost(input) {
     body,
     coverImage: clip(input.coverImage, 500) || null,
     published: input.published !== false,
+    pinned,
+    pinOrder: pinned ? normalizePinOrder(input.pinOrder ?? 1) || 1 : 0,
     authorName: clip(input.authorName || "ChessReview", 80) || "ChessReview",
     createdAt: now,
     updatedAt: now,
@@ -198,6 +222,13 @@ export function fileUpdatePost(id, input) {
     }
   }
 
+  const pinned =
+    input.pinned !== undefined ? !!input.pinned : !!prev.pinned;
+  const pinOrder = pinned
+    ? normalizePinOrder(
+        input.pinOrder !== undefined ? input.pinOrder : prev.pinOrder ?? 1
+      ) || 1
+    : 0;
   const next = {
     ...prev,
     title,
@@ -213,6 +244,8 @@ export function fileUpdatePost(id, input) {
         : prev.coverImage,
     published:
       input.published !== undefined ? !!input.published : prev.published,
+    pinned,
+    pinOrder,
     authorName:
       input.authorName != null
         ? clip(input.authorName, 80) || "ChessReview"

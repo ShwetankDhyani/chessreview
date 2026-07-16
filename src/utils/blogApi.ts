@@ -5,6 +5,10 @@ export type BlogPostSummary = {
   excerpt: string;
   coverImage?: string | null;
   published: boolean;
+  /** When true, post is sorted above unpinned posts. */
+  pinned?: boolean;
+  /** Lower numbers appear first among pinned posts (1 = topmost). */
+  pinOrder?: number;
   createdAt: string;
   updatedAt: string;
   authorName: string;

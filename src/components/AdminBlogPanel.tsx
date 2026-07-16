@@ -21,8 +21,17 @@ const emptyForm = {
   body: "",
   coverImage: "",
   published: true,
+  pinned: false,
+  pinOrder: 1,
   authorName: "ChessReview",
 };
+
+function nextPinOrder(posts: BlogPostSummary[]): number {
+  const max = posts
+    .filter((p) => p.pinned)
+    .reduce((acc, p) => Math.max(acc, Number(p.pinOrder) || 0), 0);
+  return Math.max(1, max + 1);
+}
 
 export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
@@ -110,6 +119,8 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
         body: form.body,
         coverImage: form.coverImage || null,
         published: form.published,
+        pinned: form.pinned,
+        pinOrder: form.pinned ? form.pinOrder : 0,
         authorName: form.authorName,
       };
       if (editing && form.id) {
@@ -159,6 +170,8 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
         body: p.body || "",
         coverImage: p.coverImage || "",
         published: !!p.published,
+        pinned: !!p.pinned,
+        pinOrder: p.pinned ? Math.max(1, Number(p.pinOrder) || 1) : 1,
         authorName: p.authorName || "ChessReview",
       });
       setEditing(true);
@@ -169,6 +182,92 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
       setStatus(e instanceof Error ? e.message : "Could not open post");
     }
   }
+
+  async function setPinState(
+    post: BlogPostSummary,
+    pinned: boolean,
+    pinOrder?: number
+  ) {
+    setStatus(null);
+    try {
+      await updateBlogPost(
+        {
+          id: post.id,
+          pinned,
+          pinOrder: pinned
+            ? pinOrder ??
+              (post.pinned
+                ? Math.max(1, Number(post.pinOrder) || 1)
+                : nextPinOrder(posts))
+            : 0,
+        },
+        adminKey
+      );
+      if (form.id === post.id) {
+        setForm((f) => ({
+          ...f,
+          pinned,
+          pinOrder: pinned
+            ? pinOrder ??
+              (post.pinned
+                ? Math.max(1, Number(post.pinOrder) || 1)
+                : nextPinOrder(posts))
+            : 1,
+        }));
+      }
+      await load();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not update pin");
+    }
+  }
+
+  async function movePinned(post: BlogPostSummary, direction: -1 | 1) {
+    const ordered = posts
+      .filter((p) => p.pinned)
+      .slice()
+      .sort(
+        (a, b) =>
+          (Number(a.pinOrder) || 0) - (Number(b.pinOrder) || 0) ||
+          String(b.createdAt).localeCompare(String(a.createdAt))
+      );
+    const idx = ordered.findIndex((p) => p.id === post.id);
+    const swapIdx = idx + direction;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= ordered.length) return;
+    const next = ordered.slice();
+    const tmp = next[idx]!;
+    next[idx] = next[swapIdx]!;
+    next[swapIdx] = tmp;
+    setStatus(null);
+    try {
+      for (let i = 0; i < next.length; i++) {
+        const row = next[i]!;
+        const desired = i + 1;
+        if ((Number(row.pinOrder) || 0) !== desired) {
+          await updateBlogPost(
+            { id: row.id, pinned: true, pinOrder: desired },
+            adminKey
+          );
+        }
+      }
+      await load();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not reorder pins");
+    }
+  }
+
+  const pinnedPosts = posts.filter((p) => p.pinned);
+  const canMovePin = (post: BlogPostSummary, direction: -1 | 1) => {
+    if (!post.pinned) return false;
+    const ordered = pinnedPosts
+      .slice()
+      .sort(
+        (a, b) =>
+          (Number(a.pinOrder) || 0) - (Number(b.pinOrder) || 0) ||
+          String(b.createdAt).localeCompare(String(a.createdAt))
+      );
+    const idx = ordered.findIndex((p) => p.id === post.id);
+    return idx >= 0 && ordered[idx + direction] != null;
+  };
 
   const toolbarBtn =
     "px-2 py-1 rounded border border-chess-border text-[10px] font-semibold text-chess-muted hover:text-chess-accent hover:border-chess-accent/40 transition-colors";
@@ -326,6 +425,54 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
               />
             </button>
           </label>
+          <label className="inline-flex items-center gap-2 text-xs text-chess-subtext">
+            <span>Pin to top</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.pinned}
+              aria-label="Pin to top"
+              onClick={() => {
+                hapticToggle();
+                setForm((f) => ({
+                  ...f,
+                  pinned: !f.pinned,
+                  pinOrder: !f.pinned
+                    ? f.pinOrder || nextPinOrder(posts)
+                    : f.pinOrder,
+                }));
+              }}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                form.pinned ? "bg-chess-accent" : "bg-chess-border-strong"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                  form.pinned ? "translate-x-[18px]" : "translate-x-[3px]"
+                }`}
+              />
+            </button>
+          </label>
+          {form.pinned && (
+            <label className="inline-flex items-center gap-2 text-xs text-chess-subtext">
+              <span>Pin order</span>
+              <input
+                type="number"
+                min={1}
+                max={9999}
+                value={form.pinOrder}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pinOrder: Math.max(1, Math.floor(Number(e.target.value) || 1)),
+                  }))
+                }
+                className="w-16 rounded-lg border border-chess-border bg-chess-bg px-2 py-1 text-xs text-chess-text tabular-nums focus:outline-none focus:border-chess-accent/50"
+                title="Lower number appears first among pinned posts"
+              />
+              <span className="text-[10px] text-chess-muted">1 = top</span>
+            </label>
+          )}
           <input
             value={form.authorName}
             onChange={(e) => setForm((f) => ({ ...f, authorName: e.target.value }))}
@@ -355,16 +502,58 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
         {posts.map((p) => (
           <div
             key={p.id}
-            className="flex items-center gap-3 rounded-lg border border-chess-border/60 bg-chess-bg/40 px-3 py-2"
+            className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-chess-border/60 bg-chess-bg/40 px-3 py-2"
           >
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-chess-text truncate">{p.title}</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-sm font-medium text-chess-text truncate">{p.title}</div>
+                {p.pinned && (
+                  <span className="shrink-0 rounded border border-chess-accent/35 bg-chess-accent/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
+                    Pinned · {Math.max(1, Number(p.pinOrder) || 1)}
+                  </span>
+                )}
+              </div>
               <div className="text-[10px] text-chess-muted">
                 {formatBlogDate(p.createdAt)}
                 {!p.published ? " · Draft" : ""}
                 {` · ${p.replyCount} replies`}
               </div>
             </div>
+            {p.pinned && (
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  disabled={!canMovePin(p, -1)}
+                  onClick={() => void movePinned(p, -1)}
+                  className="rounded border border-chess-border px-1.5 py-0.5 text-[10px] text-chess-muted hover:text-chess-accent disabled:opacity-30"
+                  title="Move pin higher"
+                  aria-label="Move pin higher"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  disabled={!canMovePin(p, 1)}
+                  onClick={() => void movePinned(p, 1)}
+                  className="rounded border border-chess-border px-1.5 py-0.5 text-[10px] text-chess-muted hover:text-chess-accent disabled:opacity-30"
+                  title="Move pin lower"
+                  aria-label="Move pin lower"
+                >
+                  ↓
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => void setPinState(p, !p.pinned)}
+              className={`text-[11px] ${
+                p.pinned
+                  ? "text-chess-accent hover:text-chess-accent/80"
+                  : "text-chess-muted hover:text-chess-accent"
+              }`}
+            >
+              {p.pinned ? "Unpin" : "Pin"}
+            </button>
             <a
               href={`/blog/${encodeURIComponent(p.slug)}`}
               className="text-[11px] text-chess-accent hover:underline"
