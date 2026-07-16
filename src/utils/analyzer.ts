@@ -7,7 +7,7 @@ export interface AnalyzePgnOptions {
   blackRating?: number | null;
 }
 
-/** Analyze a PGN via v3.2 WDL-aware review (native batch + WASM MultiPV fallback). */
+/** Analyze a PGN via v3.2 WDL-aware full-depth review (native batch + miss-only WASM fill). */
 export async function analyzePgn(
   pgn: string,
   onProgress?: (done: number, total: number) => void,

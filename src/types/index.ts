@@ -119,7 +119,7 @@ export interface ReviewRun {
   requestedDepth: number;
   fastDepth: number;
   deepDepth: number;
-  backendPolicy: "consensus";
+  backendPolicy: "consensus" | "full-depth";
   pgnHash: string;
 }
 
