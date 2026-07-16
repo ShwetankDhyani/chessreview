@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { hapticSoft } from "../utils/chessSounds";
+import { useCallback, useEffect, useState } from "react";
+import { hapticSoft, notifySuccess } from "../utils/chessSounds";
 
 export interface SupportLink {
   label: string;
@@ -32,6 +32,31 @@ function parseSupportLinks(): SupportLink[] {
   }
 }
 
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function HelpModal({
   open,
   onClose,
@@ -42,11 +67,27 @@ export function HelpModal({
   initial?: "contact" | "support";
 }) {
   const [tab, setTab] = useState<"contact" | "support">(initial);
+  const [emailCopied, setEmailCopied] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTab(initial);
+    setEmailCopied(false);
   }, [open, initial]);
+
+  useEffect(() => {
+    if (!emailCopied) return;
+    const t = window.setTimeout(() => setEmailCopied(false), 1800);
+    return () => window.clearTimeout(t);
+  }, [emailCopied]);
+
+  const handleCopyEmail = useCallback(async () => {
+    hapticSoft();
+    const ok = await copyText(SUPPORT_EMAIL);
+    if (!ok) return;
+    setEmailCopied(true);
+    notifySuccess();
+  }, []);
 
   if (!open) return null;
 
@@ -89,14 +130,19 @@ export function HelpModal({
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
             <p>Say hello or share feedback — we read every note.</p>
             <div className="flex flex-col gap-2 mt-2">
-              <div className="inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted" aria-hidden>
+              <button
+                type="button"
+                onClick={() => void handleCopyEmail()}
+                title="Copy email address"
+                className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/50 bg-chess-bg/30 px-3.5 py-2.5 text-left text-sm text-chess-subtext transition-colors hover:border-chess-border hover:bg-chess-bg/45"
+              >
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/60 text-chess-muted" aria-hidden>
                   ✉️
                 </span>
-                <span className="min-w-0 flex-1 select-all truncate font-medium">
-                  {SUPPORT_EMAIL}
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {emailCopied ? "Copied" : `Email - ${SUPPORT_EMAIL}`}
                 </span>
-              </div>
+              </button>
               <a
                 href={CHESSCOM_MESSAGE}
                 className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
@@ -117,18 +163,25 @@ export function HelpModal({
               If you find the tool helpful, please consider lending a hand. Whether it's sharing technical expertise, spare server space, or chipping in to offset the bills, your support keeps things running smoothly for all of us.
             </p>
 
-            <div className="mt-1 flex overflow-hidden rounded-lg border border-chess-border divide-x divide-chess-border">
+            <div className="mt-1 flex items-stretch gap-2">
               <a
                 href={paypalHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 py-2.5 text-center text-sm font-medium text-chess-accent hover:bg-chess-hover transition-colors"
+                className="flex-shrink-0 self-center rounded-lg border border-chess-border/70 bg-chess-surface/70 px-3.5 py-2 text-sm font-medium text-chess-accent hover:bg-chess-hover hover:border-chess-accent/35 transition-colors"
               >
                 PayPal
               </a>
-              <span className="flex flex-1 items-center justify-center px-2 py-2.5 text-center text-[13px] font-medium text-chess-subtext select-all break-all">
-                {SUPPORT_EMAIL}
-              </span>
+              <button
+                type="button"
+                onClick={() => void handleCopyEmail()}
+                title="Copy email address"
+                className="min-w-0 flex-1 rounded-lg border border-chess-border/40 bg-chess-bg/25 px-3 py-2 text-left text-[12px] font-medium text-chess-muted hover:bg-chess-bg/40 hover:text-chess-subtext transition-colors"
+              >
+                <span className="block truncate">
+                  {emailCopied ? "Copied" : `Email - ${SUPPORT_EMAIL}`}
+                </span>
+              </button>
             </div>
           </div>
         )}
