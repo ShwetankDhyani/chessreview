@@ -148,7 +148,7 @@ export function fileListPosts({ includeDrafts = false } = {}) {
   const s = loadState();
   return s.posts
     .filter((p) => includeDrafts || p.published)
-    .filter((p) => p.slug !== "cr-site-settings")
+    .filter((p) => p.slug !== "cr-site-settings" && p.slug !== "cr-blog-pins")
     .sort(comparePostsForList)
     .map((p) => {
       const { body, ...rest } = publicPost(p, replyCount(s, p.id));

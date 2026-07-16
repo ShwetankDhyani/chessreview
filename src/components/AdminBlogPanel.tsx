@@ -190,17 +190,18 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
     pinOrder?: number
   ) {
     setStatus(null);
+    const order = pinned
+      ? pinOrder ??
+        (post.pinned
+          ? Math.max(1, Number(post.pinOrder) || 1)
+          : nextPinOrder(posts))
+      : 0;
     try {
       await updateBlogPost(
         {
           id: post.id,
           pinned,
-          pinOrder: pinned
-            ? pinOrder ??
-              (post.pinned
-                ? Math.max(1, Number(post.pinOrder) || 1)
-                : nextPinOrder(posts))
-            : 0,
+          pinOrder: order,
         },
         adminKey
       );
@@ -208,14 +209,10 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
         setForm((f) => ({
           ...f,
           pinned,
-          pinOrder: pinned
-            ? pinOrder ??
-              (post.pinned
-                ? Math.max(1, Number(post.pinOrder) || 1)
-                : nextPinOrder(posts))
-            : 1,
+          pinOrder: pinned ? Math.max(1, order) : 1,
         }));
       }
+      setStatus(pinned ? "Pinned to top." : "Unpinned.");
       await load();
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Could not update pin");
@@ -435,13 +432,35 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
               aria-label="Pin to top"
               onClick={() => {
                 hapticToggle();
+                const nextPinned = !form.pinned;
+                const nextOrder = nextPinned
+                  ? form.pinOrder || nextPinOrder(posts)
+                  : form.pinOrder;
                 setForm((f) => ({
                   ...f,
-                  pinned: !f.pinned,
-                  pinOrder: !f.pinned
-                    ? f.pinOrder || nextPinOrder(posts)
-                    : f.pinOrder,
+                  pinned: nextPinned,
+                  pinOrder: nextOrder,
                 }));
+                // Existing posts: save pin immediately (form toggle alone used to do nothing).
+                if (editing && form.id) {
+                  void setPinState(
+                    {
+                      id: form.id,
+                      slug: "",
+                      title: form.title,
+                      excerpt: form.excerpt,
+                      published: form.published,
+                      pinned: form.pinned,
+                      pinOrder: form.pinOrder,
+                      createdAt: "",
+                      updatedAt: "",
+                      authorName: form.authorName,
+                      replyCount: 0,
+                    },
+                    nextPinned,
+                    nextOrder
+                  );
+                }
               }}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                 form.pinned ? "bg-chess-accent" : "bg-chess-border-strong"
@@ -468,11 +487,37 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
                     pinOrder: Math.max(1, Math.floor(Number(e.target.value) || 1)),
                   }))
                 }
+                onBlur={() => {
+                  if (editing && form.id && form.pinned) {
+                    void setPinState(
+                      {
+                        id: form.id,
+                        slug: "",
+                        title: form.title,
+                        excerpt: form.excerpt,
+                        published: form.published,
+                        pinned: true,
+                        pinOrder: form.pinOrder,
+                        createdAt: "",
+                        updatedAt: "",
+                        authorName: form.authorName,
+                        replyCount: 0,
+                      },
+                      true,
+                      form.pinOrder
+                    );
+                  }
+                }}
                 className="w-16 rounded-lg border border-chess-border bg-chess-bg px-2 py-1 text-xs text-chess-text tabular-nums focus:outline-none focus:border-chess-accent/50"
                 title="Lower number appears first among pinned posts"
               />
               <span className="text-[10px] text-chess-muted">1 = top</span>
             </label>
+          )}
+          {!editing && (
+            <span className="text-[10px] text-chess-muted">
+              Pin saves with the post
+            </span>
           )}
           <input
             value={form.authorName}

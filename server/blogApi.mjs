@@ -14,6 +14,13 @@ import {
   fileSaveBlogMedia,
   fileUpdatePost,
 } from "./blog.mjs";
+import {
+  applyPinMapToPosts,
+  comparePostsWithPins,
+  isReservedBlogSlug,
+  readBlogPinMap,
+  setPostPinInMap,
+} from "./blogPins.mjs";
 
 function isWritableStore() {
   if (process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
@@ -57,6 +64,28 @@ async function engineJson(path, options = {}) {
   return data;
 }
 
+async function withPinsApplied(posts) {
+  let pinMap = {};
+  try {
+    pinMap = await readBlogPinMap();
+  } catch {
+    pinMap = {};
+  }
+  return applyPinMapToPosts(posts, pinMap).sort(comparePostsWithPins);
+}
+
+async function syncPinFromBody(postId, body, adminKey) {
+  if (!postId || body?.pinned === undefined) return;
+  const pinned = !!body.pinned;
+  const pinOrder = pinned ? body.pinOrder ?? 1 : 0;
+  try {
+    await setPostPinInMap(postId, pinned, pinOrder, adminKey);
+  } catch (e) {
+    // Pin map is required on Vercel (old engines strip post.pinned).
+    if (!isWritableStore()) throw e;
+  }
+}
+
 export async function listBlogPosts({ includeDrafts = false, adminKey = "" } = {}) {
   const base = engineStatsUrl();
   let data = null;
@@ -71,30 +100,37 @@ export async function listBlogPosts({ includeDrafts = false, adminKey = "" } = {
     }
   }
   if (!data) data = { posts: fileListPosts({ includeDrafts }) };
+  const posts = (data.posts ?? []).filter((p) => !isReservedBlogSlug(p?.slug));
   return {
     ...data,
-    posts: (data.posts ?? []).filter((p) => p?.slug !== "cr-site-settings"),
+    posts: await withPinsApplied(posts),
   };
 }
 
 export async function getBlogPost(slug, { adminKey = "" } = {}) {
+  if (isReservedBlogSlug(slug)) return null;
   const base = engineStatsUrl();
+  let data = null;
   if (base) {
     try {
       const headers = {};
       if (adminKey) headers["X-Admin-Key"] = adminKey;
-      return await engineJson(`/blog/${encodeURIComponent(slug)}`, { headers });
+      data = await engineJson(`/blog/${encodeURIComponent(slug)}`, { headers });
     } catch (e) {
       if (!isWritableStore()) throw e;
     }
   }
-  return fileGetPostBySlug(slug, { includeDrafts: !!adminKey });
+  if (!data) data = fileGetPostBySlug(slug, { includeDrafts: !!adminKey });
+  if (!data?.post) return data;
+  const [post] = await withPinsApplied([data.post]);
+  return { ...data, post };
 }
 
 export async function createBlogPost(body, adminKey) {
   const base = engineStatsUrl();
+  let result;
   if (base) {
-    return engineJson("/blog", {
+    result = await engineJson("/blog", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,17 +138,26 @@ export async function createBlogPost(body, adminKey) {
       },
       body: JSON.stringify(body),
     });
+  } else {
+    if (!isWritableStore()) {
+      throw new Error("Blog storage unavailable. Set EVAL_SERVER_URL.");
+    }
+    result = { ok: true, post: fileCreatePost(body) };
   }
-  if (!isWritableStore()) {
-    throw new Error("Blog storage unavailable. Set EVAL_SERVER_URL.");
+  const postId = result?.post?.id;
+  await syncPinFromBody(postId, body, adminKey);
+  if (result?.post) {
+    const [post] = await withPinsApplied([result.post]);
+    return { ...result, post };
   }
-  return { ok: true, post: fileCreatePost(body) };
+  return result;
 }
 
 export async function updateBlogPost(body, adminKey) {
   const base = engineStatsUrl();
+  let result;
   if (base) {
-    return engineJson("/blog", {
+    result = await engineJson("/blog", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -120,15 +165,22 @@ export async function updateBlogPost(body, adminKey) {
       },
       body: JSON.stringify({ ...body, action: "update" }),
     });
+  } else {
+    if (!isWritableStore()) throw new Error("Blog storage unavailable");
+    result = { ok: true, post: fileUpdatePost(body.id, body) };
   }
-  if (!isWritableStore()) throw new Error("Blog storage unavailable");
-  return { ok: true, post: fileUpdatePost(body.id, body) };
+  await syncPinFromBody(body?.id, body, adminKey);
+  if (result?.post) {
+    const [post] = await withPinsApplied([result.post]);
+    return { ...result, post };
+  }
+  return result;
 }
 
 export async function deleteBlogPost(id, adminKey) {
   const base = engineStatsUrl();
   if (base) {
-    return engineJson("/blog", {
+    const result = await engineJson("/blog", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -136,6 +188,12 @@ export async function deleteBlogPost(id, adminKey) {
       },
       body: JSON.stringify({ action: "delete", id }),
     });
+    try {
+      await setPostPinInMap(id, false, 0, adminKey);
+    } catch {
+      /* best-effort cleanup */
+    }
+    return result;
   }
   if (!isWritableStore()) throw new Error("Blog storage unavailable");
   return fileDeletePost(id);
