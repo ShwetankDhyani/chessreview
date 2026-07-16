@@ -189,11 +189,7 @@ export function MobileBoardShell({
             integratedWidth={barWidth}
           />
           <div
-            className={`relative flex-1 min-w-0 h-full ${
-              boardProps.engineLineGlow ?? boardProps.continuationActive
-                ? "overflow-visible"
-                : "overflow-hidden"
-            }`}
+            className="relative flex-1 min-w-0 h-full overflow-visible"
           >
             <AnalyzeBoardStack
               {...boardProps}

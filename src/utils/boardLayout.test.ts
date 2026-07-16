@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { computeMobileBoardSize } from "./boardLayout";
 
 describe("computeMobileBoardSize", () => {
-  it("limits board height on typical phones to leave room for commentary", () => {
+  it("gives a large board on typical phones while leaving coach room", () => {
     const size = computeMobileBoardSize(390, 844, { evalGraphOpen: false });
-    expect(size).toBeLessThan(390);
-    expect(size).toBeGreaterThanOrEqual(240);
+    expect(size).toBeLessThanOrEqual(390 - 8 - 20);
+    expect(size).toBeGreaterThanOrEqual(300);
   });
 
   it("shrinks further when eval graph is expanded", () => {

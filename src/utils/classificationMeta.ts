@@ -50,21 +50,22 @@ export const CLASSIFICATION_META: Record<
   good: {
     label: "Good",
     // Olive sage — quiet positive, not another neon green
-    color: "#b4a45c",
+    color: "#8fbc5a",
     bgColor: "bg-move-good",
     glyph: "",
-    symbol: "👍",
+    symbol: "✓",
   },
   book: {
     label: "Book",
     color: "#c4a484",
     bgColor: "bg-move-book",
-    glyph: "🕮",
-    symbol: "🕮",
+    glyph: "book",
+    symbol: "book",
   },
   inaccuracy: {
     label: "Inaccuracy",
-    color: "#f0d24b",
+    // Amber — distinct from last-move yellow tint on the board
+    color: "#e6b422",
     bgColor: "bg-move-inaccuracy",
     glyph: "!?",
     symbol: "!?",

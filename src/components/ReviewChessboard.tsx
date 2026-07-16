@@ -141,6 +141,7 @@ export function ReviewChessboard({
             variant={arrow.variant}
           />
         ) : null}
+        {/* Badge above arrows so mistake/blunder glyphs stay readable. */}
         {lastMoveHighlight && moveClassification ? (
           <MoveClassificationBadge
             square={lastMoveHighlight.to}

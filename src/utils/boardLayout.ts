@@ -15,15 +15,15 @@ export const DESKTOP_LAYOUT = {
 export const MOBILE_LAYOUT = {
   header: 48,
   tabBar: 88,
-  topPad: 8,
-  playerTags: 48,
-  evalDockCollapsed: 36,
-  evalDockOpen: 72,
-  evalBar: 22,
-  inlinePad: 12,
+  topPad: 6,
+  playerTags: 44,
+  evalDockCollapsed: 32,
+  evalDockOpen: 68,
+  evalBar: 20,
+  inlinePad: 8,
   /** Commentary should claim at least this share of the main column. */
-  coachMinRatio: 0.4,
-  coachMinPx: 220,
+  coachMinRatio: 0.28,
+  coachMinPx: 160,
 } as const;
 
 export function computeDesktopBoardSize(
@@ -55,8 +55,8 @@ export function computeDesktopBoardSize(
 }
 
 /**
- * Mobile board size when reviewing — caps height so move commentary keeps
- * ~40%+ of the viewport (largest panel after the board).
+ * Mobile board size when reviewing — prefer a larger board while still
+ * leaving a usable coach strip underneath.
  */
 export function computeMobileBoardSize(
   winW: number,
@@ -80,5 +80,5 @@ export function computeMobileBoardSize(
   const maxByHeight = contentH - chrome - coachMin;
 
   const size = Math.floor(Math.min(byWidth, maxByHeight));
-  return Math.max(240, Math.min(size, byWidth));
+  return Math.max(260, Math.min(size, byWidth));
 }
