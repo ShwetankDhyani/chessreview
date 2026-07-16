@@ -1,4 +1,5 @@
 import { hapticSoft } from "../utils/chessSounds";
+import { useState } from "react";
 export interface SupportLink {
   label: string;
   href: string;
@@ -31,13 +32,17 @@ function parseSupportLinks(): SupportLink[] {
 export function HelpModal({
   open,
   onClose,
+  initial = "contact",
 }: {
   open: boolean;
   onClose: () => void;
+  initial?: "contact" | "support";
 }) {
   if (!open) return null;
 
   const links = parseSupportLinks();
+  const [tab, setTab] = useState<"contact" | "support">(initial);
+  const showSupport = tab === "support";
 
   return (
     <div
@@ -53,10 +58,26 @@ export function HelpModal({
         onClick={() => { hapticSoft(); onClose(); }}
       />
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <h2 id="help-title" className="text-base font-bold text-chess-text">
-            Support Us
-          </h2>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTab("contact")}
+              className={`text-sm font-semibold ${showSupport ? "text-chess-muted hover:text-chess-text" : "text-chess-text"}`}
+              aria-current={!showSupport}
+            >
+              Contact
+            </button>
+            <span className="text-chess-border-strong text-[10px]" aria-hidden>·</span>
+            <button
+              type="button"
+              onClick={() => setTab("support")}
+              className={`text-sm font-semibold ${showSupport ? "text-chess-text" : "text-chess-muted hover:text-chess-text"}`}
+              aria-current={showSupport}
+            >
+              Support
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => { hapticSoft(); onClose(); }}
@@ -67,97 +88,40 @@ export function HelpModal({
           </button>
         </div>
 
-        <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
-          <p>
-            ChessReview began as a hobby project — built for the joy of studying
-            games and sharing that with other players who love chess.
-          </p>
-          <p>
-            Keeping analysis fast and the site online comes with real costs:
-            servers, tunnels, and compute for deep engine reviews. None of that
-            diminishes the fun of building this; it is simply part of running it
-            well.
-          </p>
-          <p>
-            If this tool has helped your chess, a small donation or practical
-            help (for example access to server capacity) genuinely makes a
-            difference in how much we can offer and how reliably it runs.
-          </p>
-          <p className="text-chess-muted text-xs">
-            There is no paywall — support is entirely optional. Thank you for
-            being here.
-          </p>
-        </div>
-
-        <div className="mt-5 pt-4 border-t border-chess-border/80">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-1.5">
-            Questions & suggestions
-          </p>
-          <p className="text-xs text-chess-muted mb-3 leading-relaxed">
-            Reach us by email or a Chess.com message — we read every note.
-          </p>
-          <div className="flex flex-col gap-2">
-            <a
-              href="mailto:admin@chessreview.org"
-              className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
-            >
-              <span
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
-                aria-hidden
+        {!showSupport ? (
+          <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
+            <p>Say hello or share feedback — we read every note.</p>
+            <div className="flex flex-col gap-2 mt-2">
+              <a
+                href="mailto:admin@chessreview.org"
+                className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 6h16v12H4z" />
-                  <path d="M4 7l8 6 8-6" />
-                </svg>
-              </span>
-              <span className="min-w-0 flex-1 truncate font-medium">
-                admin@chessreview.org
-              </span>
-            </a>
-            <a
-              href={CHESSCOM_MESSAGE}
-              className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
-            >
-              <span
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
-                aria-hidden
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent" aria-hidden>
+                  ✉️
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium">Email: admin@chessreview.org</span>
+              </a>
+              <a
+                href={CHESSCOM_MESSAGE}
+                className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </span>
-              <span className="min-w-0 flex-1 truncate font-medium">
-                Message on Chess.com
-              </span>
-            </a>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent" aria-hidden>
+                  ♟️
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium">Message on Chess.com</span>
+              </a>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
+            <p>Keep ChessReview running fast. Two quick options:</p>
+          </div>
+        )}
 
-        {links.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-chess-border">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted mb-2">
-              Support options
-            </p>
+        {showSupport && (
+          <div className="mt-4">
             <div className="flex flex-col gap-2">
-              {links.map((link) => (
+              {links.slice(0, 1).map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -165,12 +129,26 @@ export function HelpModal({
                   rel="noopener noreferrer"
                   className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-accent hover:bg-chess-hover hover:border-chess-accent/40 transition-colors"
                 >
-                  {link.label}
+                  PayPal
                 </a>
               ))}
+              <a
+                href="mailto:admin@chessreview.org"
+                className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
+              >
+                Message (Email)
+              </a>
+              <a
+                href={CHESSCOM_MESSAGE}
+                className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
+              >
+                Message (Chess.com)
+              </a>
             </div>
           </div>
         )}
+
+        {/* End */}
       </div>
     </div>
   );

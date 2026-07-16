@@ -5,7 +5,7 @@ import { ReviewOdometer } from "./ReviewOdometer";
 import { hapticTap } from "../utils/chessSounds";
 
 export function SiteFooter() {
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState<false | "contact" | "support">(false);
 
   useEffect(() => {
     if (!helpOpen) return;
@@ -25,14 +25,16 @@ export function SiteFooter() {
       >
         <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
           <div className="flex items-center gap-3">
-            <a
-              href="https://www.chess.com/play/online/new?isInvited=1&opponent=ShwetankDhyani"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => {
+                hapticTap();
+                setHelpOpen("contact");
+              }}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
-              Play Me!
-            </a>
+              Contact
+            </button>
             <span className="text-chess-border-strong text-[10px]" aria-hidden>
               ·
             </span>
@@ -49,7 +51,7 @@ export function SiteFooter() {
               type="button"
               onClick={() => {
                 hapticTap();
-                setHelpOpen(true);
+                setHelpOpen("support");
               }}
               className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
             >
@@ -62,7 +64,11 @@ export function SiteFooter() {
         </div>
       </footer>
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpModal
+        open={!!helpOpen}
+        onClose={() => setHelpOpen(false)}
+        initial={helpOpen === "support" ? "support" : "contact"}
+      />
     </>
   );
 }
