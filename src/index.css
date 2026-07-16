@@ -1133,6 +1133,145 @@ html[data-testing-mode="1"] {
   animation: coachInsightIn 0.28s ease-out forwards;
 }
 
+/* Support Us — Buy me a coffee / Ko-fi */
+.support-coffee-cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(212, 165, 116, 0.35);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(212, 165, 116, 0.18), transparent 55%),
+    linear-gradient(135deg, #2a2118 0%, #1a1510 55%, #241c14 100%);
+  padding: 0.95rem 1rem;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.support-coffee-cta:hover {
+  transform: translateY(-1px);
+  border-color: rgba(226, 199, 154, 0.55);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.support-coffee-cta:active {
+  transform: translateY(0);
+}
+
+.support-coffee-cta-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 70%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(129, 182, 76, 0.12),
+    transparent 65%
+  );
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+}
+
+.support-coffee-cta:hover .support-coffee-cta-glow {
+  opacity: 1;
+}
+
+.support-coffee-icon {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3.15rem;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.support-coffee-mug {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+  transition: transform 0.25s ease;
+}
+
+.support-coffee-cta:hover .support-coffee-mug {
+  transform: translateY(-1px) rotate(-2deg);
+}
+
+.support-coffee-steam {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  bottom: 2.05rem;
+  z-index: 2;
+  width: 1.6rem;
+  height: 1.15rem;
+  transform: translateX(-58%);
+}
+
+.support-coffee-steam-wisp {
+  position: absolute;
+  bottom: 0;
+  width: 3px;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to top,
+    rgba(243, 230, 208, 0.55),
+    rgba(243, 230, 208, 0)
+  );
+  transform-origin: bottom center;
+  animation: supportCoffeeSteam 2.4s ease-in-out infinite;
+}
+
+.support-coffee-steam-wisp--a {
+  left: 0.15rem;
+  animation-delay: 0s;
+}
+
+.support-coffee-steam-wisp--b {
+  left: 0.65rem;
+  height: 16px;
+  animation-delay: 0.45s;
+}
+
+.support-coffee-steam-wisp--c {
+  left: 1.15rem;
+  animation-delay: 0.9s;
+}
+
+.support-coffee-cta:hover .support-coffee-steam-wisp {
+  animation-duration: 1.6s;
+}
+
+@keyframes supportCoffeeSteam {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scaleX(1) scaleY(0.55);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scaleX(1.35) scaleY(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-coffee-steam-wisp,
+  .support-coffee-cta,
+  .support-coffee-mug {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;

@@ -8,11 +8,12 @@ export interface SupportLink {
 
 const SUPPORT_EMAIL = "admin@chessreview.org";
 const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
+const DEFAULT_KOFI = "https://ko-fi.com/shwetank";
 
 const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
   {
-    label: "Support via Ko-fi",
-    href: "https://ko-fi.com/shwetank",
+    label: "Buy me a coffee",
+    href: DEFAULT_KOFI,
   },
 ];
 
@@ -31,6 +32,45 @@ function parseSupportLinks(): SupportLink[] {
   } catch {
     return DEFAULT_SUPPORT_LINKS;
   }
+}
+
+function CoffeeMugIcon() {
+  return (
+    <span className="support-coffee-icon" aria-hidden>
+      <span className="support-coffee-steam">
+        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--a" />
+        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--b" />
+        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--c" />
+      </span>
+      <svg
+        className="support-coffee-mug"
+        viewBox="0 0 64 64"
+        width="44"
+        height="44"
+        fill="none"
+      >
+        <path
+          d="M12 26h32v18c0 5.5-4.5 10-10 10H22c-5.5 0-10-4.5-10-10V26z"
+          fill="currentColor"
+          className="text-[#d4a574]"
+        />
+        <path
+          d="M14 28h28v14c0 4.4-3.6 8-8 8H22c-4.4 0-8-3.6-8-8V28z"
+          fill="#2a2118"
+          opacity="0.35"
+        />
+        <path
+          d="M44 30h6c4.4 0 8 3.6 8 8s-3.6 8-8 8h-6"
+          stroke="currentColor"
+          className="text-[#d4a574]"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+        />
+        <ellipse cx="28" cy="26" rx="16" ry="4" fill="#f0d5a8" />
+        <ellipse cx="28" cy="25.5" rx="12" ry="2.6" fill="#6b4423" />
+      </svg>
+    </span>
+  );
 }
 
 export function HelpModal({
@@ -52,8 +92,7 @@ export function HelpModal({
   if (!open) return null;
 
   const links = parseSupportLinks();
-  const supportHref = links[0]?.href ?? DEFAULT_SUPPORT_LINKS[0]!.href;
-  const supportLabel = links[0]?.label?.replace(/^Support via\s+/i, "") || "Ko-fi";
+  const supportHref = links[0]?.href ?? DEFAULT_KOFI;
   const showSupport = tab === "support";
   const readOnlyContact = initial === "contact";
 
@@ -114,30 +153,46 @@ export function HelpModal({
             </div>
           </div>
         ) : (
-          <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
+          <div className="space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hi, Shwetank here. I run and fund ChessReview out of pocket to keep it free. As we grow, keeping the platform fast and reliable takes a bit of community teamwork.
+              Hi, Shwetank here. I run and fund ChessReview out of pocket to keep it free.
             </p>
             <p>
-              If you find the tool helpful, please consider lending a hand. Whether it's sharing technical expertise, spare server space, or chipping in to offset the bills, your support keeps things running smoothly for all of us.
+              If you find the tool helpful, a small tip to offset the bills goes a long way —
+              and keeps reviews fast for everyone.
             </p>
 
-            <div className="mt-1 flex items-stretch gap-2">
-              <a
-                href={supportHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 self-center rounded-lg border border-chess-border/70 bg-chess-surface/70 px-3.5 py-2 text-sm font-medium text-chess-accent hover:bg-chess-hover hover:border-chess-accent/35 transition-colors"
+            <a
+              href={supportHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => hapticSoft()}
+              className="support-coffee-cta group"
+            >
+              <span className="support-coffee-cta-glow" aria-hidden />
+              <CoffeeMugIcon />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-[15px] font-bold tracking-tight text-[#f3e6d0] group-hover:text-white transition-colors">
+                  Buy me a coffee
+                </span>
+                <span className="mt-0.5 block text-[11px] font-medium text-[#c4a57a]/group-hover:text-[#e2c79a] transition-colors">
+                  Support on Ko-fi · thank you
+                </span>
+              </span>
+              <span
+                className="flex-shrink-0 text-lg font-semibold text-[#e2c79a] opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                aria-hidden
               >
-                {supportLabel}
-              </a>
-              <a
-                href={SUPPORT_MAILTO}
-                className="min-w-0 flex-1 flex items-center justify-center rounded-lg border border-chess-border/40 bg-chess-bg/25 px-3 py-2 text-center text-[12px] font-medium text-chess-muted hover:bg-chess-bg/40 hover:text-chess-subtext transition-colors"
-              >
-                <span className="block truncate">Email - {SUPPORT_EMAIL}</span>
-              </a>
-            </div>
+                →
+              </span>
+            </a>
+
+            <a
+              href={SUPPORT_MAILTO}
+              className="block text-center text-[11px] text-chess-muted hover:text-chess-subtext transition-colors"
+            >
+              Or email — {SUPPORT_EMAIL}
+            </a>
           </div>
         )}
       </div>
