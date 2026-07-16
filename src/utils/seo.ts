@@ -1,4 +1,4 @@
-/** Canonical site URL — keep in sync with /api/sitemap and robots.txt */
+/** Canonical site URL — keep in sync with /sitemap.xml and robots.txt */
 export const SITE_ORIGIN = "https://www.chessreview.org";
 export const SITE_NAME = "ChessReview";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;

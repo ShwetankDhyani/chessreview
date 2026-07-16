@@ -158,7 +158,7 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
 
   async function startEdit(slug: string) {
     try {
-      const res = await fetch(`/api/blog/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/blog?slug=${encodeURIComponent(slug)}`, {
         headers: { "X-Admin-Key": adminKey },
       });
       const data = await res.json();

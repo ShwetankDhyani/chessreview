@@ -34,8 +34,36 @@
   ],
   "rewrites": [
     {
+      "source": "/api/stats/public",
+      "destination": "/api/stats?kind=public"
+    },
+    {
+      "source": "/api/stats/admin",
+      "destination": "/api/stats?kind=admin"
+    },
+    {
+      "source": "/api/stats/timing",
+      "destination": "/api/stats?kind=timing"
+    },
+    {
+      "source": "/api/share-preview",
+      "destination": "/api/share?preview=1"
+    },
+    {
+      "source": "/api/blog-media/:id",
+      "destination": "/api/blog?media=:id"
+    },
+    {
+      "source": "/api/blog/:slug",
+      "destination": "/api/blog?slug=:slug"
+    },
+    {
+      "source": "/api/sitemap",
+      "destination": "/api/blog?sitemap=1"
+    },
+    {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
+      "destination": "/api/blog?sitemap=1"
     },
     {
       "source": "/r/:id",
@@ -46,7 +74,7 @@
           "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview).*"
         }
       ],
-      "destination": "/api/share-preview?id=:id"
+      "destination": "/api/share?preview=1&id=:id"
     },
     {
       "source": "/blog",
@@ -68,7 +96,7 @@
           "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
         }
       ],
-      "destination": "/api/blog/:slug?format=html"
+      "destination": "/api/blog?slug=:slug&format=html"
     },
     {
       "source": "/about",

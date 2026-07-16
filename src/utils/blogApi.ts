@@ -141,7 +141,7 @@ export async function fetchBlogPost(
 ): Promise<{ post: BlogPost; replies: BlogReply[] }> {
   const engineUrl = import.meta.env.VITE_EVAL_SERVER_URL?.replace(/\/$/, "");
   const sources = [
-    `/api/blog/${encodeURIComponent(slug)}`,
+    `/api/blog?slug=${encodeURIComponent(slug)}`,
     engineUrl ? `${engineUrl}/blog/${encodeURIComponent(slug)}` : null,
   ].filter(Boolean) as string[];
 
@@ -290,7 +290,7 @@ export async function postBlogReply(
   const sources = [
     { url: "/api/blog", body },
     {
-      url: `/api/blog/${encodeURIComponent(slug)}?replies=1`,
+      url: `/api/blog?slug=${encodeURIComponent(slug)}&replies=1`,
       body: JSON.stringify(payload),
     },
     engineUrl
