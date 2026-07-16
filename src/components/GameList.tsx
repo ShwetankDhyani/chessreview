@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { GameListItem } from "../types";
-import { fetchRecentGames, getResultLabel, formatDate } from "../utils/chesscomApi";
+import {
+  fetchChesscomPlayerStats,
+  fetchRecentGames,
+  getResultLabel,
+  formatDate,
+} from "../utils/chesscomApi";
 import { RatingStat, TimeClassIcon } from "./TimeClassIcon";
 import { fetchLichessGames } from "../utils/lichessApi";
 import { AccountLinkPromo } from "./AccountLinkPromo";
@@ -175,31 +180,28 @@ export const GameList: React.FC<GameListProps> = ({
       clearSlowTimer();
       setShowSlowRetry(false);
 
-      // Fetch stats (failures are silent)
+      // Fetch stats (failures are silent). Chess.com goes through serial backoff client.
       let newStats = null;
       try {
         if (plat === "chesscom") {
-          const res = await fetch(`https://api.chess.com/pub/player/${uname.toLowerCase()}/stats`);
-          if (res.ok) {
-            const data = await res.json();
-            newStats = {
-              bullet: data.chess_bullet?.last?.rating,
-              blitz: data.chess_blitz?.last?.rating,
-              rapid: data.chess_rapid?.last?.rating
-            };
-          }
+          newStats = await fetchChesscomPlayerStats(uname.trim());
         } else {
-          const res = await fetch(`https://lichess.org/api/user/${uname.toLowerCase()}`);
+          const res = await fetch(
+            `https://lichess.org/api/user/${encodeURIComponent(uname.toLowerCase())}`,
+            { headers: { Accept: "application/json" }, cache: "no-store" }
+          );
           if (res.ok) {
             const data = await res.json();
             newStats = {
               bullet: data.perfs?.bullet?.rating,
               blitz: data.perfs?.blitz?.rating,
-              rapid: data.perfs?.rapid?.rating
+              rapid: data.perfs?.rapid?.rating,
             };
           }
         }
-      } catch { /* ignore stats error */ }
+      } catch {
+        /* ignore stats error */
+      }
 
       if (gen !== loadGenRef.current) return;
 

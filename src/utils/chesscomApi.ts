@@ -1,26 +1,12 @@
 import type { ChessComGame, GameListItem } from "../types";
+import {
+  chesscomArchivesUrl,
+  chesscomFetch,
+  chesscomMonthGamesUrl,
+  chesscomPlayerStatsUrl,
+} from "./chesscomClient";
 
-export async function fetchMonthGames(
-  username: string,
-  year: number,
-  month: number
-): Promise<GameListItem[]> {
-  const mm = String(month).padStart(2, "0");
-  const url = `https://api.chess.com/pub/player/${username.toLowerCase()}/games/${year}/${mm}`;
-
-  const res = await fetch(url, {
-    headers: { "User-Agent": "ChessReviewApp/1.0" },
-  });
-
-  if (!res.ok) {
-    if (res.status === 404)
-      throw new Error(`Player "${username}" not found on Chess.com`);
-    throw new Error(`Chess.com API error: ${res.status}`);
-  }
-
-  const data: { games: ChessComGame[] } = await res.json();
-  const games = data.games ?? [];
-
+function mapGames(games: ChessComGame[]): GameListItem[] {
   return games
     .filter((g) => g.rules === "chess" && g.pgn)
     .sort((a, b) => b.end_time - a.end_time)
@@ -38,23 +24,84 @@ export async function fetchMonthGames(
     }));
 }
 
+export async function fetchMonthGames(
+  username: string,
+  year: number,
+  month: number
+): Promise<GameListItem[]> {
+  const url = chesscomMonthGamesUrl(username, year, month);
+  const res = await chesscomFetch(url);
+
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    if (res.status === 410) return [];
+    throw new Error(`Chess.com API error: ${res.status}`);
+  }
+
+  const data: { games: ChessComGame[] } = await res.json();
+  return mapGames(data.games ?? []);
+}
+
+/** List archive month URLs (newest last from API). */
+async function fetchArchiveUrls(username: string): Promise<string[]> {
+  const res = await chesscomFetch(chesscomArchivesUrl(username));
+  if (res.status === 404) {
+    throw new Error(`Player "${username}" not found on Chess.com`);
+  }
+  if (!res.ok) {
+    throw new Error(`Chess.com archives error: ${res.status}`);
+  }
+  const data: { archives?: string[] } = await res.json();
+  return data.archives ?? [];
+}
+
 export async function fetchRecentGames(
   username: string,
   limit = 100
 ): Promise<GameListItem[]> {
+  const archives = await fetchArchiveUrls(username.trim());
+  // Prefer real archive months (avoids hammering empty months).
+  const recent = archives.slice(-6).reverse();
   const collected: GameListItem[] = [];
-  const now = new Date();
 
-  // Walk backwards month by month until we have enough games (up to 6 months back)
-  for (let i = 0; i < 6 && collected.length < limit; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const batch = await fetchMonthGames(username, d.getFullYear(), d.getMonth() + 1).catch(() => []);
-    collected.push(...batch);
+  for (const archiveUrl of recent) {
+    if (collected.length >= limit) break;
+    const res = await chesscomFetch(archiveUrl);
+    if (!res.ok) continue;
+    const data: { games?: ChessComGame[] } = await res.json();
+    collected.push(...mapGames(data.games ?? []));
   }
 
-  return collected
-    .sort((a, b) => b.endTime - a.endTime)
-    .slice(0, limit);
+  // Fallback if archives empty/unavailable: walk calendar months politely.
+  if (collected.length === 0) {
+    const now = new Date();
+    for (let i = 0; i < 6 && collected.length < limit; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const batch = await fetchMonthGames(
+        username,
+        d.getFullYear(),
+        d.getMonth() + 1
+      ).catch(() => []);
+      collected.push(...batch);
+    }
+  }
+
+  return collected.sort((a, b) => b.endTime - a.endTime).slice(0, limit);
+}
+
+export async function fetchChesscomPlayerStats(username: string): Promise<{
+  bullet?: number;
+  blitz?: number;
+  rapid?: number;
+} | null> {
+  const res = await chesscomFetch(chesscomPlayerStatsUrl(username));
+  if (!res.ok) return null;
+  const data = await res.json();
+  return {
+    bullet: data.chess_bullet?.last?.rating,
+    blitz: data.chess_blitz?.last?.rating,
+    rapid: data.chess_rapid?.last?.rating,
+  };
 }
 
 export function getResultLabel(
@@ -79,4 +126,3 @@ export function formatDate(unixTs: number): string {
     day: "numeric",
   });
 }
-
