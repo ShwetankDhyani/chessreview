@@ -1133,7 +1133,37 @@ html[data-testing-mode="1"] {
   animation: coachInsightIn 0.28s ease-out forwards;
 }
 
-/* Support Us — Buy me a coffee / Ko-fi (matches site panel tones) */
+/* Support Us — Free Coffee prank + Ko-fi CTA */
+.support-coffee-prank-title {
+  animation: supportCoffeePrankIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.support-coffee-reveal {
+  animation: supportCoffeeRevealIn 0.35s ease-out both;
+}
+
+@keyframes supportCoffeePrankIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) rotate(-6deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes supportCoffeeRevealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .support-coffee-cta {
   position: relative;
   display: flex;
@@ -1245,7 +1275,9 @@ html[data-testing-mode="1"] {
 @media (prefers-reduced-motion: reduce) {
   .support-coffee-steam-wisp,
   .support-coffee-cta,
-  .support-coffee-mug {
+  .support-coffee-mug,
+  .support-coffee-prank-title,
+  .support-coffee-reveal {
     animation: none !important;
     transition: none !important;
   }

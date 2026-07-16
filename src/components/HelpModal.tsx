@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { hapticSoft } from "../utils/chessSounds";
+import { hapticSoft, hapticTap } from "../utils/chessSounds";
 
 export interface SupportLink {
   label: string;
@@ -34,9 +34,9 @@ function parseSupportLinks(): SupportLink[] {
   }
 }
 
-function CoffeeMugIcon() {
+function CoffeeMugIcon({ size = 40 }: { size?: number }) {
   return (
-    <span className="support-coffee-icon" aria-hidden>
+    <span className="support-coffee-icon" aria-hidden style={{ width: size * 1.1, height: size * 1.15 }}>
       <span className="support-coffee-steam">
         <span className="support-coffee-steam-wisp support-coffee-steam-wisp--a" />
         <span className="support-coffee-steam-wisp support-coffee-steam-wisp--b" />
@@ -45,8 +45,8 @@ function CoffeeMugIcon() {
       <svg
         className="support-coffee-mug"
         viewBox="0 0 64 64"
-        width="40"
-        height="40"
+        width={size}
+        height={size}
         fill="none"
       >
         <path
@@ -83,10 +83,12 @@ export function HelpModal({
   initial?: "contact" | "support";
 }) {
   const [tab, setTab] = useState<"contact" | "support">(initial);
+  const [coffeePrank, setCoffeePrank] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTab(initial);
+    setCoffeePrank(false);
   }, [open, initial]);
 
   if (!open) return null;
@@ -113,8 +115,32 @@ export function HelpModal({
         <div className="flex items-start justify-between gap-3 mb-3">
           {readOnlyContact ? (
             <h2 id="help-title" className="text-base font-bold text-chess-text">Contact</h2>
+          ) : coffeePrank ? (
+            <h2
+              id="help-title"
+              className="support-coffee-prank-title text-base font-bold text-chess-accent"
+            >
+              For mee
+            </h2>
           ) : (
-            <h2 id="help-title" className="text-base font-bold text-chess-text">Support Us</h2>
+            <button
+              type="button"
+              id="help-title"
+              onClick={() => {
+                hapticTap();
+                setCoffeePrank(true);
+              }}
+              className="support-free-coffee-title group inline-flex items-center gap-2 text-left rounded-lg -ml-1 px-1 py-0.5 hover:bg-chess-accent/10 transition-colors"
+              aria-label="Free coffee — tap to claim"
+            >
+              <span className="text-base font-bold text-chess-text group-hover:text-white transition-colors">
+                Free
+              </span>
+              <CoffeeMugIcon size={28} />
+              <span className="text-base font-bold text-chess-text group-hover:text-white transition-colors">
+                Coffee!
+              </span>
+            </button>
           )}
           <button
             type="button"
@@ -152,14 +178,18 @@ export function HelpModal({
               </a>
             </div>
           </div>
+        ) : !coffeePrank ? (
+          <p className="text-sm text-chess-muted leading-relaxed">
+            Go on — tap the free coffee up top.
+          </p>
         ) : (
-          <div className="space-y-4 text-sm text-chess-subtext leading-relaxed">
+          <div className="support-coffee-reveal space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hey — Shwetank here. I keep ChessReview free out of pocket, no paywalls.
+              Hey, I&apos;m Shwetank and I think I did a good job with the website. I know you agree ;)
             </p>
             <p>
-              If a review helped you out, a coffee on Ko-fi is a chill way to help with the
-              server bills. Totally optional.
+              I keep ChessReview up out of my own pocket for the love of chess and community, and if
+              you found this helpful, don&apos;t be shy of sending me a cup of coffee.
             </p>
 
             <a
