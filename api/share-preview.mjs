@@ -1,18 +1,33 @@
 import { getShare } from "../server/reviewSharesApi.mjs";
+import { cleanMetaDescription, escapeHtml } from "../server/seoHtml.mjs";
 
 const SITE_ORIGIN = "https://www.chessreview.org";
 const OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function notFoundHtml(id) {
+  const url = `${SITE_ORIGIN}/r/${encodeURIComponent(id || "")}`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Shared review not found — ChessReview</title>
+  <meta name="description" content="This shared chess game review is unavailable." />
+  <meta name="robots" content="noindex, follow" />
+  <link rel="canonical" href="${escapeHtml(url)}" />
+</head>
+<body>
+  <p>Shared review not found. <a href="${escapeHtml(SITE_ORIGIN)}/">Open ChessReview</a>.</p>
+</body>
+</html>`;
 }
 
 /** HTML preview for social crawlers on /r/:id share links. */
 export default async function handler(req, res) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.status(405).send("GET only");
+    return;
+  }
+
   const id = req.query?.id;
   if (!id || typeof id !== "string") {
     res.status(400).send("Missing id");
@@ -22,7 +37,13 @@ export default async function handler(req, res) {
   try {
     const row = await getShare(id);
     if (!row?.summary) {
-      res.status(404).send("Review not found");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=60");
+      if (req.method === "HEAD") {
+        res.status(404).end();
+        return;
+      }
+      res.status(404).send(notFoundHtml(id));
       return;
     }
 
@@ -35,7 +56,9 @@ export default async function handler(req, res) {
         ? ` Accuracy: ${Math.round(wAcc)}% vs ${Math.round(bAcc)}%.`
         : "";
     const title = `${white} vs ${black} — ChessReview`;
-    const description = `Shared chess game review.${accText} Free move ratings, accuracy scores, and Stockfish analysis on ChessReview.`;
+    const description = cleanMetaDescription(
+      `Shared chess game review.${accText} Free move ratings, accuracy scores, and Stockfish analysis on ChessReview.`
+    );
     const url = `${SITE_ORIGIN}/r/${encodeURIComponent(id)}`;
 
     const jsonLd = {
@@ -60,6 +83,7 @@ export default async function handler(req, res) {
   <meta charset="utf-8" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="ChessReview" />
   <meta property="og:title" content="${escapeHtml(title)}" />
@@ -73,7 +97,6 @@ export default async function handler(req, res) {
   <meta name="twitter:image" content="${escapeHtml(OG_IMAGE)}" />
   <link rel="canonical" href="${escapeHtml(url)}" />
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(url)}" />
 </head>
 <body>
   <p><a href="${escapeHtml(url)}">${escapeHtml(title)}</a> — free chess game review on ChessReview.</p>
@@ -82,6 +105,10 @@ export default async function handler(req, res) {
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=300");
+    if (req.method === "HEAD") {
+      res.status(200).end();
+      return;
+    }
     res.status(200).send(html);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Preview failed";

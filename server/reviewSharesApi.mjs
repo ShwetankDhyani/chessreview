@@ -35,10 +35,9 @@ async function readEngineJson(path, options = {}) {
     const message =
       (data && typeof data.error === "string" && data.error) ||
       `Engine share failed (${res.status})`;
-    if (res.status === 404) {
-      throw new Error("Share is not enabled on the analysis server yet");
-    }
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
   }
   return data;
 }
@@ -50,7 +49,12 @@ export async function getShare(id) {
       const engine = await readEngineJson(`/share/${encodeURIComponent(id)}`);
       if (engine?.pgn) return engine;
     } catch (e) {
-      if (!isWritableShareStore()) throw e;
+      // Missing share IDs also return 404 — treat as not found, not a hard failure.
+      if (e?.status === 404) {
+        if (!isWritableShareStore()) return null;
+      } else if (!isWritableShareStore()) {
+        throw e;
+      }
     }
   }
   return fileGetShare(id);

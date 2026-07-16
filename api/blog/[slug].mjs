@@ -1,4 +1,5 @@
 import { addBlogReply, getBlogPost } from "../../server/blogApi.mjs";
+import { cleanMetaDescription, escapeHtml } from "../../server/seoHtml.mjs";
 
 const SITE_ORIGIN = "https://www.chessreview.org";
 const OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
@@ -8,14 +9,6 @@ function adminKey(req) {
     req.headers["x-admin-key"] ??
     String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "")
   ).trim();
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 function wantsHtml(req) {
@@ -35,18 +28,21 @@ function blogPreviewHtml(post) {
   const slug = post.slug;
   const url = `${SITE_ORIGIN}/blog/${encodeURIComponent(slug)}`;
   const title = `${post.title} — ChessReview Blog`;
-  const description =
+  const description = cleanMetaDescription(
     (post.excerpt && String(post.excerpt).trim()) ||
-    "Articles and notes from ChessReview for amateur and club chess players.";
+      "Articles and notes from ChessReview for amateur and club chess players."
+  );
   const image = absolutizeImage(post.coverImage);
   const published = post.createdAt || "";
   const modified = post.updatedAt || post.createdAt || "";
   const author = post.authorName || "ChessReview";
-  const bodyPreview = String(post.body || post.excerpt || "")
-    .replace(/[#*_`>\-\[\]\(\)]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 1200);
+  const bodyPreview = cleanMetaDescription(
+    String(post.body || post.excerpt || "")
+      .replace(/[#*_`>\-\[\]\(\)]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+    1200
+  ).replace(/…$/, "");
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -110,7 +106,7 @@ function blogPreviewHtml(post) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -119,10 +115,11 @@ export default async function handler(req, res) {
   if (!slug) return res.status(400).json({ error: "Missing slug" });
 
   try {
-    if (req.method === "GET") {
+    if (req.method === "GET" || req.method === "HEAD") {
       const data = await getBlogPost(String(slug), { adminKey: adminKey(req) });
       if (!data) {
         if (wantsHtml(req)) {
+          if (req.method === "HEAD") return res.status(404).end();
           res.status(404).send("Not found");
           return;
         }
@@ -133,9 +130,11 @@ export default async function handler(req, res) {
         const post = data.post ?? data;
         res.setHeader("Content-Type", "text/html; charset=utf-8");
         res.setHeader("Cache-Control", "public, max-age=300");
+        if (req.method === "HEAD") return res.status(200).end();
         return res.status(200).send(blogPreviewHtml(post));
       }
 
+      if (req.method === "HEAD") return res.status(200).end();
       return res.status(200).json(data);
     }
 
