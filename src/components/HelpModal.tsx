@@ -1,9 +1,13 @@
-import { hapticSoft } from "../utils/chessSounds";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { hapticSoft, notifySuccess } from "../utils/chessSounds";
+
 export interface SupportLink {
   label: string;
   href: string;
 }
+
+const SUPPORT_EMAIL = "admin@chessreview.org";
+const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 
 const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
   {
@@ -29,6 +33,31 @@ function parseSupportLinks(): SupportLink[] {
   }
 }
 
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function HelpModal({
   open,
   onClose,
@@ -38,13 +67,39 @@ export function HelpModal({
   onClose: () => void;
   initial?: "contact" | "support";
 }) {
+  const [tab, setTab] = useState<"contact" | "support">(initial);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTab(initial);
+    setEmailCopied(false);
+  }, [open, initial]);
+
+  useEffect(() => {
+    if (!emailCopied) return;
+    const t = window.setTimeout(() => setEmailCopied(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [emailCopied]);
+
+  const handleEmail = useCallback(async () => {
+    hapticSoft();
+    const copied = await copyText(SUPPORT_EMAIL);
+    if (copied) {
+      setEmailCopied(true);
+      notifySuccess();
+    }
+    // Best-effort: many desktops have no mail app, so mailto alone feels broken.
+    window.location.href = SUPPORT_MAILTO;
+  }, []);
+
   if (!open) return null;
 
   const links = parseSupportLinks();
   const paypalHref = links[0]?.href ?? DEFAULT_SUPPORT_LINKS[0]!.href;
-  const [tab, setTab] = useState<"contact" | "support">(initial);
   const showSupport = tab === "support";
   const readOnlyContact = initial === "contact";
+  const emailLabel = emailCopied ? "Copied!" : "Email us";
 
   return (
     <div
@@ -80,15 +135,18 @@ export function HelpModal({
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
             <p>Say hello or share feedback — we read every note.</p>
             <div className="flex flex-col gap-2 mt-2">
-              <a
-                href="mailto:admin@chessreview.org"
-                className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
+              <button
+                type="button"
+                onClick={() => void handleEmail()}
+                className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-left text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
               >
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent" aria-hidden>
                   ✉️
                 </span>
-                <span className="min-w-0 flex-1 truncate font-medium">Email: admin@chessreview.org</span>
-              </a>
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {emailCopied ? "Copied admin@chessreview.org" : "Email: admin@chessreview.org"}
+                </span>
+              </button>
               <a
                 href={CHESSCOM_MESSAGE}
                 className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
@@ -118,13 +176,20 @@ export function HelpModal({
               >
                 PayPal
               </a>
-              <a
-                href="mailto:admin@chessreview.org"
+              <button
+                type="button"
+                onClick={() => void handleEmail()}
                 className="flex-1 py-2.5 text-center text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:text-chess-accent transition-colors"
+                title={`Copy ${SUPPORT_EMAIL}`}
               >
-                Email us
-              </a>
+                {emailLabel}
+              </button>
             </div>
+            {emailCopied ? (
+              <p className="text-center text-[11px] text-chess-muted">
+                {SUPPORT_EMAIL} copied — paste into your mail app
+              </p>
+            ) : null}
           </div>
         )}
       </div>
