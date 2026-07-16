@@ -132,7 +132,7 @@ export function HelpModal({
               </a>
               <a
                 href={SUPPORT_MAILTO}
-                className="min-w-0 flex-1 rounded-lg border border-chess-border/40 bg-chess-bg/25 px-3 py-2 text-left text-[12px] font-medium text-chess-muted hover:bg-chess-bg/40 hover:text-chess-subtext transition-colors"
+                className="min-w-0 flex-1 flex items-center justify-center rounded-lg border border-chess-border/40 bg-chess-bg/25 px-3 py-2 text-center text-[12px] font-medium text-chess-muted hover:bg-chess-bg/40 hover:text-chess-subtext transition-colors"
               >
                 <span className="block truncate">Email - {SUPPORT_EMAIL}</span>
               </a>
