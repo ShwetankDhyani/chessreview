@@ -1,10 +1,23 @@
 /** Desktop layout constants for fitting the board + eval graph in the viewport */
 export const DESKTOP_LAYOUT = {
-  header: 44,
-  evalGraphBar: 30,
+  /** Matches `--app-header-h` (3rem) */
+  header: 48,
+  /** Eval graph toggle row (`py-2` + label) */
+  evalGraphBar: 36,
+  /** Open chart height (`h-14`) */
   evalGraphChart: 56,
-  verticalPad: 28,
-  playerRows: 54,
+  /** Main area padding (`py-3`) + chart `mt-1.5` + slack */
+  verticalPad: 32,
+  /**
+   * Two PlayerTag rows (~34px each) plus `gap-1` slots in the board column.
+   * Tags sit above and below the board.
+   */
+  playerRows: 76,
+  /**
+   * Save / Reanalyze / Download row under the board (`h-9` + `pt-1.5` + column gap).
+   * Must stay reserved or shorter laptop viewports clip the buttons.
+   */
+  boardActions: 48,
   sidebar: 288,
   coachPanel: 208,
   navColumn: 48,
@@ -29,7 +42,12 @@ export const MOBILE_LAYOUT = {
 export function computeDesktopBoardSize(
   winW: number,
   winH: number,
-  opts: { evalGraphOpen: boolean; hasAnalyzedMoves: boolean }
+  opts: {
+    evalGraphOpen: boolean;
+    hasAnalyzedMoves: boolean;
+    /** Reserve space for Save / Reanalyze / Download under the board (default true). */
+    reserveBoardActions?: boolean;
+  }
 ): number {
   const coach = opts.hasAnalyzedMoves
     ? DESKTOP_LAYOUT.coachPanel + DESKTOP_LAYOUT.navColumn
@@ -44,12 +62,15 @@ export function computeDesktopBoardSize(
     ? DESKTOP_LAYOUT.evalGraphBar +
       (opts.evalGraphOpen ? DESKTOP_LAYOUT.evalGraphChart : 0)
     : 0;
+  const actions =
+    opts.reserveBoardActions === false ? 0 : DESKTOP_LAYOUT.boardActions;
   const maxH =
     winH -
     DESKTOP_LAYOUT.header -
     evalH -
     DESKTOP_LAYOUT.verticalPad -
-    DESKTOP_LAYOUT.playerRows;
+    DESKTOP_LAYOUT.playerRows -
+    actions;
   const size = Math.floor(Math.min(maxW, maxH));
   return Math.max(240, Math.min(size, 680));
 }
