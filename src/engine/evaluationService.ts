@@ -14,6 +14,12 @@ const BATCH_CHUNK_SIZE = 96;
 const PROBE_UP_TTL_MS = 45_000;
 const PROBE_DOWN_RETRY_MS = 6_000;
 const BATCH_QUEUE_POLL_MS = 1200;
+const ENGINE_REVIEW_LOCK_KEY = "cr:engineReviewLock:v1";
+const ENGINE_REVIEW_LOCK_TTL_MS = parseInt(
+  process.env.ENGINE_REVIEW_LOCK_TTL_MS ?? "300000",
+  10
+);
+const ENGINE_REVIEW_LOCK_POLL_MS = 200;
 
 export interface EvalQueueStatus {
   state: "idle" | "queued" | "running";
@@ -622,60 +628,159 @@ export async function evaluateFensConsensus(
   policy: ConsensusEvalPolicy,
   onProgress?: (done: number, total: number) => void
 ): Promise<ConsensusEvalOutput> {
-  const unique = [...new Set(fens)];
-  const total = unique.length;
-  // One queue runId for the whole review-stage (fast + deep) to prevent
-  // interleaving between concurrently running reviews.
-  const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const runPriority = Date.now();
+  const runWithEngineLock = async (): Promise<ConsensusEvalOutput> => {
+    const unique = [...new Set(fens)];
+    const total = unique.length;
+    // One queue runId for the whole review-stage (fast + deep) to prevent
+    // interleaving between concurrently running reviews.
+    const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const runPriority = Date.now();
 
-  const fastMap = await evaluateFensBatch(
-    unique,
-    policy.fastDepth,
-    onProgress,
-    runId,
-    runPriority
-  );
-  if (fastMap.size < unique.length) {
+    const fastMap = await evaluateFensBatch(
+      unique,
+      policy.fastDepth,
+      onProgress,
+      runId,
+      runPriority
+    );
+    if (fastMap.size < unique.length) {
+      for (const fen of unique) {
+        if (fastMap.has(fen)) continue;
+        const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
+        if (fallback) fastMap.set(fen, fallback);
+      }
+    }
+
+    const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
+    const deepMap = await evaluateFensBatch(
+      deepenTargets,
+      policy.deepDepth,
+      undefined,
+      runId,
+      runPriority
+    );
+    if (deepMap.size < deepenTargets.length) {
+      for (const fen of deepenTargets) {
+        if (deepMap.has(fen)) continue;
+        const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
+        if (fallback) deepMap.set(fen, fallback);
+      }
+    }
+
+    const merged = new Map<string, EvalResult>();
+    let verified = 0;
     for (const fen of unique) {
-      if (fastMap.has(fen)) continue;
-      const fallback = await evaluateFen(fen, policy.fastDepth).catch(() => null);
-      if (fallback) fastMap.set(fen, fallback);
+      const finalEval = mergeConsensusEval(
+        fastMap.get(fen),
+        deepMap.get(fen),
+        policy
+      );
+      if (finalEval.verified) verified++;
+      merged.set(fen, finalEval);
     }
-  }
 
-  const deepenTargets = prioritizeForDeepening(unique, fastMap, policy);
-  const deepMap = await evaluateFensBatch(
-    deepenTargets,
-    policy.deepDepth,
-    undefined,
-    runId,
-    runPriority
-  );
-  if (deepMap.size < deepenTargets.length) {
-    for (const fen of deepenTargets) {
-      if (deepMap.has(fen)) continue;
-      const fallback = await evaluateFen(fen, policy.deepDepth).catch(() => null);
-      if (fallback) deepMap.set(fen, fallback);
-    }
-  }
-
-  const merged = new Map<string, EvalResult>();
-  let verified = 0;
-  for (const fen of unique) {
-    const finalEval = mergeConsensusEval(fastMap.get(fen), deepMap.get(fen), policy);
-    if (finalEval.verified) verified++;
-    merged.set(fen, finalEval);
-  }
-
-  return {
-    evals: merged,
-    meta: {
-      evaluated: total,
-      deepened: deepenTargets.length,
-      verified,
-    },
+    return {
+      evals: merged,
+      meta: {
+        evaluated: total,
+        deepened: deepenTargets.length,
+        verified,
+      },
+    };
   };
+
+  // Extra protection: cross-tab lock so canceled/restarted reviews can't
+  // enqueue new engine batches while another review is still running.
+  // This prevents the "Queued #N keeps increasing" ping-pong UX.
+  const isBrowser =
+    typeof window !== "undefined" && typeof document !== "undefined";
+  if (!isBrowser) {
+    return runWithEngineLock();
+  }
+
+  // Best-effort: use the browser's lock manager if available.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const locks = (navigator as any)?.locks as
+      | {
+          request: (
+            name: string,
+            options: { mode: "exclusive" },
+            callback: () => Promise<unknown>
+          ) => Promise<unknown>;
+        }
+      | undefined;
+    if (locks?.request) {
+      return (await locks.request(
+        "chessreview:engineReview",
+        { mode: "exclusive" },
+        runWithEngineLock
+      )) as ConsensusEvalOutput;
+    }
+  } catch {
+    // fall through to localStorage lock
+  }
+
+  // Fallback: localStorage-based mutex with TTL.
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let contended = false;
+  while (true) {
+    const raw = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
+    let holder: { token: string; ts: number } | null = null;
+    if (raw) {
+      try {
+        holder = JSON.parse(raw);
+      } catch {
+        holder = null;
+      }
+    }
+
+    const now = Date.now();
+    const holderFresh = holder?.ts != null && now - holder.ts < ENGINE_REVIEW_LOCK_TTL_MS;
+    if (!holderFresh) {
+      localStorage.setItem(
+        ENGINE_REVIEW_LOCK_KEY,
+        JSON.stringify({ token, ts: now })
+      );
+      // Re-read to ensure we won.
+      const raw2 = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
+      if (raw2) {
+        try {
+          const holder2 = JSON.parse(raw2) as { token: string; ts: number };
+          if (holder2?.token === token) break;
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!contended) {
+      contended = true;
+      // Show queue label while waiting for lock. No exact position available.
+      emitQueueStatus({
+        state: "queued",
+        position: null,
+        etaMs: null,
+        chunkDone: 0,
+        chunkTotal: 1,
+      });
+    }
+    await new Promise((r) => setTimeout(r, ENGINE_REVIEW_LOCK_POLL_MS));
+  }
+
+  try {
+    return await runWithEngineLock();
+  } finally {
+    const raw = localStorage.getItem(ENGINE_REVIEW_LOCK_KEY);
+    if (raw) {
+      try {
+        const holder = JSON.parse(raw) as { token: string };
+        if (holder?.token === token) localStorage.removeItem(ENGINE_REVIEW_LOCK_KEY);
+      } catch {
+        // ignore
+      }
+    }
+  }
 }
 
 export let cloudOnlyMode = false;
