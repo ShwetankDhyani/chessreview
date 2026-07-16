@@ -101,7 +101,12 @@ export function HelpModal({
           </div>
         ) : (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
-            <p>ChessReview runs on a personal server. Community support is how we keep it reliable — either a small donation or technical help.</p>
+            <p>
+              I host ChessReview on a personal server to keep it free and accessible for everyone.
+              As the community grows, so do the hosting costs. If you find the platform helpful,
+              please consider chipping in! Whether it&apos;s a small donation or sharing server space,
+              your support goes a long way in keeping us fast and reliable.
+            </p>
           </div>
         )}
 
@@ -120,17 +125,13 @@ export function HelpModal({
                 </a>
               ))}
               <a
-                href={`mailto:admin@chessreview.org?subject=${encodeURIComponent("Technical help for ChessReview")}`}
+                href={CHESSCOM_MESSAGE}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
               >
-                Get in touch (technical help)
+                Get in touch
               </a>
-              <div className="text-center text-[11px] text-chess-muted">
-                Or{" "}
-                <a href={CHESSCOM_MESSAGE} className="underline underline-offset-2 hover:text-chess-accent">
-                  message on Chess.com
-                </a>
-              </div>
             </div>
           </div>
         )}
