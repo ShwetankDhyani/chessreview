@@ -11,8 +11,8 @@ const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 
 const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
   {
-    label: "Support via PayPal",
-    href: "https://paypal.me/shwetankdhyani",
+    label: "Support via Ko-fi",
+    href: "https://ko-fi.com/shwetank",
   },
 ];
 
@@ -52,7 +52,8 @@ export function HelpModal({
   if (!open) return null;
 
   const links = parseSupportLinks();
-  const paypalHref = links[0]?.href ?? DEFAULT_SUPPORT_LINKS[0]!.href;
+  const supportHref = links[0]?.href ?? DEFAULT_SUPPORT_LINKS[0]!.href;
+  const supportLabel = links[0]?.label?.replace(/^Support via\s+/i, "") || "Ko-fi";
   const showSupport = tab === "support";
   const readOnlyContact = initial === "contact";
 
@@ -123,12 +124,12 @@ export function HelpModal({
 
             <div className="mt-1 flex items-stretch gap-2">
               <a
-                href={paypalHref}
+                href={supportHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-shrink-0 self-center rounded-lg border border-chess-border/70 bg-chess-surface/70 px-3.5 py-2 text-sm font-medium text-chess-accent hover:bg-chess-hover hover:border-chess-accent/35 transition-colors"
               >
-                PayPal
+                {supportLabel}
               </a>
               <a
                 href={SUPPORT_MAILTO}
