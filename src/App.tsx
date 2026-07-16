@@ -68,7 +68,7 @@ import {
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
 import { BoardReviewActions } from "./components/BoardReviewActions";
-import { buildPgnFilename, downloadPgn } from "./utils/exportPgn";
+import { buildPgnFilename, copyPgnToClipboard, downloadPgn } from "./utils/exportPgn";
 import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
@@ -1336,7 +1336,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     }
   }, [activeUser, pgn, reviewResult, summary, moves, playerNames, refreshSavedReviews]);
 
-  const handleExportPgn = useCallback(() => {
+  const handleDownloadPgn = useCallback(() => {
     if (!pgn.trim()) return;
     hapticTap();
     downloadPgn(pgn, buildPgnFilename(playerNames.white, playerNames.black));
@@ -1344,6 +1344,22 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     notifySuccess();
     window.setTimeout(() => setSaveReviewMessage(null), 2500);
   }, [pgn, playerNames.white, playerNames.black]);
+
+  const handleCopyPgn = useCallback(() => {
+    if (!pgn.trim()) return;
+    void (async () => {
+      hapticTap();
+      const ok = await copyPgnToClipboard(pgn);
+      if (ok) {
+        setSaveReviewMessage("PGN copied.");
+        notifySuccess();
+      } else {
+        setSaveReviewMessage("Could not copy PGN.");
+        notifyError();
+      }
+      window.setTimeout(() => setSaveReviewMessage(null), 2500);
+    })();
+  }, [pgn]);
 
   const handleOpenSavedReview = useCallback(
     async (id: string) => {
@@ -2094,7 +2110,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   saveMessage={saveReviewMessage}
                   onReanalyze={requestReanalysis}
                   onSave={() => void handleSaveReview()}
-                  onExportPgn={handleExportPgn}
+                  onDownloadPgn={handleDownloadPgn}
+                  onCopyPgn={handleCopyPgn}
                   className="pl-[34px] pt-1.5"
                 />
               </div>
@@ -2368,7 +2385,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           saveMessage={null}
                           onReanalyze={requestReanalysis}
                           onSave={() => void handleSaveReview()}
-                          onExportPgn={handleExportPgn}
+                          onDownloadPgn={handleDownloadPgn}
+                          onCopyPgn={handleCopyPgn}
                         />
                       ) : undefined
                     }
