@@ -102,11 +102,9 @@ export function HelpModal({
         ) : (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
             <p>
-              I host ChessReview on a personal server to keep it free and accessible for everyone.
-              As the community grows, so do the computation costs. If you find the platform helpful,
-              please consider chipping in! Whether it&apos;s a small donation or sharing server space,
-              your support goes a long way in keeping us fast and reliable.
+              <strong className="text-chess-text">Hello —</strong> I host ChessReview on a personal server to keep it free and accessible for everyone. As the community grows, so do the computation costs. If you find the platform helpful, please consider chipping in — a small donation or shared server capacity both go a long way in keeping us fast and reliable.
             </p>
+            <p className="text-[12px] text-chess-muted">— Shwetank</p>
           </div>
         )}
 
@@ -124,14 +122,24 @@ export function HelpModal({
                   PayPal
                 </a>
               ))}
-              <a
-                href={CHESSCOM_MESSAGE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-center rounded-lg border border-chess-border bg-chess-surface py-2.5 text-sm font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
-              >
-                Get in touch
-              </a>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href="mailto:admin@chessreview.org"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
+                  title="Email"
+                >
+                  ✉️ <span>Email</span>
+                </a>
+                <a
+                  href={CHESSCOM_MESSAGE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-chess-border bg-chess-surface py-2 text-[13px] font-medium text-chess-subtext hover:bg-chess-hover hover:border-chess-accent/30 transition-colors"
+                  title="Chess.com Message"
+                >
+                  ♟️ <span>Chess.com</span>
+                </a>
+              </div>
             </div>
           </div>
         )}
