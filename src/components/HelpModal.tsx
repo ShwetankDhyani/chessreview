@@ -101,10 +101,12 @@ export function HelpModal({
           </div>
         ) : (
           <div className="space-y-3 text-sm text-chess-subtext leading-relaxed">
-            <p>
-              <strong className="text-chess-text">Hello —</strong> I host ChessReview on a personal server to keep it free and accessible for everyone. As the community grows, so do the computation costs. If you find the platform helpful, please consider chipping in — a small donation or shared server capacity both go a long way in keeping us fast and reliable.
+            <p className="text-chess-text">
+              Hi, Shwetank here. I run and fund ChessReview out of pocket to keep it free. As we grow, keeping the platform fast and reliable takes a bit of community teamwork.
             </p>
-            <p className="text-[12px] text-chess-muted">— Shwetank</p>
+            <p>
+              If you find the tool helpful, please consider lending a hand. Whether it's sharing technical expertise, spare server space, or chipping in to offset the bills, your support keeps things running smoothly for all of us.
+            </p>
           </div>
         )}
 
