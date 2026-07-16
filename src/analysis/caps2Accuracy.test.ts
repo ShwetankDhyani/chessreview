@@ -36,13 +36,22 @@ describe("caps2Accuracy", () => {
     expect(loss).toBeLessThan(92);
   });
 
-  it("weights blunders heavily via harmonic blend", () => {
+  it("weights blunders heavily via volatility + harmonic blend", () => {
     const clean = caps2GameAccuracy(Array(18).fill(0.01));
     const withBlunder = caps2GameAccuracy([
       ...Array(17).fill(0.01),
       0.25,
     ]);
     expect(clean - withBlunder).toBeGreaterThan(5);
+  });
+
+  it("scores higher than a pure harmonic crush on long quiet games", () => {
+    // Many tiny slips: volatility weighting should not tank as hard as
+    // (arithmetic+harmonic)/2 on equal weight.
+    const losses = Array(30).fill(0.02);
+    losses[20] = 0.15;
+    const score = caps2GameAccuracy(losses);
+    expect(score).toBeGreaterThan(55);
   });
 
   it("includes book and forced plies as perfect moves", () => {

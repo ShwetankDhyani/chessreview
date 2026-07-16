@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accuracyEpLoss,
   classificationLoss,
   classifyReviewMove,
   engineRankFromMultipv,
@@ -28,7 +29,7 @@ function base(overrides: Partial<ClassifyReviewInput>): ClassifyReviewInput {
 }
 
 describe("epLoss vs classificationLoss", () => {
-  it("accuracy loss stays vs-best (zero when engine best)", () => {
+  it("vs-best loss is zero when engine best is played", () => {
     expect(
       epLossFromPlayed(
         base({
@@ -41,13 +42,27 @@ describe("epLoss vs classificationLoss", () => {
     ).toBe(0);
   });
 
-  it("classification uses absolute collapse, so dumping a win is punished", () => {
-    // Second-best also looks "equal" to a shallow best that fails — but you threw 70%.
+  it("accuracy loss is Lichess-style before→after", () => {
+    expect(
+      accuracyEpLoss(
+        base({
+          eBefore: 0.7,
+          eAfterBest: 0.05,
+          eAfterPlayed: 0.05,
+          playedUci: "e2e4",
+        })
+      )
+    ).toBeCloseTo(0.65, 5);
+  });
+
+  it("classification falls back to absolute collapse when best-line fen is missing", () => {
+    // Shallow / incomplete best fen — still punish dumping a win.
     const loss = classificationLoss(
       base({
         eBefore: 0.7,
         eAfterBest: 0.02,
         eAfterPlayed: 0.0,
+        fenAfterBest: null,
         playedUci: "a2a3",
         multipvLines: [
           { multipv: 1, cp: -800, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
@@ -56,6 +71,23 @@ describe("epLoss vs classificationLoss", () => {
       })
     );
     expect(loss).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it("classification prefers vs-best when deep best-line fen exists", () => {
+    const loss = classificationLoss(
+      base({
+        eBefore: 0.7,
+        eAfterBest: 0.02,
+        eAfterPlayed: 0.0,
+        fenAfterBest: "after-best",
+        playedUci: "a2a3",
+        multipvLines: [
+          { multipv: 1, cp: -800, depth: 14, pv: ["e2e4"], bestMove: "e2e4" },
+          { multipv: 2, cp: -900, depth: 14, pv: ["a2a3"], bestMove: "a2a3" },
+        ],
+      })
+    );
+    expect(loss).toBeCloseTo(0.02, 5);
   });
 });
 

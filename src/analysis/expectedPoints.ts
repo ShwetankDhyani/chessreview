@@ -1,8 +1,5 @@
 import type { WdlTriple } from "./wdl";
-import {
-  expectedPointsFromWdlWhite,
-  wdlTripleToWinProb,
-} from "./wdl";
+import { wdlTripleToWinProb } from "./wdl";
 
 export const WIN_PROB_K = 0.00368208;
 export const MATE_CP = 10000;
@@ -32,7 +29,12 @@ export function expectedPointsFromCpWhite(cpWhite: number, mover: "w" | "b"): nu
   return winPercentFromCp(signed) / 100;
 }
 
-/** Expected points from a MultiPV line — prefers WDL; uses legacy logistic for UCI cp. */
+/**
+ * Expected points from a MultiPV line.
+ * Uses Lichess CP→Win% logistic (same k as lila) so accuracy matches site reports.
+ * Native WDL is kept on the eval for display/debug but is not used for scoring —
+ * Stockfish WDL swings are often harsher than Lichess Win% and crushed accuracy %.
+ */
 export function expectedPointsFromLine(
   line: LineLike,
   mover: "w" | "b",
@@ -41,9 +43,6 @@ export function expectedPointsFromLine(
   if (line.mate !== undefined) {
     const whiteWinning = line.mate > 0;
     return (mover === "w") === whiteWinning ? 1 : 0;
-  }
-  if (line.wdl) {
-    return expectedPointsFromWdlWhite(line.wdl, mover);
   }
   const cpWhite = line.cp ?? 0;
   const signed = mover === "w" ? cpWhite : -cpWhite;
@@ -60,9 +59,6 @@ export function expectedPointsFromEval(
     const whiteWinning = evalWhite.mate > 0;
     const moverWinning = mover === "w" ? whiteWinning : !whiteWinning;
     return moverWinning ? 1 : 0;
-  }
-  if (evalWhite.wdl) {
-    return expectedPointsFromWdlWhite(evalWhite.wdl, mover);
   }
   return expectedPointsFromCpWhite(evalWhite.cp ?? 0, mover);
 }

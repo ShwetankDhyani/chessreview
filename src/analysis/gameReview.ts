@@ -13,7 +13,7 @@ import { computePhaseAccuracies } from "./gamePhases";
 import {
   classifyReviewMove,
   engineRankFromMultipv,
-  epLossFromPlayed,
+  accuracyEpLoss,
   type ClassifyReviewInput,
 } from "./classifyReviewMove";
 import { expectedPointsFromEval, expectedPointsFromLine } from "./expectedPoints";
@@ -111,8 +111,8 @@ function buildSummary(moves: AnalyzedMove[], formulaVersion: string): ReviewSumm
       },
     },
     accuracyMeta: {
-      method: "chesscom_wdl_v4",
-      formulaVersion: `v3.2.1-${formulaVersion}`,
+      method: "lichess_caps2_v5",
+      formulaVersion: `v3.3.0-${formulaVersion}`,
     },
   };
 }
@@ -331,10 +331,11 @@ export async function analyzeGameReview(
       forced,
     };
 
-    let epLoss = epLossFromPlayed(classifyInput);
+    let epLoss = accuracyEpLoss(classifyInput);
     if (deliveredMate) {
       classifyInput.eAfterPlayed = 1;
       classifyInput.eAfterBest = 1;
+      classifyInput.eBefore = 1;
       epLoss = 0;
     }
 
