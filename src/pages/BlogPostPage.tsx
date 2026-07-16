@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
+import { BlogPinnedBadge } from "../components/BlogPinnedBadge";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
@@ -491,6 +492,11 @@ export default function BlogPostPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-chess-accent/90 mb-3">
                 Journal
               </p>
+              {post.pinned && (
+                <div className="mb-3">
+                  <BlogPinnedBadge />
+                </div>
+              )}
               <h1 className="text-3xl sm:text-[2.15rem] font-bold text-chess-text leading-[1.15] tracking-tight">
                 {post.title}
               </h1>

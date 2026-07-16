@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { BlogPinnedBadge } from "./BlogPinnedBadge";
 import {
   createBlogPost,
   deleteBlogPost,
@@ -508,8 +509,11 @@ export function AdminBlogPanel({ adminKey, embedded = false }: Props) {
               <div className="flex flex-wrap items-center gap-2">
                 <div className="text-sm font-medium text-chess-text truncate">{p.title}</div>
                 {p.pinned && (
-                  <span className="shrink-0 rounded border border-chess-accent/35 bg-chess-accent/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-chess-accent">
-                    Pinned · {Math.max(1, Number(p.pinOrder) || 1)}
+                  <span className="inline-flex items-center gap-1.5 shrink-0">
+                    <BlogPinnedBadge />
+                    <span className="text-[9px] tabular-nums text-chess-muted">
+                      #{Math.max(1, Number(p.pinOrder) || 1)}
+                    </span>
                   </span>
                 )}
               </div>

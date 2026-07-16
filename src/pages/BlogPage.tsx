@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { BlogPinnedBadge } from "../components/BlogPinnedBadge";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import {
@@ -64,11 +65,7 @@ function PostCard({
 
       <div className={`relative ${featured ? "p-5 sm:p-6" : "p-4 sm:p-5"} space-y-3`}>
         <div className="flex flex-wrap items-center gap-2">
-          {post.pinned && (
-            <span className="rounded-full border border-chess-accent/35 bg-chess-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-chess-accent">
-              Pinned
-            </span>
-          )}
+          {post.pinned && <BlogPinnedBadge />}
           {featured && !post.pinned && (
             <span className="rounded-full border border-chess-accent/35 bg-chess-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-chess-accent">
               Latest
