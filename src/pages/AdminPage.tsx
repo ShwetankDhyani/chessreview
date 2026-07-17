@@ -27,8 +27,12 @@ import {
 import { AdminSection } from "../components/admin/AdminSection";
 import { AdminSwitch } from "../components/admin/AdminSwitch";
 import { hapticSoft } from "../utils/chessSounds";
+import {
+  clearSessionAdminKey,
+  loadSessionAdminKey,
+  saveSessionAdminKey,
+} from "../utils/blogApi";
 
-const KEY_STORAGE = "cr_admin_key";
 const RECENT_PAGE_SIZE = 10;
 
 function formatWhen(iso: string) {
@@ -69,9 +73,7 @@ export default function AdminPage() {
     noindex: true,
   });
 
-  const [adminKey, setAdminKey] = useState(
-    () => sessionStorage.getItem(KEY_STORAGE) ?? ""
-  );
+  const [adminKey, setAdminKey] = useState(() => loadSessionAdminKey());
   const [inputKey, setInputKey] = useState("");
   const [stats, setStats] = useState<AdminReviewStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function AdminPage() {
       const data = await fetchAdminStats(key);
       setStats(data);
       setRecentPage(0);
-      sessionStorage.setItem(KEY_STORAGE, key);
+      saveSessionAdminKey(key);
       setAdminKey(key);
       try {
         const settings = await fetchSiteSettings();
@@ -134,7 +136,7 @@ export default function AdminPage() {
 
   const signOut = () => {
     hapticSoft();
-    sessionStorage.removeItem(KEY_STORAGE);
+    clearSessionAdminKey();
     setAdminKey("");
     setStats(null);
     setInputKey("");
