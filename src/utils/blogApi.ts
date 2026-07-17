@@ -38,6 +38,8 @@ export type BlogReplyNode = BlogReply & { children: BlogReplyNode[] };
 const REPLY_TOKEN_KEY = "cr_blog_reply_tokens";
 const REPLY_NAME_KEY = "cr_blog_reply_name";
 const ADMIN_KEY_STORAGE = "cr_admin_key";
+/** Fired on window when the session admin key is set or cleared. */
+export const ADMIN_KEY_CHANGED = "cr_admin_key_changed";
 export const MAX_REPLY_DEPTH = 5;
 
 export function loadSessionAdminKey(): string {
@@ -46,6 +48,23 @@ export function loadSessionAdminKey(): string {
   } catch {
     return "";
   }
+}
+
+export function saveSessionAdminKey(key: string): void {
+  const trimmed = key.trim();
+  try {
+    if (trimmed) sessionStorage.setItem(ADMIN_KEY_STORAGE, trimmed);
+    else sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(
+    new CustomEvent(ADMIN_KEY_CHANGED, { detail: { hasKey: !!trimmed } })
+  );
+}
+
+export function clearSessionAdminKey(): void {
+  saveSessionAdminKey("");
 }
 
 export function buildReplyTree(replies: BlogReply[]): BlogReplyNode[] {
