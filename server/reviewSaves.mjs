@@ -10,7 +10,8 @@ import { join } from "path";
 
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
 const SAVES_FILE = join(DATA_DIR, "saved-reviews.json");
-const MAX_SAVED = 400;
+/** Soft ceiling only for runaway growth — admin keeps full history otherwise. */
+const MAX_SAVED = 50_000;
 const MAX_BYTES = 700_000;
 
 function loadState() {
@@ -122,6 +123,34 @@ export function fileDeleteSavedReview(id, platform, username) {
   delete state.reviews[String(id)];
   saveState(state);
   return { ok: true };
+}
+
+/** Admin aggregate: total saves and counts per Chess.com / Lichess user. */
+export function fileAdminSavedSummary() {
+  const state = loadState();
+  const byUserMap = new Map();
+  let total = 0;
+  for (const r of Object.values(state.reviews)) {
+    if (!r || typeof r !== "object") continue;
+    total += 1;
+    const platform = String(r.platform ?? "");
+    const username = String(r.username ?? "").toLowerCase();
+    if (!platform || !username) continue;
+    const key = `${platform}:${username}`;
+    const row = byUserMap.get(key) ?? {
+      platform,
+      username,
+      count: 0,
+      lastSavedAt: 0,
+    };
+    row.count += 1;
+    row.lastSavedAt = Math.max(row.lastSavedAt, Number(r.savedAt) || 0);
+    byUserMap.set(key, row);
+  }
+  const byUser = [...byUserMap.values()].sort(
+    (a, b) => b.count - a.count || b.lastSavedAt - a.lastSavedAt
+  );
+  return { total, byUser };
 }
 
 export function handleEngineSavedReviewsRequest(req, res, url, { readJsonBody }) {

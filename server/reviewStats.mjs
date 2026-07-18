@@ -167,9 +167,47 @@ async function dbAdminStats() {
       byDepth: [],
       ratingSummary: { avgWhite: null, avgBlack: null, ratedGames: 0 },
       recent: [],
+      recentTotal: 0,
+      savedGames: { total: 0, byUser: [] },
     };
   }
   return callRpc("get_admin_review_stats");
+}
+
+async function dbSavedGamesSummary() {
+  if (!isSupabaseConfigured()) return { total: 0, byUser: [] };
+  try {
+    const res = await fetch(
+      `${supabaseBase()}/rest/v1/saved_reviews?select=platform,username,saved_at`,
+      { headers: supabaseHeaders("return=minimal") }
+    );
+    if (!res.ok) return { total: 0, byUser: [] };
+    const rows = await res.json();
+    const byUserMap = new Map();
+    let total = 0;
+    for (const r of Array.isArray(rows) ? rows : []) {
+      total += 1;
+      const platform = String(r.platform ?? "");
+      const username = String(r.username ?? "").toLowerCase();
+      if (!platform || !username) continue;
+      const key = `${platform}:${username}`;
+      const row = byUserMap.get(key) ?? {
+        platform,
+        username,
+        count: 0,
+        lastSavedAt: 0,
+      };
+      row.count += 1;
+      row.lastSavedAt = Math.max(row.lastSavedAt, Number(r.saved_at) || 0);
+      byUserMap.set(key, row);
+    }
+    const byUser = [...byUserMap.values()].sort(
+      (a, b) => b.count - a.count || b.lastSavedAt - a.lastSavedAt
+    );
+    return { total, byUser };
+  } catch {
+    return { total: 0, byUser: [] };
+  }
 }
 
 function withBaseline(stats) {
@@ -235,10 +273,25 @@ export async function getAdminStats() {
         process.env.ADMIN_SECRET ?? process.env.STATS_READ_KEY ?? "",
     },
   });
-  if (engine) return engine;
+  if (engine) {
+    if (!engine.savedGames && isSupabaseConfigured()) {
+      engine.savedGames = await dbSavedGamesSummary();
+    }
+    if (engine.recentTotal == null && Array.isArray(engine.recent)) {
+      engine.recentTotal = engine.recent.length;
+    }
+    return engine;
+  }
 
   if (isSupabaseConfigured()) {
-    return withBaseline(await dbAdminStats());
+    const stats = withBaseline(await dbAdminStats());
+    if (!stats.savedGames) {
+      stats.savedGames = await dbSavedGamesSummary();
+    }
+    if (stats.recentTotal == null && Array.isArray(stats.recent)) {
+      stats.recentTotal = stats.recent.length;
+    }
+    return stats;
   }
 
   return {
@@ -250,6 +303,8 @@ export async function getAdminStats() {
     byDepth: [],
     ratingSummary: { avgWhite: null, avgBlack: null, ratedGames: 0 },
     recent: [],
+    recentTotal: 0,
+    savedGames: { total: 0, byUser: [] },
   };
 }
 

@@ -37,6 +37,18 @@ export interface DepthStat {
   avgDurationMs: number;
 }
 
+export interface SavedGamesByUser {
+  platform: string;
+  username: string;
+  count: number;
+  lastSavedAt: number;
+}
+
+export interface SavedGamesSummary {
+  total: number;
+  byUser: SavedGamesByUser[];
+}
+
 export interface AdminReviewStats extends PublicReviewStats {
   byDepth?: DepthStat[];
   ratingSummary?: {
@@ -44,7 +56,34 @@ export interface AdminReviewStats extends PublicReviewStats {
     avgBlack: number | null;
     ratedGames: number;
   };
+  /** Full review history (newest first). */
   recent?: RecentReviewRow[];
+  recentTotal?: number;
+  savedGames?: SavedGamesSummary;
+}
+
+/** Public Chess.com / Lichess profile URL for a linked reviewer account. */
+export function chessProfileUrl(
+  platform: string | null | undefined,
+  username: string | null | undefined
+): string | null {
+  const name = username?.trim();
+  if (!name) return null;
+  const p = String(platform ?? "").toLowerCase();
+  if (p === "chesscom" || p === "chess.com") {
+    return `https://www.chess.com/member/${encodeURIComponent(name)}`;
+  }
+  if (p === "lichess") {
+    return `https://lichess.org/@/${encodeURIComponent(name)}`;
+  }
+  return null;
+}
+
+export function platformLabel(platform: string | null | undefined): string {
+  const p = String(platform ?? "").toLowerCase();
+  if (p === "chesscom" || p === "chess.com") return "Chess.com";
+  if (p === "lichess") return "Lichess";
+  return platform?.trim() || "—";
 }
 
 const regionNames =
