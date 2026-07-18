@@ -38,13 +38,26 @@ export type BlogReplyNode = BlogReply & { children: BlogReplyNode[] };
 const REPLY_TOKEN_KEY = "cr_blog_reply_tokens";
 const REPLY_NAME_KEY = "cr_blog_reply_name";
 const ADMIN_KEY_STORAGE = "cr_admin_key";
-/** Fired on window when the session admin key is set or cleared. */
+/** Fired on window when the admin key is set or cleared. */
 export const ADMIN_KEY_CHANGED = "cr_admin_key_changed";
 export const MAX_REPLY_DEPTH = 5;
 
+/**
+ * Admin key is kept in localStorage so signed-in devices keep the footer
+ * control-panel entry across tabs and browser restarts (until Sign out).
+ * Older sessionStorage values are migrated once.
+ */
 export function loadSessionAdminKey(): string {
   try {
-    return sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+    const fromLocal = localStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+    if (fromLocal) return fromLocal;
+    const fromSession = sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+    if (fromSession) {
+      localStorage.setItem(ADMIN_KEY_STORAGE, fromSession);
+      sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+      return fromSession;
+    }
+    return "";
   } catch {
     return "";
   }
@@ -53,8 +66,13 @@ export function loadSessionAdminKey(): string {
 export function saveSessionAdminKey(key: string): void {
   const trimmed = key.trim();
   try {
-    if (trimmed) sessionStorage.setItem(ADMIN_KEY_STORAGE, trimmed);
-    else sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+    if (trimmed) {
+      localStorage.setItem(ADMIN_KEY_STORAGE, trimmed);
+      sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+    } else {
+      localStorage.removeItem(ADMIN_KEY_STORAGE);
+      sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+    }
   } catch {
     /* ignore */
   }

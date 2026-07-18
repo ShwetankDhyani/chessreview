@@ -101,6 +101,8 @@ You should get `{"ok":true,"id":"…","savedAt":…}` — not `not found`.
 
 Optional: run `supabase/saved_reviews.sql` in Supabase and set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` on Vercel for cloud save without the engine file store.
 
+If admin review history was previously capped at 80 rows, run `supabase/admin_full_history.sql` once so `get_admin_review_stats` returns the full event list.
+
 ## URLs
 
 | What | URL |

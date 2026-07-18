@@ -8,9 +8,11 @@ import {
   YAxis,
 } from "recharts";
 import {
+  chessProfileUrl,
   countryLabel,
   fetchAdminStats,
   formatReviewsServed,
+  platformLabel,
   type AdminReviewStats,
   type RecentReviewRow,
 } from "../utils/reviewStats";
@@ -148,7 +150,8 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const recentTotal = stats?.recent?.length ?? 0;
+  const recentTotal =
+    stats?.recentTotal ?? stats?.recent?.length ?? 0;
   const recentPageCount = Math.max(
     1,
     Math.ceil(recentTotal / RECENT_PAGE_SIZE)
@@ -159,6 +162,10 @@ export default function AdminPage() {
     const start = recentPage * RECENT_PAGE_SIZE;
     return all.slice(start, start + RECENT_PAGE_SIZE);
   }, [stats?.recent, recentPage]);
+
+  const savedGames = stats?.savedGames;
+  const savedTotal = savedGames?.total ?? 0;
+  const savedByUser = savedGames?.byUser ?? [];
 
   const countryRows = stats?.countries ?? [];
   const countryChartHeight = Math.max(countryRows.length * 28, 160);
@@ -466,9 +473,78 @@ export default function AdminPage() {
         </AdminSection>
 
         <AdminSection
+          id="saved"
+          title="Saved games"
+          description="Cloud-saved reviews by signed-in Chess.com / Lichess users."
+          defaultOpen={false}
+          badge={savedTotal > 0 ? String(savedTotal) : undefined}
+        >
+          {savedTotal === 0 ? (
+            <p className="text-sm text-chess-muted">No saved games yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-chess-border/60">
+              <table className="w-full min-w-[480px] text-xs">
+                <thead>
+                  <tr className="bg-chess-bg/40 text-left text-chess-muted">
+                    <th className="px-3 py-2">User</th>
+                    <th className="px-3 py-2">Platform</th>
+                    <th className="px-3 py-2">Saved</th>
+                    <th className="px-3 py-2">Last save</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedByUser.map((row) => {
+                    const profileUrl = chessProfileUrl(
+                      row.platform,
+                      row.username
+                    );
+                    return (
+                      <tr
+                        key={`${row.platform}:${row.username}`}
+                        className="border-t border-chess-border/30 hover:bg-chess-hover/20"
+                      >
+                        <td className="px-3 py-2 font-medium text-chess-text">
+                          {profileUrl ? (
+                            <a
+                              href={profileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-chess-accent hover:underline"
+                            >
+                              {row.username}
+                            </a>
+                          ) : (
+                            row.username
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-chess-muted">
+                          {platformLabel(row.platform)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">{row.count}</td>
+                        <td className="px-3 py-2 text-chess-muted">
+                          {row.lastSavedAt
+                            ? formatWhen(new Date(row.lastSavedAt).toISOString())
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="px-3 py-2 text-[11px] text-chess-muted">
+                {savedTotal.toLocaleString()} saved game
+                {savedTotal === 1 ? "" : "s"} across{" "}
+                {savedByUser.length.toLocaleString()} user
+                {savedByUser.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          )}
+        </AdminSection>
+
+        <AdminSection
           id="recent"
-          title="Recent reviews"
-          description="Latest completed analyses."
+          title="Review history"
+          description="Every completed analysis, newest first."
           defaultOpen={false}
           badge={recentTotal > 0 ? String(recentTotal) : undefined}
         >
@@ -523,11 +599,30 @@ export default function AdminPage() {
                           <td className="px-3 py-2">
                             {row.username ? (
                               <span>
-                                {row.username}
+                                {(() => {
+                                  const profileUrl = chessProfileUrl(
+                                    row.reviewer_platform,
+                                    row.username
+                                  );
+                                  return profileUrl ? (
+                                    <a
+                                      href={profileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-medium text-chess-accent hover:underline"
+                                    >
+                                      {row.username}
+                                    </a>
+                                  ) : (
+                                    <span className="font-medium">
+                                      {row.username}
+                                    </span>
+                                  );
+                                })()}
                                 {row.reviewer_platform ? (
                                   <span className="text-chess-muted">
                                     {" "}
-                                    · {row.reviewer_platform}
+                                    · {platformLabel(row.reviewer_platform)}
                                   </span>
                                 ) : null}
                               </span>

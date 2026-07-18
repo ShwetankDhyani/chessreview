@@ -15,10 +15,10 @@ import { join } from "path";
 import {
   computeTimingModel,
 } from "./reviewTimingStats.mjs";
+import { fileAdminSavedSummary } from "./reviewSaves.mjs";
 
 const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
 const STATS_FILE = join(DATA_DIR, "review-stats.json");
-const MAX_EVENTS = 500;
 
 function parseBaseline() {
   const n = parseInt(process.env.STATS_REVIEWS_BASELINE ?? "0", 10);
@@ -130,7 +130,10 @@ export function fileAdminStats() {
     countries,
     byDepth: depthBreakdown(events),
     ratingSummary: ratingSummary(events),
-    recent: events.slice(0, 80),
+    // Full history from the beginning — no 80-row cap.
+    recent: events,
+    recentTotal: events.length,
+    savedGames: fileAdminSavedSummary(),
     tracking: "engine-file",
     testingMode: !!s.testingMode,
   };
@@ -177,7 +180,6 @@ export function fileLogReview(row) {
   };
   s.liveCount += 1;
   s.events.unshift(event);
-  if (s.events.length > MAX_EVENTS) s.events.length = MAX_EVENTS;
   saveState(s);
   return { duplicate: false, count: s.baseline + s.liveCount };
 }
