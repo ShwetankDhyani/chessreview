@@ -386,6 +386,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [addProfileError, setAddProfileError] = useState<string | null>(null);
   const addProfileReqGenRef = useRef(0);
   const addProfileAbortRef = useRef<AbortController | null>(null);
+  /** Re-entrancy guard for the same-tab profile sync listener. */
+  const profileSyncBusyRef = useRef(false);
   const [savedReviews, setSavedReviews] = useState<SavedReviewListItem[]>([]);
   const [savedReviewsLoading, setSavedReviewsLoading] = useState(false);
   const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
@@ -394,7 +396,22 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const activeUser = profiles[activeProfileIdx] ?? null;
 
+  /**
+   * Always-current profile list.
+   *
+   * `saveProfiles` notifies same-tab listeners synchronously, before React has
+   * re-rendered, so any listener reading the `profiles` state closure sees the
+   * previous value. The profile-sync listener below used that stale value to
+   * decide a username was unknown and re-added it, which recursed until the
+   * stack overflowed and aborted the rest of the add — leaving a saved profile
+   * whose games never loaded.
+   */
+  const profilesRef = useRef<ChessProfile[]>(profiles);
+  profilesRef.current = profiles;
+
   const saveProfiles = (ps: ChessProfile[], activeIdx?: number) => {
+    // Update the ref first so listeners triggered below observe the new list.
+    profilesRef.current = ps;
     setProfiles(ps);
     localStorage.setItem(PROFILES_KEY, JSON.stringify(ps));
     if (activeIdx !== undefined) {
@@ -517,9 +534,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   }, []);
 
   const addProfile = async (name: string, platform: "chesscom" | "lichess", skipVerify = false) => {
-    if (profiles.length >= 5) return;
-    // Don't add duplicates
-    const exists = profiles.some(p => p.name.toLowerCase() === name.toLowerCase() && p.platform === platform);
+    // Read through the ref: this can be called from a listener holding a stale
+    // render closure, and duplicate detection must see the committed list.
+    if (profilesRef.current.length >= 5) return;
+    const exists = profilesRef.current.some(
+      (p) =>
+        p.platform === platform &&
+        p.name.toLowerCase() === name.toLowerCase()
+    );
     if (exists) {
       setAddProfileError("Already linked");
       notifyWarning();
@@ -573,7 +595,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     }
 
     // Re-check duplicates after normalization/verification (e.g. casing changes).
-    const normalizedExists = profiles.some(
+    const normalizedExists = profilesRef.current.some(
       (p) => p.platform === platform && p.name.toLowerCase() === finalName.toLowerCase()
     );
     if (normalizedExists) {
@@ -582,7 +604,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       return;
     }
 
-    const updated = [...profiles, { name: finalName, platform }];
+    const updated = [...profilesRef.current, { name: finalName, platform }];
     saveProfiles(updated, updated.length - 1);
     setShowAddProfile(false);
     setAddProfileName("");
@@ -596,7 +618,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const removeProfile = (idx: number) => {
     const isRemovingActive = idx === activeProfileIdx;
-    const updated = profiles.filter((_, i) => i !== idx);
+    const updated = profilesRef.current.filter((_, i) => i !== idx);
     const newActiveIdx = activeProfileIdx >= updated.length
       ? Math.max(0, updated.length - 1)
       : activeProfileIdx > idx ? activeProfileIdx - 1 : activeProfileIdx;
@@ -624,7 +646,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         platform?: "chesscom" | "lichess";
       } | null;
       if (!detail?.name || !detail.platform) return;
-      const idx = profiles.findIndex(
+      const idx = profilesRef.current.findIndex(
         (p) =>
           p.platform === detail.platform &&
           p.name.toLowerCase() === detail.name!.toLowerCase()
@@ -635,7 +657,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     };
     window.addEventListener("cr_profile_invalid", onInvalidProfile);
     return () => window.removeEventListener("cr_profile_invalid", onInvalidProfile);
-  }, [profiles, removeProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDepthChange = useCallback((d: number) => {
     setDepth(d);
@@ -1474,18 +1497,36 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   // Sync profiles when GameList saves a new username (e.g. first-time user)
   useEffect(() => {
     const onStorage = () => {
+      // saveProfiles dispatches "storage" itself, so this can re-enter before
+      // React commits. Guard explicitly rather than relying on render timing.
+      if (profileSyncBusyRef.current) return;
+
       const name = localStorage.getItem("cr_username");
-      const platform = (localStorage.getItem("cr_platform") ?? "chesscom") as "chesscom" | "lichess";
-      if (name && !profiles.some(p => p.name.toLowerCase() === name.toLowerCase() && p.platform === platform)) {
-        // New user entered in GameList — auto-add to profiles, skip verify as API check happened in GameList
-        addProfile(name, platform, true);
+      if (!name) return;
+      const platform = (localStorage.getItem("cr_platform") ?? "chesscom") as
+        | "chesscom"
+        | "lichess";
+
+      const known = profilesRef.current.some(
+        (p) =>
+          p.platform === platform &&
+          p.name.toLowerCase() === name.toLowerCase()
+      );
+      if (known) return;
+
+      profileSyncBusyRef.current = true;
+      try {
+        // Username came from GameList, which already confirmed it upstream.
+        void addProfile(name, platform, true);
+      } finally {
+        profileSyncBusyRef.current = false;
       }
     };
     window.addEventListener("storage", onStorage);
     const interval = setInterval(onStorage, 2000);
     return () => { window.removeEventListener("storage", onStorage); clearInterval(interval); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profiles]);
+  }, []);
 
   useEffect(() => {
     if (isCovered) return;
