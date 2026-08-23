@@ -257,7 +257,7 @@ export function ReviewSessionView({
             </div>
 
             {moves.length > 0 && (
-              <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-border rounded-lg overflow-hidden self-stretch shadow-md">
+              <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-hairline rounded-xl overflow-hidden self-stretch shadow-elev-2">
                 <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border bg-chess-bg/40 flex-shrink-0">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-chess-text uppercase tracking-[0.08em]">
                     <span className="h-1.5 w-1.5 rounded-full bg-chess-accent" />

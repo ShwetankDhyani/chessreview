@@ -39,23 +39,23 @@ export function EvalChartPanel({
   if (docked || integrated) {
     return (
       <div
-        className={`flex-shrink-0 border-t border-chess-border/50 bg-chess-panel/90 ${className}`}
+        className={`flex-shrink-0 border-t border-chess-hairline bg-chess-panel/90 ${className}`}
       >
         <button
           type="button"
           onClick={toggle}
-          className="w-full flex items-center justify-between gap-2 px-3 h-9 text-left hover:bg-chess-hover/40 transition-colors"
+          className="w-full flex items-center justify-between gap-2 px-3 h-9 text-left transition-colors duration-200 ease-soft hover:bg-chess-hover/45"
           aria-expanded={open}
         >
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-chess-muted">
             Eval graph
           </span>
-          <span className="text-[10px] text-chess-muted tabular-nums">
+          <span className="text-[10px] font-medium text-chess-muted/85 tabular-nums">
             {open ? "Hide ▾" : "Show ▸"}
           </span>
         </button>
         <div
-          className="overflow-hidden transition-[height] duration-200 ease-out"
+          className="overflow-hidden transition-[height] duration-300 ease-soft"
           style={{ height: open ? "4.5rem" : "0px" }}
         >
           <EvalChart
@@ -70,23 +70,23 @@ export function EvalChartPanel({
 
   return (
     <div
-      className={`flex-shrink-0 mt-1.5 border-t border-chess-border bg-chess-panel ${className}`}
+      className={`flex-shrink-0 mt-1.5 border-t border-chess-hairline bg-chess-panel ${className}`}
     >
       <button
         type="button"
         onClick={toggle}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-chess-hover/50 transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-colors duration-200 ease-soft hover:bg-chess-hover/45"
         aria-expanded={open}
       >
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-chess-muted">
           Eval graph
         </span>
-        <span className="text-[10px] text-chess-muted tabular-nums">
+        <span className="text-[10px] font-medium text-chess-muted/85 tabular-nums">
           {open ? "Hide ▾" : "Show ▸"}
         </span>
       </button>
       <div
-        className={`overflow-hidden transition-[height] duration-200 ease-out ${
+        className={`overflow-hidden transition-[height] duration-300 ease-soft ${
           open ? "h-14" : "h-0"
         }`}
       >

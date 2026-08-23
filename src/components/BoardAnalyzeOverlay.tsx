@@ -54,7 +54,7 @@ export function BoardAnalyzeOverlay({
             : "Another review is already underway"
         }
       >
-        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-xl border border-chess-border bg-chess-panel/95 backdrop-blur-sm px-5 py-4 shadow-[0_18px_56px_rgba(0,0,0,0.7)] min-w-[240px] max-w-[280px]">
+        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-2xl border border-chess-hairline-strong bg-chess-panel/95 backdrop-blur-md px-5 py-4 shadow-elev-4 min-w-[240px] max-w-[280px]">
           <div className="flex items-start gap-2.5">
             <span
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-chess-accent/15 border border-chess-accent/30 text-chess-accent"
@@ -98,7 +98,7 @@ export function BoardAnalyzeOverlay({
               <button
                 type="button"
                 onClick={conflict.onWait}
-                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-chess-accent-hover active:scale-[0.98]"
+                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.98]"
               >
                 Open review
               </button>
@@ -115,7 +115,7 @@ export function BoardAnalyzeOverlay({
               <button
                 type="button"
                 onClick={conflict.onCancelAndAnalyze}
-                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-chess-accent-hover active:scale-[0.98]"
+                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.98]"
               >
                 Cancel &amp; analyze this
               </button>

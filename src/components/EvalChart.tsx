@@ -96,12 +96,14 @@ export const EvalChart: React.FC<EvalChartProps> = ({
         : (pt.eval / 100).toFixed(2);
 
     return (
-      <div className="bg-chess-panel border border-chess-border rounded px-2 py-1.5 text-xs shadow-lg">
-        <div className="font-medium text-chess-text">{pt.label}</div>
+      <div className="bg-chess-panel/95 backdrop-blur-md border border-chess-hairline-strong rounded-lg px-2.5 py-1.5 text-xs shadow-elev-3">
+        <div className="font-semibold tracking-tight text-chess-text">
+          {pt.label}
+        </div>
         <div className="text-chess-subtext">
           Eval:{" "}
           <span
-            className="font-mono font-bold"
+            className="font-mono font-bold tabular-nums"
             style={{ color: pt.eval >= 0 ? "#6daa6d" : "#ca3c3c" }}
           >
             {pt.eval >= 0 ? "+" : ""}
@@ -132,8 +134,9 @@ export const EvalChart: React.FC<EvalChartProps> = ({
         >
           <defs>
             <linearGradient id="whiteGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#e8e6e3" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#e8e6e3" stopOpacity={0.05} />
+              <stop offset="0%" stopColor="#e8e6e3" stopOpacity={0.34} />
+              <stop offset="55%" stopColor="#e8e6e3" stopOpacity={0.12} />
+              <stop offset="100%" stopColor="#e8e6e3" stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="blackGrad" x1="0" y1="1" x2="0" y2="0">
               <stop offset="5%" stopColor="#1a1a1a" stopOpacity={0.8} />
@@ -143,7 +146,12 @@ export const EvalChart: React.FC<EvalChartProps> = ({
           <XAxis dataKey="label" hide />
           <YAxis domain={[-CLAMP, CLAMP]} hide />
           <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine y={0} stroke="#3a3a3a" strokeWidth={1} />
+          <ReferenceLine
+            y={0}
+            stroke="#4a4744"
+            strokeWidth={1}
+            strokeDasharray="2 3"
+          />
           {bookBand && (
             <ReferenceArea
               x1={bookBand.x1}
@@ -157,13 +165,15 @@ export const EvalChart: React.FC<EvalChartProps> = ({
           <Area
             type="monotone"
             dataKey="clampedEval"
-            stroke="#888"
+            stroke="#a8a5a1"
             strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="url(#whiteGrad)"
             dot={false}
             activeDot={{
-              r: 4,
-              fill: "#6daa6d",
+              r: 3.5,
+              fill: "#81b64c",
               stroke: "#1a1a1a",
               strokeWidth: 2,
             }}

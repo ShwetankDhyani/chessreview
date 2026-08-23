@@ -374,7 +374,7 @@ export const GameList: React.FC<GameListProps> = ({
             <div className="mobile-surface-section flex-shrink-0 py-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 truncate text-sm font-semibold text-chess-text">
+                  <div className="flex items-center gap-1.5 truncate text-sm font-semibold tracking-tight text-chess-text">
                     <span className="text-chess-muted leading-none">
                       {platform === "lichess" ? "♞" : "♟"}
                     </span>
@@ -388,7 +388,7 @@ export const GameList: React.FC<GameListProps> = ({
                     </div>
                   )}
                   {games.length > 0 && !loading && (
-                    <p className="mt-0.5 text-[10px] text-chess-muted">
+                    <p className="mt-0.5 text-[10px] tabular-nums text-chess-muted/85">
                       {filteredGames.length} of {games.length} games
                     </p>
                   )}
@@ -432,7 +432,7 @@ export const GameList: React.FC<GameListProps> = ({
                   onDismiss={() => setGamesError(null)}
                 />
               ) : showSlowRetry && loading ? (
-                <div className="mt-2 flex items-center gap-2 rounded-xl border border-chess-border/70 bg-chess-panel/70 px-3 py-2 text-[11px] text-chess-subtext">
+                <div className="mt-2 flex items-center gap-2.5 rounded-lg border border-chess-hairline bg-chess-panel/70 px-3 py-2 text-[11px] leading-snug text-chess-subtext shadow-elev-1">
                   <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
                   <span className="min-w-0 flex-1 font-medium">
                     Still waiting on{" "}
@@ -441,7 +441,7 @@ export const GameList: React.FC<GameListProps> = ({
                   <button
                     type="button"
                     onClick={handleRetry}
-                    className="flex-shrink-0 font-semibold text-chess-accent"
+                    className="flex-shrink-0 font-semibold text-chess-accent transition-colors duration-200 ease-soft hover:text-chess-accent-hover"
                   >
                     Retry
                   </button>
@@ -504,7 +504,7 @@ export const GameList: React.FC<GameListProps> = ({
             )}
 
             {showActivePin ? (
-              <div className="flex-shrink-0 z-10 border-t border-[#3f3c39] bg-[#312e2b] shadow-[0_6px_14px_rgba(0,0,0,0.28)]">
+              <div className="flex-shrink-0 z-10 border-t border-chess-hairline bg-chess-panel shadow-elev-2">
                 {renderActivePin()}
               </div>
             ) : null}
@@ -549,7 +549,7 @@ export const GameList: React.FC<GameListProps> = ({
                       setFormatFilter("all");
                       setRatingSort("none");
                     }}
-                    className="text-chess-accent hover:underline"
+                    className="font-semibold text-chess-accent transition-colors duration-200 ease-soft hover:text-chess-accent-hover"
                   >
                     Clear filters
                   </button>
@@ -575,7 +575,7 @@ export const GameList: React.FC<GameListProps> = ({
                       selectedGameId === game.id ? "mobile-list-row--active" : ""
                     }`}
                   >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/5">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.055] ring-1 ring-inset ring-white/[0.06]">
                       <TimeClassIcon timeClass={game.timeClass} size={13} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -587,14 +587,14 @@ export const GameList: React.FC<GameListProps> = ({
                             border: color === "black" ? "1px solid #888" : "1px solid #ccc",
                           }}
                         />
-                        <span className="truncate text-[13px] font-medium text-chess-text">
+                        <span className="truncate text-[13px] font-semibold tracking-tight text-chess-text">
                           {opponent}
                         </span>
                         <span className="flex-shrink-0 text-[11px] text-chess-muted tabular-nums">
                           {oppRating}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[10px] capitalize text-chess-muted">
+                      <div className="mt-0.5 text-[10px] capitalize tracking-wide text-chess-muted/85">
                         {game.timeClass} · {formatDate(game.endTime)}
                       </div>
                     </div>
@@ -609,7 +609,7 @@ export const GameList: React.FC<GameListProps> = ({
         <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-hidden">
           <div className="mobile-surface flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {showActivePin ? (
-              <div className="z-10 flex-shrink-0 border-b border-[#3f3c39] bg-[#312e2b] shadow-[0_6px_14px_rgba(0,0,0,0.28)]">
+              <div className="z-10 flex-shrink-0 border-b border-chess-hairline bg-chess-panel shadow-elev-2">
                 {renderActivePin()}
               </div>
             ) : null}
@@ -620,13 +620,13 @@ export const GameList: React.FC<GameListProps> = ({
                 </div>
               )}
               <div className="mobile-surface-section py-2">
-                <p className="text-[10px] text-chess-muted mb-2 text-center">
+                <p className="text-[10px] font-medium tracking-wide text-chess-muted mb-2 text-center">
                   Open a game from link
                 </p>
                 <GameUrlImport onImported={onGameSelect} compact />
               </div>
               <div className="mobile-surface-section flex flex-col py-3">
-                <p className="text-[10px] text-chess-muted mb-2 text-center">
+                <p className="text-[10px] font-medium tracking-wide text-chess-muted mb-2 text-center">
                   Or paste PGN / open a .pgn file
                 </p>
                 <PgnPastePanel onLoad={onGameSelect} compact />

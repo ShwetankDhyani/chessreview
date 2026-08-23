@@ -46,7 +46,7 @@ export function MobileBoardControls({
         <button
           type="button"
           onClick={flip}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
           aria-label="Flip board"
         >
           <FlipBoardIcon />
@@ -69,7 +69,7 @@ export function MobileBoardControls({
       <button
         type="button"
         onClick={flip}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
         aria-label="Flip board"
       >
         <FlipBoardIcon />

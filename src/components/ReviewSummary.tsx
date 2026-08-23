@@ -109,7 +109,7 @@ const PhaseAccuracyTable: React.FC<{ phases: PhaseAccuracyStats }> = ({
             className="grid items-center gap-x-1.5 sm:gap-x-2 py-2 min-w-0 rounded-md"
             style={{ gridTemplateColumns: PHASE_GRID }}
           >
-            <div className="flex justify-end min-w-0 pr-1 border-r border-chess-border/25">
+            <div className="flex justify-end min-w-0 pr-1 border-r border-chess-hairline">
               <span
                 className="text-sm font-bold tabular-nums tracking-tight"
                 style={{ color: accuracyTone(row.white) }}
@@ -122,7 +122,7 @@ const PhaseAccuracyTable: React.FC<{ phases: PhaseAccuracyStats }> = ({
                 {label}
               </span>
             </div>
-            <div className="flex justify-start min-w-0 pl-1 border-l border-chess-border/25">
+            <div className="flex justify-start min-w-0 pl-1 border-l border-chess-hairline">
               <span
                 className="text-sm font-bold tabular-nums tracking-tight"
                 style={{ color: accuracyTone(row.black) }}
@@ -146,10 +146,10 @@ function AccuracyExcludeToggle({
 }) {
   return (
     <div
-      className={`mt-3 rounded-lg border px-3 py-2.5 transition-colors ${
+      className={`mt-3 rounded-xl border px-3 py-2.5 shadow-elev-1 transition-all duration-200 ease-soft ${
         checked
-          ? "border-chess-accent/45 bg-chess-accent/10"
-          : "border-chess-border-strong bg-chess-surface/80"
+          ? "border-chess-accent/40 bg-chess-accent/[0.09]"
+          : "border-chess-hairline bg-chess-surface/80"
       }`}
     >
       <div className="flex items-center gap-3 min-h-[2.5rem]">
@@ -171,12 +171,12 @@ function AccuracyExcludeToggle({
           aria-checked={checked}
           aria-label="Exclude book and forced moves from accuracy"
           onClick={() => { hapticToggle(); onChange(!checked); }}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chess-accent/50 ${
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.22)] transition-colors duration-200 ease-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chess-accent/50 ${
             checked ? "bg-chess-accent" : "bg-chess-border-strong"
           }`}
         >
           <span
-            className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+            className={`inline-block h-4 w-4 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-soft ${
               checked ? "translate-x-[22px]" : "translate-x-[3px]"
             }`}
           />
@@ -197,9 +197,9 @@ function ReviewSection({
 }) {
   return (
     <section
-      className={first ? "" : "pt-4 mt-4 border-t border-chess-border/50"}
+      className={first ? "" : "pt-5 mt-5 border-t border-chess-hairline"}
     >
-      <h3 className="text-[10px] text-chess-muted font-semibold uppercase tracking-wider mb-3">
+      <h3 className="text-[10px] text-chess-muted font-semibold uppercase tracking-[0.13em] mb-3">
         {title}
       </h3>
       {children}
@@ -401,10 +401,10 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             return (
               <React.Fragment key={key}>
                 <div
-                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-chess-hover/25 rounded-md transition-colors"
+                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-chess-hover/25 rounded-lg transition-colors duration-200 ease-soft"
                   style={{ gridTemplateColumns: MOVE_GRID }}
                 >
-                  <div className="flex justify-end min-w-0 pr-1 border-r border-chess-border/25">
+                  <div className="flex justify-end min-w-0 pr-1 border-r border-chess-hairline">
                     <CountBadge
                       count={whiteCount}
                       color={meta.color}
@@ -425,7 +425,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
                       {meta.label}
                     </span>
                   </div>
-                  <div className="flex justify-start min-w-0 pl-1 border-l border-chess-border/25">
+                  <div className="flex justify-start min-w-0 pl-1 border-l border-chess-hairline">
                     <CountBadge
                       count={blackCount}
                       color={meta.color}
@@ -474,12 +474,12 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
       )}
 
       {onShare && (
-        <div className="mt-auto pt-4 border-t border-chess-border/50 space-y-2">
+        <div className="mt-auto pt-5 border-t border-chess-hairline space-y-2">
           <button
             type="button"
             onClick={() => { hapticTap(); onShare?.(); }}
             disabled={sharing}
-            className="w-full text-xs font-semibold py-2.5 rounded-lg border border-chess-border hover:bg-chess-hover disabled:opacity-50"
+            className="w-full text-xs font-semibold tracking-tight py-2.5 rounded-lg border border-chess-hairline bg-chess-surface/60 shadow-elev-1 transition-all duration-200 ease-soft hover:bg-chess-hover hover:border-chess-border-strong active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
           >
             {sharing ? "Creating link…" : "Share this review"}
           </button>
@@ -520,7 +520,7 @@ const CriticalMomentsList: React.FC<{
           type="button"
           disabled={!onMoveClick}
           onClick={() => onMoveClick?.(idx)}
-          className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-md text-left transition-colors ${
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors duration-200 ease-soft ${
             onMoveClick ? "hover:bg-chess-hover/40 cursor-pointer" : ""
           }`}
         >
@@ -585,8 +585,10 @@ const CountBadge: React.FC<{
     type="button"
     onClick={onClick}
     disabled={!clickable}
-    className={`w-6 h-6 flex items-center justify-center text-xs font-bold rounded transition-all ${
-      clickable ? "cursor-pointer hover:scale-110" : "cursor-default"
+    className={`w-6 h-6 flex items-center justify-center text-xs font-bold tabular-nums rounded-md transition-all duration-200 ease-soft ${
+      clickable
+        ? "cursor-pointer hover:scale-105 hover:brightness-125 active:scale-95"
+        : "cursor-default"
     } ${active ? "ring-1 ring-offset-1 ring-offset-chess-bg" : ""}`}
     style={{
       backgroundColor: active
@@ -608,7 +610,7 @@ const MoveDropdown: React.FC<{
   onMoveClick: (idx: number) => void;
 }> = ({ movesForType, color, onMoveClick }) => (
   <div
-    className="mx-1 mb-1 rounded overflow-hidden"
+    className="mx-1 mb-1 rounded-lg overflow-hidden"
     style={{ backgroundColor: `${color}0c` }}
   >
     {movesForType.map(({ idx, move }) => {
@@ -619,9 +621,9 @@ const MoveDropdown: React.FC<{
           key={idx}
           type="button"
           onClick={() => onMoveClick(idx)}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-chess-hover/50 transition-colors text-left"
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-chess-hover/50 transition-colors duration-200 ease-soft text-left"
         >
-          <span className="text-chess-muted font-mono w-8 flex-shrink-0">
+          <span className="text-chess-muted font-mono tabular-nums w-8 flex-shrink-0">
             {moveNum}
             {isBlack ? "…" : "."}
           </span>
@@ -629,7 +631,7 @@ const MoveDropdown: React.FC<{
             {move.san}
           </span>
           {move.evalAfter?.cp !== undefined && (
-            <span className="ml-auto text-chess-muted font-mono text-xs">
+            <span className="ml-auto text-chess-muted font-mono tabular-nums text-xs">
               {move.evalAfter.cp > 0 ? "+" : ""}
               {(move.evalAfter.cp / 100).toFixed(1)}
             </span>

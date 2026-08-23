@@ -127,7 +127,7 @@ export function EngineDepthControls({
           D{depth}
         </button>
         {showDepthMenu && (
-          <div className="absolute right-0 top-[calc(100%+0.4rem)] z-50 flex gap-0.5 rounded-xl border border-chess-border bg-chess-panel p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+          <div className="absolute right-0 top-[calc(100%+0.4rem)] z-50 flex gap-0.5 rounded-xl border border-chess-hairline-strong bg-chess-panel p-1.5 shadow-elev-4">
             {depths.map((d) => (
               <button
                 key={d}

@@ -27,7 +27,7 @@ export function BoardAnalysisStrip({
 
   return (
     <div
-      className={`relative flex-shrink-0 overflow-hidden rounded-lg border border-chess-border bg-chess-panel shadow-sm ${className}`}
+      className={`relative flex-shrink-0 overflow-hidden rounded-xl border border-chess-hairline bg-chess-panel shadow-elev-1 ${className}`}
       role="status"
       aria-live="polite"
       aria-label={`Analyzing, ${pctLabel} percent`}
