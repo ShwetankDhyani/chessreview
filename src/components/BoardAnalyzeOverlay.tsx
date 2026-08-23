@@ -18,7 +18,6 @@ interface BoardAnalyzeOverlayProps {
   progressPercent?: number;
   stageLabel?: string;
   currentSan?: string;
-  etaLabel?: string | null;
   currentPly?: number;
   totalPlies?: number;
   /** Shown when this board is open while another game is still analyzing. */

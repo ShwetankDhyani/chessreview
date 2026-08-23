@@ -74,11 +74,7 @@ import { EngineDepthControls } from "./components/EngineDepthControls";
 import { BoardAnalysisStrip } from "./components/BoardAnalysisStrip";
 import { AnalyzingMoveList } from "./components/AnalyzingMoveList";
 import { progressToReplayPly } from "./utils/pgnReplay";
-import {
-  analysisStageLabel,
-  formatEtaGuess,
-  remainingEtaSeconds,
-} from "./utils/analysisProgressUi";
+import { analysisStageLabel } from "./utils/analysisProgressUi";
 import { coachShowsBestWas } from "./utils/moveFactSheet";
 import { boardMoveClassification } from "./utils/boardMoveClassification";
 import { shouldShowEngineLineGlow } from "./utils/engineLineGlow";
@@ -1521,15 +1517,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const analysisPlyCount = gamePlyCount || replayFrames.length;
 
-  const { percent: progressPercent, remainingMs: analysisRemainingMs } =
-    usePredictedAnalysisProgress(
-      analysisState,
-      rawProgressPercent,
-      analysisStartedAt,
-      analysisPlyCount,
-      depth,
-      timingModel
-    );
+  const { percent: progressPercent } = usePredictedAnalysisProgress(
+    analysisState,
+    rawProgressPercent,
+    analysisStartedAt,
+    analysisPlyCount,
+    depth,
+    timingModel
+  );
 
   const analyzingReplayPly =
     replayFrames.length > 0
@@ -1538,9 +1533,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const analyzingMoveSan =
     analyzingReplayPly >= 0 ? replayFrames[analyzingReplayPly]?.san : undefined;
   const analysisStage = analysisStageLabel(progressPercent, depth);
-  const analysisEtaLabel = formatEtaGuess(
-    remainingEtaSeconds(analysisRemainingMs)
-  );
 
   const vsLabel = `${playerNames.white} vs ${playerNames.black}`;
   const activeReview = useMemo(() => {
@@ -2012,7 +2004,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       totalPlies={replayFrames.length}
                       currentSan={analyzingMoveSan}
                       stageLabel={analysisStage}
-                      etaLabel={analysisEtaLabel}
                     />
                   </div>
                 ) : (
@@ -2076,7 +2067,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
-                  analysisEtaLabel={analysisEtaLabel}
                   reviewConflict={reviewConflict}
                 />
                 </div>
@@ -2347,7 +2337,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   progressPercent={progressPercent}
                   analysisStageLabel={analysisStage}
                   analyzingMoveSan={analyzingMoveSan}
-                  analysisEtaLabel={analysisEtaLabel}
                   analyzingPly={analyzingReplayPly}
                   analyzingTotalPlies={replayFrames.length}
                   reviewConflict={reviewConflict}
