@@ -181,9 +181,17 @@ export default function AdminPage() {
       const settings = await updateSiteSettings(adminKey, {
         homeGamesNewsSlug: homeGamesNewsSlugFromChoice(next),
       });
-      setHomeGamesNewsChoice(
-        homeGamesNewsChoiceFromSettings(settings.homeGamesNewsSlug)
+      const confirmed = homeGamesNewsChoiceFromSettings(
+        settings.homeGamesNewsSlug
       );
+      if (confirmed !== next) {
+        setHomeGamesNewsChoice(prev);
+        setHomeGamesNewsError(
+          "Setting did not save. Try again in a moment."
+        );
+        return;
+      }
+      setHomeGamesNewsChoice(confirmed);
     } catch (e) {
       setHomeGamesNewsChoice(prev);
       setHomeGamesNewsError(
@@ -372,7 +380,9 @@ export default function AdminPage() {
               Home Games tab news
             </label>
             <p className="mt-0.5 text-[11px] leading-snug text-chess-muted">
-              Choose which blog post appears above the game list, or hide it.
+              Which blog post shows above the game list on the home Games tab.
+              “Automatic” follows your blog pin order (same as the top post on
+              /blog). “None” hides it.
             </p>
             <select
               id="home-games-news"
@@ -381,8 +391,10 @@ export default function AdminPage() {
               onChange={(e) => void setHomeGamesNewsValue(e.target.value)}
               className="mt-2 w-full rounded-lg border border-chess-border bg-chess-panel px-2.5 py-2 text-[12px] text-chess-text outline-none focus:border-chess-accent/70 disabled:opacity-60"
             >
-              <option value="__auto__">Automatic (top pinned post)</option>
-              <option value="__none__">None</option>
+              <option value="__auto__">
+                Automatic — top of blog list (by pin)
+              </option>
+              <option value="__none__">None — hide news banner</option>
               {blogPosts.map((post) => (
                 <option key={post.id} value={post.slug}>
                   {post.title}
