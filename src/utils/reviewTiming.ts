@@ -2,10 +2,17 @@
 
 export const TIMING_SAMPLE_WINDOW = 120;
 export const LOCAL_TIMING_MAX = 60;
-export const MIN_DEPTH_SAMPLES = 4;
-export const MIN_BUCKET_SAMPLES = 3;
+export const MIN_DEPTH_SAMPLES = 3;
+export const MIN_BUCKET_SAMPLES = 2;
 
-const LOCAL_STORAGE_KEY = "cr_review_timing_v1";
+/**
+ * Only learn ETAs from reviews after the parallel full-depth engine path.
+ * Pre-era samples (slow serial / consensus) are ignored.
+ */
+export const TIMING_ERA_START_MS = Date.parse("2026-07-16T10:00:00.000Z");
+
+/** Bumped to drop stale local samples from the old slow pipeline. */
+const LOCAL_STORAGE_KEY = "cr_review_timing_v2";
 
 export interface TimingDepthRow {
   depth: number;
@@ -27,6 +34,7 @@ export interface ReviewTimingModel {
   windowSize: number;
   sampleCount: number;
   updatedAt: string;
+  eraStart?: string;
   global: {
     count: number;
     medianMsPerPly: number;
@@ -80,7 +88,8 @@ function validSample(s: LocalTimingSample): boolean {
     s.durationMs > 500 &&
     s.plies > 0 &&
     s.depth >= 1 &&
-    s.depth <= 30
+    s.depth <= 30 &&
+    s.recordedAt >= TIMING_ERA_START_MS
   );
 }
 
@@ -138,6 +147,7 @@ export function buildTimingModel(
     windowSize: TIMING_SAMPLE_WINDOW,
     sampleCount: recent.length,
     updatedAt: new Date().toISOString(),
+    eraStart: new Date(TIMING_ERA_START_MS).toISOString(),
     global,
     byDepth,
     byDepthPly,
@@ -149,22 +159,29 @@ export function emptyTimingModel(): ReviewTimingModel {
     windowSize: TIMING_SAMPLE_WINDOW,
     sampleCount: 0,
     updatedAt: new Date().toISOString(),
+    eraStart: new Date(TIMING_ERA_START_MS).toISOString(),
     global: null,
     byDepth: [],
     byDepthPly: [],
   };
 }
 
-/** Static fallback when no history exists yet. */
+/**
+ * Static fallback tuned for parallel full-depth native reviews
+ * (~2 Stockfish workers, one pass at requested depth).
+ */
 export function formulaFallbackDurationMs(plies: number, depth: number): number {
-  const positions = Math.max(plies + 1, 10);
-  const depthScale = Math.pow(1.26, Math.max(0, depth - 14));
-  const msPerPosition = (110 + depth * 12) * depthScale;
-  const evalMs = positions * msPerPosition;
-  const tailMs = 3000 + plies * 40;
-  const connectMs = 1800;
-  const total = connectMs + evalMs + tailMs;
-  return Math.round(Math.min(240_000, Math.max(8_000, total)));
+  const basePositions = Math.max(plies + 1, 8);
+  // Extra fen-after-best evals when moves diverge from PV1
+  const positions = Math.ceil(basePositions * 1.12);
+  const workers = 2;
+  const depthScale = Math.pow(1.18, Math.max(0, depth - 12));
+  const msPerPosition = (42 + depth * 7) * depthScale;
+  const evalMs = (positions / workers) * msPerPosition;
+  const connectMs = 700;
+  const classifyMs = 350 + plies * 6;
+  const total = connectMs + evalMs + classifyMs;
+  return Math.round(Math.min(180_000, Math.max(3_000, total)));
 }
 
 function blendHistorical(
@@ -172,9 +189,10 @@ function blendHistorical(
   formula: number,
   sampleCount: number
 ): number {
-  const weight = Math.min(0.92, Math.max(0.3, sampleCount / 22));
+  // Prefer fresh samples quickly; keep a light formula anchor.
+  const weight = Math.min(0.95, Math.max(0.45, sampleCount / 12));
   const blended = weight * historical + (1 - weight) * formula;
-  return Math.round(Math.min(240_000, Math.max(5_000, blended)));
+  return Math.round(Math.min(180_000, Math.max(2_500, blended)));
 }
 
 function predictFromModel(
@@ -195,7 +213,7 @@ function predictFromModel(
   if (bucket) {
     return {
       ms: blendHistorical(bucket.medianDurationMs, formula, bucket.count),
-      confidence: Math.min(0.95, 0.55 + bucket.count / 20),
+      confidence: Math.min(0.95, 0.55 + bucket.count / 16),
     };
   }
 
@@ -207,7 +225,7 @@ function predictFromModel(
       depthRow.medianOverheadMs + depthRow.medianMsPerPly * Math.max(plies, 1);
     return {
       ms: blendHistorical(ms, formula, depthRow.count),
-      confidence: Math.min(0.9, 0.45 + depthRow.count / 18),
+      confidence: Math.min(0.9, 0.45 + depthRow.count / 14),
     };
   }
 
@@ -217,7 +235,7 @@ function predictFromModel(
       model.global.medianMsPerPly * Math.max(plies, 1);
     return {
       ms: blendHistorical(ms, formula, model.sampleCount),
-      confidence: Math.min(0.75, 0.3 + model.sampleCount / 30),
+      confidence: Math.min(0.75, 0.3 + model.sampleCount / 24),
     };
   }
 
@@ -233,15 +251,15 @@ export function mergeTimingModels(
   if (!local || local.sampleCount === 0) return server;
 
   const localRecent = local.sampleCount;
-  const localWeight = Math.min(0.65, localRecent / 25);
+  const localWeight = Math.min(0.8, localRecent / 16);
 
   const mergedByDepth = new Map<number, TimingDepthRow>();
   for (const row of server.byDepth) mergedByDepth.set(row.depth, row);
   for (const row of local.byDepth) {
     const existing = mergedByDepth.get(row.depth);
-    if (!existing || row.count >= 2) {
+    if (!existing || row.count >= 1) {
       if (existing && row.count > 0) {
-        const w = Math.min(0.7, row.count / (row.count + existing.count));
+        const w = Math.min(0.8, row.count / (row.count + existing.count));
         mergedByDepth.set(row.depth, {
           depth: row.depth,
           count: row.count + existing.count,
@@ -271,7 +289,7 @@ export function mergeTimingModels(
     );
     if (idx >= 0) {
       const prev = mergedBuckets[idx];
-      const w = Math.min(0.75, row.count / (row.count + prev.count));
+      const w = Math.min(0.85, row.count / (row.count + prev.count));
       mergedBuckets[idx] = {
         ...row,
         count: row.count + prev.count,
@@ -309,6 +327,7 @@ export function mergeTimingModels(
     windowSize: TIMING_SAMPLE_WINDOW,
     sampleCount: server.sampleCount + local.sampleCount,
     updatedAt: new Date().toISOString(),
+    eraStart: new Date(TIMING_ERA_START_MS).toISOString(),
     global,
     byDepth: [...mergedByDepth.values()].sort((a, b) => a.depth - b.depth),
     byDepthPly: mergedBuckets,
