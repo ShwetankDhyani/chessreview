@@ -434,6 +434,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       localStorage.setItem("cr_platform", p.platform);
       // Clear cached games and stats so GameList reloads for the new profile
       localStorage.removeItem("cr_games");
+      localStorage.removeItem("cr_games_meta");
       localStorage.removeItem("cr_stats");
       window.dispatchEvent(new Event("storage"));
       // Force GameList to reload
@@ -589,6 +590,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     notifySuccess();
     // Clear games cache and trigger reload
     localStorage.removeItem("cr_games");
+    localStorage.removeItem("cr_games_meta");
     window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: { name: finalName, platform } }));
   };
 
@@ -604,10 +606,12 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       localStorage.removeItem("cr_username");
       localStorage.removeItem("cr_platform");
       localStorage.removeItem("cr_games");
+      localStorage.removeItem("cr_games_meta");
       localStorage.removeItem("cr_stats");
       window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: null }));
     } else if (isRemovingActive) {
       localStorage.removeItem("cr_games");
+      localStorage.removeItem("cr_games_meta");
       localStorage.removeItem("cr_stats");
       window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: updated[newActiveIdx] }));
     }

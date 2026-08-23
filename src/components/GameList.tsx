@@ -13,6 +13,7 @@ import { PgnPastePanel } from "./PgnPastePanel";
 import { GameUrlImport } from "./GameUrlImport";
 import { InlineErrorNotice } from "./InlineErrorNotice";
 import { hapticSelection, hapticSoft, hapticTap } from "../utils/chessSounds";
+import { setChesscomBackoffListener } from "../utils/chesscomClient";
 import {
   normalizeGameLoadError,
   trackAppError,
@@ -24,6 +25,53 @@ type Platform = "chesscom" | "lichess";
 const STORAGE_KEY_USER    = "cr_username";
 const STORAGE_KEY_PLAT    = "cr_platform";
 const STORAGE_KEY_GAMES   = "cr_games";
+/** Which account the cached games belong to, and when they were fetched. */
+const STORAGE_KEY_GAMES_META = "cr_games_meta";
+/** Older cached games still render immediately, but trigger a quiet refresh. */
+const GAMES_CACHE_TTL_MS = 5 * 60_000;
+
+type GamesCacheMeta = { user: string; platform: Platform; at: number };
+
+function readGamesCacheMeta(): GamesCacheMeta | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_GAMES_META);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GamesCacheMeta>;
+    if (typeof parsed?.user !== "string" || typeof parsed?.at !== "number") {
+      return null;
+    }
+    return {
+      user: parsed.user,
+      platform: parsed.platform === "lichess" ? "lichess" : "chesscom",
+      at: parsed.at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeGamesCacheMeta(user: string, platform: Platform): void {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_GAMES_META,
+      JSON.stringify({ user, platform, at: Date.now() } satisfies GamesCacheMeta)
+    );
+  } catch {
+    /* storage full or unavailable — cache metadata is best-effort */
+  }
+}
+
+function cacheMatchesAccount(
+  meta: GamesCacheMeta | null,
+  user: string,
+  platform: Platform
+): boolean {
+  if (!meta) return false;
+  return (
+    meta.platform === platform &&
+    meta.user.trim().toLowerCase() === user.trim().toLowerCase()
+  );
+}
 
 /** In-tab review session shown while browsing Games without a full refresh. */
 export interface ActiveReviewSession {
@@ -67,8 +115,12 @@ export const GameList: React.FC<GameListProps> = ({
     } catch { return []; }
   });
   const [loading, setLoading] = useState(false);
+  /** Quiet refresh behind already-visible games; never blocks the list. */
+  const [refreshing, setRefreshing] = useState(false);
   const [showSlowRetry, setShowSlowRetry] = useState(false);
   const [gamesError, setGamesError] = useState<AppError | null>(null);
+  /** Set when a platform asks us to wait, so the delay isn't unexplained. */
+  const [backoffNotice, setBackoffNotice] = useState<string | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSucceededRef = useRef(false);
   const loadGenRef = useRef(0);
@@ -128,14 +180,50 @@ export const GameList: React.FC<GameListProps> = ({
   // Persist platform selection
   useEffect(() => { localStorage.setItem(STORAGE_KEY_PLAT, platform); }, [platform]);
 
-  // Auto-load on mount if username is saved but cache is empty
+  /**
+   * On mount, decide between showing cache, refreshing quietly, or loading.
+   *
+   * Cached games previously persisted indefinitely and were only replaced when
+   * the user pressed refresh, so a returning visitor could sit on a stale list
+   * with no indication anything was out of date.
+   */
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY_USER);
-    const savedPlat = (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom";
-    if (saved && games.length === 0) {
+    if (!saved) return;
+    const savedPlat =
+      (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom";
+
+    const meta = readGamesCacheMeta();
+    const cacheUsable =
+      games.length > 0 && cacheMatchesAccount(meta, saved, savedPlat);
+
+    if (!cacheUsable) {
+      // Cache is empty, or belongs to a different account than the active one.
+      if (games.length > 0) {
+        setGames([]);
+        gamesRef.current = [];
+      }
       loadGames(saved, savedPlat);
+      return;
+    }
+
+    if (!meta || Date.now() - meta.at > GAMES_CACHE_TTL_MS) {
+      loadGames(saved, savedPlat, { background: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Explain Chess.com throttling pauses instead of appearing frozen.
+  useEffect(() => {
+    setChesscomBackoffListener(({ status, delayMs }) => {
+      const seconds = Math.max(1, Math.round(delayMs / 1000));
+      setBackoffNotice(
+        status === 429 || status === 403
+          ? `Chess.com is throttling — retrying in ${seconds}s`
+          : `Chess.com is slow — retrying in ${seconds}s`
+      );
+    });
+    return () => setChesscomBackoffListener(null);
   }, []);
 
   // Listen for profile switches from the header dock
@@ -190,9 +278,14 @@ export const GameList: React.FC<GameListProps> = ({
     []
   );
 
-  const loadGames = async (uname: string, plat: Platform) => {
+  const loadGames = async (
+    uname: string,
+    plat: Platform,
+    opts: { background?: boolean } = {}
+  ) => {
     const name = uname.trim();
     if (!name) return;
+    const background = !!opts.background;
 
     // Supersede any previous load before starting a new one.
     abortInFlightLoad();
@@ -200,9 +293,13 @@ export const GameList: React.FC<GameListProps> = ({
     loadAbortRef.current = controller;
 
     const gen = ++loadGenRef.current;
-    setLoading(true);
-    setGamesError(null);
-    startSlowTimer();
+    if (background) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setGamesError(null);
+      startSlowTimer();
+    }
 
     try {
       const list =
@@ -217,10 +314,13 @@ export const GameList: React.FC<GameListProps> = ({
       loadSucceededRef.current = true;
       clearSlowTimer();
       setShowSlowRetry(false);
+      setGamesError(null);
+      setBackoffNotice(null);
 
       localStorage.setItem(STORAGE_KEY_USER, name);
       localStorage.setItem(STORAGE_KEY_PLAT, plat);
       localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
+      writeGamesCacheMeta(name, plat);
 
       // Games are on screen now; ratings can arrive whenever they arrive.
       loadStatsInBackground(name, plat, gen, controller.signal);
@@ -231,11 +331,21 @@ export const GameList: React.FC<GameListProps> = ({
       const normalized = normalizeGameLoadError(error, plat);
       clearSlowTimer();
       setShowSlowRetry(false);
-      setGamesError(normalized);
+      setBackoffNotice(null);
+
+      // A failed quiet refresh keeps the cached list on screen. Surfacing an
+      // error over usable games would be a downgrade, not a warning.
+      const keepQuiet = background && gamesRef.current.length > 0;
+      if (!keepQuiet) setGamesError(normalized);
+
       trackAppError({
         code: normalized.code,
         message: normalized.message,
-        context: { platform: plat, username: name, source: "game-list" },
+        context: {
+          platform: plat,
+          username: name,
+          source: background ? "game-list-refresh" : "game-list",
+        },
       });
       // Only a confirmed 404 may unlink the profile.
       if (normalized.code === "GAME_SOURCE_NOT_FOUND") {
@@ -248,6 +358,7 @@ export const GameList: React.FC<GameListProps> = ({
     } finally {
       if (gen === loadGenRef.current) {
         setLoading(false);
+        setRefreshing(false);
         if (loadAbortRef.current === controller) loadAbortRef.current = null;
       }
     }
@@ -406,8 +517,13 @@ export const GameList: React.FC<GameListProps> = ({
                     </div>
                   )}
                   {games.length > 0 && !loading && (
-                    <p className="mt-0.5 text-[10px] tabular-nums text-chess-muted/85">
-                      {filteredGames.length} of {games.length} games
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] tabular-nums text-chess-muted/85">
+                      <span>
+                        {filteredGames.length} of {games.length} games
+                      </span>
+                      {refreshing && (
+                        <span className="text-chess-accent/80">updating…</span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -419,7 +535,7 @@ export const GameList: React.FC<GameListProps> = ({
                   title="Fetch latest games"
                   aria-label="Fetch latest games"
                 >
-                  {loading ? (
+                  {loading || refreshing ? (
                     <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-chess-muted border-t-transparent" />
                   ) : (
                     "↻"
@@ -453,8 +569,10 @@ export const GameList: React.FC<GameListProps> = ({
                 <div className="mt-2 flex items-center gap-2.5 rounded-lg border border-chess-hairline bg-chess-panel/70 px-3 py-2 text-[11px] leading-snug text-chess-subtext shadow-elev-1">
                   <span className="inline-block h-3 w-3 flex-shrink-0 animate-spin rounded-full border-2 border-chess-accent/40 border-t-chess-accent" />
                   <span className="min-w-0 flex-1 font-medium">
-                    Still waiting on{" "}
-                    {platform === "lichess" ? "Lichess" : "Chess.com"}…
+                    {backoffNotice ??
+                      `Still waiting on ${
+                        platform === "lichess" ? "Lichess" : "Chess.com"
+                      }…`}
                   </span>
                   <button
                     type="button"
