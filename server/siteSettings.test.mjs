@@ -53,6 +53,17 @@ describe("siteSettings file store", () => {
     expect(mod.fileGetSiteSettings().homeGamesNewsSlug).toBeUndefined();
   });
 
+  it("keeps testingMode when only home news slug changes", async () => {
+    const mod = await import("./siteSettings.mjs");
+    mod.fileSetSiteSettings({ testingMode: true });
+    expect(
+      mod.fileSetSiteSettings({ homeGamesNewsSlug: "news-slug" })
+    ).toEqual({
+      testingMode: true,
+      homeGamesNewsSlug: "news-slug",
+    });
+  });
+
   it("reads an existing settings file", async () => {
     writeFileSync(
       join(DIR, "site-settings.json"),

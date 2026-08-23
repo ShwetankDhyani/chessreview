@@ -1,8 +1,11 @@
 /**
- * Site-wide settings (testingMode banner).
+ * Site-wide settings (testingMode banner + home Games tab news).
  *
  * Persistence:
- * - Vercel / production: engine review-stats.json via GET /stats + POST /stats/admin
+ * - testingMode: engine review-stats.json via GET /stats + POST /stats/admin
+ * - homeGamesNewsSlug: reserved blog post `cr-site-settings` (same pattern as
+ *   blog pins) so it works on Vercel even when the analysis engine predates
+ *   the homeGamesNewsSlug stats field
  * - Local dev / vitest: data/site-settings.json when EVAL_SERVER_URL is unset
  */
 
@@ -25,8 +28,6 @@ const SITE_SETTINGS_TITLE = "ChessReview site settings";
 function defaultState() {
   return { testingMode: false };
 }
-
-/** @typedef {{ testingMode: boolean, homeGamesNewsSlug?: string | null }} SiteSettingsState */
 
 function normalizeHomeGamesNewsSlug(raw) {
   if (raw === "__auto__") return undefined;
@@ -71,6 +72,14 @@ function saveState(state) {
   const tmp = `${SETTINGS_FILE}.tmp`;
   writeFileSync(tmp, JSON.stringify(state, null, 2), "utf8");
   renameSync(tmp, SETTINGS_FILE);
+}
+
+function serializeSiteSettings(state) {
+  const out = { testingMode: !!state.testingMode };
+  if (state.homeGamesNewsSlug !== undefined) {
+    out.homeGamesNewsSlug = state.homeGamesNewsSlug;
+  }
+  return out;
 }
 
 export function fileGetSiteSettings() {
@@ -149,14 +158,6 @@ function parseSiteSettingsPayload(payload) {
   return null;
 }
 
-function serializeSiteSettings(state) {
-  const out = { testingMode: !!state.testingMode };
-  if (state.homeGamesNewsSlug !== undefined) {
-    out.homeGamesNewsSlug = state.homeGamesNewsSlug;
-  }
-  return out;
-}
-
 async function readFromEngineStats() {
   const res = await engineFetch("/stats");
   if (!res?.ok) return null;
@@ -164,14 +165,14 @@ async function readFromEngineStats() {
   return parsed ? serializeSiteSettings({ testingMode: false, ...parsed }) : null;
 }
 
-async function writeToEngineStats(patch, adminKey) {
+async function writeTestingModeToEngineStats(testingMode, adminKey) {
   const res = await engineFetch("/stats/admin", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Admin-Key": adminKey,
     },
-    body: JSON.stringify({ action: "site-settings", ...patch }),
+    body: JSON.stringify({ action: "site-settings", testingMode }),
   });
   if (!res) return null;
   if (res.status === 401) {
@@ -181,20 +182,142 @@ async function writeToEngineStats(patch, adminKey) {
   }
   if (!res.ok) return null;
   const parsed = parseSiteSettingsPayload(res.data);
-  return parsed
-    ? serializeSiteSettings({ testingMode: false, ...parsed })
-    : serializeSiteSettings({ testingMode: false, ...patch });
+  return { testingMode: parsed?.testingMode ?? !!testingMode };
+}
+
+/**
+ * homeGamesNewsSlug is stored in the reserved blog post so older engines
+ * (that only understand testingMode in /stats/admin) still persist it.
+ */
+async function readHomeNewsFromBlog() {
+  const res = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
+  if (!res?.ok) return null;
+  const parsed = parseSiteSettingsPayload(res.data);
+  if (!parsed || !("homeGamesNewsSlug" in parsed)) return null;
+  return { homeGamesNewsSlug: parsed.homeGamesNewsSlug };
+}
+
+async function writeHomeNewsToBlog(homeGamesNewsSlug, adminKey) {
+  const base = engineBase();
+  if (!base) return null;
+
+  const existing = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
+  let current = {};
+  if (existing?.ok) {
+    current = parseSiteSettingsPayload(existing.data) || {};
+  }
+
+  const next = { ...current };
+  const normalized = normalizeHomeGamesNewsSlug(homeGamesNewsSlug);
+  if (normalized === undefined) {
+    delete next.homeGamesNewsSlug;
+  } else {
+    next.homeGamesNewsSlug = normalized;
+  }
+  // Keep testingMode out of this doc when possible — stats file owns it.
+  // Preserve it if already present so we don't wipe a legacy blog copy.
+  const bodyObj = {};
+  if (typeof next.testingMode === "boolean") {
+    bodyObj.testingMode = next.testingMode;
+  }
+  if ("homeGamesNewsSlug" in next) {
+    bodyObj.homeGamesNewsSlug = next.homeGamesNewsSlug;
+  } else {
+    // Explicit auto marker so readers can tell "configured auto" vs empty post
+    bodyObj.homeGamesNewsSlug = "__auto__";
+  }
+
+  const body = JSON.stringify(bodyObj);
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Admin-Key": adminKey,
+  };
+
+  if (existing?.ok && existing.data?.post?.id) {
+    const res = await engineFetch("/blog", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: "update",
+        id: existing.data.post.id,
+        title: SITE_SETTINGS_TITLE,
+        slug: SITE_SETTINGS_SLUG,
+        excerpt: "Internal site settings — hidden from the blog.",
+        body,
+        published: true,
+      }),
+    });
+    if (res?.status === 401) {
+      const err = new Error("Unauthorized");
+      err.status = 401;
+      throw err;
+    }
+    if (!res?.ok) {
+      throw new Error(
+        (res?.data && typeof res.data.error === "string" && res.data.error) ||
+          "Could not save home news setting"
+      );
+    }
+  } else {
+    const created = await engineFetch("/blog", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        title: SITE_SETTINGS_TITLE,
+        slug: SITE_SETTINGS_SLUG,
+        excerpt: "Internal site settings — hidden from the blog.",
+        body,
+        published: true,
+      }),
+    });
+    if (created?.status === 401) {
+      const err = new Error("Unauthorized");
+      err.status = 401;
+      throw err;
+    }
+    if (!created?.ok) {
+      throw new Error(
+        (created?.data &&
+          typeof created.data.error === "string" &&
+          created.data.error) ||
+          "Could not save home news setting"
+      );
+    }
+  }
+
+  return serializeSiteSettings({
+    testingMode: !!next.testingMode,
+    homeGamesNewsSlug: normalized,
+  });
 }
 
 export async function getSiteSettings() {
   if (engineBase()) {
+    let testingMode = false;
+    let homeGamesNewsSlug;
+
     try {
       const fromStats = await readFromEngineStats();
-      if (fromStats) return fromStats;
+      if (fromStats) {
+        testingMode = !!fromStats.testingMode;
+        if ("homeGamesNewsSlug" in fromStats) {
+          homeGamesNewsSlug = fromStats.homeGamesNewsSlug;
+        }
+      }
     } catch {
       /* fall through */
     }
-    return serializeSiteSettings(defaultState());
+
+    try {
+      const fromBlog = await readHomeNewsFromBlog();
+      if (fromBlog && "homeGamesNewsSlug" in fromBlog) {
+        homeGamesNewsSlug = fromBlog.homeGamesNewsSlug;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    return serializeSiteSettings({ testingMode, homeGamesNewsSlug });
   }
 
   if (!isReadOnlyDeploy()) {
@@ -212,7 +335,9 @@ function buildSiteSettingsPatch(body = {}) {
     patch.homeGamesNewsSlug =
       body.homeGamesNewsSlug === undefined
         ? undefined
-        : normalizeHomeGamesNewsSlug(body.homeGamesNewsSlug);
+        : body.homeGamesNewsSlug === "__auto__"
+          ? "__auto__"
+          : normalizeHomeGamesNewsSlug(body.homeGamesNewsSlug);
   }
   if (!Object.keys(patch).length) {
     throw new Error("No site settings fields to update");
@@ -235,15 +360,62 @@ export async function setSiteSettings(body, adminKey) {
   const patch = buildSiteSettingsPatch(body);
 
   if (engineBase()) {
+    let testingMode = false;
+    let homeGamesNewsSlug;
+
+    // Load current values so partial updates return a full snapshot.
     try {
-      const viaStats = await writeToEngineStats(patch, adminKey);
-      if (viaStats) return viaStats;
-    } catch (e) {
-      if (e?.status === 401) throw e;
+      const current = await getSiteSettings();
+      testingMode = !!current.testingMode;
+      if ("homeGamesNewsSlug" in current) {
+        homeGamesNewsSlug = current.homeGamesNewsSlug;
+      }
+    } catch {
+      /* ignore */
     }
-    throw new Error(
-      "Could not save site settings. Check EVAL_SERVER_URL / analysis server."
-    );
+
+    if (typeof patch.testingMode === "boolean") {
+      try {
+        const viaStats = await writeTestingModeToEngineStats(
+          patch.testingMode,
+          adminKey
+        );
+        if (viaStats) testingMode = !!viaStats.testingMode;
+        else {
+          throw new Error(
+            "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+          );
+        }
+      } catch (e) {
+        if (e?.status === 401) throw e;
+        throw e instanceof Error
+          ? e
+          : new Error(
+              "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+            );
+      }
+    }
+
+    if ("homeGamesNewsSlug" in patch) {
+      try {
+        const viaBlog = await writeHomeNewsToBlog(
+          patch.homeGamesNewsSlug,
+          adminKey
+        );
+        if (viaBlog && "homeGamesNewsSlug" in viaBlog) {
+          homeGamesNewsSlug = viaBlog.homeGamesNewsSlug;
+        } else {
+          homeGamesNewsSlug = undefined;
+        }
+      } catch (e) {
+        if (e?.status === 401) throw e;
+        throw e instanceof Error
+          ? e
+          : new Error("Could not save home Games tab news setting.");
+      }
+    }
+
+    return serializeSiteSettings({ testingMode, homeGamesNewsSlug });
   }
 
   if (!isReadOnlyDeploy()) {
@@ -271,7 +443,7 @@ function adminKeyFrom(req) {
 /**
  * Engine routes (legacy alias — testingMode lives in review-stats.json):
  *   GET  /site-settings
- *   POST /site-settings  { testingMode: boolean }  (admin)
+ *   POST /site-settings  { testingMode?: boolean, homeGamesNewsSlug?: ... }
  */
 export function handleEngineSiteSettingsRequest(
   req,
