@@ -1,14 +1,33 @@
 export type SiteSettings = {
   testingMode: boolean;
+  /** Missing = auto (top pinned post). Null = hidden. String = specific post slug. */
+  homeGamesNewsSlug?: string | null;
 };
 
-/** Reads Testing Mode from public stats (no extra serverless function). */
+export type SiteSettingsPatch = Partial<
+  SiteSettings & { homeGamesNewsSlug?: string | null | "__auto__" }
+>;
+
+function parseSiteSettings(data: Record<string, unknown>): SiteSettings {
+  const settings: SiteSettings = { testingMode: !!data.testingMode };
+  if ("homeGamesNewsSlug" in data) {
+    settings.homeGamesNewsSlug =
+      typeof data.homeGamesNewsSlug === "string"
+        ? data.homeGamesNewsSlug
+        : data.homeGamesNewsSlug === null
+          ? null
+          : null;
+  }
+  return settings;
+}
+
+/** Reads site flags from public stats (no extra serverless function). */
 export async function fetchSiteSettings(): Promise<SiteSettings> {
   try {
     const res = await fetch("/api/stats/public", { cache: "no-store" });
     if (!res.ok) return { testingMode: false };
     const data = await res.json();
-    return { testingMode: !!data.testingMode };
+    return parseSiteSettings(data);
   } catch {
     return { testingMode: false };
   }
@@ -16,7 +35,7 @@ export async function fetchSiteSettings(): Promise<SiteSettings> {
 
 export async function updateSiteSettings(
   adminKey: string,
-  patch: Partial<SiteSettings>
+  patch: SiteSettingsPatch
 ): Promise<SiteSettings> {
   const trimmed = adminKey.trim();
   const res = await fetch("/api/stats/admin", {
@@ -36,5 +55,5 @@ export async function updateSiteSettings(
       typeof data.error === "string" ? data.error : "Update failed"
     );
   }
-  return { testingMode: !!data.testingMode };
+  return parseSiteSettings(data);
 }

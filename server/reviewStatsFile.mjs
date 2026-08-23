@@ -34,6 +34,22 @@ function defaultState() {
   };
 }
 
+function normalizeHomeGamesNewsSlug(raw) {
+  if (raw === "__auto__") return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "string") return undefined;
+  const slug = raw.trim();
+  return slug || null;
+}
+
+function serializeSiteSettings(state) {
+  const out = { testingMode: !!state.testingMode };
+  if (state.homeGamesNewsSlug !== undefined) {
+    out.homeGamesNewsSlug = state.homeGamesNewsSlug;
+  }
+  return out;
+}
+
 function loadState() {
   try {
     if (!existsSync(STATS_FILE)) return defaultState();
@@ -45,6 +61,13 @@ function loadState() {
       events: Array.isArray(parsed.events) ? parsed.events : [],
       liveCount: Number(parsed.liveCount) || 0,
       testingMode: !!parsed.testingMode,
+      ...( "homeGamesNewsSlug" in parsed
+        ? {
+            homeGamesNewsSlug: normalizeHomeGamesNewsSlug(
+              parsed.homeGamesNewsSlug
+            ),
+          }
+        : {}),
     };
   } catch {
     return defaultState();
@@ -64,7 +87,7 @@ export function filePublicStats() {
   return {
     count: s.baseline + s.liveCount,
     countryCount: countries.length,
-    testingMode: !!s.testingMode,
+    ...serializeSiteSettings(s),
   };
 }
 
@@ -140,10 +163,28 @@ export function fileAdminStats() {
 }
 
 export function fileSetTestingMode(testingMode) {
+  return fileSetSiteSettings({ testingMode: !!testingMode });
+}
+
+export function fileSetSiteSettings(patch = {}) {
   const s = loadState();
-  s.testingMode = !!testingMode;
+  if (typeof patch.testingMode === "boolean") {
+    s.testingMode = patch.testingMode;
+  }
+  if ("homeGamesNewsSlug" in patch) {
+    const normalized = normalizeHomeGamesNewsSlug(patch.homeGamesNewsSlug);
+    if (normalized === undefined) {
+      delete s.homeGamesNewsSlug;
+    } else {
+      s.homeGamesNewsSlug = normalized;
+    }
+  }
   saveState(s);
-  return { testingMode: s.testingMode };
+  return serializeSiteSettings(s);
+}
+
+export function fileGetSiteSettings() {
+  return serializeSiteSettings(loadState());
 }
 
 const GEO_FIELDS = ["country_code", "region", "city", "latitude", "longitude"];
@@ -238,9 +279,17 @@ export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonB
         const body = await readJsonBody(req);
         if (
           body?.action === "site-settings" ||
-          typeof body?.testingMode === "boolean"
+          typeof body?.testingMode === "boolean" ||
+          "homeGamesNewsSlug" in (body ?? {})
         ) {
-          const result = fileSetTestingMode(!!body.testingMode);
+          const patch = {};
+          if (typeof body.testingMode === "boolean") {
+            patch.testingMode = body.testingMode;
+          }
+          if ("homeGamesNewsSlug" in body) {
+            patch.homeGamesNewsSlug = body.homeGamesNewsSlug;
+          }
+          const result = fileSetSiteSettings(patch);
           res.writeHead(200);
           res.end(JSON.stringify(result));
           return;

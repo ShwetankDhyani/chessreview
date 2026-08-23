@@ -369,6 +369,9 @@ export function createReviewStatsMiddleware() {
             JSON.stringify({
               ...stats,
               testingMode: !!settings?.testingMode,
+              ...("homeGamesNewsSlug" in (settings ?? {})
+                ? { homeGamesNewsSlug: settings.homeGamesNewsSlug ?? null }
+                : {}),
             })
           );
         } catch (e) {
@@ -415,18 +418,18 @@ export function createReviewStatsMiddleware() {
           const body = raw ? JSON.parse(raw) : {};
           if (
             body?.action === "site-settings" ||
-            typeof body?.testingMode === "boolean"
+            typeof body?.testingMode === "boolean" ||
+            "homeGamesNewsSlug" in (body ?? {})
           ) {
             const { setSiteSettings } = await import("./siteSettings.mjs");
-            const settings = await setSiteSettings(
-              {
-                testingMode:
-                  typeof body.testingMode === "boolean"
-                    ? body.testingMode
-                    : undefined,
-              },
-              key
-            );
+            const patch = {};
+            if (typeof body.testingMode === "boolean") {
+              patch.testingMode = body.testingMode;
+            }
+            if ("homeGamesNewsSlug" in body) {
+              patch.homeGamesNewsSlug = body.homeGamesNewsSlug;
+            }
+            const settings = await setSiteSettings(patch, key);
             res.statusCode = 200;
             res.end(JSON.stringify(settings));
             return;

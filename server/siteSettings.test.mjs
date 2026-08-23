@@ -31,6 +31,28 @@ describe("siteSettings file store", () => {
     expect(mod.fileGetSiteSettings()).toEqual({ testingMode: true });
   });
 
+  it("persists home games news slug choices", async () => {
+    const mod = await import("./siteSettings.mjs");
+    expect(
+      mod.fileSetSiteSettings({ homeGamesNewsSlug: "hello-world" })
+    ).toEqual({
+      testingMode: false,
+      homeGamesNewsSlug: "hello-world",
+    });
+    expect(mod.fileGetSiteSettings().homeGamesNewsSlug).toBe("hello-world");
+
+    expect(mod.fileSetSiteSettings({ homeGamesNewsSlug: null })).toEqual({
+      testingMode: false,
+      homeGamesNewsSlug: null,
+    });
+    expect(mod.fileGetSiteSettings().homeGamesNewsSlug).toBeNull();
+
+    expect(mod.fileSetSiteSettings({ homeGamesNewsSlug: "__auto__" })).toEqual({
+      testingMode: false,
+    });
+    expect(mod.fileGetSiteSettings().homeGamesNewsSlug).toBeUndefined();
+  });
+
   it("reads an existing settings file", async () => {
     writeFileSync(
       join(DIR, "site-settings.json"),

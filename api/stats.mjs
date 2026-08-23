@@ -50,6 +50,9 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ...stats,
         testingMode: !!settings?.testingMode,
+        ...("homeGamesNewsSlug" in (settings ?? {})
+          ? { homeGamesNewsSlug: settings.homeGamesNewsSlug ?? null }
+          : {}),
       });
     }
 
@@ -65,17 +68,17 @@ export default async function handler(req, res) {
         typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
       if (
         body?.action === "site-settings" ||
-        typeof body?.testingMode === "boolean"
+        typeof body?.testingMode === "boolean" ||
+        "homeGamesNewsSlug" in (body ?? {})
       ) {
-        const settings = await setSiteSettings(
-          {
-            testingMode:
-              typeof body.testingMode === "boolean"
-                ? body.testingMode
-                : undefined,
-          },
-          key
-        );
+        const patch = { action: "site-settings" };
+        if (typeof body.testingMode === "boolean") {
+          patch.testingMode = body.testingMode;
+        }
+        if ("homeGamesNewsSlug" in body) {
+          patch.homeGamesNewsSlug = body.homeGamesNewsSlug;
+        }
+        const settings = await setSiteSettings(patch, key);
         return res.status(200).json(settings);
       }
       return res.status(400).json({ error: "Unknown admin action" });
