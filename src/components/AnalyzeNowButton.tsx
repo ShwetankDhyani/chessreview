@@ -18,7 +18,7 @@ export function AnalyzeNowButton({
         type="button"
         onClick={onClick}
         disabled={disabled || !onClick}
-        className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-chess-accent hover:bg-chess-accent-hover disabled:opacity-50 text-white text-xs font-bold shadow-sm transition-colors ${className}`}
+        className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-chess-accent hover:bg-chess-accent-hover disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-bold tracking-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.22),0_4px_12px_-4px_rgba(129,182,76,0.4)] transition-all duration-200 ease-soft active:scale-[0.97] ${className}`}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M8 5v14l11-7z" />
@@ -35,7 +35,7 @@ export function AnalyzeNowButton({
       disabled={disabled || !onClick}
       className={`pointer-events-auto disabled:opacity-50 group ${className}`}
     >
-      <div className="analyze-now-plaque flex flex-col items-stretch gap-3.5 rounded-xl border border-chess-border bg-chess-panel/95 backdrop-blur-sm px-5 py-4 shadow-[0_18px_56px_rgba(0,0,0,0.7)] min-w-[224px]">
+      <div className="analyze-now-plaque flex flex-col items-stretch gap-3.5 rounded-2xl border border-chess-hairline-strong bg-chess-panel/95 backdrop-blur-md px-5 py-4 shadow-elev-4 min-w-[224px]">
         <div className="flex items-center gap-2.5">
           <span
             className="flex h-10 w-10 items-center justify-center rounded-lg bg-chess-accent/15 border border-chess-accent/30 text-chess-accent"
@@ -47,15 +47,15 @@ export function AnalyzeNowButton({
             </svg>
           </span>
           <span className="text-left leading-tight">
-            <span className="block text-sm font-bold text-chess-text">
+            <span className="block text-sm font-bold tracking-tight text-chess-text">
               Game Review
             </span>
-            <span className="block text-[11px] font-medium text-chess-muted mt-0.5">
+            <span className="block text-[11px] font-medium leading-snug text-chess-muted mt-0.5">
               Engine accuracy & move ratings
             </span>
           </span>
         </div>
-        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold text-white shadow-md transition-all group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
+        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M8 5v14l11-7z" />
           </svg>

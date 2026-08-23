@@ -52,7 +52,7 @@ export function SiteFooter() {
   return (
     <>
       <footer
-        className="flex-shrink-0 z-40 border-t border-chess-border/80 bg-chess-panel/95 backdrop-blur-sm
+        className="flex-shrink-0 z-40 border-t border-chess-hairline bg-chess-panel/90 backdrop-blur-md
           fixed left-0 right-0 bottom-0 lg:static
           pb-[env(safe-area-inset-bottom,0px)]"
       >
@@ -64,7 +64,7 @@ export function SiteFooter() {
                 onClick={() => hapticTap()}
                 title="Control panel"
                 aria-label="Open admin control panel"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-chess-muted/70 transition-colors hover:bg-chess-hover hover:text-chess-accent"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-chess-muted/70 transition-all duration-200 ease-soft hover:bg-chess-hover hover:text-chess-accent active:scale-95"
               >
                 <SettingsGearIcon className="h-3.5 w-3.5" />
               </Link>
@@ -77,20 +77,20 @@ export function SiteFooter() {
                 hapticTap();
                 setHelpOpen("contact");
               }}
-              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
               Contact
             </button>
-            <span className="text-chess-border-strong text-[10px]" aria-hidden>
+            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·
             </span>
             <Link
               to="/blog"
-              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
               Blog
             </Link>
-            <span className="text-chess-border-strong text-[10px]" aria-hidden>
+            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·
             </span>
             <button
@@ -99,7 +99,7 @@ export function SiteFooter() {
                 hapticTap();
                 setHelpOpen("support");
               }}
-              className="text-[11px] text-chess-muted hover:text-chess-accent transition-colors tracking-wide"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
               Free Coffee!
             </button>

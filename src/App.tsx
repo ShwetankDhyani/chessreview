@@ -1702,10 +1702,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       <h1 className="sr-only">
         ChessReview — Free chess game analysis online for club and amateur players
       </h1>
-      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-rim"
             aria-hidden
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -1784,7 +1784,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
         <div
-          className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-border bg-chess-panel shadow-[0_-4px_14px_rgba(0,0,0,0.4)]"
+          className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md shadow-elev-up"
           style={{ bottom: "var(--mobile-footer-stack)" }}
         >
           <div className="page-inline-pad flex min-h-[56px]">
@@ -1814,15 +1814,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   hapticSelection();
                   setTab(t);
                 }}
-                className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 px-2 transition-colors ${
-                  isActive ? "text-chess-accent" : "text-chess-muted"
+                className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 px-2 transition-all duration-200 ease-soft active:scale-[0.97] ${
+                  isActive
+                    ? "text-chess-accent"
+                    : "text-chess-muted hover:text-chess-subtext"
                 }`}
               >
                 {isActive && (
                   <span className="absolute top-0 inset-x-6 h-0.5 rounded-b bg-chess-accent" />
                 )}
                 {icon}
-                <span className={`text-[10px] uppercase tracking-wider ${isActive ? "font-bold" : "font-semibold"}`}>{label}</span>
+                <span className={`text-[10px] uppercase tracking-[0.09em] ${isActive ? "font-bold" : "font-semibold"}`}>{label}</span>
               </button>
             );
           })}
@@ -1831,8 +1833,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
         {/* Sidebar — desktop only (avoid duplicate GameList fetch on mobile) */}
         {isDesktop && (
-        <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-border flex flex-col overflow-hidden">
-          <div className="flex bg-chess-bg/40 border-b border-chess-border">
+        <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-hairline flex flex-col overflow-hidden">
+          <div className="flex bg-chess-bg/40 border-b border-chess-hairline">
             {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
               <button
                 key={t}
@@ -1840,10 +1842,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   hapticSelection();
                   setTab(t);
                 }}
-                className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors ${
+                className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] transition-colors duration-200 ease-soft ${
                   tab === t
                     ? "text-chess-accent"
-                    : "text-chess-muted hover:text-chess-text"
+                    : "text-chess-muted hover:text-chess-text hover:bg-white/[0.02]"
                 }`}
               >
                 {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
@@ -1879,15 +1881,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
               <div className="flex flex-col h-full overflow-y-auto min-h-0">
                 {pgn ? (
                   <>
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-chess-border flex-shrink-0 gap-2">
-                      <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider truncate min-w-0">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-chess-hairline flex-shrink-0 gap-2">
+                      <span className="text-[11px] text-chess-muted font-semibold uppercase tracking-[0.09em] truncate min-w-0">
                         {playerNames.white} vs {playerNames.black}
                       </span>
                       {isViewingAway ? (
                         <button
                           type="button"
                           onClick={returnToActiveReview}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent hover:border-chess-accent/40"
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/40 hover:bg-chess-hover active:scale-[0.97]"
                         >
                           Wait · {Math.round(progressPercent)}%
                         </button>
@@ -1895,7 +1897,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                         <button
                           type="button"
                           onClick={returnToActiveReview}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent hover:border-chess-accent/40"
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/40 hover:bg-chess-hover active:scale-[0.97]"
                         >
                           Open review
                         </button>
@@ -2176,7 +2178,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
               {/* Coach panel — move notes, eval, engine line */}
               {moves.length > 0 && (
-                <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-border rounded-lg overflow-hidden self-stretch shadow-md">
+                <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-hairline rounded-xl overflow-hidden self-stretch shadow-elev-2">
                   <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border bg-chess-bg/40 flex-shrink-0">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-chess-text uppercase tracking-[0.08em]">
                       <span className="h-1.5 w-1.5 rounded-full bg-chess-accent" />
@@ -2483,7 +2485,7 @@ function MobileBoardControls({
         <button
           type="button"
           onClick={onFlip}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
           aria-label="Flip board"
         >
           <FlipBoardIcon />
@@ -2506,7 +2508,7 @@ function MobileBoardControls({
       <button
         type="button"
         onClick={onFlip}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-border bg-chess-surface text-chess-subtext active:bg-chess-hover transition-colors touch-manipulation"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
         aria-label="Flip board"
       >
         <FlipBoardIcon />

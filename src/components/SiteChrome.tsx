@@ -12,10 +12,13 @@ export function SiteChrome({
 }) {
   return (
     <div className="h-[100dvh] overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col spa-panel-enter">
-      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
-        <Link to="/" className="flex items-center gap-2 min-w-0 flex-shrink-0">
+      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
+        <Link
+          to="/"
+          className="group flex items-center gap-2 min-w-0 flex-shrink-0 rounded-lg transition-opacity duration-200 ease-soft hover:opacity-90"
+        >
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-rim transition-colors duration-200 ease-soft group-hover:border-chess-accent/55"
             aria-hidden
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -32,7 +35,7 @@ export function SiteChrome({
         </Link>
         <div className="flex-1 min-w-0" />
         {title ? (
-          <span className="text-xs font-semibold uppercase tracking-wider text-chess-muted hidden sm:inline">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.11em] text-chess-muted hidden sm:inline">
             {title}
           </span>
         ) : null}

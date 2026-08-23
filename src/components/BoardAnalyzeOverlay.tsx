@@ -98,7 +98,7 @@ export function BoardAnalyzeOverlay({
               <button
                 type="button"
                 onClick={conflict.onWait}
-                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-chess-accent-hover active:scale-[0.98]"
+                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.98]"
               >
                 Open review
               </button>
@@ -115,7 +115,7 @@ export function BoardAnalyzeOverlay({
               <button
                 type="button"
                 onClick={conflict.onCancelAndAnalyze}
-                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold text-white shadow-md transition-colors hover:bg-chess-accent-hover active:scale-[0.98]"
+                className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.98]"
               >
                 Cancel &amp; analyze this
               </button>

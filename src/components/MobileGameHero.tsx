@@ -91,7 +91,7 @@ export function MobileGameHero({
           type="button"
           onClick={onAnalyze}
           disabled={analyzing}
-          className="w-full max-w-sm flex items-center justify-center gap-2 bg-move-best hover:bg-green-600 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-md"
+          className="w-full max-w-sm flex items-center justify-center gap-2 bg-move-best hover:bg-green-600 disabled:opacity-60 disabled:pointer-events-none text-white font-semibold tracking-tight px-4 py-2.5 rounded-lg transition-all duration-200 ease-soft active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.22),0_6px_16px_-6px_rgba(129,182,76,0.45)]"
         >
           {analyzing ? (
             <>
