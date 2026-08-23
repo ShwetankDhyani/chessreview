@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { fetchBlogList, type BlogPostSummary } from "../utils/blogApi";
+import { fetchSiteSettings } from "../utils/siteSettings";
 
 /** Per-slug dismiss so a new top post can resurface. */
 const DISMISS_KEY = "cr_home_news_dismissed";
@@ -18,7 +19,7 @@ interface LatestBlogNewsProps {
 }
 
 /**
- * Quiet home teaser for the editorial top blog post (pinned / newest).
+ * Quiet home teaser for the editorial blog post chosen in site settings.
  * Fails silently; dismissible per slug.
  */
 export function LatestBlogNews({ className = "" }: LatestBlogNewsProps) {
@@ -28,11 +29,24 @@ export function LatestBlogNews({ className = "" }: LatestBlogNewsProps) {
     let cancelled = false;
     void (async () => {
       try {
-        const posts = await fetchBlogList();
+        const [settings, posts] = await Promise.all([
+          fetchSiteSettings(),
+          fetchBlogList(),
+        ]);
         if (cancelled || posts.length === 0) return;
-        const top = posts[0]!;
-        if (readDismissedSlug() === top.slug) return;
-        setPost(top);
+
+        const configured = settings.homeGamesNewsSlug;
+        if (configured === null) return;
+
+        let chosen: BlogPostSummary | undefined;
+        if (typeof configured === "string") {
+          chosen = posts.find((p) => p.slug === configured);
+        } else {
+          chosen = posts[0];
+        }
+        if (!chosen) return;
+        if (readDismissedSlug() === chosen.slug) return;
+        setPost(chosen);
       } catch {
         /* ignore — never block the games tab */
       }

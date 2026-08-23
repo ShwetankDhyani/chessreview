@@ -31,11 +31,31 @@ import { AdminSwitch } from "../components/admin/AdminSwitch";
 import { hapticSoft } from "../utils/chessSounds";
 import {
   clearSessionAdminKey,
+  fetchBlogList,
   loadSessionAdminKey,
   saveSessionAdminKey,
+  type BlogPostSummary,
 } from "../utils/blogApi";
 
 const RECENT_PAGE_SIZE = 10;
+
+type HomeGamesNewsChoice = "__auto__" | "__none__" | string;
+
+function homeGamesNewsChoiceFromSettings(
+  slug: string | null | undefined
+): HomeGamesNewsChoice {
+  if (slug === null) return "__none__";
+  if (typeof slug === "string" && slug.length > 0) return slug;
+  return "__auto__";
+}
+
+function homeGamesNewsSlugFromChoice(
+  choice: HomeGamesNewsChoice
+): string | null | "__auto__" {
+  if (choice === "__auto__") return "__auto__";
+  if (choice === "__none__") return null;
+  return choice;
+}
 
 function formatWhen(iso: string) {
   try {
@@ -85,6 +105,13 @@ export default function AdminPage() {
   const [testingBusy, setTestingBusy] = useState(false);
   const [testingError, setTestingError] = useState<string | null>(null);
   const [testingBannerKey, setTestingBannerKey] = useState(0);
+  const [homeGamesNewsChoice, setHomeGamesNewsChoice] =
+    useState<HomeGamesNewsChoice>("__auto__");
+  const [homeGamesNewsBusy, setHomeGamesNewsBusy] = useState(false);
+  const [homeGamesNewsError, setHomeGamesNewsError] = useState<string | null>(
+    null
+  );
+  const [blogPosts, setBlogPosts] = useState<BlogPostSummary[]>([]);
 
   const load = async (key: string) => {
     setLoading(true);
@@ -96,9 +123,17 @@ export default function AdminPage() {
       saveSessionAdminKey(key);
       setAdminKey(key);
       try {
-        const settings = await fetchSiteSettings();
+        const [settings, posts] = await Promise.all([
+          fetchSiteSettings(),
+          fetchBlogList({ drafts: true, adminKey: key }),
+        ]);
         setTestingMode(!!settings.testingMode);
+        setHomeGamesNewsChoice(
+          homeGamesNewsChoiceFromSettings(settings.homeGamesNewsSlug)
+        );
+        setBlogPosts(posts.filter((post) => post.published !== false));
         setTestingError(null);
+        setHomeGamesNewsError(null);
       } catch {
         /* settings optional relative to analytics */
       }
@@ -133,6 +168,29 @@ export default function AdminPage() {
       setTestingError(e instanceof Error ? e.message : "Could not update");
     } finally {
       setTestingBusy(false);
+    }
+  };
+
+  const setHomeGamesNewsValue = async (next: HomeGamesNewsChoice) => {
+    if (!adminKey || homeGamesNewsBusy) return;
+    const prev = homeGamesNewsChoice;
+    setHomeGamesNewsChoice(next);
+    setHomeGamesNewsBusy(true);
+    setHomeGamesNewsError(null);
+    try {
+      const settings = await updateSiteSettings(adminKey, {
+        homeGamesNewsSlug: homeGamesNewsSlugFromChoice(next),
+      });
+      setHomeGamesNewsChoice(
+        homeGamesNewsChoiceFromSettings(settings.homeGamesNewsSlug)
+      );
+    } catch (e) {
+      setHomeGamesNewsChoice(prev);
+      setHomeGamesNewsError(
+        e instanceof Error ? e.message : "Could not update"
+      );
+    } finally {
+      setHomeGamesNewsBusy(false);
     }
   };
 
@@ -274,7 +332,13 @@ export default function AdminPage() {
           title="Site"
           description="Live flags visitors see on the site."
           defaultOpen
-          badge={testingMode ? "Testing on" : undefined}
+          badge={
+            testingMode
+              ? "Testing on"
+              : homeGamesNewsChoice === "__none__"
+                ? "No home news"
+                : undefined
+          }
         >
           <div className="flex items-center justify-between gap-4 rounded-lg border border-chess-border/70 bg-chess-bg/35 px-3 py-2.5">
             <div className="min-w-0">
@@ -299,6 +363,38 @@ export default function AdminPage() {
           {testingError ? (
             <p className="mt-2 text-[11px] text-red-400">{testingError}</p>
           ) : null}
+
+          <div className="mt-3 rounded-lg border border-chess-border/70 bg-chess-bg/35 px-3 py-2.5">
+            <label
+              htmlFor="home-games-news"
+              className="block text-[12px] font-semibold leading-snug text-chess-text"
+            >
+              Home Games tab news
+            </label>
+            <p className="mt-0.5 text-[11px] leading-snug text-chess-muted">
+              Choose which blog post appears above the game list, or hide it.
+            </p>
+            <select
+              id="home-games-news"
+              value={homeGamesNewsChoice}
+              disabled={homeGamesNewsBusy}
+              onChange={(e) => void setHomeGamesNewsValue(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-chess-border bg-chess-panel px-2.5 py-2 text-[12px] text-chess-text outline-none focus:border-chess-accent/70 disabled:opacity-60"
+            >
+              <option value="__auto__">Automatic (top pinned post)</option>
+              <option value="__none__">None</option>
+              {blogPosts.map((post) => (
+                <option key={post.id} value={post.slug}>
+                  {post.title}
+                </option>
+              ))}
+            </select>
+            {homeGamesNewsError ? (
+              <p className="mt-2 text-[11px] text-red-400">
+                {homeGamesNewsError}
+              </p>
+            ) : null}
+          </div>
         </AdminSection>
 
         <AdminSection

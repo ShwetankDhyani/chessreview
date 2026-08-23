@@ -26,6 +26,16 @@ function defaultState() {
   return { testingMode: false };
 }
 
+/** @typedef {{ testingMode: boolean, homeGamesNewsSlug?: string | null }} SiteSettingsState */
+
+function normalizeHomeGamesNewsSlug(raw) {
+  if (raw === "__auto__") return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "string") return undefined;
+  const slug = raw.trim();
+  return slug || null;
+}
+
 function isReadOnlyDeploy() {
   return !!(
     process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME
@@ -44,7 +54,13 @@ function loadState() {
   try {
     if (!existsSync(SETTINGS_FILE)) return defaultState();
     const parsed = JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
-    return { testingMode: !!parsed.testingMode };
+    const state = { testingMode: !!parsed.testingMode };
+    if ("homeGamesNewsSlug" in parsed) {
+      state.homeGamesNewsSlug = normalizeHomeGamesNewsSlug(
+        parsed.homeGamesNewsSlug
+      );
+    }
+    return state;
   } catch {
     return defaultState();
   }
@@ -58,18 +74,24 @@ function saveState(state) {
 }
 
 export function fileGetSiteSettings() {
-  return loadState();
+  return serializeSiteSettings(loadState());
 }
 
 export function fileSetSiteSettings(patch = {}) {
-  const next = {
-    ...loadState(),
-    ...(typeof patch.testingMode === "boolean"
-      ? { testingMode: patch.testingMode }
-      : {}),
-  };
+  const next = { ...loadState() };
+  if (typeof patch.testingMode === "boolean") {
+    next.testingMode = patch.testingMode;
+  }
+  if ("homeGamesNewsSlug" in patch) {
+    const normalized = normalizeHomeGamesNewsSlug(patch.homeGamesNewsSlug);
+    if (normalized === undefined) {
+      delete next.homeGamesNewsSlug;
+    } else {
+      next.homeGamesNewsSlug = normalized;
+    }
+  }
   saveState(next);
-  return next;
+  return serializeSiteSettings(next);
 }
 
 export function isSiteSettingsSlug(slug) {
@@ -92,21 +114,34 @@ async function engineFetch(path, options = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-function parseTestingMode(payload) {
+function parseSiteSettingsPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
-  if (typeof payload.testingMode === "boolean") return payload.testingMode;
+
+  const fromObject = (obj) => {
+    if (!obj || typeof obj !== "object") return null;
+    const out = {};
+    if (typeof obj.testingMode === "boolean") out.testingMode = obj.testingMode;
+    if ("homeGamesNewsSlug" in obj) {
+      out.homeGamesNewsSlug = normalizeHomeGamesNewsSlug(obj.homeGamesNewsSlug);
+    }
+    return Object.keys(out).length ? out : null;
+  };
+
+  const direct = fromObject(payload);
+  if (direct) return direct;
+
   if (typeof payload.body === "string") {
     try {
-      const parsed = JSON.parse(payload.body);
-      if (typeof parsed?.testingMode === "boolean") return parsed.testingMode;
+      const parsed = fromObject(JSON.parse(payload.body));
+      if (parsed) return parsed;
     } catch {
       /* ignore */
     }
   }
   if (payload.post && typeof payload.post.body === "string") {
     try {
-      const parsed = JSON.parse(payload.post.body);
-      if (typeof parsed?.testingMode === "boolean") return parsed.testingMode;
+      const parsed = fromObject(JSON.parse(payload.post.body));
+      if (parsed) return parsed;
     } catch {
       /* ignore */
     }
@@ -114,21 +149,29 @@ function parseTestingMode(payload) {
   return null;
 }
 
+function serializeSiteSettings(state) {
+  const out = { testingMode: !!state.testingMode };
+  if (state.homeGamesNewsSlug !== undefined) {
+    out.homeGamesNewsSlug = state.homeGamesNewsSlug;
+  }
+  return out;
+}
+
 async function readFromEngineStats() {
   const res = await engineFetch("/stats");
   if (!res?.ok) return null;
-  const mode = parseTestingMode(res.data);
-  return mode == null ? null : { testingMode: mode };
+  const parsed = parseSiteSettingsPayload(res.data);
+  return parsed ? serializeSiteSettings({ testingMode: false, ...parsed }) : null;
 }
 
-async function writeToEngineStats(testingMode, adminKey) {
+async function writeToEngineStats(patch, adminKey) {
   const res = await engineFetch("/stats/admin", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Admin-Key": adminKey,
     },
-    body: JSON.stringify({ action: "site-settings", testingMode }),
+    body: JSON.stringify({ action: "site-settings", ...patch }),
   });
   if (!res) return null;
   if (res.status === 401) {
@@ -137,88 +180,10 @@ async function writeToEngineStats(testingMode, adminKey) {
     throw err;
   }
   if (!res.ok) return null;
-  const mode = parseTestingMode(res.data);
-  return { testingMode: mode == null ? !!testingMode : mode };
-}
-
-async function writeToEngineSiteSettings(testingMode, adminKey) {
-  const res = await engineFetch("/site-settings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Admin-Key": adminKey,
-    },
-    body: JSON.stringify({ testingMode }),
-  });
-  if (!res) return null;
-  if (res.status === 401) {
-    const err = new Error("Unauthorized");
-    err.status = 401;
-    throw err;
-  }
-  if (!res.ok) return null;
-  return { testingMode: !!res.data?.testingMode };
-}
-
-async function readFromBlog() {
-  const res = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
-  if (!res?.ok) return null;
-  const mode = parseTestingMode(res.data);
-  return mode == null ? null : { testingMode: mode };
-}
-
-async function writeToBlog(testingMode, adminKey) {
-  const base = engineBase();
-  if (!base) return null;
-
-  const body = JSON.stringify({ testingMode: !!testingMode });
-  const headers = {
-    "Content-Type": "application/json",
-    "X-Admin-Key": adminKey,
-  };
-
-  // Update existing reserved post when present.
-  const existing = await engineFetch(`/blog/${SITE_SETTINGS_SLUG}`);
-  if (existing?.ok && existing.data?.post?.id) {
-    const res = await engineFetch("/blog", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        action: "update",
-        id: existing.data.post.id,
-        title: SITE_SETTINGS_TITLE,
-        slug: SITE_SETTINGS_SLUG,
-        excerpt: "Internal site flag — hidden from the blog.",
-        body,
-        published: true,
-      }),
-    });
-    if (res?.status === 401) {
-      const err = new Error("Unauthorized");
-      err.status = 401;
-      throw err;
-    }
-    if (res?.ok) return { testingMode: !!testingMode };
-  }
-
-  const created = await engineFetch("/blog", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      title: SITE_SETTINGS_TITLE,
-      slug: SITE_SETTINGS_SLUG,
-      excerpt: "Internal site flag — hidden from the blog.",
-      body,
-      published: true,
-    }),
-  });
-  if (created?.status === 401) {
-    const err = new Error("Unauthorized");
-    err.status = 401;
-    throw err;
-  }
-  if (!created?.ok) return null;
-  return { testingMode: !!testingMode };
+  const parsed = parseSiteSettingsPayload(res.data);
+  return parsed
+    ? serializeSiteSettings({ testingMode: false, ...parsed })
+    : serializeSiteSettings({ testingMode: false, ...patch });
 }
 
 export async function getSiteSettings() {
@@ -229,13 +194,30 @@ export async function getSiteSettings() {
     } catch {
       /* fall through */
     }
-    return { testingMode: false };
+    return serializeSiteSettings(defaultState());
   }
 
   if (!isReadOnlyDeploy()) {
-    return fileGetSiteSettings();
+    return serializeSiteSettings(fileGetSiteSettings());
   }
-  return { testingMode: false };
+  return serializeSiteSettings(defaultState());
+}
+
+function buildSiteSettingsPatch(body = {}) {
+  const patch = {};
+  if (typeof body.testingMode === "boolean") {
+    patch.testingMode = body.testingMode;
+  }
+  if ("homeGamesNewsSlug" in body) {
+    patch.homeGamesNewsSlug =
+      body.homeGamesNewsSlug === undefined
+        ? undefined
+        : normalizeHomeGamesNewsSlug(body.homeGamesNewsSlug);
+  }
+  if (!Object.keys(patch).length) {
+    throw new Error("No site settings fields to update");
+  }
+  return patch;
 }
 
 export async function setSiteSettings(body, adminKey) {
@@ -250,30 +232,26 @@ export async function setSiteSettings(body, adminKey) {
     throw err;
   }
 
-  const testingMode =
-    typeof body?.testingMode === "boolean" ? body.testingMode : undefined;
-  if (typeof testingMode !== "boolean") {
-    throw new Error("testingMode boolean required");
-  }
+  const patch = buildSiteSettingsPatch(body);
 
   if (engineBase()) {
     try {
-      const viaStats = await writeToEngineStats(testingMode, adminKey);
+      const viaStats = await writeToEngineStats(patch, adminKey);
       if (viaStats) return viaStats;
     } catch (e) {
       if (e?.status === 401) throw e;
     }
     throw new Error(
-      "Could not save Testing Mode. Check EVAL_SERVER_URL / analysis server."
+      "Could not save site settings. Check EVAL_SERVER_URL / analysis server."
     );
   }
 
   if (!isReadOnlyDeploy()) {
-    return fileSetSiteSettings({ testingMode });
+    return fileSetSiteSettings(patch);
   }
 
   throw new Error(
-    "Could not save Testing Mode. Set EVAL_SERVER_URL to your engine tunnel URL on Vercel."
+    "Could not save site settings. Set EVAL_SERVER_URL to your engine tunnel URL on Vercel."
   );
 }
 
@@ -305,7 +283,7 @@ export function handleEngineSiteSettingsRequest(
 
   if (req.method === "GET") {
     return import("./reviewStatsFile.mjs").then((stats) =>
-      writeJson(res, 200, { testingMode: !!stats.filePublicStats().testingMode })
+      writeJson(res, 200, stats.fileGetSiteSettings())
     );
   }
 
@@ -317,8 +295,8 @@ export function handleEngineSiteSettingsRequest(
     }
     return readJsonBody(req)
       .then(async (body) => {
-        const { fileSetTestingMode } = await import("./reviewStatsFile.mjs");
-        const updated = fileSetTestingMode(!!body?.testingMode);
+        const { fileSetSiteSettings } = await import("./reviewStatsFile.mjs");
+        const updated = fileSetSiteSettings(buildSiteSettingsPatch(body));
         writeJson(res, 200, updated);
       })
       .catch((e) => {
