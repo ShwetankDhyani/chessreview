@@ -31,7 +31,7 @@ export function SavedGamesModal({
         aria-hidden
       />
       <div
-        className="fixed left-1/2 top-1/2 z-[90] w-[min(92vw,28rem)] max-h-[min(80dvh,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-chess-border bg-chess-panel shadow-2xl flex flex-col overflow-hidden"
+        className="fixed left-1/2 top-1/2 z-[90] w-[min(92vw,28rem)] max-h-[min(80dvh,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="saved-games-title"

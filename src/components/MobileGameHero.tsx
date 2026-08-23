@@ -40,7 +40,7 @@ export function MobileGameHero({
       <PlayerStrip name={topName} rating={topRating} color={topColor} align="top" />
 
       <div
-        className="relative rounded-lg overflow-hidden border border-chess-border shadow-lg"
+        className="relative rounded-xl overflow-hidden border border-chess-hairline shadow-elev-3"
         style={{
           background:
             "linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #252525 100%)",
@@ -69,7 +69,7 @@ export function MobileGameHero({
               showBestMoveArrow={false}
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-              <div className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-black/55 backdrop-blur-sm border border-white/10 shadow-xl">
+              <div className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-black/55 backdrop-blur-md border border-white/10 shadow-elev-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-move-best">
                   vs
                 </span>

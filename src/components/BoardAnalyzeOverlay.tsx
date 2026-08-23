@@ -54,7 +54,7 @@ export function BoardAnalyzeOverlay({
             : "Another review is already underway"
         }
       >
-        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-xl border border-chess-border bg-chess-panel/95 backdrop-blur-sm px-5 py-4 shadow-[0_18px_56px_rgba(0,0,0,0.7)] min-w-[240px] max-w-[280px]">
+        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-2xl border border-chess-hairline-strong bg-chess-panel/95 backdrop-blur-md px-5 py-4 shadow-elev-4 min-w-[240px] max-w-[280px]">
           <div className="flex items-start gap-2.5">
             <span
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-chess-accent/15 border border-chess-accent/30 text-chess-accent"

@@ -29,7 +29,7 @@ export function AdminSwitch({
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+        className={`inline-block h-4 w-4 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-soft ${
           checked ? "translate-x-[22px]" : "translate-x-[3px]"
         }`}
       />

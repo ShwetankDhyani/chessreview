@@ -111,7 +111,7 @@ export function ReviewOdometer() {
             className="pointer-events-none absolute bottom-full right-0 mb-2 z-50
               w-max max-w-[min(16rem,calc(100vw-2rem))]
               rounded-lg border border-chess-border/80 bg-chess-panel/95 backdrop-blur-sm
-              px-2.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+              px-2.5 py-1.5 shadow-elev-3"
           >
             <p className="text-[11px] leading-snug text-chess-subtext">
               <span className="font-semibold tabular-nums text-chess-accent">
@@ -153,7 +153,7 @@ export function ReviewOdometer() {
             />
             <div
               className="relative w-full sm:max-w-sm mx-0 sm:mx-4 mb-[calc(var(--site-footer)+env(safe-area-inset-bottom,0px)+0.5rem)]
-                rounded-t-2xl sm:rounded-2xl border border-chess-border bg-chess-panel shadow-2xl
+                rounded-t-2xl sm:rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
                 px-4 pt-3 pb-4 animate-[fadeSlideUp_180ms_ease-out]"
             >
               <div className="flex items-start justify-between gap-3 mb-3">

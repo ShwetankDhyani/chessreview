@@ -189,7 +189,7 @@ function PgnExportMenu({
             ref={menuRef}
             role="menu"
             aria-label="Export PGN"
-            className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-chess-border/90 bg-chess-panel shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
+            className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4"
             style={{ top: pos.top, left: pos.left }}
           >
             <button

@@ -215,7 +215,7 @@ export function ProfileMenu({
         <div
           role="dialog"
           aria-label="Account"
-          className="fixed left-2 right-2 top-[calc(var(--app-header-h)+0.35rem)] z-[70] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-border/90 bg-chess-panel shadow-[0_24px_64px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.03)]
+          className="fixed left-2 right-2 top-[calc(var(--app-header-h)+0.35rem)] z-[70] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
             lg:absolute lg:inset-auto lg:right-0 lg:top-[calc(100%+0.4rem)] lg:left-auto lg:w-[19.5rem]"
         >
           <div className="flex items-center justify-between border-b border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5">
