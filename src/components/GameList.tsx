@@ -7,7 +7,7 @@ import {
   formatDate,
 } from "../utils/chesscomApi";
 import { RatingStat, TimeClassIcon } from "./TimeClassIcon";
-import { fetchLichessGames } from "../utils/lichessApi";
+import { fetchLichessGames, fetchLichessPlayerStats } from "../utils/lichessApi";
 import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
 import { GameUrlImport } from "./GameUrlImport";
@@ -16,7 +16,6 @@ import { hapticSelection, hapticSoft, hapticTap } from "../utils/chessSounds";
 import {
   normalizeGameLoadError,
   trackAppError,
-  withTimeout,
   type AppError,
 } from "../utils/appError";
 
@@ -25,8 +24,6 @@ type Platform = "chesscom" | "lichess";
 const STORAGE_KEY_USER    = "cr_username";
 const STORAGE_KEY_PLAT    = "cr_platform";
 const STORAGE_KEY_GAMES   = "cr_games";
-const LICHESS_FETCH_TIMEOUT_MS = 5000;
-const CHESSCOM_FETCH_TIMEOUT_MS = 20000;
 
 /** In-tab review session shown while browsing Games without a full refresh. */
 export interface ActiveReviewSession {
@@ -77,6 +74,17 @@ export const GameList: React.FC<GameListProps> = ({
   const loadGenRef = useRef(0);
   const gamesRef = useRef(games);
   gamesRef.current = games;
+  /**
+   * Aborts the in-flight load. Superseding a request must actually cancel it:
+   * Chess.com is fetched through a serial queue, so an abandoned request would
+   * otherwise keep delaying the retry the user just asked for.
+   */
+  const loadAbortRef = useRef<AbortController | null>(null);
+
+  const abortInFlightLoad = useCallback(() => {
+    loadAbortRef.current?.abort();
+    loadAbortRef.current = null;
+  }, []);
 
   const clearSlowTimer = useCallback(() => {
     if (slowTimerRef.current) {
@@ -96,7 +104,13 @@ export const GameList: React.FC<GameListProps> = ({
     }, 5000);
   }, [clearSlowTimer]);
 
-  useEffect(() => () => clearSlowTimer(), [clearSlowTimer]);
+  useEffect(
+    () => () => {
+      clearSlowTimer();
+      loadAbortRef.current?.abort();
+    },
+    [clearSlowTimer]
+  );
 
   const [stats, setStats] = useState<{ bullet?: number, blitz?: number, rapid?: number } | null>(() => {
     try {
@@ -128,28 +142,22 @@ export const GameList: React.FC<GameListProps> = ({
   useEffect(() => {
     const onSwitch = (e: Event) => {
       const detail = (e as CustomEvent).detail as { name: string; platform: Platform } | null;
+      loadGenRef.current += 1;
+      abortInFlightLoad();
+      setGames([]);
+      gamesRef.current = [];
+      setStats(null);
+      setLoading(false);
+      setShowSlowRetry(false);
+      setGamesError(null);
+      clearSlowTimer();
+
       if (detail?.name) {
-        loadGenRef.current += 1;
         setInputVal(detail.name);
         setPlatform(detail.platform);
-        setGames([]);
-        gamesRef.current = [];
-        setStats(null);
-        setLoading(false);
-        setShowSlowRetry(false);
-        setGamesError(null);
-        clearSlowTimer();
         loadGames(detail.name, detail.platform);
       } else {
-        loadGenRef.current += 1;
         setInputVal("");
-        setGames([]);
-        gamesRef.current = [];
-        setStats(null);
-        setLoading(false);
-        setShowSlowRetry(false);
-        setGamesError(null);
-        clearSlowTimer();
       }
     };
     window.addEventListener("cr_profile_switch", onSwitch);
@@ -157,20 +165,51 @@ export const GameList: React.FC<GameListProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** Ratings are decorative — never let them delay or fail the game list. */
+  const loadStatsInBackground = useCallback(
+    (uname: string, plat: Platform, gen: number, signal: AbortSignal) => {
+      void (async () => {
+        try {
+          const newStats =
+            plat === "chesscom"
+              ? await fetchChesscomPlayerStats(uname, { signal })
+              : await fetchLichessPlayerStats(uname, { signal });
+
+          if (gen !== loadGenRef.current || signal.aborted) return;
+          setStats(newStats);
+          if (newStats) {
+            localStorage.setItem("cr_stats", JSON.stringify(newStats));
+          } else {
+            localStorage.removeItem("cr_stats");
+          }
+        } catch {
+          /* ratings are optional */
+        }
+      })();
+    },
+    []
+  );
+
   const loadGames = async (uname: string, plat: Platform) => {
-    if (!uname.trim()) return;
+    const name = uname.trim();
+    if (!name) return;
+
+    // Supersede any previous load before starting a new one.
+    abortInFlightLoad();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
+
     const gen = ++loadGenRef.current;
     setLoading(true);
     setGamesError(null);
     startSlowTimer();
+
     try {
-      const list = await withTimeout(
+      const list =
         plat === "chesscom"
-          ? fetchRecentGames(uname.trim())
-          : fetchLichessGames(uname.trim()),
-        plat === "lichess" ? LICHESS_FETCH_TIMEOUT_MS : CHESSCOM_FETCH_TIMEOUT_MS,
-        "Game fetch timeout"
-      );
+          ? await fetchRecentGames(name, { signal: controller.signal })
+          : await fetchLichessGames(name, { signal: controller.signal });
+
       if (gen !== loadGenRef.current) return;
 
       setGames(list);
@@ -179,40 +218,16 @@ export const GameList: React.FC<GameListProps> = ({
       clearSlowTimer();
       setShowSlowRetry(false);
 
-      // Fetch stats (failures are silent). Chess.com goes through serial backoff client.
-      let newStats = null;
-      try {
-        if (plat === "chesscom") {
-          newStats = await fetchChesscomPlayerStats(uname.trim());
-        } else {
-          const res = await fetch(
-            `https://lichess.org/api/user/${encodeURIComponent(uname.toLowerCase())}`,
-            { headers: { Accept: "application/json" }, cache: "no-store" }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            newStats = {
-              bullet: data.perfs?.bullet?.rating,
-              blitz: data.perfs?.blitz?.rating,
-              rapid: data.perfs?.rapid?.rating,
-            };
-          }
-        }
-      } catch {
-        /* ignore stats error */
-      }
-
-      if (gen !== loadGenRef.current) return;
-
-      setStats(newStats);
-      if (newStats) localStorage.setItem("cr_stats", JSON.stringify(newStats));
-      else localStorage.removeItem("cr_stats");
-
-      localStorage.setItem(STORAGE_KEY_USER, uname.trim());
+      localStorage.setItem(STORAGE_KEY_USER, name);
       localStorage.setItem(STORAGE_KEY_PLAT, plat);
       localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
+
+      // Games are on screen now; ratings can arrive whenever they arrive.
+      loadStatsInBackground(name, plat, gen, controller.signal);
     } catch (error) {
-      if (gen !== loadGenRef.current) return;
+      // A superseded or cancelled load is not a failure worth reporting.
+      if (controller.signal.aborted || gen !== loadGenRef.current) return;
+
       const normalized = normalizeGameLoadError(error, plat);
       clearSlowTimer();
       setShowSlowRetry(false);
@@ -220,18 +235,20 @@ export const GameList: React.FC<GameListProps> = ({
       trackAppError({
         code: normalized.code,
         message: normalized.message,
-        context: { platform: plat, username: uname.trim(), source: "game-list" },
+        context: { platform: plat, username: name, source: "game-list" },
       });
+      // Only a confirmed 404 may unlink the profile.
       if (normalized.code === "GAME_SOURCE_NOT_FOUND") {
         window.dispatchEvent(
           new CustomEvent("cr_profile_invalid", {
-            detail: { name: uname.trim(), platform: plat },
+            detail: { name, platform: plat },
           })
         );
       }
     } finally {
       if (gen === loadGenRef.current) {
         setLoading(false);
+        if (loadAbortRef.current === controller) loadAbortRef.current = null;
       }
     }
   };
@@ -242,11 +259,12 @@ export const GameList: React.FC<GameListProps> = ({
   };
   const cancelLoad = useCallback(() => {
     loadGenRef.current += 1;
+    abortInFlightLoad();
     setLoading(false);
     clearSlowTimer();
     setShowSlowRetry(false);
     setGamesError(null);
-  }, [clearSlowTimer]);
+  }, [clearSlowTimer, abortInFlightLoad]);
 
   const handleRetry = () => {
     hapticSelection();

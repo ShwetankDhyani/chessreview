@@ -110,37 +110,98 @@ function enqueue<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+export interface ChesscomFetchInit extends RequestInit {
+  /**
+   * Wall-clock budget for this request including queue wait, backoff and
+   * transfer. Without it a retry chain can outlive the caller, and because the
+   * queue is serial that zombie request also delays every later call.
+   */
+  timeoutMs?: number;
+}
+
 /**
  * Serial Chess.com fetch with status-aware backoff.
  * Browser may strip User-Agent; still send Accept + identify in comments/logs.
  */
 export async function chesscomFetch(
   url: string,
-  init: RequestInit = {}
+  init: ChesscomFetchInit = {}
 ): Promise<Response> {
-  const signal = init.signal ?? undefined;
+  const { timeoutMs, ...requestInit } = init;
+  const externalSignal = requestInit.signal ?? undefined;
+  // Start the clock at call time so queue waiting counts against the budget.
+  const deadlineAt =
+    timeoutMs != null && timeoutMs > 0 ? Date.now() + timeoutMs : null;
+
+  const remainingMs = () =>
+    deadlineAt == null ? Number.POSITIVE_INFINITY : deadlineAt - Date.now();
+
   return enqueue(async () => {
     let lastError: unknown;
+
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const gate = Math.max(0, nextAllowedAt - Date.now(), cooldownUntil - Date.now());
-      if (gate > 0) await sleep(gate, signal);
+      if (externalSignal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+      if (remainingMs() <= 0) break;
+
+      const gate = Math.max(
+        0,
+        nextAllowedAt - Date.now(),
+        cooldownUntil - Date.now()
+      );
+      if (gate > 0) {
+        if (gate >= remainingMs()) break;
+        await sleep(gate, externalSignal);
+      }
+
+      // Bound each attempt by the remaining budget and actually abort it,
+      // so a stalled socket cannot hold the serial queue open.
+      const attemptController = new AbortController();
+      let attemptTimer: ReturnType<typeof setTimeout> | null = null;
+      if (deadlineAt != null) {
+        attemptTimer = setTimeout(
+          () => attemptController.abort(new DOMException("Timeout", "AbortError")),
+          Math.max(1, remainingMs())
+        );
+      }
+      const onExternalAbort = () =>
+        attemptController.abort(new DOMException("Aborted", "AbortError"));
+      externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+
+      const cleanup = () => {
+        if (attemptTimer) clearTimeout(attemptTimer);
+        externalSignal?.removeEventListener("abort", onExternalAbort);
+      };
 
       let res: Response;
       try {
-        const headers = new Headers(init.headers);
+        const headers = new Headers(requestInit.headers);
         if (!headers.has("Accept")) headers.set("Accept", "application/json");
         // Browsers forbid setting User-Agent; harmless no-op there, used in Node/tests.
         if (!headers.has("User-Agent")) {
           headers.set("User-Agent", CHESSCOM_USER_AGENT);
         }
-        res = await fetch(url, { ...init, headers, cache: "no-store" });
+        res = await fetch(url, {
+          ...requestInit,
+          headers,
+          cache: "no-store",
+          signal: attemptController.signal,
+        });
+        cleanup();
       } catch (e) {
+        cleanup();
         lastError = e;
-        if (e instanceof DOMException && e.name === "AbortError") throw e;
+        if (externalSignal?.aborted) throw new DOMException("Aborted", "AbortError");
+        if (e instanceof DOMException && e.name === "AbortError") {
+          // Our own deadline fired.
+          break;
+        }
         if (attempt >= MAX_RETRIES) throw e;
         const delay = chesscomBackoffDelayMs(503, attempt, null);
+        if (delay >= remainingMs()) break;
         onBackoff?.({ status: 0, attempt, delayMs: delay, retryAfter: null });
-        await sleep(delay, signal);
+        await sleep(delay, externalSignal);
         nextAllowedAt = Date.now() + MIN_GAP_MS;
         continue;
       }
@@ -153,25 +214,29 @@ export async function chesscomFetch(
 
       const retryAfter = res.headers.get("Retry-After");
       const delay = chesscomBackoffDelayMs(res.status, attempt, retryAfter);
-      onBackoff?.({
-        status: res.status,
-        attempt,
-        delayMs: delay,
-        retryAfter,
-      });
       // Consume body so the connection can close cleanly before retry.
       try {
         await res.arrayBuffer();
       } catch {
         /* ignore */
       }
+      // No budget left to wait out this backoff — hand the response back so the
+      // caller can classify it (429 vs 503) instead of reporting a bare timeout.
+      if (delay >= remainingMs()) return res;
+
+      onBackoff?.({
+        status: res.status,
+        attempt,
+        delayMs: delay,
+        retryAfter,
+      });
       cooldownUntil = Date.now() + delay;
-      await sleep(delay, signal);
+      await sleep(delay, externalSignal);
       cooldownUntil = Date.now();
     }
-    throw lastError instanceof Error
-      ? lastError
-      : new Error("Chess.com request failed after retries");
+
+    if (lastError instanceof Error) throw lastError;
+    throw new Error("Chess.com request timed out");
   });
 }
 

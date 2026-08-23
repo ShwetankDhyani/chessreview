@@ -39,6 +39,12 @@ import {
 } from "./utils/sessionReviewPin";
 import { formatChessMoveCounter } from "./utils/pgnPlies";
 import { chesscomFetch, chesscomPlayerUrl } from "./utils/chesscomClient";
+import {
+  HttpStatusError,
+  NotFoundError,
+  retryingFetch,
+  TimeoutError,
+} from "./utils/netRetry";
 import { buildPgnReplayFrames, type ReplayFrame } from "./utils/pgnReplay";
 import { useAnalysisBoardReplay } from "./hooks/useAnalysisBoardReplay";
 import { usePredictedAnalysisProgress } from "./hooks/usePredictedAnalysisProgress";
@@ -106,6 +112,9 @@ import {
 } from "./utils/appError";
 
 type SidebarTab = "games" | "review" | "moves";
+
+/** Budget for confirming an account exists when linking a profile. */
+const PROFILE_VERIFY_TIMEOUT_MS = 12_000;
 
 interface GameMeta {
   white: string;
@@ -436,6 +445,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     | { status: "ok"; name: string }
     | { status: "not_found" }
     | { status: "timeout" }
+    | { status: "rate_limited" }
     | { status: "network" };
 
   const verifyUserExists = async (
@@ -445,8 +455,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   ): Promise<ProfileVerifyResult> => {
     try {
       if (platform === "chesscom") {
-        const res = await chesscomFetch(chesscomPlayerUrl(name), { signal });
+        const res = await chesscomFetch(chesscomPlayerUrl(name), {
+          signal,
+          timeoutMs: PROFILE_VERIFY_TIMEOUT_MS,
+        });
         if (res.status === 404) return { status: "not_found" };
+        if (res.status === 429 || res.status === 403) {
+          return { status: "rate_limited" };
+        }
         if (!res.ok) return { status: "network" };
         const data = await res.json();
         if (data?.url) {
@@ -460,20 +476,30 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         return { status: "ok", name: data.username || name };
       }
 
-      const res = await fetch(
-        `https://lichess.org/api/user/${encodeURIComponent(name.toLowerCase())}`,
+      const res = await retryingFetch(
+        `https://lichess.org/api/user/${encodeURIComponent(name.trim().toLowerCase())}`,
         {
           signal,
           cache: "no-store",
           headers: { Accept: "application/json" },
+          timeoutMs: PROFILE_VERIFY_TIMEOUT_MS,
+          attempts: 3,
+          notFoundStatuses: [404],
+          notFoundMessage: "not found",
         }
       );
-      if (res.status === 404) return { status: "not_found" };
-      if (!res.ok) return { status: "network" };
       const data = await res.json();
       if (!data?.id && !data?.username) return { status: "not_found" };
       return { status: "ok", name: data.username || data.id || name };
     } catch (error) {
+      if (signal?.aborted) return { status: "timeout" };
+      if (error instanceof NotFoundError) return { status: "not_found" };
+      if (error instanceof TimeoutError) return { status: "timeout" };
+      if (error instanceof HttpStatusError) {
+        return error.status === 429 || error.status === 403
+          ? { status: "rate_limited" }
+          : { status: "network" };
+      }
       if (error instanceof DOMException && error.name === "AbortError") {
         return { status: "timeout" };
       }
@@ -488,8 +514,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setAddProfileLoading(false);
     setAddProfileError(null);
   }, []);
-
-  const PROFILE_VERIFY_TIMEOUT_MS = 12_000;
 
   const addProfile = async (name: string, platform: "chesscom" | "lichess", skipVerify = false) => {
     if (profiles.length >= 5) return;
@@ -518,9 +542,23 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       if (reqId !== addProfileReqGenRef.current) return;
       setAddProfileLoading(false);
       addProfileAbortRef.current = null;
-      if (result.status === "timeout" || result.status === "network") {
+      if (result.status === "rate_limited") {
         setAddProfileError(
-          `${sourceLabel} isn’t responding — paste a game link or PGN instead.`
+          `${sourceLabel} is rate-limiting right now — wait a few seconds and try again.`
+        );
+        notifyWarning();
+        return;
+      }
+      if (result.status === "timeout") {
+        setAddProfileError(
+          `${sourceLabel} took too long to respond — try again, or paste a game link or PGN.`
+        );
+        notifyWarning();
+        return;
+      }
+      if (result.status === "network") {
+        setAddProfileError(
+          `Couldn’t reach ${sourceLabel} — check your connection and try again.`
         );
         notifyWarning();
         return;
