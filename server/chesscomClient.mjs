@@ -75,30 +75,69 @@ function enqueue(fn) {
   return run;
 }
 
-/** Serial Chess.com fetch with status-aware backoff. */
+/**
+ * Default request budget.
+ *
+ * Backoffs here can reach a 30s 403 cooldown or 60s exponential wait, which
+ * outlives a serverless invocation. Without a budget the function is killed
+ * mid-retry and the caller gets a platform timeout instead of a real answer,
+ * so cap the whole operation and return the last response we actually saw.
+ */
+const DEFAULT_TIMEOUT_MS = 12_000;
+
+/** Serial Chess.com fetch with status-aware backoff and a wall-clock budget. */
 export async function chesscomFetch(url, init = {}) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...requestInit } = init;
+  // Start the clock now so time spent queueing counts against the budget.
+  const deadlineAt =
+    timeoutMs != null && timeoutMs > 0 ? Date.now() + timeoutMs : null;
+  const remainingMs = () =>
+    deadlineAt == null ? Number.POSITIVE_INFINITY : deadlineAt - Date.now();
+
   return enqueue(async () => {
     let lastError;
+    let lastResponse = null;
+
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (remainingMs() <= 0) break;
+
       const gate = Math.max(
         0,
         nextAllowedAt - Date.now(),
         cooldownUntil - Date.now()
       );
-      if (gate > 0) await sleep(gate);
+      if (gate > 0) {
+        if (gate >= remainingMs()) break;
+        await sleep(gate);
+      }
+
+      // Abort a stalled socket rather than letting it hold the serial queue.
+      const controller = new AbortController();
+      const timer =
+        deadlineAt == null
+          ? null
+          : setTimeout(() => controller.abort(), Math.max(1, remainingMs()));
 
       let res;
       try {
-        const headers = new Headers(init.headers ?? {});
+        const headers = new Headers(requestInit.headers ?? {});
         if (!headers.has("Accept")) headers.set("Accept", "application/json");
         if (!headers.has("User-Agent")) {
           headers.set("User-Agent", CHESSCOM_USER_AGENT);
         }
-        res = await fetch(url, { ...init, headers });
+        res = await fetch(url, {
+          ...requestInit,
+          headers,
+          signal: controller.signal,
+        });
+        if (timer) clearTimeout(timer);
       } catch (e) {
+        if (timer) clearTimeout(timer);
         lastError = e;
+        if (e?.name === "AbortError") break;
         if (attempt >= MAX_RETRIES) throw e;
         const delay = chesscomBackoffDelayMs(503, attempt, null);
+        if (delay >= remainingMs()) break;
         console.warn(
           `[chesscom] network error, backoff ${delay}ms (attempt ${attempt + 1})`
         );
@@ -115,22 +154,30 @@ export async function chesscomFetch(url, init = {}) {
 
       const retryAfter = res.headers.get("Retry-After");
       const delay = chesscomBackoffDelayMs(res.status, attempt, retryAfter);
-      console.warn(
-        `[chesscom] HTTP ${res.status}, backoff ${delay}ms` +
-          (retryAfter ? ` (Retry-After: ${retryAfter})` : "") +
-          ` attempt ${attempt + 1}/${MAX_RETRIES}`
-      );
       try {
         await res.arrayBuffer();
       } catch {
         /* ignore */
       }
+      lastResponse = res;
+
+      // Out of budget: hand back the real status so the caller can distinguish
+      // rate limiting from an outage instead of reporting a bare timeout.
+      if (delay >= remainingMs()) return res;
+
+      console.warn(
+        `[chesscom] HTTP ${res.status}, backoff ${delay}ms` +
+          (retryAfter ? ` (Retry-After: ${retryAfter})` : "") +
+          ` attempt ${attempt + 1}/${MAX_RETRIES}`
+      );
       cooldownUntil = Date.now() + delay;
       await sleep(delay);
       cooldownUntil = Date.now();
     }
+
+    if (lastResponse) return lastResponse;
     throw lastError instanceof Error
       ? lastError
-      : new Error("Chess.com request failed after retries");
+      : new Error("Chess.com request timed out");
   });
 }

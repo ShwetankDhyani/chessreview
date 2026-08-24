@@ -26,36 +26,105 @@ function platformLabel(platform?: GameSourcePlatform): string {
   return platform === "lichess" ? "Lichess" : "Chess.com";
 }
 
+function errorName(error: unknown): string {
+  return error instanceof Error ? error.name : "";
+}
+
+function httpStatusOf(error: unknown): number | null {
+  if (
+    error &&
+    typeof error === "object" &&
+    "status" in error &&
+    typeof (error as { status: unknown }).status === "number"
+  ) {
+    return (error as { status: number }).status;
+  }
+  return null;
+}
+
+/**
+ * Classify a game-load failure.
+ *
+ * Typed errors from `netRetry` are checked first. Substring matching is only a
+ * fallback for legacy throw sites — it must never be the reason a profile is
+ * treated as nonexistent, since that unlinks the account.
+ */
 export function normalizeGameLoadError(
   error: unknown,
   platform?: GameSourcePlatform
 ): AppError {
   const raw = (extractMessage(error) ?? "").toLowerCase();
   const src = platformLabel(platform);
-  if (raw.includes("timeout")) {
-    return {
-      code: "GAME_FETCH_TIMEOUT",
-      message: `${src} timed out — paste a game link or PGN.`,
-      retryable: true,
-    };
-  }
-  if (raw.includes("not found") || raw.includes("invalid")) {
+  const name = errorName(error);
+  const status = httpStatusOf(error);
+
+  const timedOut = name === "TimeoutError" || name === "AbortError";
+  const notFound = name === "NotFoundError";
+  const rateLimited = status === 429 || status === 403;
+  const upstreamDown = status != null && status >= 500;
+  const networkDown = name === "NetworkError";
+
+  if (notFound) {
     return {
       code: "GAME_SOURCE_NOT_FOUND",
       message: `No ${src} profile by that name.`,
       retryable: false,
     };
   }
-  if (raw.includes("429") || raw.includes("rate")) {
+
+  if (rateLimited) {
     return {
       code: "GAME_RATE_LIMITED",
       message: `${src} is rate-limiting — wait a moment, or paste a link / PGN.`,
       retryable: true,
     };
   }
+
+  if (upstreamDown) {
+    return {
+      code: "GAME_SOURCE_UNAVAILABLE",
+      message: `${src} is having trouble right now — retry, or paste a link / PGN.`,
+      retryable: true,
+    };
+  }
+
+  if (networkDown) {
+    return {
+      code: "GAME_NETWORK_ERROR",
+      message: `Can’t reach ${src} — check your connection and retry.`,
+      retryable: true,
+    };
+  }
+
+  if (timedOut || raw.includes("timeout") || raw.includes("timed out")) {
+    return {
+      code: "GAME_FETCH_TIMEOUT",
+      message: `${src} timed out — retry, or paste a game link or PGN.`,
+      retryable: true,
+    };
+  }
+
+  if (raw.includes("429") || raw.includes("rate limit")) {
+    return {
+      code: "GAME_RATE_LIMITED",
+      message: `${src} is rate-limiting — wait a moment, or paste a link / PGN.`,
+      retryable: true,
+    };
+  }
+
+  // Legacy string fallback. Kept last and deliberately strict so a transient
+  // message containing "not found" cannot masquerade as a missing account.
+  if (raw.includes("not found on")) {
+    return {
+      code: "GAME_SOURCE_NOT_FOUND",
+      message: `No ${src} profile by that name.`,
+      retryable: false,
+    };
+  }
+
   return {
     code: "GAME_LOAD_FAILED",
-    message: `Couldn’t load ${src} games — paste a link or PGN.`,
+    message: `Couldn’t load ${src} games — retry, or paste a link or PGN.`,
     retryable: true,
   };
 }
