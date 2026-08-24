@@ -1,4 +1,5 @@
 import type { AnalyzedMove, ReviewResult, ReviewSummary } from "../types";
+import { fetchWithTimeout } from "./netRetry";
 
 export interface ShareReviewPayload {
   pgn: string;
@@ -20,8 +21,11 @@ function engineShareUrl(): string | null {
   return raw ? raw.replace(/\/$/, "") : null;
 }
 
+/** Nothing here should be able to hang the UI waiting on a stalled socket. */
+const SHARE_TIMEOUT_MS = 15_000;
+
 async function readShareJson(url: string, init?: RequestInit) {
-  const res = await fetch(url, init);
+  const res = await fetchWithTimeout(url, init, SHARE_TIMEOUT_MS);
   let data: { error?: string; id?: string } | null = null;
   try {
     data = await res.json();

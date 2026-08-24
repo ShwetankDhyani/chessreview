@@ -122,13 +122,32 @@ export interface GameReviewOptions extends ReviewEngineOptions {
   openingBook?: ReadonlySet<string>;
   whiteRating?: number | null;
   blackRating?: number | null;
+  /** Cancels engine work in progress, not just its result. */
+  signal?: AbortSignal | null;
+  /** Ceiling for the WASM backfill stage. Defaults to 5 minutes. */
+  wasmFillBudgetMs?: number;
 }
+
+/**
+ * Upper bound on plies we will review.
+ *
+ * Every position is analysed individually, so cost grows linearly with length.
+ * Correspondence games can run into the thousands of plies, which meant a
+ * request that could never finish in a browser session. Reviewing the first
+ * MAX_REVIEW_PLIES is far better than appearing to hang.
+ */
+export const MAX_REVIEW_PLIES = 600;
+
+/** Default ceiling for filling gaps the native engine did not cover. */
+const DEFAULT_WASM_FILL_BUDGET_MS = 5 * 60_000;
 
 async function buildAnalysisCache(
   fens: string[],
   depth: number,
   multiPv: number,
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal | null,
+  wasmFillBudgetMs?: number
 ): Promise<{ cache: Map<string, PositionAnalysis>; engineTag: string }> {
   const unique = [...new Set(fens)];
   const batch = await buildBatchPositionCache(unique, depth, (done, total) => {
@@ -147,8 +166,12 @@ async function buildAnalysisCache(
     wasmDepth,
     multiPv,
     analyzePositionMultiPv,
-    (done, total) => {
-      onProgress?.(88 + Math.round((done / Math.max(total, 1)) * 2), 100);
+    {
+      signal,
+      budgetMs: wasmFillBudgetMs,
+      onProgress: (done, total) => {
+        onProgress?.(88 + Math.round((done / Math.max(total, 1)) * 2), 100);
+      },
     }
   );
   onProgress?.(90, 100);
@@ -194,8 +217,16 @@ export async function analyzeGameReview(
   const multiPv = options.multiPv ?? DEFAULT_MULTIPV;
 
   const chess = new Chess();
-  chess.loadPgn(pgn);
-  const history = chess.history({ verbose: true }) as Move[];
+  try {
+    chess.loadPgn(pgn);
+  } catch {
+    throw new Error("Invalid PGN: could not read the moves in this game");
+  }
+  const fullHistory = chess.history({ verbose: true }) as Move[];
+  if (fullHistory.length === 0) {
+    throw new Error("Invalid PGN: no moves to review");
+  }
+  const history = fullHistory.slice(0, MAX_REVIEW_PLIES);
 
   const fens: string[] = [];
   const tmp = new Chess();
@@ -209,7 +240,9 @@ export async function analyzeGameReview(
     [...new Set(fens)],
     depth,
     multiPv,
-    options.onProgress
+    options.onProgress,
+    options.signal,
+    options.wasmFillBudgetMs ?? DEFAULT_WASM_FILL_BUDGET_MS
   );
 
   const extraBestFens = collectExtraBestFens(fens, history, analysisCache);

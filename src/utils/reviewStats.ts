@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "./netRetry";
 export interface CountryStat {
   countryCode: string;
   count: number;
@@ -116,7 +117,7 @@ export async function fetchPublicReviewStats(): Promise<{
 
   for (const url of sources) {
     try {
-      const res = await fetch(url);
+      const res = await fetchWithTimeout(url, undefined, 10_000);
       if (!res.ok) continue;
       const data = await res.json();
       const count = data.count ?? data.reviewsServed;
@@ -150,9 +151,11 @@ export async function fetchAdminStats(adminKey: string): Promise<AdminReviewStat
 
   for (const { url } of sources) {
     try {
-      const res = await fetch(url, {
-        headers: { "X-Admin-Key": trimmed },
-      });
+      const res = await fetchWithTimeout(
+        url,
+        { headers: { "X-Admin-Key": trimmed } },
+        15_000
+      );
       if (res.status === 401) {
         sawUnauthorized = true;
         continue;
@@ -216,7 +219,7 @@ async function recordReviewCompletedAsync(input: RecordReviewInput): Promise<voi
 
   // Vercel adds geo headers; forward to engine with country in body.
   try {
-    const res = await fetch("/api/review-events", postOpts);
+    const res = await fetchWithTimeout("/api/review-events", postOpts, 8_000);
     if (res.ok) return;
   } catch {
     /* fall through to engine */
@@ -226,7 +229,7 @@ async function recordReviewCompletedAsync(input: RecordReviewInput): Promise<voi
   if (!engineUrl) return;
 
   try {
-    await fetch(`${engineUrl}/stats/review`, postOpts);
+    await fetchWithTimeout(`${engineUrl}/stats/review`, postOpts, 8_000);
   } catch {
     /* analytics must never block or surface errors */
   }

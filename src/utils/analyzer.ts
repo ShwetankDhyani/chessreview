@@ -5,6 +5,8 @@ import type { ReviewResult } from "../types";
 export interface AnalyzePgnOptions {
   whiteRating?: number | null;
   blackRating?: number | null;
+  /** Cancels engine work in progress, not merely its result. */
+  signal?: AbortSignal | null;
 }
 
 /** Analyze a PGN via v3.2 WDL-aware full-depth review (native batch + miss-only WASM fill). */
@@ -22,6 +24,7 @@ export async function analyzePgn(
     openingBook: getOpeningBook(),
     whiteRating: opts?.whiteRating,
     blackRating: opts?.blackRating,
+    signal: opts?.signal,
     onProgress: (done, total) => {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
       onProgress?.(pct, 100);

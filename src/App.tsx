@@ -246,6 +246,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [gameMeta, setGameMeta] = useState<GameMeta | null>(null);
   const [clocks, setClocks] = useState<(number | null)[]>([]);
   const abortRef = useRef(false);
+  /**
+   * Cancels engine work for the running review.
+   *
+   * `abortRef` only prevented results being applied after the fact; the engine
+   * kept grinding through every remaining position, so Cancel did not free the
+   * machine and a long game could stay busy for a long time afterwards.
+   */
+  const analysisAbortRef = useRef<AbortController | null>(null);
+
+  const abortRunningAnalysis = useCallback(() => {
+    abortRef.current = true;
+    analysisAbortRef.current?.abort();
+    analysisAbortRef.current = null;
+  }, []);
   const hasRemoteEngine = !!import.meta.env.VITE_EVAL_SERVER_URL;
   const [engineBackend, setEngineBackend] = useState<"native" | "cloud" | "browser" | "unavailable">(
     hasRemoteEngine ? "unavailable" : "cloud"
@@ -792,6 +806,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       if (!pgnStr.trim()) return;
       const gen = ++analysisGenerationRef.current;
       abortRef.current = false;
+      analysisAbortRef.current?.abort();
+      const analysisController = new AbortController();
+      analysisAbortRef.current = analysisController;
       await recheckEngine();
       setContinuationActive(false);
       setContinuationFen(null);
@@ -845,9 +862,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           {
             whiteRating: meta.whiteRating ?? null,
             blackRating: meta.blackRating ?? null,
+            signal: analysisController.signal,
           }
         );
-        if (abortRef.current || gen !== analysisGenerationRef.current) return;
+        if (
+          abortRef.current ||
+          analysisController.signal.aborted ||
+          gen !== analysisGenerationRef.current
+        ) {
+          return;
+        }
 
         const viewingAway = !samePgn(displayPgnRef.current, pgnStr);
         setProgress({ done: 100, total: 100 });
@@ -949,7 +973,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   }, []);
 
   const cancelAnalysis = useCallback(() => {
-    abortRef.current = true;
+    abortRunningAnalysis();
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);
     setShowAnalysisProgress(false);
@@ -962,7 +986,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setAnalysisState("idle");
     }
     notifyWarning();
-  }, [pgn, clearReviewJob]);
+  }, [pgn, clearReviewJob, abortRunningAnalysis]);
 
   /** Soft-load a PGN onto the board without aborting an in-flight review job. */
   const loadPgn = useCallback((pgnStr: string, opts?: { keepAnalysis?: boolean }) => {
@@ -980,7 +1004,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       // Only cancel a *running* analysis. Never drop a finished session pin —
       // browsing another game must leave the Games pin intact.
       if (analysisRunning) {
-        abortRef.current = true;
+        abortRunningAnalysis();
         analysisGenerationRef.current += 1;
         setAnalysisRunning(false);
         setShowAnalysisProgress(false);
@@ -1029,7 +1053,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setGameMeta(meta);
     setClocks(extractClocks(parsed.pgn));
     return true;
-  }, [analysisRunning]);
+  }, [analysisRunning, abortRunningAnalysis]);
 
   /** Reattach the finished Games pin so soft-browse never drops it. */
   const retainCompletedPin = useCallback(() => {
@@ -1218,7 +1242,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     if (!pgn.trim()) return;
     hapticHeavy();
     announce("start");
-    abortRef.current = true;
+    abortRunningAnalysis();
     analysisGenerationRef.current += 1;
     setAnalysisRunning(false);
     setShowAnalysisProgress(false);
@@ -1227,7 +1251,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     clearReviewJob();
     clearCompletedPin();
     void runAnalysis(pgn, { visible: true });
-  }, [pgn, clearReviewJob, clearCompletedPin, runAnalysis]);
+  }, [
+    pgn,
+    clearReviewJob,
+    clearCompletedPin,
+    runAnalysis,
+    abortRunningAnalysis,
+  ]);
 
   const selectGame = useCallback(
     (pgnStr: string, meta?: { id?: string }) => {

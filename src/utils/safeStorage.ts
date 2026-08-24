@@ -42,7 +42,10 @@ export function isPersistentStorageAvailable(): boolean {
 export function safeGetItem(key: string): string | null {
   if (probe()) {
     try {
-      return window.localStorage.getItem(key);
+      const stored = window.localStorage.getItem(key);
+      // A hit always wins. On a miss, fall through: the value may have failed
+      // to persist (quota) yet still be valid for this session.
+      if (stored !== null) return stored;
     } catch {
       /* fall through to memory */
     }

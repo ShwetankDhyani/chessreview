@@ -11,21 +11,55 @@ let multiPvConfigured = 0;
 const pending = new Map<string, (r: AnalyzeResponse) => void>();
 let idCounter = 0;
 
-function getWorker(): Worker {
-  if (!worker) {
-    worker = new Worker(
+/**
+ * A dead worker never replies, so every in-flight request would otherwise sit
+ * until its own 120s timeout — and each subsequent position would repeat that
+ * wait. Settle everything at once and drop the instance so the next call builds
+ * a fresh worker.
+ */
+function failAllPending(reason: string): void {
+  const inFlight = [...pending.entries()];
+  pending.clear();
+  multiPvConfigured = 0;
+  try {
+    worker?.terminate();
+  } catch {
+    /* already gone */
+  }
+  worker = null;
+
+  if (inFlight.length > 0) {
+    console.warn(`[stockfish] worker unavailable (${reason})`);
+  }
+  for (const [id, cb] of inFlight) {
+    // Empty lines mean "not analysed"; callers already treat that as a gap
+    // rather than a failure, so the review degrades instead of dying.
+    cb({ id, depth: 0, lines: [] } as AnalyzeResponse);
+  }
+}
+
+function getWorker(): Worker | null {
+  if (worker) return worker;
+  try {
+    const created = new Worker(
       new URL("./stockfishReview.worker.ts", import.meta.url),
       { type: "module" }
     );
-    worker.onmessage = (e: MessageEvent<AnalyzeResponse>) => {
+    created.onmessage = (e: MessageEvent<AnalyzeResponse>) => {
       const cb = pending.get(e.data.id);
       if (cb) {
         pending.delete(e.data.id);
         cb(e.data);
       }
     };
+    created.onerror = () => failAllPending("runtime error");
+    created.onmessageerror = () => failAllPending("message decode error");
+    worker = created;
+    return worker;
+  } catch {
+    // Workers unavailable (unsupported browser, blocked by policy).
+    return null;
   }
-  return worker;
 }
 
 function normalizeCpToWhite(fen: string, cp?: number, mate?: number): { cp?: number; mate?: number } {
@@ -38,20 +72,36 @@ function normalizeCpToWhite(fen: string, cp?: number, mate?: number): { cp?: num
 
 export async function analyzePositionMultiPv(
   fen: string,
-  options?: { depth?: number; multiPv?: number; timeoutMs?: number }
+  options?: {
+    depth?: number;
+    multiPv?: number;
+    timeoutMs?: number;
+    signal?: AbortSignal | null;
+  }
 ): Promise<PositionAnalysis> {
   const depth = Math.max(options?.depth ?? DEFAULT_DEPTH, 18);
   const multiPv = options?.multiPv ?? DEFAULT_MULTIPV;
   const id = `sfrev_${++idCounter}`;
+  const empty: PositionAnalysis = { fen, depth: 0, lines: [] };
+
+  if (options?.signal?.aborted) return empty;
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      resolve({ fen, depth: 0, lines: [] });
+      resolve(empty);
     }, options?.timeoutMs ?? 120_000);
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      pending.delete(id);
+      resolve(empty);
+    };
+    options?.signal?.addEventListener("abort", onAbort, { once: true });
 
     pending.set(id, (response) => {
       clearTimeout(timer);
+      options?.signal?.removeEventListener("abort", onAbort);
       const lines = response.lines.map((line) => {
         const norm = normalizeCpToWhite(fen, line.cp, line.mate);
         return {
@@ -68,11 +118,24 @@ export async function analyzePositionMultiPv(
     });
 
     const w = getWorker();
-    if (multiPv !== multiPvConfigured) {
-      w.postMessage(`setoption name MultiPV value ${multiPv}`);
-      multiPvConfigured = multiPv;
+    if (!w) {
+      clearTimeout(timer);
+      pending.delete(id);
+      resolve(empty);
+      return;
     }
-    w.postMessage({ id, fen, depth, multiPv });
+
+    try {
+      if (multiPv !== multiPvConfigured) {
+        w.postMessage(`setoption name MultiPV value ${multiPv}`);
+        multiPvConfigured = multiPv;
+      }
+      w.postMessage({ id, fen, depth, multiPv });
+    } catch {
+      clearTimeout(timer);
+      failAllPending("postMessage failed");
+      resolve(empty);
+    }
   });
 }
 

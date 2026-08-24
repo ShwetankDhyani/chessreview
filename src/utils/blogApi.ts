@@ -1,4 +1,5 @@
 import { safeGetItem, safeRemoveItem, safeSetItem } from "./safeStorage";
+import { fetchWithTimeout } from "./netRetry";
 export type BlogPostSummary = {
   id: string;
   slug: string;
@@ -186,7 +187,11 @@ export async function fetchBlogPost(
   let lastError = "Post not found";
   for (const url of sources) {
     try {
-      const res = await fetch(url, { headers: adminHeaders(adminKey) });
+      const res = await fetchWithTimeout(
+        url,
+        { headers: adminHeaders(adminKey) },
+        15_000
+      );
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Post API unavailable";
@@ -219,7 +224,11 @@ export async function fetchBlogList(opts?: {
   let lastError = "Could not load blog";
   for (const url of sources) {
     try {
-      const res = await fetch(url, { headers: adminHeaders(opts?.adminKey) });
+      const res = await fetchWithTimeout(
+        url,
+        { headers: adminHeaders(opts?.adminKey) },
+        15_000
+      );
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) continue;
       const data = await res.json().catch(() => ({}));
@@ -239,11 +248,11 @@ export async function createBlogPost(
   payload: Record<string, unknown>,
   adminKey: string
 ) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify(payload),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Create failed");
@@ -255,11 +264,11 @@ export async function updateBlogPost(
   payload: Record<string, unknown>,
   adminKey: string
 ) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({ ...payload, action: "update" }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Update failed");
@@ -268,11 +277,11 @@ export async function updateBlogPost(
 }
 
 export async function deleteBlogPost(id: string, adminKey: string) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({ action: "delete", id }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Delete failed");
@@ -290,7 +299,7 @@ export async function uploadBlogImage(
     reader.onerror = () => reject(new Error("Could not read file"));
     reader.readAsDataURL(file);
   });
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({
@@ -299,7 +308,7 @@ export async function uploadBlogImage(
       contentType: file.type,
       filename: file.name,
     }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Upload failed");
@@ -342,11 +351,11 @@ export async function postBlogReply(
   let lastError = "Could not post reply";
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, {
+      const res = await fetchWithTimeout(src.url, {
         method: "POST",
         headers,
         body: src.body,
-      });
+      }, 20_000);
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Reply API unavailable";
@@ -394,11 +403,11 @@ export async function deleteBlogReply(
   let lastError = "Could not delete reply";
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, {
+      const res = await fetchWithTimeout(src.url, {
         method: "POST",
         headers: adminHeaders(adminKey),
         body: src.body,
-      });
+      }, 20_000);
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Delete API unavailable";

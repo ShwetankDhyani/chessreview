@@ -174,13 +174,40 @@ let workerInstance: Worker | null = null;
 const pendingCallbacks = new Map<string, (result: EvalResult) => void>();
 const pendingFens = new Map<string, string>();
 
-function getWorker(): Worker {
-  if (!workerInstance) {
-    workerInstance = new Worker(
+/**
+ * Settle every outstanding request when the worker dies.
+ *
+ * A crashed worker never replies, so each caller would otherwise wait out its
+ * own timeout in turn. Resolving with a neutral eval keeps the review moving
+ * and drops the instance so the next call rebuilds it.
+ */
+function failAllPendingEvals(reason: string): void {
+  const callbacks = [...pendingCallbacks.values()];
+  pendingCallbacks.clear();
+  pendingFens.clear();
+  try {
+    workerInstance?.terminate();
+  } catch {
+    /* already gone */
+  }
+  workerInstance = null;
+
+  if (callbacks.length > 0) {
+    console.warn(`[stockfish] eval worker unavailable (${reason})`);
+  }
+  for (const cb of callbacks) {
+    cb({ cp: 0, depth: 0, source: "local" });
+  }
+}
+
+function getWorker(): Worker | null {
+  if (workerInstance) return workerInstance;
+  try {
+    const created = new Worker(
       new URL("./stockfish.worker.ts", import.meta.url),
       { type: "module" }
     );
-    workerInstance.onmessage = (e) => {
+    created.onmessage = (e) => {
       const { id, cp, mate, depth, bestMove, pv } = e.data;
       const cb = pendingCallbacks.get(id);
       const fen = pendingFens.get(id);
@@ -198,8 +225,14 @@ function getWorker(): Worker {
         pendingFens.delete(id);
       }
     };
+    created.onerror = () => failAllPendingEvals("runtime error");
+    created.onmessageerror = () => failAllPendingEvals("message decode error");
+    workerInstance = created;
+    return workerInstance;
+  } catch {
+    // Workers unsupported or blocked by policy.
+    return null;
   }
-  return workerInstance;
 }
 
 let idCounter = 0;
@@ -223,12 +256,15 @@ export async function evalWithStockfish(
 ): Promise<EvalResult> {
   const worker = getWorker();
   const id = `sf_${++idCounter}`;
+  const neutral: EvalResult = { cp: 0, depth: 0, source: "local" };
+
+  if (!worker) return neutral;
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       pendingCallbacks.delete(id);
       pendingFens.delete(id);
-      resolve({ cp: 0, depth: 0, source: "local" });
+      resolve(neutral);
     }, timeoutMs);
 
     pendingFens.set(id, fen);
@@ -236,7 +272,13 @@ export async function evalWithStockfish(
       clearTimeout(timer);
       resolve(result);
     });
-    worker.postMessage({ id, fen, depth });
+    try {
+      worker.postMessage({ id, fen, depth });
+    } catch {
+      clearTimeout(timer);
+      failAllPendingEvals("postMessage failed");
+      resolve(neutral);
+    }
   });
 }
 
