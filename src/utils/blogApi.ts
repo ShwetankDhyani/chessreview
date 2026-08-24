@@ -1,3 +1,5 @@
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./safeStorage";
+import { fetchWithTimeout } from "./netRetry";
 export type BlogPostSummary = {
   id: string;
   slug: string;
@@ -49,11 +51,11 @@ export const MAX_REPLY_DEPTH = 5;
  */
 export function loadSessionAdminKey(): string {
   try {
-    const fromLocal = localStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+    const fromLocal = safeGetItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
     if (fromLocal) return fromLocal;
     const fromSession = sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
     if (fromSession) {
-      localStorage.setItem(ADMIN_KEY_STORAGE, fromSession);
+      safeSetItem(ADMIN_KEY_STORAGE, fromSession);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
       return fromSession;
     }
@@ -67,10 +69,10 @@ export function saveSessionAdminKey(key: string): void {
   const trimmed = key.trim();
   try {
     if (trimmed) {
-      localStorage.setItem(ADMIN_KEY_STORAGE, trimmed);
+      safeSetItem(ADMIN_KEY_STORAGE, trimmed);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
     } else {
-      localStorage.removeItem(ADMIN_KEY_STORAGE);
+      safeRemoveItem(ADMIN_KEY_STORAGE);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
     }
   } catch {
@@ -120,7 +122,7 @@ export function replyDepth(replies: BlogReply[], replyId: string): number {
 
 export function loadReplyName(): string {
   try {
-    return localStorage.getItem(REPLY_NAME_KEY) ?? "";
+    return safeGetItem(REPLY_NAME_KEY) ?? "";
   } catch {
     return "";
   }
@@ -128,7 +130,7 @@ export function loadReplyName(): string {
 
 export function saveReplyName(name: string) {
   try {
-    localStorage.setItem(REPLY_NAME_KEY, name.trim().slice(0, 40));
+    safeSetItem(REPLY_NAME_KEY, name.trim().slice(0, 40));
   } catch {
     /* ignore */
   }
@@ -136,7 +138,7 @@ export function saveReplyName(name: string) {
 
 export function loadOwnedReplyTokens(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(REPLY_TOKEN_KEY);
+    const raw = safeGetItem(REPLY_TOKEN_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, string>;
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -150,7 +152,7 @@ export function rememberReplyToken(replyId: string, deleteToken: string) {
   try {
     const map = loadOwnedReplyTokens();
     map[replyId] = deleteToken;
-    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+    safeSetItem(REPLY_TOKEN_KEY, JSON.stringify(map));
   } catch {
     /* ignore */
   }
@@ -160,7 +162,7 @@ export function forgetReplyToken(replyId: string) {
   try {
     const map = loadOwnedReplyTokens();
     delete map[replyId];
-    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+    safeSetItem(REPLY_TOKEN_KEY, JSON.stringify(map));
   } catch {
     /* ignore */
   }
@@ -185,7 +187,11 @@ export async function fetchBlogPost(
   let lastError = "Post not found";
   for (const url of sources) {
     try {
-      const res = await fetch(url, { headers: adminHeaders(adminKey) });
+      const res = await fetchWithTimeout(
+        url,
+        { headers: adminHeaders(adminKey) },
+        15_000
+      );
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Post API unavailable";
@@ -218,7 +224,11 @@ export async function fetchBlogList(opts?: {
   let lastError = "Could not load blog";
   for (const url of sources) {
     try {
-      const res = await fetch(url, { headers: adminHeaders(opts?.adminKey) });
+      const res = await fetchWithTimeout(
+        url,
+        { headers: adminHeaders(opts?.adminKey) },
+        15_000
+      );
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) continue;
       const data = await res.json().catch(() => ({}));
@@ -238,11 +248,11 @@ export async function createBlogPost(
   payload: Record<string, unknown>,
   adminKey: string
 ) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify(payload),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Create failed");
@@ -254,11 +264,11 @@ export async function updateBlogPost(
   payload: Record<string, unknown>,
   adminKey: string
 ) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({ ...payload, action: "update" }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Update failed");
@@ -267,11 +277,11 @@ export async function updateBlogPost(
 }
 
 export async function deleteBlogPost(id: string, adminKey: string) {
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({ action: "delete", id }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Delete failed");
@@ -289,7 +299,7 @@ export async function uploadBlogImage(
     reader.onerror = () => reject(new Error("Could not read file"));
     reader.readAsDataURL(file);
   });
-  const res = await fetch("/api/blog", {
+  const res = await fetchWithTimeout("/api/blog", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify({
@@ -298,7 +308,7 @@ export async function uploadBlogImage(
       contentType: file.type,
       filename: file.name,
     }),
-  });
+  }, 20_000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Upload failed");
@@ -341,11 +351,11 @@ export async function postBlogReply(
   let lastError = "Could not post reply";
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, {
+      const res = await fetchWithTimeout(src.url, {
         method: "POST",
         headers,
         body: src.body,
-      });
+      }, 20_000);
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Reply API unavailable";
@@ -393,11 +403,11 @@ export async function deleteBlogReply(
   let lastError = "Could not delete reply";
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, {
+      const res = await fetchWithTimeout(src.url, {
         method: "POST",
         headers: adminHeaders(adminKey),
         body: src.body,
-      });
+      }, 20_000);
       const ct = res.headers.get("content-type") || "";
       if (!ct.includes("application/json")) {
         lastError = "Delete API unavailable";

@@ -2,13 +2,14 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { fetchBlogList, type BlogPostSummary } from "../utils/blogApi";
 import { fetchSiteSettings } from "../utils/siteSettings";
+import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 
 /** Per-slug dismiss so a new top post can resurface. */
 const DISMISS_KEY = "cr_home_news_dismissed";
 
 function readDismissedSlug(): string | null {
   try {
-    return localStorage.getItem(DISMISS_KEY);
+    return safeGetItem(DISMISS_KEY);
   } catch {
     return null;
   }
@@ -62,7 +63,7 @@ export function LatestBlogNews({ className = "" }: LatestBlogNewsProps) {
     e.preventDefault();
     e.stopPropagation();
     try {
-      localStorage.setItem(DISMISS_KEY, post.slug);
+      safeSetItem(DISMISS_KEY, post.slug);
     } catch {
       /* ignore */
     }

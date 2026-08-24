@@ -1,4 +1,5 @@
 import type { AnalyzedMove, ReviewResult, ReviewSummary } from "../types";
+import { fetchWithTimeout } from "./netRetry";
 
 export interface SavedReviewListItem {
   id: string;
@@ -32,8 +33,11 @@ interface SaveReviewPayload {
   run: ReviewResult["run"] | null;
 }
 
+/** Saved-review calls block user actions, so they need a hard ceiling. */
+const SAVED_REVIEW_TIMEOUT_MS = 20_000;
+
 async function readJson(url: string, init?: RequestInit) {
-  const res = await fetch(url, init);
+  const res = await fetchWithTimeout(url, init, SAVED_REVIEW_TIMEOUT_MS);
   let data: any = null;
   try {
     data = await res.json();

@@ -1,3 +1,4 @@
+import { safeGetItem, safeSetItem } from "./safeStorage";
 /** Adaptive review duration prediction from recent completed reviews. */
 
 export const TIMING_SAMPLE_WINDOW = 120;
@@ -328,7 +329,7 @@ export function predictReviewDurationMs(
 
 export function loadLocalTimingSamples(): LocalTimingSample[] {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const raw = safeGetItem(LOCAL_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as LocalTimingSample[];
     return Array.isArray(parsed) ? parsed.filter(validSample) : [];
@@ -342,7 +343,7 @@ export function appendLocalTimingSample(sample: LocalTimingSample): void {
   try {
     const prev = loadLocalTimingSamples();
     const next = [sample, ...prev].slice(0, LOCAL_TIMING_MAX);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(next));
+    safeSetItem(LOCAL_STORAGE_KEY, JSON.stringify(next));
   } catch {
     /* ignore quota */
   }

@@ -179,6 +179,39 @@ export class Deadline {
   }
 }
 
+/**
+ * A single fetch that cannot outlive `timeoutMs`.
+ *
+ * For endpoints where retrying is not appropriate (writes, one-shot reads) but
+ * an unbounded wait is still unacceptable — the browser's own timeout can be
+ * minutes, during which the UI simply looks stuck.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit | undefined,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("Timeout", "AbortError")),
+    Math.max(1, timeoutMs)
+  );
+  const linked = linkSignals(init?.signal, controller.signal);
+
+  try {
+    return await fetch(url, { ...init, signal: linked.signal });
+  } catch (error) {
+    // Distinguish our deadline from the caller cancelling.
+    if (isAbortError(error) && !init?.signal?.aborted) {
+      throw new TimeoutError("Request timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    linked.dispose();
+  }
+}
+
 export interface RetryingFetchOptions extends Omit<RequestInit, "signal"> {
   /** Total budget for the whole operation, including retries and backoff. */
   timeoutMs?: number;

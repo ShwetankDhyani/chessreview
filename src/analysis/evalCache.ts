@@ -93,6 +93,21 @@ export function batchCacheIsUsable(
 /**
  * Fill only missing FENs via WASM MultiPV — never re-analyze the whole game.
  */
+export interface FillMissingOptions {
+  onProgress?: (done: number, total: number) => void;
+  /** User cancellation; stops before the next position. */
+  signal?: AbortSignal | null;
+  /**
+   * Wall-clock ceiling for the whole backfill.
+   *
+   * Positions are analysed one at a time and each may take up to its own
+   * timeout, so a long game could otherwise keep going for hours. Stopping
+   * early leaves those positions unanalysed, which the review already renders
+   * as unverified rather than treating as an error.
+   */
+  budgetMs?: number;
+}
+
 export async function fillMissingWithWasm(
   cache: Map<string, PositionAnalysis>,
   requiredFens: string[],
@@ -100,17 +115,32 @@ export async function fillMissingWithWasm(
   multiPv: number,
   analyzePositionMultiPv: (
     fen: string,
-    opts: { depth: number; multiPv: number }
+    opts: {
+      depth: number;
+      multiPv: number;
+      signal?: AbortSignal | null;
+    }
   ) => Promise<PositionAnalysis>,
-  onProgress?: (done: number, total: number) => void
+  options: FillMissingOptions | ((done: number, total: number) => void) = {}
 ): Promise<void> {
+  const opts: FillMissingOptions =
+    typeof options === "function" ? { onProgress: options } : options;
+  const { onProgress, signal, budgetMs } = opts;
+
   const missing = requiredFens.filter((fen) => !cache.has(fen));
+  const endsAt =
+    budgetMs != null && budgetMs > 0 ? Date.now() + budgetMs : null;
+
   let done = 0;
   for (const fen of missing) {
+    if (signal?.aborted) break;
+    if (endsAt != null && Date.now() >= endsAt) break;
+
     try {
       const analysis = await analyzePositionMultiPv(fen, {
         depth,
         multiPv,
+        signal,
       });
       if (analysis.lines.length > 0) cache.set(fen, analysis);
     } catch {

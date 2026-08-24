@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   computeBackoffMs,
   Deadline,
+  fetchWithTimeout,
   HttpStatusError,
   isTransientStatus,
   linkSignals,
@@ -242,6 +243,24 @@ describe("retryingFetch", () => {
     expect(observed?.aborted).toBe(true);
   });
 
+  it("surfaces a caller abort during backoff", async () => {
+    const controller = new AbortController();
+    const fetchImpl = vi.fn().mockResolvedValue(statusResponse(503));
+
+    const pending = retryingFetch("https://example.test/l", {
+      fetchImpl,
+      signal: controller.signal,
+      attempts: 5,
+      baseBackoffMs: 200,
+      maxBackoffMs: 200,
+      timeoutMs: 5_000,
+    });
+    setTimeout(() => controller.abort(), 10);
+
+    const err = await pending.catch((e) => e);
+    expect((err as Error).name).toBe("AbortError");
+  });
+
   it("propagates caller cancellation as an AbortError", async () => {
     const controller = new AbortController();
     const fetchImpl = vi.fn((_url: string, init?: RequestInit) => {
@@ -262,5 +281,62 @@ describe("retryingFetch", () => {
     const err = await pending.catch((e) => e);
     expect(err).toBeInstanceOf(DOMException);
     expect((err as DOMException).name).toBe("AbortError");
+  });
+});
+
+describe("fetchWithTimeout", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the response when it arrives in time", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: 1 })));
+    const res = await fetchWithTimeout("https://example.test/a", undefined, 500);
+    expect(res.status).toBe(200);
+  });
+
+  it("aborts and throws TimeoutError when the deadline passes", async () => {
+    let observed: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        observed = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          observed?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError"))
+          );
+        });
+      })
+    );
+
+    await expect(
+      fetchWithTimeout("https://example.test/b", undefined, 20)
+    ).rejects.toBeInstanceOf(TimeoutError);
+    expect(observed?.aborted).toBe(true);
+  });
+
+  it("keeps a caller abort distinguishable from a timeout", async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError"))
+          );
+        });
+      })
+    );
+
+    const pending = fetchWithTimeout(
+      "https://example.test/c",
+      { signal: controller.signal },
+      5_000
+    );
+    controller.abort();
+
+    const err = await pending.catch((e) => e);
+    expect(err).not.toBeInstanceOf(TimeoutError);
+    expect((err as Error).name).toBe("AbortError");
   });
 });

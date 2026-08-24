@@ -1,5 +1,7 @@
 /** Lichess endgame tablebase probe (≤7 pieces). */
 
+import { fetchWithTimeout } from "./netRetry";
+
 export interface TablebaseMove {
   uci: string;
   san?: string;
@@ -105,10 +107,12 @@ export async function probeTablebase(
 ): Promise<TablebaseResult | null> {
   if (!isTablebasePosition(fen)) return null;
   const url = `${TB_URL}?fen=${encodeURIComponent(fen)}`;
-  const res = await fetch(url, {
-    signal,
-    headers: { Accept: "application/json" },
-  });
+  // Tablebase data is a bonus panel; never let it stall the move view.
+  const res = await fetchWithTimeout(
+    url,
+    { signal, headers: { Accept: "application/json" } },
+    8_000
+  );
   if (!res.ok) return null;
   const data = (await res.json()) as {
     category?: string;

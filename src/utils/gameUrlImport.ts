@@ -8,6 +8,7 @@ import {
   INVALID_GAME_URL_MSG,
   UNSUPPORTED_URL_MSG,
 } from "./gameUrlHosts";
+import { fetchWithTimeout } from "./netRetry";
 
 export type GameUrlPlatform = "lichess" | "chesscom";
 
@@ -99,11 +100,11 @@ export async function fetchPgnFromGameUrl(
     throw new Error(INVALID_GAME_URL_MSG);
   }
 
-  const res = await fetch("/api/game-import", {
+  const res = await fetchWithTimeout("/api/game-import", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url: trimmed }),
-  });
+  }, 25_000);
 
   let data: { pgn?: string; label?: string; error?: string };
   const raw = await res.text();

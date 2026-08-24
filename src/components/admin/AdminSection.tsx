@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { hapticSelection } from "../../utils/chessSounds";
+import { safeGetItem, safeSetItem } from "../../utils/safeStorage";
 
 type Props = {
   id: string;
@@ -22,7 +23,7 @@ export function AdminSection({
   const storageKey = `cr_admin_section_${id}`;
   const [open, setOpen] = useState(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
+      const saved = safeGetItem(storageKey);
       if (saved === "1") return true;
       if (saved === "0") return false;
     } catch {
@@ -34,7 +35,7 @@ export function AdminSection({
 
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, open ? "1" : "0");
+      safeSetItem(storageKey, open ? "1" : "0");
     } catch {
       /* ignore */
     }
