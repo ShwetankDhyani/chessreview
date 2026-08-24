@@ -18,12 +18,13 @@ import {
 } from "../utils/evalDisplay";
 import { getMeta } from "../utils/classificationMeta";
 import { hapticTap, hapticToggle } from "../utils/chessSounds";
+import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 
 const ACCURACY_EXCLUDE_KEY = "cr_accuracy_exclude_book_forced";
 
 function readExcludePref(): boolean {
   try {
-    return localStorage.getItem(ACCURACY_EXCLUDE_KEY) === "1";
+    return safeGetItem(ACCURACY_EXCLUDE_KEY) === "1";
   } catch {
     return false;
   }
@@ -272,7 +273,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem(
+      safeSetItem(
         ACCURACY_EXCLUDE_KEY,
         excludeBookAndForced ? "1" : "0"
       );

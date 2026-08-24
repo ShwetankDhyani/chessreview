@@ -154,6 +154,13 @@ export function normalizeAnalysisError(error: unknown): AppError {
 
 export function normalizeShareError(error: unknown): AppError {
   const raw = (extractMessage(error) ?? "").toLowerCase();
+  if (errorName(error) === "InvalidReviewPayloadError") {
+    return {
+      code: "SHARE_CORRUPT",
+      message: "This shared review is incomplete or damaged.",
+      retryable: false,
+    };
+  }
   if (raw.includes("not found") || raw.includes("invalid")) {
     return {
       code: "SHARE_NOT_FOUND",

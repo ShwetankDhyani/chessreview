@@ -15,6 +15,13 @@ import { InlineErrorNotice } from "./InlineErrorNotice";
 import { hapticSelection, hapticSoft, hapticTap } from "../utils/chessSounds";
 import { setChesscomBackoffListener } from "../utils/chesscomClient";
 import {
+  safeGetItem,
+  safeGetJson,
+  safeRemoveItem,
+  safeSetItem,
+} from "../utils/safeStorage";
+import { normalizeCachedGames } from "../utils/reviewPayload";
+import {
   normalizeGameLoadError,
   trackAppError,
   type AppError,
@@ -34,7 +41,7 @@ type GamesCacheMeta = { user: string; platform: Platform; at: number };
 
 function readGamesCacheMeta(): GamesCacheMeta | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_GAMES_META);
+    const raw = safeGetItem(STORAGE_KEY_GAMES_META);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<GamesCacheMeta>;
     if (typeof parsed?.user !== "string" || typeof parsed?.at !== "number") {
@@ -52,7 +59,7 @@ function readGamesCacheMeta(): GamesCacheMeta | null {
 
 function writeGamesCacheMeta(user: string, platform: Platform): void {
   try {
-    localStorage.setItem(
+    safeSetItem(
       STORAGE_KEY_GAMES_META,
       JSON.stringify({ user, platform, at: Date.now() } satisfies GamesCacheMeta)
     );
@@ -103,16 +110,16 @@ export const GameList: React.FC<GameListProps> = ({
   onOpenActiveReview,
 }) => {
   const [platform, setPlatform] = useState<Platform>(
-    () => (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom"
+    () => (safeGetItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom"
   );
   const [inputVal, setInputVal] = useState(
-    () => localStorage.getItem(STORAGE_KEY_USER) ?? ""
+    () => safeGetItem(STORAGE_KEY_USER) ?? ""
   );
   const [games, setGames] = useState<GameListItem[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_GAMES);
-      return raw ? (JSON.parse(raw) as GameListItem[]) : [];
-    } catch { return []; }
+    // Rows call .toLowerCase() on player names during render, so an entry with
+    // a missing field would crash the Games tab on every paint.
+    const raw = safeGetJson<unknown>(STORAGE_KEY_GAMES, []);
+    return normalizeCachedGames(raw) as unknown as GameListItem[];
   });
   const [loading, setLoading] = useState(false);
   /** Quiet refresh behind already-visible games; never blocks the list. */
@@ -166,7 +173,7 @@ export const GameList: React.FC<GameListProps> = ({
 
   const [stats, setStats] = useState<{ bullet?: number, blitz?: number, rapid?: number } | null>(() => {
     try {
-      const raw = localStorage.getItem("cr_stats");
+      const raw = safeGetItem("cr_stats");
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
@@ -178,7 +185,7 @@ export const GameList: React.FC<GameListProps> = ({
   const [ratingSort, setRatingSort]         = useState<RatingSort>("none");
 
   // Persist platform selection
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_PLAT, platform); }, [platform]);
+  useEffect(() => { safeSetItem(STORAGE_KEY_PLAT, platform); }, [platform]);
 
   /**
    * On mount, decide between showing cache, refreshing quietly, or loading.
@@ -188,10 +195,10 @@ export const GameList: React.FC<GameListProps> = ({
    * with no indication anything was out of date.
    */
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_USER);
+    const saved = safeGetItem(STORAGE_KEY_USER);
     if (!saved) return;
     const savedPlat =
-      (localStorage.getItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom";
+      (safeGetItem(STORAGE_KEY_PLAT) as Platform) ?? "chesscom";
 
     const meta = readGamesCacheMeta();
     const cacheUsable =
@@ -266,9 +273,9 @@ export const GameList: React.FC<GameListProps> = ({
           if (gen !== loadGenRef.current || signal.aborted) return;
           setStats(newStats);
           if (newStats) {
-            localStorage.setItem("cr_stats", JSON.stringify(newStats));
+            safeSetItem("cr_stats", JSON.stringify(newStats));
           } else {
-            localStorage.removeItem("cr_stats");
+            safeRemoveItem("cr_stats");
           }
         } catch {
           /* ratings are optional */
@@ -317,9 +324,9 @@ export const GameList: React.FC<GameListProps> = ({
       setGamesError(null);
       setBackoffNotice(null);
 
-      localStorage.setItem(STORAGE_KEY_USER, name);
-      localStorage.setItem(STORAGE_KEY_PLAT, plat);
-      localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(list));
+      safeSetItem(STORAGE_KEY_USER, name);
+      safeSetItem(STORAGE_KEY_PLAT, plat);
+      safeSetItem(STORAGE_KEY_GAMES, JSON.stringify(list));
       writeGamesCacheMeta(name, plat);
 
       // Games are on screen now; ratings can arrive whenever they arrive.
@@ -397,7 +404,7 @@ export const GameList: React.FC<GameListProps> = ({
     );
   };
 
-  const storedUser = localStorage.getItem(STORAGE_KEY_USER);
+  const storedUser = safeGetItem(STORAGE_KEY_USER);
 
   // Derive filtered + sorted games
   const activeUser = storedUser ?? inputVal.trim();

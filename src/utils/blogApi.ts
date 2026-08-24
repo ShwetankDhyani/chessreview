@@ -1,3 +1,4 @@
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./safeStorage";
 export type BlogPostSummary = {
   id: string;
   slug: string;
@@ -49,11 +50,11 @@ export const MAX_REPLY_DEPTH = 5;
  */
 export function loadSessionAdminKey(): string {
   try {
-    const fromLocal = localStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
+    const fromLocal = safeGetItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
     if (fromLocal) return fromLocal;
     const fromSession = sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
     if (fromSession) {
-      localStorage.setItem(ADMIN_KEY_STORAGE, fromSession);
+      safeSetItem(ADMIN_KEY_STORAGE, fromSession);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
       return fromSession;
     }
@@ -67,10 +68,10 @@ export function saveSessionAdminKey(key: string): void {
   const trimmed = key.trim();
   try {
     if (trimmed) {
-      localStorage.setItem(ADMIN_KEY_STORAGE, trimmed);
+      safeSetItem(ADMIN_KEY_STORAGE, trimmed);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
     } else {
-      localStorage.removeItem(ADMIN_KEY_STORAGE);
+      safeRemoveItem(ADMIN_KEY_STORAGE);
       sessionStorage.removeItem(ADMIN_KEY_STORAGE);
     }
   } catch {
@@ -120,7 +121,7 @@ export function replyDepth(replies: BlogReply[], replyId: string): number {
 
 export function loadReplyName(): string {
   try {
-    return localStorage.getItem(REPLY_NAME_KEY) ?? "";
+    return safeGetItem(REPLY_NAME_KEY) ?? "";
   } catch {
     return "";
   }
@@ -128,7 +129,7 @@ export function loadReplyName(): string {
 
 export function saveReplyName(name: string) {
   try {
-    localStorage.setItem(REPLY_NAME_KEY, name.trim().slice(0, 40));
+    safeSetItem(REPLY_NAME_KEY, name.trim().slice(0, 40));
   } catch {
     /* ignore */
   }
@@ -136,7 +137,7 @@ export function saveReplyName(name: string) {
 
 export function loadOwnedReplyTokens(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(REPLY_TOKEN_KEY);
+    const raw = safeGetItem(REPLY_TOKEN_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, string>;
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -150,7 +151,7 @@ export function rememberReplyToken(replyId: string, deleteToken: string) {
   try {
     const map = loadOwnedReplyTokens();
     map[replyId] = deleteToken;
-    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+    safeSetItem(REPLY_TOKEN_KEY, JSON.stringify(map));
   } catch {
     /* ignore */
   }
@@ -160,7 +161,7 @@ export function forgetReplyToken(replyId: string) {
   try {
     const map = loadOwnedReplyTokens();
     delete map[replyId];
-    localStorage.setItem(REPLY_TOKEN_KEY, JSON.stringify(map));
+    safeSetItem(REPLY_TOKEN_KEY, JSON.stringify(map));
   } catch {
     /* ignore */
   }

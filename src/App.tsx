@@ -40,6 +40,12 @@ import {
 import { formatChessMoveCounter } from "./utils/pgnPlies";
 import { chesscomFetch, chesscomPlayerUrl } from "./utils/chesscomClient";
 import {
+  safeGetItem,
+  safeRemoveItem,
+  safeSetItem,
+} from "./utils/safeStorage";
+import { normalizeReviewPayload } from "./utils/reviewPayload";
+import {
   HttpStatusError,
   NotFoundError,
   retryingFetch,
@@ -246,7 +252,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   );
 
   const [depth, setDepth] = useState<number>(() => {
-    const saved = localStorage.getItem("cr_depth");
+    const saved = safeGetItem("cr_depth");
     const parsed = parseInt(saved ?? "14", 10);
     return Number.isFinite(parsed) ? Math.max(14, parsed) : 14;
   });
@@ -369,14 +375,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const loadProfiles = (): ChessProfile[] => {
     try {
-      const raw = localStorage.getItem(PROFILES_KEY);
+      const raw = safeGetItem(PROFILES_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   };
 
   const [profiles, setProfiles] = useState<ChessProfile[]>(loadProfiles);
   const [activeProfileIdx, setActiveProfileIdx] = useState<number>(() => {
-    const idx = parseInt(localStorage.getItem(ACTIVE_PROFILE_KEY) ?? "0", 10);
+    const idx = parseInt(safeGetItem(ACTIVE_PROFILE_KEY) ?? "0", 10);
     return idx;
   });
   const [showAddProfile, setShowAddProfile] = useState(false);
@@ -413,16 +419,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     // Update the ref first so listeners triggered below observe the new list.
     profilesRef.current = ps;
     setProfiles(ps);
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(ps));
+    safeSetItem(PROFILES_KEY, JSON.stringify(ps));
     if (activeIdx !== undefined) {
       setActiveProfileIdx(activeIdx);
-      localStorage.setItem(ACTIVE_PROFILE_KEY, String(activeIdx));
+      safeSetItem(ACTIVE_PROFILE_KEY, String(activeIdx));
     }
     // Sync the legacy keys so GameList picks it up
     const active = ps[activeIdx ?? activeProfileIdx];
     if (active) {
-      localStorage.setItem("cr_username", active.name);
-      localStorage.setItem("cr_platform", active.platform);
+      safeSetItem("cr_username", active.name);
+      safeSetItem("cr_platform", active.platform);
     }
     // Fire storage event for same-tab listeners
     window.dispatchEvent(new Event("storage"));
@@ -431,8 +437,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   // Migrate legacy single-profile to new system on first load
   useEffect(() => {
     if (profiles.length === 0) {
-      const name = localStorage.getItem("cr_username");
-      const platform = (localStorage.getItem("cr_platform") ?? "chesscom") as "chesscom" | "lichess";
+      const name = safeGetItem("cr_username");
+      const platform = (safeGetItem("cr_platform") ?? "chesscom") as "chesscom" | "lichess";
       if (name) {
         const migrated = [{ name, platform }];
         saveProfiles(migrated, 0);
@@ -444,15 +450,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const switchProfile = (idx: number) => {
     if (idx === activeProfileIdx) return;
     setActiveProfileIdx(idx);
-    localStorage.setItem(ACTIVE_PROFILE_KEY, String(idx));
+    safeSetItem(ACTIVE_PROFILE_KEY, String(idx));
     const p = profiles[idx];
     if (p) {
-      localStorage.setItem("cr_username", p.name);
-      localStorage.setItem("cr_platform", p.platform);
+      safeSetItem("cr_username", p.name);
+      safeSetItem("cr_platform", p.platform);
       // Clear cached games and stats so GameList reloads for the new profile
-      localStorage.removeItem("cr_games");
-      localStorage.removeItem("cr_games_meta");
-      localStorage.removeItem("cr_stats");
+      safeRemoveItem("cr_games");
+      safeRemoveItem("cr_games_meta");
+      safeRemoveItem("cr_stats");
       window.dispatchEvent(new Event("storage"));
       // Force GameList to reload
       window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: p }));
@@ -611,8 +617,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setAddProfileError(null);
     notifySuccess();
     // Clear games cache and trigger reload
-    localStorage.removeItem("cr_games");
-    localStorage.removeItem("cr_games_meta");
+    safeRemoveItem("cr_games");
+    safeRemoveItem("cr_games_meta");
     window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: { name: finalName, platform } }));
   };
 
@@ -625,16 +631,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     saveProfiles(updated, newActiveIdx);
     
     if (updated.length === 0) {
-      localStorage.removeItem("cr_username");
-      localStorage.removeItem("cr_platform");
-      localStorage.removeItem("cr_games");
-      localStorage.removeItem("cr_games_meta");
-      localStorage.removeItem("cr_stats");
+      safeRemoveItem("cr_username");
+      safeRemoveItem("cr_platform");
+      safeRemoveItem("cr_games");
+      safeRemoveItem("cr_games_meta");
+      safeRemoveItem("cr_stats");
       window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: null }));
     } else if (isRemovingActive) {
-      localStorage.removeItem("cr_games");
-      localStorage.removeItem("cr_games_meta");
-      localStorage.removeItem("cr_stats");
+      safeRemoveItem("cr_games");
+      safeRemoveItem("cr_games_meta");
+      safeRemoveItem("cr_stats");
       window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: updated[newActiveIdx] }));
     }
   };
@@ -662,7 +668,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
   const handleDepthChange = useCallback((d: number) => {
     setDepth(d);
-    localStorage.setItem("cr_depth", String(d));
+    safeSetItem("cr_depth", String(d));
     // depth < 16 implies cloud-only fallback is fine; only block local for very shallow
     setCloudOnlyMode(d <= 12);
     hapticSelection();
@@ -1145,7 +1151,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   );
 
   const dismissWelcome = useCallback(() => {
-    localStorage.setItem("cr_welcome_dismissed", "1");
+    safeSetItem("cr_welcome_dismissed", "1");
     setShowWelcome(false);
     hapticSoft();
   }, []);
@@ -1447,10 +1453,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           backendPolicy: "full-depth" as const,
           pgnHash: "saved",
         };
+        // Cloud-saved reviews may predate the current schema or have been
+        // written partially; validate before handing them to the renderer.
+        const safeSaved = normalizeReviewPayload(saved);
         const loadedResult: ReviewResult = {
-          moves: saved.moves,
-          summary: saved.summary,
-          run: saved.run ?? reviewResult?.run ?? fallbackRun,
+          moves: safeSaved.moves,
+          summary: safeSaved.summary,
+          run: safeSaved.run ?? reviewResult?.run ?? fallbackRun,
         };
         applyReviewResult(loadedResult, {
           pgn: saved.pgn,
@@ -1501,9 +1510,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       // React commits. Guard explicitly rather than relying on render timing.
       if (profileSyncBusyRef.current) return;
 
-      const name = localStorage.getItem("cr_username");
+      const name = safeGetItem("cr_username");
       if (!name) return;
-      const platform = (localStorage.getItem("cr_platform") ?? "chesscom") as
+      const platform = (safeGetItem("cr_platform") ?? "chesscom") as
         | "chesscom"
         | "lichess";
 
@@ -1710,7 +1719,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [mobileEvalGraphOpen, setMobileEvalGraphOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(
-    () => !localStorage.getItem("cr_welcome_dismissed")
+    () => !safeGetItem("cr_welcome_dismissed")
   );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);

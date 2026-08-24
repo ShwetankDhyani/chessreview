@@ -10,6 +10,7 @@ import { useReviewBoardSession } from "../hooks/useReviewBoardSession";
 import type { AnalyzedMove, ReviewRun, ReviewSummary } from "../types";
 import { InlineErrorNotice } from "../components/InlineErrorNotice";
 import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
+import { normalizeReviewPayload } from "../utils/reviewPayload";
 import { hapticSelection } from "../utils/chessSounds";
 
 type ShareTab = "game" | "stats";
@@ -168,12 +169,23 @@ export default function SharePage() {
           20000,
           "Share timeout"
         );
-        setMoves(data.moves);
-        setSummary(data.summary);
-        setPgn(data.pgn ?? "");
-        setWhiteName(data.whiteName);
-        setBlackName(data.blackName);
-        setReviewRun(data.run ?? null);
+        // Shared payloads come from storage that may predate the current
+        // schema or have been written partially; validate before rendering.
+        const safe = normalizeReviewPayload(data);
+        setMoves(safe.moves);
+        setSummary(safe.summary);
+        setPgn(typeof data.pgn === "string" ? data.pgn : "");
+        setWhiteName(
+          typeof data.whiteName === "string" && data.whiteName
+            ? data.whiteName
+            : "White"
+        );
+        setBlackName(
+          typeof data.blackName === "string" && data.blackName
+            ? data.blackName
+            : "Black"
+        );
+        setReviewRun(safe.run);
       } catch (e) {
         const normalized = normalizeShareError(e);
         trackAppError({

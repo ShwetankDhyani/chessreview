@@ -1,4 +1,5 @@
 import type { ReviewResult } from "../types";
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./safeStorage";
 
 type ProfileRef = { name: string; platform: "chesscom" | "lichess" } | null;
 
@@ -32,7 +33,7 @@ function reviewKey(profile: ProfileRef, pgn: string): string {
 
 function readRecords(): CachedReviewRecord[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeGetItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CachedReviewRecord[];
     return Array.isArray(parsed) ? parsed : [];
@@ -42,7 +43,7 @@ function readRecords(): CachedReviewRecord[] {
 }
 
 function writeRecords(records: CachedReviewRecord[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, MAX_RECORDS)));
+  safeSetItem(STORAGE_KEY, JSON.stringify(records.slice(0, MAX_RECORDS)));
 }
 
 export function loadSavedReview(profile: ProfileRef, pgn: string): ReviewResult | null {

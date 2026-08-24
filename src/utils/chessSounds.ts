@@ -1,3 +1,4 @@
+import { safeGetItem, safeSetItem } from "./safeStorage";
 /**
  * Sensory hierarchy:
  * - Navigation: lighter haptic
@@ -30,7 +31,7 @@ const prefsListeners = new Set<ChangeListener>();
 
 function readPref(key: string, fallback = true): boolean {
   try {
-    return localStorage.getItem(key) !== "off";
+    return safeGetItem(key) !== "off";
   } catch {
     return fallback;
   }
@@ -38,7 +39,7 @@ function readPref(key: string, fallback = true): boolean {
 
 function writePref(key: string, on: boolean): void {
   try {
-    localStorage.setItem(key, on ? "on" : "off");
+    safeSetItem(key, on ? "on" : "off");
   } catch {
     /* ignore */
   }
