@@ -31,6 +31,7 @@ function defaultState() {
 
 function normalizeHomeGamesNewsSlug(raw) {
   if (raw === "__auto__") return undefined;
+  if (raw === "__none__") return "__none__";
   if (raw === null) return null;
   if (typeof raw !== "string") return undefined;
   const slug = raw.trim();

@@ -7,6 +7,9 @@ import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 /** Per-slug dismiss so a new top post can resurface. */
 const DISMISS_KEY = "cr_home_news_dismissed";
 
+/** Standing home news when admin has not chosen another post. */
+export const HOME_APPEAL_NEWS_SLUG = "appeal-for-help";
+
 function readDismissedSlug(): string | null {
   try {
     return safeGetItem(DISMISS_KEY);
@@ -17,6 +20,24 @@ function readDismissedSlug(): string | null {
 
 interface LatestBlogNewsProps {
   className?: string;
+}
+
+function pickHomeNewsPost(
+  configured: string | null | undefined,
+  posts: BlogPostSummary[]
+): BlogPostSummary | undefined {
+  if (configured === "__none__") return undefined;
+
+  if (typeof configured === "string" && configured.length > 0) {
+    return posts.find((p) => p.slug === configured);
+  }
+
+  // Auto (undefined) or legacy null ("hide"): surface the standing appeal
+  // when present so home stays useful without an admin write.
+  const appeal = posts.find((p) => p.slug === HOME_APPEAL_NEWS_SLUG);
+  if (appeal) return appeal;
+  if (configured === null) return undefined;
+  return posts[0];
 }
 
 /**
@@ -36,15 +57,7 @@ export function LatestBlogNews({ className = "" }: LatestBlogNewsProps) {
         ]);
         if (cancelled || posts.length === 0) return;
 
-        const configured = settings.homeGamesNewsSlug;
-        if (configured === null) return;
-
-        let chosen: BlogPostSummary | undefined;
-        if (typeof configured === "string") {
-          chosen = posts.find((p) => p.slug === configured);
-        } else {
-          chosen = posts[0];
-        }
+        const chosen = pickHomeNewsPost(settings.homeGamesNewsSlug, posts);
         if (!chosen) return;
         if (readDismissedSlug() === chosen.slug) return;
         setPost(chosen);

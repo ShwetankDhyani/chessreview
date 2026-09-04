@@ -44,16 +44,18 @@ type HomeGamesNewsChoice = "__auto__" | "__none__" | string;
 function homeGamesNewsChoiceFromSettings(
   slug: string | null | undefined
 ): HomeGamesNewsChoice {
-  if (slug === null) return "__none__";
+  if (slug === "__none__") return "__none__";
+  // Legacy null used to mean hide; the standing appeal is the new default.
+  if (slug === null) return "appeal-for-help";
   if (typeof slug === "string" && slug.length > 0) return slug;
   return "__auto__";
 }
 
 function homeGamesNewsSlugFromChoice(
   choice: HomeGamesNewsChoice
-): string | null | "__auto__" {
+): string | null | "__auto__" | "__none__" {
   if (choice === "__auto__") return "__auto__";
-  if (choice === "__none__") return null;
+  if (choice === "__none__") return "__none__";
   return choice;
 }
 
@@ -381,8 +383,8 @@ export default function AdminPage() {
             </label>
             <p className="mt-0.5 text-[11px] leading-snug text-chess-muted">
               Which blog post shows above the game list on the home Games tab.
-              “Automatic” follows your blog pin order (same as the top post on
-              /blog). “None” hides it.
+              “Automatic” prefers Appeal for Help when present, otherwise the
+              top pinned blog post. “None” hides the banner.
             </p>
             <select
               id="home-games-news"
@@ -392,7 +394,7 @@ export default function AdminPage() {
               className="mt-2 w-full rounded-lg border border-chess-border bg-chess-panel px-2.5 py-2 text-[12px] text-chess-text outline-none focus:border-chess-accent/70 disabled:opacity-60"
             >
               <option value="__auto__">
-                Automatic — top of blog list (by pin)
+                Automatic — appeal, else top of blog
               </option>
               <option value="__none__">None — hide news banner</option>
               {blogPosts.map((post) => (

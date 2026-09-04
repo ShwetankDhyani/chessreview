@@ -1,7 +1,12 @@
 import { fetchWithTimeout } from "./netRetry";
 export type SiteSettings = {
   testingMode: boolean;
-  /** Missing = auto (top pinned post). Null = hidden. String = specific post slug. */
+  /**
+   * Missing = auto (prefer Appeal for Help, else top pinned post).
+   * Null (legacy) = same as auto for the standing appeal.
+   * "__none__" = hidden.
+   * String = specific post slug.
+   */
   homeGamesNewsSlug?: string | null;
 };
 
@@ -12,12 +17,16 @@ export type SiteSettingsPatch = Partial<
 function parseSiteSettings(data: Record<string, unknown>): SiteSettings {
   const settings: SiteSettings = { testingMode: !!data.testingMode };
   if ("homeGamesNewsSlug" in data) {
-    settings.homeGamesNewsSlug =
-      typeof data.homeGamesNewsSlug === "string"
-        ? data.homeGamesNewsSlug
-        : data.homeGamesNewsSlug === null
-          ? null
-          : null;
+    const raw = data.homeGamesNewsSlug;
+    if (raw === "__none__") {
+      settings.homeGamesNewsSlug = "__none__";
+    } else if (typeof raw === "string") {
+      settings.homeGamesNewsSlug = raw;
+    } else if (raw === null) {
+      settings.homeGamesNewsSlug = null;
+    } else {
+      settings.homeGamesNewsSlug = null;
+    }
   }
   return settings;
 }

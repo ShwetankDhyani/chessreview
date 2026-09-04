@@ -21,6 +21,10 @@ import {
   readBlogPinMap,
   setPostPinInMap,
 } from "./blogPins.mjs";
+import {
+  getStaticBlogPost,
+  mergeStaticBlogPosts,
+} from "./staticBlogPosts.mjs";
 
 function isWritableStore() {
   if (process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
@@ -100,7 +104,9 @@ export async function listBlogPosts({ includeDrafts = false, adminKey = "" } = {
     }
   }
   if (!data) data = { posts: fileListPosts({ includeDrafts }) };
-  const posts = (data.posts ?? []).filter((p) => !isReservedBlogSlug(p?.slug));
+  const posts = mergeStaticBlogPosts(
+    (data.posts ?? []).filter((p) => !isReservedBlogSlug(p?.slug))
+  );
   return {
     ...data,
     posts: await withPinsApplied(posts),
@@ -117,10 +123,20 @@ export async function getBlogPost(slug, { adminKey = "" } = {}) {
       if (adminKey) headers["X-Admin-Key"] = adminKey;
       data = await engineJson(`/blog/${encodeURIComponent(slug)}`, { headers });
     } catch (e) {
-      if (!isWritableStore()) throw e;
+      // Engine may not have shipped static posts; fall through to merge.
+      if (getStaticBlogPost(slug)) {
+        data = null;
+      } else if (!isWritableStore()) {
+        throw e;
+      }
     }
   }
   if (!data) data = fileGetPostBySlug(slug, { includeDrafts: !!adminKey });
+  if (!data?.post) {
+    const staticPost = getStaticBlogPost(slug);
+    if (!staticPost) return data;
+    data = { post: staticPost, replies: [] };
+  }
   if (!data?.post) return data;
   const [post] = await withPinsApplied([data.post]);
   return { ...data, post };
