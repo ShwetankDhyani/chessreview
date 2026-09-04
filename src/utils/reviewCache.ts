@@ -46,6 +46,16 @@ function writeRecords(records: CachedReviewRecord[]): void {
   safeSetItem(STORAGE_KEY, JSON.stringify(records.slice(0, MAX_RECORDS)));
 }
 
+/**
+ * How many reviews this browser has completed.
+ *
+ * Used as a "has this person actually got value yet?" signal, so we can hold
+ * back anything that would be presumptuous to show a first-time visitor.
+ */
+export function countCachedReviews(): number {
+  return readRecords().length;
+}
+
 export function loadSavedReview(profile: ProfileRef, pgn: string): ReviewResult | null {
   const key = reviewKey(profile, pgn);
   const hit = readRecords().find((r) => r.key === key);
