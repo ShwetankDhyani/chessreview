@@ -107,9 +107,7 @@ export function SupportAppeal({ className = "" }: SupportAppealProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z" />
-            <path d="M17 10h1.8a2.7 2.7 0 0 1 0 5.4H17" />
-            <path d="M8 3.2c-.5.9-.4 1.7.2 2.4M12.2 3c-.6 1-.5 1.9.2 2.6" />
+            <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
           </svg>
         </span>
 
@@ -135,7 +133,7 @@ export function SupportAppeal({ className = "" }: SupportAppealProps) {
               onClick={() => hapticSoft()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-chess-accent px-2.5 py-1.5 text-[11px] font-semibold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.97]"
             >
-              Buy us a coffee
+              Chip in
               <span aria-hidden>→</span>
             </a>
             <button
