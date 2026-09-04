@@ -1,9 +1,20 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { hapticSoft } from "../utils/chessSounds";
+import { countCachedReviews } from "../utils/reviewCache";
 import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 import { supportUrl } from "../utils/supportLinks";
 
 const DISMISS_KEY = "cr_support_appeal_dismissed_at";
+
+/**
+ * Reviews someone must have finished before we ask for anything.
+ *
+ * Asking a first-time visitor to donate is both presumptuous and ineffective —
+ * they have not seen what the site does yet, and on a fresh visit this would
+ * stack under the welcome banner as a second thing to dismiss. Waiting until
+ * the site has demonstrably helped keeps the copy honest.
+ */
+export const MIN_REVIEWS_BEFORE_APPEAL = 2;
 
 /**
  * How long a dismissal lasts.
@@ -13,6 +24,16 @@ const DISMISS_KEY = "cr_support_appeal_dismissed_at";
  * chased, and the appeal still reaches regulars eventually.
  */
 export const SUPPORT_APPEAL_SNOOZE_MS = 60 * 24 * 60 * 60 * 1000;
+
+/** Exported for tests: should the appeal be shown at all? */
+export function shouldShowAppeal(opts: {
+  dismissedAt: string | null;
+  reviewCount: number;
+  now?: number;
+}): boolean {
+  if (opts.reviewCount < MIN_REVIEWS_BEFORE_APPEAL) return false;
+  return !isSnoozed(opts.dismissedAt, opts.now ?? Date.now());
+}
 
 /** Exported for tests: is the appeal currently snoozed? */
 export function isSnoozed(
@@ -42,7 +63,12 @@ export function SupportAppeal({ className = "" }: SupportAppealProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(!isSnoozed(safeGetItem(DISMISS_KEY)));
+    setVisible(
+      shouldShowAppeal({
+        dismissedAt: safeGetItem(DISMISS_KEY),
+        reviewCount: countCachedReviews(),
+      })
+    );
   }, []);
 
   if (!visible) return null;

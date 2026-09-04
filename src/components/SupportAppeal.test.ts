@@ -1,7 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { isSnoozed, SUPPORT_APPEAL_SNOOZE_MS } from "./SupportAppeal";
+import {
+  isSnoozed,
+  MIN_REVIEWS_BEFORE_APPEAL,
+  shouldShowAppeal,
+  SUPPORT_APPEAL_SNOOZE_MS,
+} from "./SupportAppeal";
 
 const NOW = 1_800_000_000_000;
+
+describe("who sees the appeal", () => {
+  it("stays hidden until the site has actually helped someone", () => {
+    // A first-time visitor should never be asked for money, and would
+    // otherwise see this stacked under the welcome banner.
+    for (let reviews = 0; reviews < MIN_REVIEWS_BEFORE_APPEAL; reviews++) {
+      expect(
+        shouldShowAppeal({ dismissedAt: null, reviewCount: reviews, now: NOW })
+      ).toBe(false);
+    }
+  });
+
+  it("shows once enough reviews are done", () => {
+    expect(
+      shouldShowAppeal({
+        dismissedAt: null,
+        reviewCount: MIN_REVIEWS_BEFORE_APPEAL,
+        now: NOW,
+      })
+    ).toBe(true);
+  });
+
+  it("respects a dismissal even for a heavy user", () => {
+    expect(
+      shouldShowAppeal({
+        dismissedAt: String(NOW),
+        reviewCount: 50,
+        now: NOW,
+      })
+    ).toBe(false);
+  });
+
+  it("asks only after real use, never on a first visit", () => {
+    expect(MIN_REVIEWS_BEFORE_APPEAL).toBeGreaterThan(1);
+  });
+});
 
 describe("support appeal snooze", () => {
   it("shows when never dismissed", () => {
