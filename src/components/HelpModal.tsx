@@ -1,38 +1,13 @@
 import { useEffect, useState } from "react";
 import { hapticSoft } from "../utils/chessSounds";
+import {
+  CHESSCOM_MESSAGE_URL,
+  SUPPORT_EMAIL,
+  SUPPORT_MAILTO,
+  supportUrl,
+} from "../utils/supportLinks";
+export type { SupportLink } from "../utils/supportLinks";
 
-export interface SupportLink {
-  label: string;
-  href: string;
-}
-
-const SUPPORT_EMAIL = "admin@chessreview.org";
-const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
-const DEFAULT_KOFI = "https://ko-fi.com/shwetank";
-
-const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
-  {
-    label: "Buy me a coffee",
-    href: DEFAULT_KOFI,
-  },
-];
-
-const CHESSCOM_USERNAME = "ShwetankDhyani";
-const CHESSCOM_MESSAGE = `https://www.chess.com/messages/compose?to=${CHESSCOM_USERNAME}`;
-
-function parseSupportLinks(): SupportLink[] {
-  const raw = import.meta.env.VITE_SUPPORT_LINKS as string | undefined;
-  if (!raw?.trim()) return DEFAULT_SUPPORT_LINKS;
-  try {
-    const parsed = JSON.parse(raw) as SupportLink[];
-    const links = Array.isArray(parsed)
-      ? parsed.filter((l) => l?.label && l?.href)
-      : [];
-    return links.length > 0 ? links : DEFAULT_SUPPORT_LINKS;
-  } catch {
-    return DEFAULT_SUPPORT_LINKS;
-  }
-}
 
 function CoffeeMugIcon({ size = 40 }: { size?: number }) {
   return (
@@ -91,8 +66,7 @@ export function HelpModal({
 
   if (!open) return null;
 
-  const links = parseSupportLinks();
-  const supportHref = links[0]?.href ?? DEFAULT_KOFI;
+  const supportHref = supportUrl();
   const showSupport = tab === "support";
   const readOnlyContact = initial === "contact";
 
@@ -147,7 +121,7 @@ export function HelpModal({
                 </span>
               </a>
               <a
-                href={CHESSCOM_MESSAGE}
+                href={CHESSCOM_MESSAGE_URL}
                 className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
               >
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent" aria-hidden>

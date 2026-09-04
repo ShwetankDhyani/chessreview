@@ -98,6 +98,7 @@ import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { LatestBlogNews } from "./components/LatestBlogNews";
+import { SupportAppeal } from "./components/SupportAppeal";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
@@ -1987,6 +1988,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   </div>
                 )}
                 <LatestBlogNews className="mx-3 mt-2 flex-shrink-0" />
+                <SupportAppeal className="mx-3 mt-2 flex-shrink-0" />
                 <GameList
                   username=""
                   onGameSelect={selectGame}
@@ -2376,6 +2378,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   </div>
                 )}
                 <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
+                <SupportAppeal className="page-inline-pad mt-2 flex-shrink-0 w-full" />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <GameList
                     username=""
