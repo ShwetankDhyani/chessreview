@@ -63,12 +63,18 @@ export function SupportAppeal({ className = "" }: SupportAppealProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(
-      shouldShowAppeal({
-        dismissedAt: safeGetItem(DISMISS_KEY),
-        reviewCount: countCachedReviews(),
-      })
-    );
+    const refresh = () => {
+      setVisible(
+        shouldShowAppeal({
+          dismissedAt: safeGetItem(DISMISS_KEY),
+          reviewCount: countCachedReviews(),
+        })
+      );
+    };
+    refresh();
+    // Appear as soon as the 2nd review finishes without requiring a reload.
+    window.addEventListener("cr_review_logged", refresh);
+    return () => window.removeEventListener("cr_review_logged", refresh);
   }, []);
 
   if (!visible) return null;

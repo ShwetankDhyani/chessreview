@@ -99,6 +99,7 @@ import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { LatestBlogNews } from "./components/LatestBlogNews";
 import { SupportAppeal } from "./components/SupportAppeal";
+import { recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
@@ -901,6 +902,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           depth,
           durationMs,
         });
+        // Local use signal for home UI (e.g. support appeal after N reviews).
+        recordReviewCompletion();
         window.dispatchEvent(new CustomEvent("cr_review_logged"));
 
         if (viewingAway) {
