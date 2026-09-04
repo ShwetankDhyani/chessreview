@@ -10,6 +10,8 @@ interface CachedReviewRecord {
 }
 
 const STORAGE_KEY = "cr_saved_reviews_v1";
+/** Lightweight monotonic count of finished local reviews (not full result payloads). */
+const COMPLETION_COUNT_KEY = "cr_reviews_completed_count";
 const MAX_RECORDS = 40;
 
 function hashText(value: string): string {
@@ -51,9 +53,51 @@ function writeRecords(records: CachedReviewRecord[]): void {
  *
  * Used as a "has this person actually got value yet?" signal, so we can hold
  * back anything that would be presumptuous to show a first-time visitor.
+ *
+ * Prefers the dedicated completion counter (bumped on every successful analysis).
+ * Falls back to timing samples / cached result records for sessions that
+ * finished reviews before the counter existed.
  */
 export function countCachedReviews(): number {
-  return readRecords().length;
+  const raw = safeGetItem(COMPLETION_COUNT_KEY);
+  if (raw != null && raw !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+  }
+
+  const fromRecords = readRecords().length;
+  let fromTiming = 0;
+  try {
+    const timingRaw = safeGetItem("cr_review_timing_v1");
+    if (timingRaw) {
+      const parsed = JSON.parse(timingRaw) as unknown;
+      if (Array.isArray(parsed)) fromTiming = parsed.length;
+    }
+  } catch {
+    /* ignore corrupt timing history */
+  }
+
+  const legacy = Math.max(fromRecords, fromTiming);
+  // Persist so later increments stay monotonic even if timing history is cleared.
+  if (legacy > 0) {
+    safeSetItem(COMPLETION_COUNT_KEY, String(legacy));
+  }
+  return legacy;
+}
+
+/**
+ * Record that a review finished in this browser.
+ *
+ * Kept separate from {@link saveReview}: storing full analysis payloads is optional
+ * and can fail on quota, but the appeal gate still needs a reliable use signal.
+ */
+export function recordReviewCompletion(): void {
+  try {
+    const next = countCachedReviews() + 1;
+    safeSetItem(COMPLETION_COUNT_KEY, String(next));
+  } catch {
+    // Best-effort only.
+  }
 }
 
 export function loadSavedReview(profile: ProfileRef, pgn: string): ReviewResult | null {
