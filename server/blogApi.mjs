@@ -338,6 +338,14 @@ export function createBlogMiddleware() {
     try {
       if (pathOnly === "/api/blog" && req.method === "GET") {
         const url = new URL(rawUrl, "http://localhost");
+        const slug = (url.searchParams.get("slug") ?? "").trim();
+        if (slug) {
+          const data = await getBlogPost(slug, {
+            adminKey: adminKeyFrom(req),
+          });
+          if (!data) return sendJson(res, 404, { error: "Not found" });
+          return sendJson(res, 200, data);
+        }
         const drafts = url.searchParams.get("drafts") === "1";
         const key = adminKeyFrom(req);
         if (drafts && key !== expectedAdmin()) {
