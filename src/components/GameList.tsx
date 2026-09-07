@@ -465,14 +465,14 @@ export const GameList: React.FC<GameListProps> = ({
     const fillPct = activeReview.done ? 100 : Math.max(pct, 4);
     const statusLabel = activeReview.running
       ? `Analyzing · ${pct}%`
-      : "Review ready";
+      : "Previous review";
 
     return (
       <button
         type="button"
         onClick={() => { hapticTap(); onOpenActiveReview?.(); }}
         className="mobile-list-row relative overflow-hidden mobile-list-row--active"
-        aria-label={`${activeReview.label}, ${statusLabel}. Open review.`}
+        aria-label={`${activeReview.label}, ${statusLabel}. Open previous review.`}
       >
         <div
           className="pointer-events-none absolute inset-y-0 left-0 bg-chess-accent/25 transition-[width] duration-300"
@@ -492,7 +492,7 @@ export const GameList: React.FC<GameListProps> = ({
           </div>
         </div>
         <span className="relative z-10 flex-shrink-0 text-[11px] font-bold tabular-nums text-chess-accent">
-          {activeReview.done ? "Open" : `${pct}%`}
+          {activeReview.done ? "Back" : `${pct}%`}
         </span>
       </button>
     );
