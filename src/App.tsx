@@ -1095,7 +1095,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     }
     const pin = completedPin ?? getSessionReviewPin();
     if (pin && !matchesReviewIdentity({ pgn, gameId: sessionGameId }, pin)) {
-      // Finished review still parked — board plaque handles Open / Analyze this.
+      // Parked finished review is for another game — Analyze means this board.
+      abortRef.current = true;
+      analysisGenerationRef.current += 1;
+      setAnalysisRunning(false);
+      setShowAnalysisProgress(false);
+      showAnalysisProgressRef.current = false;
+      setAnalysisStartedAt(null);
+      clearReviewJob();
+      clearCompletedPin();
+      notifyReviewStart();
+      void runAnalysis(pgn, { visible: true });
       return;
     }
     notifyReviewStart();
@@ -1108,6 +1118,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     reviewJob,
     completedPin,
     sessionGameId,
+    clearReviewJob,
+    clearCompletedPin,
     runAnalysis,
     navigateToMove,
   ]);
@@ -2021,13 +2033,23 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           Wait · {Math.round(progressPercent)}%
                         </button>
                       ) : isViewingAwayFromCompleted ? (
-                        <button
-                          type="button"
-                          onClick={returnToActiveReview}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-chess-border-strong bg-chess-surface text-[11px] font-semibold text-chess-accent shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/40 hover:bg-chess-hover active:scale-[0.97]"
-                        >
-                          Open review
-                        </button>
+                        <div className="flex flex-shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={cancelAndAnalyzeCurrent}
+                            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-chess-accent text-[11px] font-bold text-white shadow-elev-1 transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.97]"
+                          >
+                            Analyze this
+                          </button>
+                          <button
+                            type="button"
+                            onClick={returnToActiveReview}
+                            className="inline-flex max-w-[9.5rem] items-center gap-1 h-8 px-2 rounded-lg border border-chess-border-strong bg-chess-surface text-[10px] font-semibold text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/40 hover:bg-chess-hover hover:text-chess-text active:scale-[0.97]"
+                            title={`Open previous review: ${pinForAway!.label}`}
+                          >
+                            <span className="truncate">Previous review</span>
+                          </button>
+                        </div>
                       ) : analysisState === "loading" ? (
                         <AnalyzeNowButton
                           variant="compact"
@@ -2065,8 +2087,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       ) : isViewingAwayFromCompleted ? (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           <span>
-                            Your last review is still open. Tap Open review to
-                            return, or analyze this game instead.
+                            This board is a different game. Your previous review
+                            of{" "}
+                            <span className="font-semibold text-chess-subtext">
+                              {pinForAway!.label}
+                            </span>{" "}
+                            is still available — use Analyze this for the game on
+                            the board, or Previous review to go back.
                           </span>
                         </div>
                       ) : (
