@@ -671,6 +671,48 @@ export function PrepPlayerVisuals({
   );
 }
 
+function formatH2hValue(
+  value: number | null,
+  format?: "pct"
+): string {
+  if (value == null) return "—";
+  return format === "pct" ? `${value}%` : String(value);
+}
+
+/** Which side "wins" this metric — null if not comparable / not a contest. */
+function h2hMetricWinner(
+  label: string,
+  self: number | null,
+  opponent: number | null
+): "self" | "opponent" | "tie" | null {
+  if (self == null || opponent == null) return null;
+  if (self === opponent) return "tie";
+  const lowerIsBetter = new Set([
+    "Tilt index",
+    "Loss streaks (3+)",
+    "Losses on time %",
+  ]);
+  const skip = new Set(["Games sampled", "Losses by resign %"]);
+  if (skip.has(label)) return null;
+  if (lowerIsBetter.has(label)) {
+    return self < opponent ? "self" : "opponent";
+  }
+  return self > opponent ? "self" : "opponent";
+}
+
+function h2hValueClass(
+  side: "self" | "opponent",
+  winner: "self" | "opponent" | "tie" | null
+): string {
+  if (winner === side) {
+    return "px-3 py-2 tabular-nums font-semibold text-chess-accent";
+  }
+  if (winner && winner !== "tie") {
+    return "px-3 py-2 tabular-nums text-chess-muted";
+  }
+  return "px-3 py-2 tabular-nums text-chess-subtext";
+}
+
 export function PrepHeadToHeadVisuals({
   rows,
   selfName,
@@ -802,35 +844,38 @@ export function PrepHeadToHeadVisuals({
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wider text-chess-muted bg-chess-surface/40">
               <th className="px-3 py-2 font-semibold">Metric</th>
-              <th className="px-3 py-2 font-semibold">You</th>
-              <th className="px-3 py-2 font-semibold">{opponentName}</th>
+              <th className="px-3 py-2 font-semibold text-[#94c455]">You</th>
+              <th className="px-3 py-2 font-semibold text-[#e69045]">
+                {opponentName}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr
-                key={row.label}
-                className="border-t border-chess-hairline/80 text-chess-subtext"
-              >
-                <td className="px-3 py-2 text-chess-text font-medium">
-                  {row.label}
-                </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {row.self == null
-                    ? "—"
-                    : row.format === "pct"
-                      ? `${row.self}%`
-                      : String(row.self)}
-                </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {row.opponent == null
-                    ? "—"
-                    : row.format === "pct"
-                      ? `${row.opponent}%`
-                      : String(row.opponent)}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const winner = h2hMetricWinner(row.label, row.self, row.opponent);
+              return (
+                <tr
+                  key={row.label}
+                  className="border-t border-chess-hairline/80"
+                >
+                  <td className="px-3 py-2 text-chess-text font-medium">
+                    {row.label}
+                  </td>
+                  <td className={h2hValueClass("self", winner)}>
+                    {formatH2hValue(row.self, row.format)}
+                    {winner === "self" ? (
+                      <span className="sr-only"> (better)</span>
+                    ) : null}
+                  </td>
+                  <td className={h2hValueClass("opponent", winner)}>
+                    {formatH2hValue(row.opponent, row.format)}
+                    {winner === "opponent" ? (
+                      <span className="sr-only"> (better)</span>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
