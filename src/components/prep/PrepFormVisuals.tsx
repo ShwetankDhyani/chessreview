@@ -233,6 +233,8 @@ const chartTooltipProps = {
   contentStyle: tooltipStyle,
   labelStyle: tooltipLabelStyle,
   itemStyle: tooltipItemStyle,
+  // Default Recharts bar cursor is a bright band that blows out dark charts.
+  cursor: { fill: "rgba(255, 255, 255, 0.045)" },
 };
 
 export function PrepPlayerVisuals({
