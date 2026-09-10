@@ -33,12 +33,32 @@ export interface PrepFormCharts {
     scorePct: number;
     played: number;
   }>;
+  byRatingScore?: Array<{
+    key: string;
+    label: string;
+    scorePct: number;
+    played: number;
+  }>;
   terminations: Array<{
     key: string;
     label: string;
     value: number;
     pct: number;
   }>;
+}
+
+export interface PrepVsRatingBand extends PrepColorSplit {}
+
+export interface PrepVsRating {
+  gap: number;
+  minGames: number;
+  higher: PrepVsRatingBand;
+  lower: PrepVsRatingBand;
+  peer: PrepVsRatingBand;
+  /** giant_killer | nerfed_gun | feasts_lower | even | null */
+  archetype: string | null;
+  archetypeTitle: string | null;
+  gapPct: number | null;
 }
 
 export interface PrepFormStats {
@@ -69,6 +89,7 @@ export interface PrepFormStats {
     otherPct: number;
     counts: Record<string, number>;
   };
+  vsRating?: PrepVsRating;
   charts?: PrepFormCharts;
 }
 

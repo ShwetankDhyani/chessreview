@@ -45,6 +45,7 @@ function emptyCharts(): PrepFormCharts {
     resultsSpark: [],
     wld: [],
     byColorScore: [],
+    byRatingScore: [],
     terminations: [],
   };
 }
@@ -259,6 +260,14 @@ export function PrepPlayerVisuals({
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-chess-text truncate">
               {title}
             </h2>
+            {report.stats.vsRating?.archetypeTitle ? (
+              <p className="text-[11px] font-semibold tracking-wide text-chess-accent">
+                {report.stats.vsRating.archetypeTitle}
+                {report.stats.vsRating.gapPct != null
+                  ? ` · ${report.stats.vsRating.gapPct > 0 ? "+" : ""}${report.stats.vsRating.gapPct} pts vs rating band`
+                  : ""}
+              </p>
+            ) : null}
             <p className="text-[12px] text-chess-muted">
               {report.platform === "lichess" ? "Lichess" : "Chess.com"} ·{" "}
               {report.sampleSize} games
@@ -450,6 +459,66 @@ export function PrepPlayerVisuals({
             </ResponsiveContainer>
           </div>
         </ChartCard>
+
+        {(charts.byRatingScore?.length ?? 0) > 0 ? (
+          <ChartCard
+            title="Vs rating"
+            hint={`±${report.stats.vsRating?.gap ?? 50} Elo bands`}
+          >
+            <div className="h-[180px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={charts.byRatingScore}
+                  layout="vertical"
+                  margin={{ left: 8, right: 12, top: 4, bottom: 4 }}
+                >
+                  <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tick={{ fill: MUTED, fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    tick={{ fill: MUTED, fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={56}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(v: number, _n, item) => [
+                      `${v}% · ${item?.payload?.played ?? 0} games`,
+                      "Score",
+                    ]}
+                  />
+                  <Bar
+                    dataKey="scorePct"
+                    radius={[0, 8, 8, 0]}
+                    barSize={20}
+                    animationDuration={850}
+                  >
+                    {(charts.byRatingScore ?? []).map((row) => (
+                      <Cell
+                        key={row.key}
+                        fill={
+                          row.key === "higher"
+                            ? "#e69045"
+                            : row.key === "lower"
+                              ? "#81b64c"
+                              : "#8b8784"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        ) : null}
 
         <ChartCard title="How they lose" hint="Termination split">
           <div className="h-[180px] w-full flex items-center">
