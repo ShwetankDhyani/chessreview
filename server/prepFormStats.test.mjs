@@ -9,7 +9,7 @@ import {
   parsePgnHeaders,
   ratingBandForGame,
 } from "./prepFormStats.mjs";
-import { fallbackFormSummary, buildFormBrief } from "./prepScouting.mjs";
+import { fallbackFormSummary, buildFormBrief, buildCompareEdgeBrief } from "./prepScouting.mjs";
 
 describe("parsePgnHeaders", () => {
   it("reads standard tag pairs", () => {
@@ -280,5 +280,36 @@ describe("buildFormBrief", () => {
     const brief = buildFormBrief(report);
     const matchups = brief.notes.find((n) => n.label === "Matchups");
     expect(matchups?.body.toLowerCase()).toContain("nerfed gun");
+  });
+});
+
+describe("buildCompareEdgeBrief", () => {
+  it("names who has the edge from score gap", () => {
+    const makeGames = (wins) => {
+      const games = [];
+      for (let i = 0; i < 10; i++) {
+        const win = i < wins;
+        games.push({
+          white: "P",
+          black: "Opp",
+          whiteRating: 1600,
+          blackRating: 1600,
+          whiteResult: win ? "win" : "resigned",
+          blackResult: win ? "resigned" : "win",
+          endTime: 1000 + i * 120,
+          pgn: `[White "P"]\n[Black "Opp"]\n[Result "${win ? "1-0" : "0-1"}"]\n`,
+        });
+      }
+      return games;
+    };
+    const self = buildFormReportFromGames(makeGames(8), "P");
+    const opp = buildFormReportFromGames(makeGames(3), "Rival");
+    // Rebuild opponent report username
+    opp.username = "Rival";
+    self.username = "Me";
+    const brief = buildCompareEdgeBrief(self, opp);
+    expect(brief.headline.toLowerCase()).toContain("edge");
+    expect(brief.notes.some((n) => n.label === "Score")).toBe(true);
+    expect(brief.plain.toLowerCase()).toContain("rival");
   });
 });

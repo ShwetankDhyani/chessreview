@@ -5,7 +5,7 @@
 import { buildFormReportFromGames } from "./prepFormStats.mjs";
 import { fetchRecentGamesForPrep } from "./prepGamesFetch.mjs";
 import { getPrepCache, setPrepCache, prepCacheTtlMs } from "./prepCache.mjs";
-import { generateFormBrief } from "./prepScouting.mjs";
+import { generateFormBrief, buildCompareEdgeBrief } from "./prepScouting.mjs";
 
 const PLATFORMS = new Set(["lichess", "chesscom"]);
 
@@ -95,18 +95,31 @@ export async function runPrepAnalyze(body = {}) {
   });
 
   let self = null;
+  let compareBrief = null;
+  let compareSkipped = null;
   if (selfUsername) {
-    self = await analyzePlayerForm({
-      username: selfUsername,
-      platform: selfPlatform || targetPlatform,
-      bypassCache: !!body.bypassCache,
-    });
+    if (selfPlatform && targetPlatform && selfPlatform !== targetPlatform) {
+      compareSkipped = {
+        reason: "platform_mismatch",
+        message:
+          "Compare only works on the same site (Chess.com with Chess.com, or Lichess with Lichess). Uncheck compare to look up this profile alone.",
+      };
+    } else {
+      self = await analyzePlayerForm({
+        username: selfUsername,
+        platform: selfPlatform || targetPlatform,
+        bypassCache: !!body.bypassCache,
+      });
+      compareBrief = buildCompareEdgeBrief(self, opponent);
+    }
   }
 
   return {
     ok: true,
     opponent,
     self,
+    compareBrief,
+    compareSkipped,
     headToHead: self
       ? {
           rows: buildHeadToHeadRows(self, opponent),

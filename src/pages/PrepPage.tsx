@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
+  PrepCompareBriefVisuals,
   PrepHeadToHeadVisuals,
   PrepPlayerVisuals,
 } from "../components/prep/PrepFormVisuals";
@@ -152,11 +153,23 @@ export default function PrepPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const platformMismatch = !!(
+    includeSelf &&
+    linked &&
+    linked.platform !== platform
+  );
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const target = username.trim();
     if (!target) {
       setError("Enter an opponent username");
+      return;
+    }
+    if (platformMismatch) {
+      setError(
+        "Compare only works on the same site — Chess.com with Chess.com, or Lichess with Lichess. Uncheck compare to look up this profile alone."
+      );
       return;
     }
     await runAnalyze(target, platform, includeSelf);
@@ -217,7 +230,10 @@ export default function PrepPage() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setPlatform(id)}
+                    onClick={() => {
+                      setPlatform(id);
+                      setError(null);
+                    }}
                     className={`h-10 px-3 text-[12px] font-semibold transition-colors ${
                       platform === id
                         ? "bg-chess-accent text-white"
@@ -236,7 +252,10 @@ export default function PrepPage() {
                 className="mt-0.5"
                 checked={includeSelf}
                 disabled={!linked}
-                onChange={(e) => setIncludeSelf(e.target.checked)}
+                onChange={(e) => {
+                  setIncludeSelf(e.target.checked);
+                  setError(null);
+                }}
               />
               <span>
                 Compare against my linked profile
@@ -262,6 +281,17 @@ export default function PrepPage() {
               </span>
             </label>
 
+            {platformMismatch ? (
+              <p className="rounded-lg border border-amber-700/40 bg-amber-950/25 px-3 py-2 text-[12px] leading-relaxed text-amber-100/90">
+                Your linked profile is on{" "}
+                {linked?.platform === "lichess" ? "Lichess" : "Chess.com"}, but
+                this lookup is{" "}
+                {platform === "lichess" ? "Lichess" : "Chess.com"}. Compare only
+                works same-site — uncheck compare to view this profile&apos;s
+                stats alone.
+              </p>
+            ) : null}
+
             <button
               type="submit"
               disabled={loading}
@@ -281,23 +311,44 @@ export default function PrepPage() {
 
           {result?.opponent && !loading ? (
             <div className="space-y-5">
-              <PrepPlayerVisuals
-                title={result.opponent.username}
-                report={result.opponent}
-              />
-              {result.self ? (
-                <PrepPlayerVisuals
-                  title={`You · ${result.self.username}`}
-                  report={result.self}
-                />
-              ) : null}
-              {result.headToHead?.rows?.length && result.self ? (
-                <PrepHeadToHeadVisuals
-                  rows={result.headToHead.rows}
-                  selfName={result.self.username}
-                  opponentName={result.opponent.username}
-                />
-              ) : null}
+              {result.compareBrief && result.self ? (
+                <>
+                  <PrepCompareBriefVisuals
+                    brief={result.compareBrief}
+                    selfName={result.self.username}
+                    opponentName={result.opponent.username}
+                  />
+                  {result.headToHead?.rows?.length ? (
+                    <PrepHeadToHeadVisuals
+                      rows={result.headToHead.rows}
+                      selfName={result.self.username}
+                      opponentName={result.opponent.username}
+                    />
+                  ) : null}
+                  <PrepPlayerVisuals
+                    title={result.opponent.username}
+                    report={result.opponent}
+                    hideBrief
+                  />
+                  <PrepPlayerVisuals
+                    title={`You · ${result.self.username}`}
+                    report={result.self}
+                    hideBrief
+                  />
+                </>
+              ) : (
+                <>
+                  {result.compareSkipped?.message ? (
+                    <div className="rounded-xl border border-amber-700/40 bg-amber-950/20 px-3 py-2 text-sm text-amber-100/90">
+                      {result.compareSkipped.message}
+                    </div>
+                  ) : null}
+                  <PrepPlayerVisuals
+                    title={result.opponent.username}
+                    report={result.opponent}
+                  />
+                </>
+              )}
             </div>
           ) : null}
         </main>
