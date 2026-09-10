@@ -1380,12 +1380,61 @@ html[data-testing-mode="1"] {
   }
 }
 
+/* H2H discovery: small glowing "New" chip on the feature entry. */
+.h2h-new-badge {
+  position: absolute;
+  top: -0.55rem;
+  right: -1.45rem;
+  z-index: 1;
+  padding: 0.08rem 0.28rem;
+  border-radius: 0.25rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #0f1a0a;
+  background: #9fd45a;
+  box-shadow:
+    0 0 0 1px rgba(159, 212, 90, 0.35),
+    0 0 8px rgba(129, 182, 76, 0.55),
+    0 0 16px rgba(129, 182, 76, 0.28);
+  animation: h2hNewGlow 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.h2h-new-badge--inline {
+  position: static;
+  top: auto;
+  right: auto;
+  margin-left: 0.15rem;
+}
+
+@keyframes h2hNewGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(159, 212, 90, 0.35),
+      0 0 6px rgba(129, 182, 76, 0.45),
+      0 0 12px rgba(129, 182, 76, 0.2);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(180, 230, 110, 0.55),
+      0 0 10px rgba(129, 182, 76, 0.75),
+      0 0 20px rgba(129, 182, 76, 0.4);
+    filter: brightness(1.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .support-coffee-steam-wisp,
   .support-coffee-cta,
   .support-coffee-mug,
   .support-coffee-prank-title,
-  .support-coffee-reveal {
+  .support-coffee-reveal,
+  .h2h-new-badge {
     animation: none !important;
     transition: none !important;
   }

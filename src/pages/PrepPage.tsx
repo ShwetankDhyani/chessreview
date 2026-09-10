@@ -177,8 +177,11 @@ export default function PrepPage() {
         />
         <main className="relative max-w-5xl mx-auto px-4 py-7 sm:py-10 space-y-6">
           <header className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90 inline-flex items-center gap-2">
               Head-to-head
+              <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
+                New
+              </span>
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
               H2H
