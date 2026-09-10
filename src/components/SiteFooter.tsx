@@ -93,6 +93,15 @@ export function SiteFooter() {
             <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·
             </span>
+            <Link
+              to="/prep"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              Prep
+            </Link>
+            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
+              ·
+            </span>
             <button
               type="button"
               onClick={() => {

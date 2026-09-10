@@ -9,6 +9,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import AboutPage from "./pages/AboutPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
+import PrepPage from "./pages/PrepPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppCrashScreen } from "./components/AppCrashScreen";
@@ -41,6 +42,7 @@ function Root() {
             <Route path="/admin" element={<AdminPage />} />
             <Route element={<UserShell />}>
               <Route path="/" element={null} />
+              <Route path="/prep" element={<PrepPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

@@ -46,6 +46,10 @@
       "destination": "/api/stats?kind=timing"
     },
     {
+      "source": "/api/prep/analyze",
+      "destination": "/api/prep"
+    },
+    {
       "source": "/api/share-preview",
       "destination": "/api/share?preview=1"
     },
