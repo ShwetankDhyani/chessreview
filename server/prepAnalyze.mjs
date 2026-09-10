@@ -1,5 +1,5 @@
 /**
- * Opponent prep / current-form analyze — Vercel + Vite middleware.
+ * Opponent / self recent-form analyze — Vercel + Vite middleware.
  */
 
 import { buildFormReportFromGames } from "./prepFormStats.mjs";
@@ -202,7 +202,7 @@ export async function handlePrepRequest(req, res) {
     const result = await runPrepAnalyze(body);
     sendJson(res, 200, result);
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Prep analyze failed";
+    const message = e instanceof Error ? e.message : "Couldn’t load form";
     const status =
       /not found/i.test(message) || /must be/i.test(message) || /Missing/i.test(message)
         ? 400
@@ -241,7 +241,7 @@ export function createPrepMiddleware() {
         const result = await runPrepAnalyze(body);
         sendJson(res, 200, result);
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Prep analyze failed";
+        const message = e instanceof Error ? e.message : "Couldn’t load form";
         const status =
           /not found/i.test(message) ||
           /must be/i.test(message) ||

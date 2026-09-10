@@ -126,7 +126,7 @@ export default function PrepPage() {
       setResult(data);
       setPhase(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t load form");
+      setError(err instanceof Error ? err.message : "Couldn't load form");
       setPhase(null);
     } finally {
       setLoading(false);
