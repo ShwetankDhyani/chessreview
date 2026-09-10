@@ -2,7 +2,7 @@
 /**
  * Publish a blog post to ChessReview (production or local).
  *
- *   ADMIN_SECRET=... node scripts/publish-blog-post.mjs docs/blog-drafts/opponent-prep-is-live.md
+ *   ADMIN_SECRET=... node scripts/publish-blog-post.mjs docs/blog-drafts/h2h-is-live.md
  *
  * Optional env:
  *   BLOG_API_URL=https://www.chessreview.org/api/blog

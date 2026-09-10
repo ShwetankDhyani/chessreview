@@ -101,7 +101,7 @@ You should get `{"ok":true,"id":"…","savedAt":…}` — not `not found`.
 
 Optional: run `supabase/saved_reviews.sql` in Supabase and set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` on Vercel for cloud save without the engine file store.
 
-For opponent prep form caching (`POST /api/prep/analyze`), also run `supabase/prep_form_cache.sql`. Without Supabase, results cache in memory for 24h per server instance.
+For H2H form caching (`POST /api/h2h/analyze`, also available as `/api/prep/analyze`), also run `supabase/prep_form_cache.sql`. Without Supabase, results cache in memory for 24h per server instance.
 
 If admin review history was previously capped at 80 rows, run `supabase/admin_full_history.sql` once so `get_admin_review_stats` returns the full event list.
 

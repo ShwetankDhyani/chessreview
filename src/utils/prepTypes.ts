@@ -77,7 +77,10 @@ export interface PrepPlayerReport {
   platform: PrepPlatform;
   sampleSize: number;
   stats: PrepFormStats;
-  scoutingReport: string;
+  /** Plain short summary of the sample. */
+  summary: string;
+  /** @deprecated Prefer summary */
+  scoutingReport?: string;
   generatedAt: string;
   cacheTtlMs: number;
   cache?: { hit: boolean; source: string | null };

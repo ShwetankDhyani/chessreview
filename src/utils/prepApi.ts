@@ -5,7 +5,7 @@ export async function analyzePrepForm(
   body: PrepAnalyzeRequest
 ): Promise<PrepAnalyzeResponse> {
   const res = await fetchWithTimeout(
-    "/api/prep/analyze",
+    "/api/h2h/analyze",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -18,8 +18,15 @@ export async function analyzePrepForm(
   };
   if (!res.ok) {
     throw new Error(
-      typeof data.error === "string" ? data.error : "Prep analyze failed"
+      typeof data.error === "string" ? data.error : "Couldn’t load form"
     );
+  }
+  // Normalize older cached payloads.
+  if (data.opponent && !data.opponent.summary && data.opponent.scoutingReport) {
+    data.opponent.summary = data.opponent.scoutingReport;
+  }
+  if (data.self && !data.self.summary && data.self.scoutingReport) {
+    data.self.summary = data.self.scoutingReport;
   }
   return data;
 }

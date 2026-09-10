@@ -215,7 +215,7 @@ export function PrepPlayerVisuals({
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-chess-accent/90">
-              Scouting dossier
+              Recent form
             </p>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-chess-text truncate">
               {title}
@@ -229,7 +229,7 @@ export function PrepPlayerVisuals({
                 : ""}
             </p>
             <p className="text-[13px] leading-relaxed text-chess-subtext max-w-xl pt-1">
-              {report.scoutingReport}
+              {report.summary || report.scoutingReport}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 flex-shrink-0">
@@ -255,8 +255,8 @@ export function PrepPlayerVisuals({
               label="Tilt"
               sub={
                 report.stats.tilt.index >= 50
-                  ? "Elevated pressure"
-                  : "Steady form"
+                  ? "Lots of rough patches"
+                  : "Pretty steady"
               }
               color={report.stats.tilt.index >= 50 ? LOSS : ACCENT}
               danger={report.stats.tilt.index >= 50}
