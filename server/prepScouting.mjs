@@ -130,8 +130,11 @@ export function buildFormBrief(formReport) {
   if (vs?.higher && vs?.lower) {
     const hi = vs.higher;
     const lo = vs.lower;
+    const minGames = vs.minGames || 8;
+    const minOther = vs.minOther || 4;
     const enough =
-      hi.played >= (vs.minGames || 8) && lo.played >= (vs.minGames || 8);
+      (hi.played >= minGames && lo.played >= minOther) ||
+      (lo.played >= minGames && hi.played >= minOther);
     if (enough) {
       if (vs.archetype === "nerfed_gun") {
         notes.push({
@@ -148,7 +151,7 @@ export function buildFormBrief(formReport) {
           label: "Matchups",
           body: `Feasting on the field — ${lo.scorePct}% against lower-rated opposition (${lo.played}), but only ${hi.scorePct}% when the rating tilts the other way (${hi.played}).`,
         });
-      } else {
+      } else if (vs.archetype === "even") {
         notes.push({
           label: "Matchups",
           body: `No wild rating-band story — ${hi.scorePct}% vs higher (${hi.played}), ${lo.scorePct}% vs lower (${lo.played}).`,

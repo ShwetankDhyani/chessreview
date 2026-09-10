@@ -52,6 +52,7 @@ export interface PrepVsRatingBand extends PrepColorSplit {}
 export interface PrepVsRating {
   gap: number;
   minGames: number;
+  minOther?: number;
   higher: PrepVsRatingBand;
   lower: PrepVsRatingBand;
   peer: PrepVsRatingBand;

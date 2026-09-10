@@ -36,9 +36,11 @@ export function parsePgnDateTimeMs(isoLike, time) {
 }
 
 /** Rating gap (Elo) before a game counts as higher / lower opposition. */
-export const VS_RATING_GAP = 50;
-/** Minimum games in a band before we trust the split. */
+export const VS_RATING_GAP = 40;
+/** Minimum games in the primary band before we trust the split. */
 export const VS_RATING_MIN_GAMES = 8;
+/** Softer floor for the contrasting band (allows sparse but loud signals). */
+export const VS_RATING_MIN_GAMES_OTHER = 4;
 
 /**
  * @param {Record<string, string>} headers
@@ -105,13 +107,25 @@ export function ratingBandForGame(ownRating, opponentRating, gap = VS_RATING_GAP
 
 /**
  * @param {{ higher: { played: number, scorePct: number }, lower: { played: number, scorePct: number }, peer?: { played: number, scorePct: number } }} bands
- * @param {number} [minGames]
+ * @param {{ minGames?: number, minOther?: number }} [opts]
  * @returns {{ key: string | null, title: string | null, gapPct: number | null }}
  */
-export function deriveVsRatingArchetype(bands, minGames = VS_RATING_MIN_GAMES) {
+export function deriveVsRatingArchetype(bands, opts = {}) {
+  const minGames =
+    typeof opts === "number" ? opts : opts.minGames ?? VS_RATING_MIN_GAMES;
+  const minOther =
+    typeof opts === "number"
+      ? VS_RATING_MIN_GAMES_OTHER
+      : opts.minOther ?? VS_RATING_MIN_GAMES_OTHER;
   const higher = bands?.higher;
   const lower = bands?.lower;
-  if (!higher || !lower || higher.played < minGames || lower.played < minGames) {
+  if (!higher || !lower) {
+    return { key: null, title: null, gapPct: null };
+  }
+  const enough =
+    (higher.played >= minGames && lower.played >= minOther) ||
+    (lower.played >= minGames && higher.played >= minOther);
+  if (!enough) {
     return { key: null, title: null, gapPct: null };
   }
   const gapPct = Math.round((higher.scorePct - lower.scorePct) * 10) / 10;
@@ -426,6 +440,7 @@ export function computeFormStats(games) {
     vsRating: {
       gap: VS_RATING_GAP,
       minGames: VS_RATING_MIN_GAMES,
+      minOther: VS_RATING_MIN_GAMES_OTHER,
       higher: vsRating.higher,
       lower: vsRating.lower,
       peer: vsRating.peer,

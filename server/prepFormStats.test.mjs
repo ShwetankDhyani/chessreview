@@ -47,6 +47,15 @@ describe("ratingBandForGame + deriveVsRatingArchetype", () => {
     expect(ratingBandForGame(null, 1700)).toBe(null);
   });
 
+  it("allows a thinner contrasting band", () => {
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 8, scorePct: 0 },
+        lower: { played: 4, scorePct: 75 },
+      }).key
+    ).toBe("feasts_lower");
+  });
+
   it("labels nerfed gun / giant killer / feasts lower", () => {
     expect(
       deriveVsRatingArchetype({
