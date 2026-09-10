@@ -694,6 +694,10 @@ function h2hMetricWinner(
   ]);
   const skip = new Set(["Games sampled", "Losses by resign %"]);
   if (skip.has(label)) return null;
+  // Dynamic vs ±N Elo labels
+  if (/^Score vs [+−-]?\d+ Elo %$/.test(label) || label.startsWith("Score vs")) {
+    // fall through to higher-is-better
+  }
   if (lowerIsBetter.has(label)) {
     return self < opponent ? "self" : "opponent";
   }
@@ -759,7 +763,12 @@ export function PrepHeadToHeadVisuals({
   const bars = useMemo(
     () =>
       rows
-        .filter((r) => r.format === "pct" || r.label === "Tilt index")
+        .filter(
+          (r) =>
+            (r.format === "pct" || r.label === "Tilt index") &&
+            r.self != null &&
+            r.opponent != null
+        )
         .map((r) => ({
           label: r.label.replace(" %", ""),
           you: r.self ?? 0,
