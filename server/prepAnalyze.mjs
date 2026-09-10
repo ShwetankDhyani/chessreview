@@ -128,9 +128,15 @@ export async function runPrepAnalyze(body = {}) {
   };
 }
 
+function bandScorePct(band) {
+  if (!band || !band.played) return null;
+  return band.scorePct;
+}
+
 function buildHeadToHeadRows(self, opponent) {
   const s = self.stats;
   const o = opponent.stats;
+  const gap = s.vsRating?.gap ?? o.vsRating?.gap ?? 100;
   return [
     {
       label: "Games sampled",
@@ -166,15 +172,15 @@ function buildHeadToHeadRows(self, opponent) {
       opponent: o.tpr.averageOpponentRating,
     },
     {
-      label: "Score vs higher %",
-      self: s.vsRating?.higher?.scorePct ?? null,
-      opponent: o.vsRating?.higher?.scorePct ?? null,
+      label: `Score vs +${gap} Elo %`,
+      self: bandScorePct(s.vsRating?.higher),
+      opponent: bandScorePct(o.vsRating?.higher),
       format: "pct",
     },
     {
-      label: "Score vs lower %",
-      self: s.vsRating?.lower?.scorePct ?? null,
-      opponent: o.vsRating?.lower?.scorePct ?? null,
+      label: `Score vs −${gap} Elo %`,
+      self: bandScorePct(s.vsRating?.lower),
+      opponent: bandScorePct(o.vsRating?.lower),
       format: "pct",
     },
     {
