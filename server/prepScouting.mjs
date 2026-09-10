@@ -101,11 +101,13 @@ export function buildFormBrief(formReport) {
 
   if (s.terminations.losses > 0) {
     const parts = [];
-    if (s.terminations.resignationPct >= 40) {
-      parts.push(`resigning a lot (${s.terminations.resignationPct}%)`);
+    if (s.terminations.resignationPct >= 55) {
+      parts.push(`resignations (${s.terminations.resignationPct}%)`);
+    } else if (s.terminations.resignationPct >= 40) {
+      parts.push(`resigning often (${s.terminations.resignationPct}%)`);
     }
     if (s.terminations.timePct >= 20) {
-      parts.push(`flagging often (${s.terminations.timePct}% on time)`);
+      parts.push(`flagging (${s.terminations.timePct}% on time)`);
     }
     if (s.terminations.matePct >= 25) {
       parts.push(`getting mated (${s.terminations.matePct}%)`);
@@ -117,7 +119,10 @@ export function buildFormBrief(formReport) {
     }
     notes.push({
       label: "How it ends",
-      body: `When things go south, they're mostly ${parts.join(", ")}.`,
+      body:
+        parts.length === 1
+          ? `When things go south, it's mostly ${parts[0]}.`
+          : `When things go south, it's mostly ${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}.`,
     });
   }
 
