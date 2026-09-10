@@ -188,7 +188,11 @@ export default function PrepPage() {
             bg-[linear-gradient(90deg,transparent_0%,#81b64c_50%,transparent_100%)] blur-2xl"
           aria-hidden
         />
-        <main className="relative max-w-5xl mx-auto px-4 py-7 sm:py-10 space-y-6">
+        <main
+          className={`relative mx-auto px-4 py-7 sm:py-10 space-y-6 ${
+            result?.self && result?.compareBrief ? "max-w-6xl" : "max-w-5xl"
+          }`}
+        >
           <header className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90 inline-flex items-center gap-2">
               Head-to-head
@@ -318,6 +322,20 @@ export default function PrepPage() {
                     selfName={result.self.username}
                     opponentName={result.opponent.username}
                   />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                    <PrepPlayerVisuals
+                      title={`You · ${result.self.username}`}
+                      report={result.self}
+                      hideBrief
+                      compact
+                    />
+                    <PrepPlayerVisuals
+                      title={result.opponent.username}
+                      report={result.opponent}
+                      hideBrief
+                      compact
+                    />
+                  </div>
                   {result.headToHead?.rows?.length ? (
                     <PrepHeadToHeadVisuals
                       rows={result.headToHead.rows}
@@ -325,16 +343,6 @@ export default function PrepPage() {
                       opponentName={result.opponent.username}
                     />
                   ) : null}
-                  <PrepPlayerVisuals
-                    title={result.opponent.username}
-                    report={result.opponent}
-                    hideBrief
-                  />
-                  <PrepPlayerVisuals
-                    title={`You · ${result.self.username}`}
-                    report={result.self}
-                    hideBrief
-                  />
                 </>
               ) : (
                 <>
