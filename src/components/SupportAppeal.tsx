@@ -133,7 +133,7 @@ export function SupportAppeal({ className = "" }: SupportAppealProps) {
               onClick={() => hapticSoft()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-chess-accent px-2.5 py-1.5 text-[11px] font-semibold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-200 ease-soft hover:bg-chess-accent-hover active:scale-[0.97]"
             >
-              Chip in
+              Donate
               <span aria-hidden>→</span>
             </a>
             <button

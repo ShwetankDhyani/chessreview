@@ -8,7 +8,7 @@ import {
 describe("parseSupportLinks", () => {
   it("falls back to the built-in Ko-fi link when unset", () => {
     expect(parseSupportLinks("")).toEqual([
-      { label: "Buy me a coffee", href: DEFAULT_KOFI_URL },
+      { label: "Donate", href: DEFAULT_KOFI_URL },
     ]);
     expect(parseSupportLinks("   ")[0].href).toBe(DEFAULT_KOFI_URL);
   });

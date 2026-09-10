@@ -114,7 +114,7 @@ export function SiteFooter() {
               }}
               className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
-              Free Coffee!
+              Donate
             </button>
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">

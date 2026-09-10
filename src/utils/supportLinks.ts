@@ -19,7 +19,7 @@ export const CHESSCOM_USERNAME = "ShwetankDhyani";
 export const CHESSCOM_MESSAGE_URL = `https://www.chess.com/messages/compose?to=${CHESSCOM_USERNAME}`;
 
 const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
-  { label: "Buy me a coffee", href: DEFAULT_KOFI_URL },
+  { label: "Donate", href: DEFAULT_KOFI_URL },
 ];
 
 /** Parse the optional env override, falling back to the built-in Ko-fi link. */
