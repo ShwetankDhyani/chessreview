@@ -56,7 +56,7 @@ export interface PrepVsRating {
   higher: PrepVsRatingBand;
   lower: PrepVsRatingBand;
   peer: PrepVsRatingBand;
-  /** giant_killer | nerfed_gun | feasts_lower | even | null */
+  /** giant_killer | nerfed_gun | feasts_lower | null — only for ~100+ Elo mismatches */
   archetype: string | null;
   archetypeTitle: string | null;
   gapPct: number | null;

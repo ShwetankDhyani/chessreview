@@ -26,8 +26,8 @@ function supabaseBase() {
 export function prepCacheKey(platform, username) {
   const p = String(platform || "").toLowerCase();
   const u = String(username || "").trim().toLowerCase();
-  // v5: vs higher/lower rating bands + matchup archetypes.
-  return createHash("sha1").update(`v5:${p}:${u}`).digest("hex");
+  // v6: matchup bands require ~100 Elo gap (much higher/lower only).
+  return createHash("sha1").update(`v6:${p}:${u}`).digest("hex");
 }
 
 export function prepCacheTtlMs() {

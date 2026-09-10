@@ -463,7 +463,7 @@ export function PrepPlayerVisuals({
         {(charts.byRatingScore?.length ?? 0) > 0 ? (
           <ChartCard
             title="Vs rating"
-            hint={`±${report.stats.vsRating?.gap ?? 50} Elo bands`}
+            hint={`±${report.stats.vsRating?.gap ?? 100} Elo · much higher/lower`}
           >
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -486,7 +486,7 @@ export function PrepPlayerVisuals({
                     tick={{ fill: MUTED, fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
-                    width={56}
+                    width={84}
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
