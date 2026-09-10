@@ -95,7 +95,7 @@ export default function PrepPage() {
   usePageSeo({
     title: "H2H — Recent form | ChessReview",
     description:
-      "Compare recent form from the last 100 Chess.com or Lichess games — score, color splits, tilt, and how they lose. No engine analysis.",
+      "Recent form from the last 100 Chess.com or Lichess games. Results only — no engine.",
     path: "/h2h",
   });
 
