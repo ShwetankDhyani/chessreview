@@ -324,7 +324,7 @@ export default function PrepPage() {
                   />
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <PrepPlayerVisuals
-                      title={`You · ${result.self.username}`}
+                      title={result.self.username}
                       report={result.self}
                       hideBrief
                       compact
