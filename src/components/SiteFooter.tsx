@@ -22,7 +22,7 @@ function SettingsGearIcon({ className = "" }: { className?: string }) {
 }
 
 export function SiteFooter() {
-  const [helpOpen, setHelpOpen] = useState<false | "contact" | "support">(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [showAdminEntry, setShowAdminEntry] = useState(
     () => !!loadSessionAdminKey()
   );
@@ -71,19 +71,6 @@ export function SiteFooter() {
             </div>
           )}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                hapticTap();
-                setHelpOpen("contact");
-              }}
-              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
-              Contact
-            </button>
-            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
-              ·
-            </span>
             <Link
               to="/blog"
               className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
@@ -110,7 +97,7 @@ export function SiteFooter() {
               type="button"
               onClick={() => {
                 hapticTap();
-                setHelpOpen("support");
+                setHelpOpen(true);
               }}
               className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
@@ -124,9 +111,9 @@ export function SiteFooter() {
       </footer>
 
       <HelpModal
-        open={!!helpOpen}
+        open={helpOpen}
         onClose={() => setHelpOpen(false)}
-        initial={helpOpen === "support" ? "support" : "contact"}
+        initial="support"
       />
     </>
   );

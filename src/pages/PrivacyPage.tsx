@@ -1,5 +1,6 @@
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "../utils/supportLinks";
 
 export default function PrivacyPage() {
   usePageSeo({
@@ -56,9 +57,14 @@ export default function PrivacyPage() {
           <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-4 space-y-2 pb-6">
             <h2 className="text-sm font-semibold text-chess-text">Contact</h2>
             <p className="text-sm text-chess-muted leading-relaxed">
-              Questions? Use{" "}
-              <strong className="text-chess-subtext font-medium">Contact</strong>{" "}
-              or{" "}
+              Questions? Email{" "}
+              <a
+                href={SUPPORT_MAILTO}
+                className="font-medium text-chess-subtext hover:text-chess-accent transition-colors"
+              >
+                {SUPPORT_EMAIL}
+              </a>{" "}
+              or use{" "}
               <strong className="text-chess-subtext font-medium">Donate</strong>{" "}
               in the site footer.
             </p>
