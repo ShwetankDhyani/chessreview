@@ -5,7 +5,7 @@
 import { buildFormReportFromGames } from "./prepFormStats.mjs";
 import { fetchRecentGamesForPrep } from "./prepGamesFetch.mjs";
 import { getPrepCache, setPrepCache, prepCacheTtlMs } from "./prepCache.mjs";
-import { generateFormSummary } from "./prepScouting.mjs";
+import { generateFormBrief } from "./prepScouting.mjs";
 
 const PLATFORMS = new Set(["lichess", "chesscom"]);
 
@@ -17,7 +17,13 @@ function normalizePlayerPayload(payload) {
       : typeof payload.scoutingReport === "string"
         ? payload.scoutingReport
         : "";
-  return { ...payload, summary, scoutingReport: summary };
+  const brief =
+    payload.brief &&
+    typeof payload.brief === "object" &&
+    typeof payload.brief.headline === "string"
+      ? payload.brief
+      : null;
+  return { ...payload, summary, scoutingReport: summary, brief };
 }
 
 function normalizePlatform(value) {
@@ -54,15 +60,16 @@ export async function analyzePlayerForm(input) {
 
   const games = await fetchRecentGamesForPrep(platform, username, 100);
   const form = buildFormReportFromGames(games, username);
-  const summary = await generateFormSummary(form);
+  const brief = await generateFormBrief(form);
   const payload = {
     username: form.username,
     platform,
     sampleSize: form.sampleSize,
     stats: form.stats,
-    summary,
+    brief,
+    summary: brief.plain,
     // Keep old key so older clients still read a blurb.
-    scoutingReport: summary,
+    scoutingReport: brief.plain,
     generatedAt: new Date().toISOString(),
     cacheTtlMs: prepCacheTtlMs(),
   };

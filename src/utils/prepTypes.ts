@@ -72,11 +72,26 @@ export interface PrepFormStats {
   charts?: PrepFormCharts;
 }
 
+export interface PrepBriefNote {
+  label: string;
+  body: string;
+}
+
+/** Structured form write-up: lead + labeled notes. */
+export interface PrepFormBrief {
+  headline: string;
+  notes: PrepBriefNote[];
+  /** Flat fallback for older clients / a11y. */
+  plain: string;
+}
+
 export interface PrepPlayerReport {
   username: string;
   platform: PrepPlatform;
   sampleSize: number;
   stats: PrepFormStats;
+  /** Structured blurb with personality (preferred in UI). */
+  brief?: PrepFormBrief | null;
   /** Plain short summary of the sample. */
   summary: string;
   /** @deprecated Prefer summary */
