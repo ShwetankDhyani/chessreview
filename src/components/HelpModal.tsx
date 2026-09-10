@@ -8,46 +8,6 @@ import {
 } from "../utils/supportLinks";
 export type { SupportLink } from "../utils/supportLinks";
 
-
-function CoffeeMugIcon({ size = 40 }: { size?: number }) {
-  return (
-    <span className="support-coffee-icon" aria-hidden style={{ width: size * 1.1, height: size * 1.15 }}>
-      <span className="support-coffee-steam">
-        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--a" />
-        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--b" />
-        <span className="support-coffee-steam-wisp support-coffee-steam-wisp--c" />
-      </span>
-      <svg
-        className="support-coffee-mug"
-        viewBox="0 0 64 64"
-        width={size}
-        height={size}
-        fill="none"
-      >
-        <path
-          d="M12 26h32v18c0 5.5-4.5 10-10 10H22c-5.5 0-10-4.5-10-10V26z"
-          fill="currentColor"
-          className="text-chess-accent"
-        />
-        <path
-          d="M14 28h28v14c0 4.4-3.6 8-8 8H22c-4.4 0-8-3.6-8-8V28z"
-          fill="#161512"
-          opacity="0.28"
-        />
-        <path
-          d="M44 30h6c4.4 0 8 3.6 8 8s-3.6 8-8 8h-6"
-          stroke="currentColor"
-          className="text-chess-accent"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-        <ellipse cx="28" cy="26" rx="16" ry="4" fill="#c5e09a" />
-        <ellipse cx="28" cy="25.5" rx="12" ry="2.6" fill="#3d5a24" />
-      </svg>
-    </span>
-  );
-}
-
 export function HelpModal({
   open,
   onClose,
@@ -81,23 +41,22 @@ export function HelpModal({
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         aria-label="Close"
-        onClick={() => { hapticSoft(); onClose(); }}
+        onClick={() => {
+          hapticSoft();
+          onClose();
+        }}
       />
       <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-3">
-          {readOnlyContact ? (
-            <h2 id="help-title" className="text-base font-bold text-chess-text">Contact</h2>
-          ) : (
-            <h2
-              id="help-title"
-              className="support-coffee-prank-title text-base font-bold text-chess-accent"
-            >
-              …For meee!
-            </h2>
-          )}
+          <h2 id="help-title" className="text-base font-bold text-chess-text">
+            {readOnlyContact || !showSupport ? "Contact" : "Donate"}
+          </h2>
           <button
             type="button"
-            onClick={() => { hapticSoft(); onClose(); }}
+            onClick={() => {
+              hapticSoft();
+              onClose();
+            }}
             className="h-8 w-8 flex-shrink-0 rounded-lg text-chess-muted hover:text-chess-text hover:bg-chess-hover"
             aria-label="Close"
           >
@@ -113,7 +72,10 @@ export function HelpModal({
                 href={SUPPORT_MAILTO}
                 className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/50 bg-chess-bg/30 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-border hover:bg-chess-bg/45"
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/60 text-chess-muted" aria-hidden>
+                <span
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/60 text-chess-muted"
+                  aria-hidden
+                >
                   ✉️
                 </span>
                 <span className="min-w-0 flex-1 truncate font-medium">
@@ -124,23 +86,27 @@ export function HelpModal({
                 href={CHESSCOM_MESSAGE_URL}
                 className="group inline-flex w-full items-center gap-2.5 rounded-lg border border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5 text-sm text-chess-subtext transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] hover:text-chess-accent"
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent" aria-hidden>
+                <span
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-chess-surface/80 text-chess-muted transition-colors group-hover:text-chess-accent"
+                  aria-hidden
+                >
                   ♟️
                 </span>
-                <span className="min-w-0 flex-1 truncate font-medium">Message on Chess.com</span>
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  Message on Chess.com
+                </span>
               </a>
             </div>
           </div>
         ) : (
-          <div className="support-coffee-reveal space-y-4 text-sm text-chess-subtext leading-relaxed">
+          <div className="space-y-4 text-sm text-chess-subtext leading-relaxed">
             <p className="text-chess-text">
-              Hey, I&apos;m Shwetank. I think I did a pretty good job with this website, and I hope
-              you agree :)
+              ChessReview stays free — no ads, no paywall — and it runs out of
+              pocket. If it has helped your chess, a donation helps keep it
+              online for the next player too.
             </p>
             <p>
-              I keep ChessReview running out of my own pocket purely for the love of chess and this
-              community. If you forgive me for the prank—and found the site helpful—don&apos;t be shy
-              about sending some actual coffee love my way!
+              Entirely optional. The site stays exactly as it is either way.
             </p>
 
             <a
@@ -148,14 +114,30 @@ export function HelpModal({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => hapticSoft()}
-              className="support-coffee-cta group"
+              className="group inline-flex w-full items-center gap-3 rounded-xl border border-chess-accent/35 bg-chess-accent/10 px-3.5 py-3 transition-colors hover:border-chess-accent/55 hover:bg-chess-accent/16"
             >
-              <CoffeeMugIcon />
+              <span
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-chess-accent/30 bg-chess-accent/15 text-chess-accent"
+                aria-hidden
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+                </svg>
+              </span>
               <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[15px] font-bold tracking-tight text-chess-text group-hover:text-white transition-colors">
-                  Buy me a coffee
+                <span className="block text-[15px] font-bold tracking-tight text-chess-text">
+                  Donate
                 </span>
-                <span className="mt-0.5 block text-[11px] font-medium text-chess-muted group-hover:text-chess-subtext transition-colors">
+                <span className="mt-0.5 block text-[11px] font-medium text-chess-muted">
                   Support on Ko-fi
                 </span>
               </span>
