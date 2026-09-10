@@ -35,10 +35,17 @@ export function parsePgnDateTimeMs(isoLike, time) {
   return Number.isFinite(ms) ? ms : null;
 }
 
+/** Rating gap (Elo) before a game counts as higher / lower opposition. */
+export const VS_RATING_GAP = 40;
+/** Minimum games in the primary band before we trust the split. */
+export const VS_RATING_MIN_GAMES = 8;
+/** Softer floor for the contrasting band (allows sparse but loud signals). */
+export const VS_RATING_MIN_GAMES_OTHER = 4;
+
 /**
  * @param {Record<string, string>} headers
  * @param {string} username
- * @returns {{ color: Color, outcome: GameOutcome, opponentRating: number | null, endMs: number | null, termination: string, opening: string, result: string } | null}
+ * @returns {{ color: Color, outcome: GameOutcome, ownRating: number | null, opponentRating: number | null, endMs: number | null, termination: string, opening: string, result: string } | null}
  */
 export function classifyGameFromHeaders(headers, username) {
   const target = String(username || "").trim().toLowerCase();
@@ -61,8 +68,11 @@ export function classifyGameFromHeaders(headers, username) {
     return null;
   }
 
+  const ownRaw =
+    color === "white" ? headers.WhiteElo || headers.WhiteRating : headers.BlackElo || headers.BlackRating;
   const oppRaw =
     color === "white" ? headers.BlackElo || headers.BlackRating : headers.WhiteElo || headers.WhiteRating;
+  const ownRating = ownRaw != null && ownRaw !== "?" ? Number(ownRaw) : null;
   const opponentRating = oppRaw != null && oppRaw !== "?" ? Number(oppRaw) : null;
 
   const date = headers.UTCDate || headers.Date || "";
@@ -72,12 +82,74 @@ export function classifyGameFromHeaders(headers, username) {
   return {
     color,
     outcome,
+    ownRating: Number.isFinite(ownRating) ? ownRating : null,
     opponentRating: Number.isFinite(opponentRating) ? opponentRating : null,
     endMs,
     termination: String(headers.Termination || headers.Status || "").trim(),
     opening: String(headers.Opening || headers.ECO || "").trim(),
     result,
   };
+}
+
+/**
+ * @param {number | null | undefined} ownRating
+ * @param {number | null | undefined} opponentRating
+ * @param {number} [gap]
+ * @returns {"higher"|"lower"|"peer"|null}
+ */
+export function ratingBandForGame(ownRating, opponentRating, gap = VS_RATING_GAP) {
+  if (!Number.isFinite(ownRating) || !Number.isFinite(opponentRating)) return null;
+  const delta = opponentRating - ownRating;
+  if (delta >= gap) return "higher";
+  if (delta <= -gap) return "lower";
+  return "peer";
+}
+
+/**
+ * @param {{ higher: { played: number, scorePct: number }, lower: { played: number, scorePct: number }, peer?: { played: number, scorePct: number } }} bands
+ * @param {{ minGames?: number, minOther?: number }} [opts]
+ * @returns {{ key: string | null, title: string | null, gapPct: number | null }}
+ */
+export function deriveVsRatingArchetype(bands, opts = {}) {
+  const minGames =
+    typeof opts === "number" ? opts : opts.minGames ?? VS_RATING_MIN_GAMES;
+  const minOther =
+    typeof opts === "number"
+      ? VS_RATING_MIN_GAMES_OTHER
+      : opts.minOther ?? VS_RATING_MIN_GAMES_OTHER;
+  const higher = bands?.higher;
+  const lower = bands?.lower;
+  if (!higher || !lower) {
+    return { key: null, title: null, gapPct: null };
+  }
+  const enough =
+    (higher.played >= minGames && lower.played >= minOther) ||
+    (lower.played >= minGames && higher.played >= minOther);
+  if (!enough) {
+    return { key: null, title: null, gapPct: null };
+  }
+  const gapPct = Math.round((higher.scorePct - lower.scorePct) * 10) / 10;
+
+  // Soft vs weaker, sharp vs stronger.
+  if (
+    gapPct >= 12 &&
+    lower.scorePct < 48 &&
+    higher.scorePct >= 50
+  ) {
+    return { key: "nerfed_gun", title: "Nerfed gun", gapPct };
+  }
+  // Strong relative results against higher-rated opposition.
+  if (gapPct >= 10 && higher.scorePct >= 48) {
+    return { key: "giant_killer", title: "Giant killer", gapPct };
+  }
+  // Punishes lower-rated, struggles when outrated.
+  if (gapPct <= -12 && lower.scorePct >= 55) {
+    return { key: "feasts_lower", title: "Feasts lower", gapPct };
+  }
+  if (lower.scorePct >= 62 && higher.scorePct < 42) {
+    return { key: "feasts_lower", title: "Feasts lower", gapPct };
+  }
+  return { key: "even", title: null, gapPct };
 }
 
 /**
@@ -196,6 +268,11 @@ export function computeFormStats(games) {
   };
 
   const oppRatings = [];
+  const vsRating = {
+    higher: emptyColorSplit(),
+    lower: emptyColorSplit(),
+    peer: emptyColorSplit(),
+  };
   /** @type {number[]} */
   const lossStreakLengths = [];
   let currentLossStreak = 0;
@@ -243,12 +320,26 @@ export function computeFormStats(games) {
     }
 
     if (g.opponentRating != null) oppRatings.push(g.opponentRating);
+
+    const band = ratingBandForGame(g.ownRating, g.opponentRating);
+    if (band) {
+      const vb = vsRating[band];
+      vb.played += 1;
+      if (g.outcome === "win") vb.wins += 1;
+      else if (g.outcome === "loss") vb.losses += 1;
+      else vb.draws += 1;
+    }
   }
   if (currentLossStreak >= 3) lossStreakLengths.push(currentLossStreak);
 
   finalizeColorSplit(byColor.white);
   finalizeColorSplit(byColor.black);
   finalizeColorSplit(byColor.overall);
+  finalizeColorSplit(vsRating.higher);
+  finalizeColorSplit(vsRating.lower);
+  finalizeColorSplit(vsRating.peer);
+
+  const vsArchetype = deriveVsRatingArchetype(vsRating);
 
   const avgOpp =
     oppRatings.length > 0
@@ -346,6 +437,17 @@ export function computeFormStats(games) {
       otherPct: termPct(termCounts.other),
       counts: termCounts,
     },
+    vsRating: {
+      gap: VS_RATING_GAP,
+      minGames: VS_RATING_MIN_GAMES,
+      minOther: VS_RATING_MIN_GAMES_OTHER,
+      higher: vsRating.higher,
+      lower: vsRating.lower,
+      peer: vsRating.peer,
+      archetype: vsArchetype.key,
+      archetypeTitle: vsArchetype.title,
+      gapPct: vsArchetype.gapPct,
+    },
     charts: {
       formTrend,
       resultsSpark,
@@ -368,6 +470,26 @@ export function computeFormStats(games) {
           played: byColor.black.played,
         },
       ],
+      byRatingScore: [
+        {
+          key: "higher",
+          label: "Higher",
+          scorePct: vsRating.higher.scorePct,
+          played: vsRating.higher.played,
+        },
+        {
+          key: "peer",
+          label: "Peer",
+          scorePct: vsRating.peer.scorePct,
+          played: vsRating.peer.played,
+        },
+        {
+          key: "lower",
+          label: "Lower",
+          scorePct: vsRating.lower.scorePct,
+          played: vsRating.lower.played,
+        },
+      ].filter((row) => row.played > 0),
       terminations: [
         { key: "time", label: "On time", value: termCounts.time, pct: termPct(termCounts.time) },
         {

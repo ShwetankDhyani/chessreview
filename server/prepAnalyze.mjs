@@ -153,6 +153,18 @@ function buildHeadToHeadRows(self, opponent) {
       opponent: o.tpr.averageOpponentRating,
     },
     {
+      label: "Score vs higher %",
+      self: s.vsRating?.higher?.scorePct ?? null,
+      opponent: o.vsRating?.higher?.scorePct ?? null,
+      format: "pct",
+    },
+    {
+      label: "Score vs lower %",
+      self: s.vsRating?.lower?.scorePct ?? null,
+      opponent: o.vsRating?.lower?.scorePct ?? null,
+      format: "pct",
+    },
+    {
       label: "Tilt index",
       self: s.tilt.index,
       opponent: o.tilt.index,

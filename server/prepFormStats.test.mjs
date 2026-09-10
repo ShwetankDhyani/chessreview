@@ -5,7 +5,9 @@ import {
   classifyGameFromHeaders,
   computeFormStats,
   computeTpr,
+  deriveVsRatingArchetype,
   parsePgnHeaders,
+  ratingBandForGame,
 } from "./prepFormStats.mjs";
 import { fallbackFormSummary, buildFormBrief } from "./prepScouting.mjs";
 
@@ -24,6 +26,7 @@ describe("classifyGameFromHeaders", () => {
         White: "Alice",
         Black: "Bob",
         Result: "1-0",
+        WhiteElo: "1600",
         BlackElo: "1500",
         Termination: "Bob resigned",
       },
@@ -31,7 +34,47 @@ describe("classifyGameFromHeaders", () => {
     );
     expect(g?.color).toBe("white");
     expect(g?.outcome).toBe("win");
+    expect(g?.ownRating).toBe(1600);
     expect(g?.opponentRating).toBe(1500);
+  });
+});
+
+describe("ratingBandForGame + deriveVsRatingArchetype", () => {
+  it("bands by rating gap", () => {
+    expect(ratingBandForGame(1600, 1700)).toBe("higher");
+    expect(ratingBandForGame(1600, 1500)).toBe("lower");
+    expect(ratingBandForGame(1600, 1620)).toBe("peer");
+    expect(ratingBandForGame(null, 1700)).toBe(null);
+  });
+
+  it("allows a thinner contrasting band", () => {
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 8, scorePct: 0 },
+        lower: { played: 4, scorePct: 75 },
+      }).key
+    ).toBe("feasts_lower");
+  });
+
+  it("labels nerfed gun / giant killer / feasts lower", () => {
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 20, scorePct: 58 },
+        lower: { played: 20, scorePct: 38 },
+      }).key
+    ).toBe("nerfed_gun");
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 20, scorePct: 58 },
+        lower: { played: 20, scorePct: 48 },
+      }).key
+    ).toBe("giant_killer");
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 20, scorePct: 35 },
+        lower: { played: 20, scorePct: 68 },
+      }).key
+    ).toBe("feasts_lower");
   });
 });
 
@@ -189,5 +232,37 @@ describe("buildFormBrief", () => {
     expect(brief.notes.some((n) => n.label === "Colors")).toBe(true);
     expect(brief.notes.some((n) => n.label === "Tilt")).toBe(true);
     expect(brief.plain).toContain(brief.headline);
+  });
+
+  it("adds a Matchups note for rating-band archetypes", () => {
+    const games = [];
+    // 10 wins vs higher-rated, 10 losses vs lower-rated → nerfed gun.
+    for (let i = 0; i < 10; i++) {
+      games.push({
+        white: "Alice",
+        black: "Strong",
+        whiteRating: 1600,
+        blackRating: 1750,
+        whiteResult: "win",
+        blackResult: "resigned",
+        endTime: 2000 + i * 60,
+        pgn: `[White "Alice"]\n[Black "Strong"]\n[WhiteElo "1600"]\n[BlackElo "1750"]\n[Result "1-0"]\n`,
+      });
+      games.push({
+        white: "Alice",
+        black: "Weak",
+        whiteRating: 1600,
+        blackRating: 1450,
+        whiteResult: "resigned",
+        blackResult: "win",
+        endTime: 3000 + i * 60,
+        pgn: `[White "Alice"]\n[Black "Weak"]\n[WhiteElo "1600"]\n[BlackElo "1450"]\n[Result "0-1"]\n`,
+      });
+    }
+    const report = buildFormReportFromGames(games, "Alice");
+    expect(report.stats.vsRating?.archetype).toBe("nerfed_gun");
+    const brief = buildFormBrief(report);
+    const matchups = brief.notes.find((n) => n.label === "Matchups");
+    expect(matchups?.body.toLowerCase()).toContain("nerfed gun");
   });
 });
