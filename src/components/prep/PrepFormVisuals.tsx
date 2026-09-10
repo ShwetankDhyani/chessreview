@@ -210,11 +210,29 @@ function ResultsRibbon({ spark }: { spark: PrepFormCharts["resultsSpark"] }) {
 }
 
 const tooltipStyle = {
-  background: "#312e2b",
-  border: "1px solid #4a4744",
+  background: "#2a2724",
+  border: "1px solid #5a5652",
   borderRadius: 10,
   fontSize: 12,
-  color: "#f1f1f1",
+  color: "#f3f1ee",
+  boxShadow: "0 10px 28px rgba(0,0,0,0.5)",
+};
+
+/** Recharts paints label/item text via these — contentStyle color alone stays unreadable. */
+const tooltipLabelStyle = {
+  color: "#f3f1ee",
+  fontWeight: 600,
+  marginBottom: 2,
+};
+
+const tooltipItemStyle = {
+  color: "#d8d4cf",
+};
+
+const chartTooltipProps = {
+  contentStyle: tooltipStyle,
+  labelStyle: tooltipLabelStyle,
+  itemStyle: tooltipItemStyle,
 };
 
 export function PrepPlayerVisuals({
@@ -354,7 +372,7 @@ export function PrepPlayerVisuals({
                   width={28}
                 />
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  {...chartTooltipProps}
                   formatter={(v: number) => [`${v}%`, "Score"]}
                   labelFormatter={(n) => `Game ${n}`}
                 />
@@ -391,7 +409,7 @@ export function PrepPlayerVisuals({
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  {...chartTooltipProps}
                   formatter={(v: number, name: string) => [v, name]}
                 />
               </PieChart>
@@ -441,7 +459,7 @@ export function PrepPlayerVisuals({
                   width={48}
                 />
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  {...chartTooltipProps}
                   formatter={(v: number, _n, item) => [
                     `${v}% · ${item?.payload?.played ?? 0} games`,
                     "Score",
@@ -489,7 +507,7 @@ export function PrepPlayerVisuals({
                     width={84}
                   />
                   <Tooltip
-                    contentStyle={tooltipStyle}
+                    {...chartTooltipProps}
                     formatter={(v: number, _n, item) => [
                       `${v}% · ${item?.payload?.played ?? 0} games`,
                       "Score",
@@ -544,7 +562,7 @@ export function PrepPlayerVisuals({
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={tooltipStyle}
+                      {...chartTooltipProps}
                       formatter={(v: number, name: string, item) => [
                         `${v} (${item?.payload?.pct ?? 0}%)`,
                         name,
@@ -669,7 +687,7 @@ export function PrepHeadToHeadVisuals({
                 fillOpacity={0.18}
                 strokeWidth={2}
               />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip {...chartTooltipProps} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -696,7 +714,7 @@ export function PrepHeadToHeadVisuals({
                 tickLine={false}
                 width={28}
               />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip {...chartTooltipProps} />
               <Bar dataKey="you" name="You" fill="#94c455" radius={[6, 6, 0, 0]} />
               <Bar dataKey="them" name="Them" fill="#e69045" radius={[6, 6, 0, 0]} />
             </BarChart>
