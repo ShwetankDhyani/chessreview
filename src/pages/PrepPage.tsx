@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { analyzePrepForm } from "../utils/prepApi";
@@ -106,6 +106,7 @@ function PlayerFormCard({
 
 export default function PrepPage() {
   const linked = useMemo(() => readActiveProfile(), []);
+  const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState<PrepPlatform>(
     linked?.platform ?? "chesscom"
@@ -115,6 +116,7 @@ export default function PrepPage() {
   const [phase, setPhase] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PrepAnalyzeResponse | null>(null);
+  const autoStarted = useRef(false);
 
   usePageSeo({
     title: "Opponent Prep — Current Form Head-to-Head | ChessReview",
@@ -123,19 +125,16 @@ export default function PrepPage() {
     path: "/prep",
   });
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const target = username.trim();
-    if (!target) {
-      setError("Enter an opponent username");
-      return;
-    }
+  const runAnalyze = async (
+    target: string,
+    plat: PrepPlatform,
+    withSelf: boolean
+  ) => {
     setError(null);
     setLoading(true);
     setPhase("Fetching recent games from the public API…");
     setResult(null);
     try {
-      // Soft phase cues — actual work is one request.
       const phaseTimer = window.setTimeout(() => {
         setPhase("Parsing PGN headers and computing form…");
       }, 1200);
@@ -144,11 +143,9 @@ export default function PrepPage() {
       }, 3200);
       const data = await analyzePrepForm({
         username: target,
-        platform,
-        selfUsername:
-          includeSelf && linked?.name ? linked.name : undefined,
-        selfPlatform:
-          includeSelf && linked?.platform ? linked.platform : undefined,
+        platform: plat,
+        selfUsername: withSelf && linked?.name ? linked.name : undefined,
+        selfPlatform: withSelf && linked?.platform ? linked.platform : undefined,
       });
       window.clearTimeout(phaseTimer);
       window.clearTimeout(phaseTimer2);
@@ -160,6 +157,33 @@ export default function PrepPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (autoStarted.current) return;
+    const qUser = (searchParams.get("u") || searchParams.get("username") || "").trim();
+    const qPlatRaw = (searchParams.get("p") || searchParams.get("platform") || "").toLowerCase();
+    const qPlat: PrepPlatform =
+      qPlatRaw === "lichess" ? "lichess" : qPlatRaw === "chesscom" || qPlatRaw === "chess.com"
+        ? "chesscom"
+        : platform;
+    if (!qUser) return;
+    autoStarted.current = true;
+    setUsername(qUser);
+    setPlatform(qPlat);
+    void runAnalyze(qUser, qPlat, false);
+    // Intentionally once on mount from deep link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const target = username.trim();
+    if (!target) {
+      setError("Enter an opponent username");
+      return;
+    }
+    await runAnalyze(target, platform, includeSelf);
   };
 
   return (
