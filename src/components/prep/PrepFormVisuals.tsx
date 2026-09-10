@@ -158,6 +158,39 @@ function FormBriefBlock({
   );
 }
 
+/** Single comparative recent-form write-up for you vs opponent. */
+export function PrepCompareBriefVisuals({
+  brief,
+  selfName,
+  opponentName,
+}: {
+  brief: PrepFormBrief;
+  selfName: string;
+  opponentName: string;
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-chess-accent/30 bg-gradient-to-br from-chess-accent/[0.14] via-chess-panel/55 to-chess-panel/20 p-4 sm:p-5 spa-panel-enter">
+      <div
+        className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-chess-accent/15 blur-3xl"
+        aria-hidden
+      />
+      <div className="relative space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-chess-accent/90">
+          Who has the edge
+        </p>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-chess-text">
+          {selfName}{" "}
+          <span className="text-chess-muted font-semibold text-base sm:text-lg">
+            vs
+          </span>{" "}
+          {opponentName}
+        </h2>
+        <FormBriefBlock brief={brief} />
+      </div>
+    </section>
+  );
+}
+
 function ChartCard({
   title,
   hint,
@@ -240,9 +273,11 @@ const chartTooltipProps = {
 export function PrepPlayerVisuals({
   title,
   report,
+  hideBrief = false,
 }: {
   title: string;
   report: PrepPlayerReport;
+  hideBrief?: boolean;
 }) {
   const o = report.stats.byColor.overall;
   const charts = chartsOf(report);
@@ -296,10 +331,12 @@ export function PrepPlayerVisuals({
                 ? ` · avg opp ${report.stats.tpr.averageOpponentRating}`
                 : ""}
             </p>
-            <FormBriefBlock
-              brief={report.brief}
-              fallback={report.summary || report.scoutingReport}
-            />
+            {!hideBrief ? (
+              <FormBriefBlock
+                brief={report.brief}
+                fallback={report.summary || report.scoutingReport}
+              />
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 flex-shrink-0">
             <RingGauge

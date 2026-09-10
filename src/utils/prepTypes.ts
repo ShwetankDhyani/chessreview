@@ -134,6 +134,10 @@ export interface PrepAnalyzeResponse {
   ok: boolean;
   opponent: PrepPlayerReport;
   self: PrepPlayerReport | null;
+  /** Single comparative brief when both players are present. */
+  compareBrief?: PrepFormBrief | null;
+  /** Set when compare was requested but skipped (e.g. platform mismatch). */
+  compareSkipped?: { reason: string; message: string } | null;
   headToHead: { rows: PrepHeadToHeadRow[] } | null;
   error?: string;
 }

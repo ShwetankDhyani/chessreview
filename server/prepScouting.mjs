@@ -83,8 +83,8 @@ export function buildFormBrief(formReport) {
       label: "Tilt",
       body: `The rough patches stick. ${s.tilt.lossStreaksOf3Plus} streaks of 3+ losses (longest ${s.tilt.longestLossStreak})${
         s.tilt.rapidRequeuesAfterLoss > 0
-          ? `, and ${s.tilt.rapidRequeuesAfterLoss} times they jumped straight back in after a loss`
-          : ", though they aren't rage-queueing after defeats"
+          ? `, and ${s.tilt.rapidRequeuesAfterLoss} times they hit rematch almost immediately after a loss`
+          : ", though they aren't hammering rematch right after losses"
       }.`,
     });
   } else if (s.tilt.index >= 35) {
@@ -153,6 +153,157 @@ export function buildFormBrief(formReport) {
     " "
   );
 
+  return { headline, notes, plain };
+}
+
+/**
+ * One comparative write-up for you vs opponent — who has the edge and why.
+ * @param {object} selfReport
+ * @param {object} opponentReport
+ * @returns {FormBrief}
+ */
+export function buildCompareEdgeBrief(selfReport, opponentReport) {
+  const youName = "You";
+  const themName =
+    String(opponentReport.username || "Opponent").trim() || "Opponent";
+  const ys = selfReport.stats;
+  const os = opponentReport.stats;
+  const yScore = ys.byColor.overall.scorePct;
+  const oScore = os.byColor.overall.scorePct;
+  const yTpr = ys.tpr.value;
+  const oTpr = os.tpr.value;
+  const yTilt = ys.tilt.index;
+  const oTilt = os.tilt.index;
+  const yWhite = ys.byColor.white.scorePct;
+  const oWhite = os.byColor.white.scorePct;
+  const yBlack = ys.byColor.black.scorePct;
+  const oBlack = os.byColor.black.scorePct;
+
+  /** @type {{ side: "you" | "them" | "even", weight: number, label: string, body: string }[]} */
+  const edges = [];
+
+  const scoreGap = Math.round((yScore - oScore) * 10) / 10;
+  if (Math.abs(scoreGap) >= 4) {
+    edges.push({
+      side: scoreGap > 0 ? "you" : "them",
+      weight: Math.min(3, Math.abs(scoreGap) / 4),
+      label: "Score",
+      body:
+        scoreGap > 0
+          ? `${youName} are scoring ${yScore}% lately versus ${themName}'s ${oScore}% (${Math.abs(scoreGap)} pts clearer).`
+          : `${themName} is scoring ${oScore}% versus your ${yScore}% (${Math.abs(scoreGap)} pts clearer).`,
+    });
+  } else {
+    edges.push({
+      side: "even",
+      weight: 0,
+      label: "Score",
+      body: `Score is basically level — you ${yScore}%, ${themName} ${oScore}%.`,
+    });
+  }
+
+  if (yTpr != null && oTpr != null) {
+    const tprGap = yTpr - oTpr;
+    if (Math.abs(tprGap) >= 40) {
+      edges.push({
+        side: tprGap > 0 ? "you" : "them",
+        weight: Math.min(2.5, Math.abs(tprGap) / 50),
+        label: "TPR",
+        body:
+          tprGap > 0
+            ? `Your TPR (${yTpr}) outruns theirs (${oTpr}) by ${Math.abs(tprGap)} — stronger results vs the room.`
+            : `Their TPR (${oTpr}) beats yours (${yTpr}) by ${Math.abs(tprGap)} — they've been performing harder.`,
+      });
+    }
+  }
+
+  const tiltGap = oTilt - yTilt; // positive => you calmer
+  if (Math.abs(tiltGap) >= 12) {
+    edges.push({
+      side: tiltGap > 0 ? "you" : "them",
+      weight: Math.min(2, Math.abs(tiltGap) / 20),
+      label: "Tilt",
+      body:
+        tiltGap > 0
+          ? `You're the steadier one here (tilt ${yTilt} vs ${oTilt}) — fewer collapse stretches.`
+          : `${themName} looks steadier (tilt ${oTilt} vs your ${yTilt}) — watch for their composure if you start a slide.`,
+    });
+  }
+
+  const whiteGap = yWhite - oWhite;
+  const blackGap = yBlack - oBlack;
+  if (Math.abs(whiteGap) >= 8 || Math.abs(blackGap) >= 8) {
+    const parts = [];
+    if (Math.abs(whiteGap) >= 8) {
+      parts.push(
+        whiteGap > 0
+          ? `you with White (${yWhite}% vs ${oWhite}%)`
+          : `them with White (${oWhite}% vs ${yWhite}%)`
+      );
+    }
+    if (Math.abs(blackGap) >= 8) {
+      parts.push(
+        blackGap > 0
+          ? `you with Black (${yBlack}% vs ${oBlack}%)`
+          : `them with Black (${oBlack}% vs ${yBlack}%)`
+      );
+    }
+    const side =
+      (whiteGap >= 8 ? 1 : whiteGap <= -8 ? -1 : 0) +
+        (blackGap >= 8 ? 1 : blackGap <= -8 ? -1 : 0) >
+      0
+        ? "you"
+        : (whiteGap >= 8 ? 1 : whiteGap <= -8 ? -1 : 0) +
+            (blackGap >= 8 ? 1 : blackGap <= -8 ? -1 : 0) <
+          0
+          ? "them"
+          : "even";
+    edges.push({
+      side,
+      weight: 1.2,
+      label: "Colors",
+      body: `Color lean: ${parts.join("; ")}.`,
+    });
+  }
+
+  const youWeight = edges
+    .filter((e) => e.side === "you")
+    .reduce((a, e) => a + e.weight, 0);
+  const themWeight = edges
+    .filter((e) => e.side === "them")
+    .reduce((a, e) => a + e.weight, 0);
+
+  let headline;
+  if (youWeight - themWeight >= 1.5) {
+    headline = `On recent form, the edge leans your way against ${themName}.`;
+  } else if (themWeight - youWeight >= 1.5) {
+    headline = `On recent form, ${themName} looks like the one with the edge.`;
+  } else {
+    headline = `Recent form is close between you and ${themName} — no runaway favorite.`;
+  }
+
+  const notes = edges.map(({ label, body }) => ({ label, body }));
+  // Lead with a short "why" when we have a clear side.
+  if (youWeight - themWeight >= 1.5 || themWeight - youWeight >= 1.5) {
+    const winners = edges
+      .filter((e) => e.side === (youWeight > themWeight ? "you" : "them"))
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 2)
+      .map((e) => e.label.toLowerCase());
+    if (winners.length) {
+      notes.unshift({
+        label: "Edge",
+        body:
+          youWeight > themWeight
+            ? `Main reasons: ${winners.join(" and ")} favor you in this sample.`
+            : `Main reasons: ${winners.join(" and ")} favor ${themName} in this sample.`,
+      });
+    }
+  }
+
+  const plain = [headline, ...notes.map((n) => `${n.label}: ${n.body}`)].join(
+    " "
+  );
   return { headline, notes, plain };
 }
 
