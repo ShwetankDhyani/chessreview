@@ -278,6 +278,46 @@ export function computeFormStats(games) {
   const termPct = (n) =>
     losses > 0 ? Math.round((1000 * n) / losses) / 10 : 0;
 
+  /** Rolling form curve (oldest → newest) for charts. */
+  const formTrend = [];
+  let rollWins = 0;
+  let rollDraws = 0;
+  let rollPlayed = 0;
+  const WINDOW = 10;
+  /** @type {Array<{outcome: string, points: number}>} */
+  const recentWindow = [];
+  for (let i = 0; i < chrono.length; i++) {
+    const g = chrono[i];
+    const points = g.outcome === "win" ? 1 : g.outcome === "draw" ? 0.5 : 0;
+    recentWindow.push({ outcome: g.outcome, points });
+    rollWins += g.outcome === "win" ? 1 : 0;
+    rollDraws += g.outcome === "draw" ? 1 : 0;
+    rollPlayed += 1;
+    if (recentWindow.length > WINDOW) {
+      const dropped = recentWindow.shift();
+      rollPlayed -= 1;
+      if (dropped.outcome === "win") rollWins -= 1;
+      if (dropped.outcome === "draw") rollDraws -= 1;
+    }
+    const rollScore =
+      rollPlayed > 0
+        ? Math.round((1000 * (rollWins + 0.5 * rollDraws)) / rollPlayed) / 10
+        : 0;
+    formTrend.push({
+      n: i + 1,
+      scorePct: rollScore,
+      result: g.outcome,
+      color: g.color,
+    });
+  }
+
+  const resultsSpark = chrono.map((g, i) => ({
+    i: i + 1,
+    outcome: g.outcome,
+    value: g.outcome === "win" ? 1 : g.outcome === "draw" ? 0.5 : 0,
+    color: g.color,
+  }));
+
   return {
     gamesAnalyzed: byColor.overall.played,
     byColor: {
@@ -305,6 +345,46 @@ export function computeFormStats(games) {
       abandonedPct: termPct(termCounts.abandoned),
       otherPct: termPct(termCounts.other),
       counts: termCounts,
+    },
+    charts: {
+      formTrend,
+      resultsSpark,
+      wld: [
+        { key: "wins", label: "Wins", value: byColor.overall.wins },
+        { key: "draws", label: "Draws", value: byColor.overall.draws },
+        { key: "losses", label: "Losses", value: byColor.overall.losses },
+      ],
+      byColorScore: [
+        {
+          key: "white",
+          label: "White",
+          scorePct: byColor.white.scorePct,
+          played: byColor.white.played,
+        },
+        {
+          key: "black",
+          label: "Black",
+          scorePct: byColor.black.scorePct,
+          played: byColor.black.played,
+        },
+      ],
+      terminations: [
+        { key: "time", label: "On time", value: termCounts.time, pct: termPct(termCounts.time) },
+        {
+          key: "resignation",
+          label: "Resign",
+          value: termCounts.resignation,
+          pct: termPct(termCounts.resignation),
+        },
+        { key: "mate", label: "Mate", value: termCounts.mate, pct: termPct(termCounts.mate) },
+        {
+          key: "abandoned",
+          label: "Abandon",
+          value: termCounts.abandoned,
+          pct: termPct(termCounts.abandoned),
+        },
+        { key: "other", label: "Other", value: termCounts.other, pct: termPct(termCounts.other) },
+      ].filter((row) => row.value > 0),
     },
   };
 }

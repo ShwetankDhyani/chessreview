@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  PrepHeadToHeadVisuals,
+  PrepPlayerVisuals,
+} from "../components/prep/PrepFormVisuals";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { analyzePrepForm } from "../utils/prepApi";
 import { safeGetItem, safeGetJson } from "../utils/safeStorage";
 import type {
   PrepAnalyzeResponse,
-  PrepHeadToHeadRow,
   PrepPlatform,
-  PrepPlayerReport,
 } from "../utils/prepTypes";
 
 type LinkedProfile = { name: string; platform: "chesscom" | "lichess" };
@@ -35,72 +37,44 @@ function readActiveProfile(): LinkedProfile | null {
   }
 }
 
-function formatCell(row: PrepHeadToHeadRow, side: "self" | "opponent"): string {
-  const v = row[side];
-  if (v == null) return "—";
-  if (row.format === "pct") return `${v}%`;
-  return String(v);
-}
-
-function StatPill({ label, value }: { label: string; value: string }) {
+function LoadingSkeleton({ phase }: { phase: string | null }) {
   return (
-    <div className="rounded-xl border border-chess-border/70 bg-chess-panel/50 px-3 py-2.5">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-muted">
-        {label}
+    <div
+      className="space-y-3"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="rounded-2xl border border-chess-accent/25 bg-chess-accent/[0.07] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inset-0 rounded-full bg-chess-accent animate-ping opacity-60" />
+            <span className="relative rounded-full h-2.5 w-2.5 bg-chess-accent" />
+          </span>
+          <span className="text-sm font-semibold text-chess-text">
+            Building scouting dossier
+          </span>
+        </div>
+        <p className="mt-1 text-[12px] text-chess-muted">
+          {phase ?? "Starting…"} Public APIs are rate-limited; charts appear when
+          the sample is ready.
+        </p>
       </div>
-      <div className="mt-1 text-lg font-semibold tabular-nums text-chess-text">
-        {value}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-[200px] rounded-2xl border border-chess-border/60 bg-chess-panel/30 overflow-hidden relative"
+          >
+            <div
+              className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_ease_infinite] bg-gradient-to-r from-transparent via-white/[0.04] to-transparent"
+              style={{ animationDelay: `${i * 120}ms` }}
+            />
+          </div>
+        ))}
       </div>
+      <style>{`@keyframes shimmer{100%{transform:translateX(100%)}}`}</style>
     </div>
-  );
-}
-
-function PlayerFormCard({
-  title,
-  report,
-}: {
-  title: string;
-  report: PrepPlayerReport;
-}) {
-  const o = report.stats.byColor.overall;
-  return (
-    <section className="space-y-3 rounded-2xl border border-chess-border/80 bg-chess-panel/35 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold text-chess-text">{title}</h2>
-        <span className="text-[11px] font-medium text-chess-muted">
-          {report.platform === "lichess" ? "Lichess" : "Chess.com"} ·{" "}
-          {report.sampleSize} games
-          {report.cache?.hit ? " · cached" : ""}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <StatPill label="Score" value={`${o.scorePct}%`} />
-        <StatPill
-          label="W–L–D"
-          value={`${o.wins}–${o.losses}–${o.draws}`}
-        />
-        <StatPill
-          label="TPR"
-          value={report.stats.tpr.value != null ? String(report.stats.tpr.value) : "—"}
-        />
-        <StatPill label="Tilt" value={String(report.stats.tilt.index)} />
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-[12px] text-chess-subtext">
-        <div>
-          White {report.stats.byColor.white.scorePct}% ·{" "}
-          {report.stats.byColor.white.played} games
-        </div>
-        <div>
-          Black {report.stats.byColor.black.scorePct}% ·{" "}
-          {report.stats.byColor.black.played} games
-        </div>
-        <div>Losses on time {report.stats.terminations.timePct}%</div>
-        <div>Resign losses {report.stats.terminations.resignationPct}%</div>
-      </div>
-      <p className="text-[13px] leading-relaxed text-chess-subtext border-t border-chess-hairline pt-3">
-        {report.scoutingReport}
-      </p>
-    </section>
   );
 }
 
@@ -121,7 +95,7 @@ export default function PrepPage() {
   usePageSeo({
     title: "Opponent Prep — Current Form Head-to-Head | ChessReview",
     description:
-      "Scout an opponent’s recent form from the last 100 games using PGN metadata only — win rates by color, TPR, tilt, and termination splits.",
+      "Scout an opponent’s recent form from the last 100 games using PGN metadata only — charts for score trend, tilt, color splits, and terminations.",
     path: "/prep",
   });
 
@@ -139,7 +113,7 @@ export default function PrepPage() {
         setPhase("Parsing PGN headers and computing form…");
       }, 1200);
       const phaseTimer2 = window.setTimeout(() => {
-        setPhase("Writing scouting summary…");
+        setPhase("Rendering charts and scouting summary…");
       }, 3200);
       const data = await analyzePrepForm({
         username: target,
@@ -164,9 +138,11 @@ export default function PrepPage() {
     const qUser = (searchParams.get("u") || searchParams.get("username") || "").trim();
     const qPlatRaw = (searchParams.get("p") || searchParams.get("platform") || "").toLowerCase();
     const qPlat: PrepPlatform =
-      qPlatRaw === "lichess" ? "lichess" : qPlatRaw === "chesscom" || qPlatRaw === "chess.com"
-        ? "chesscom"
-        : platform;
+      qPlatRaw === "lichess"
+        ? "lichess"
+        : qPlatRaw === "chesscom" || qPlatRaw === "chess.com"
+          ? "chesscom"
+          : platform;
     if (!qUser) return;
     autoStarted.current = true;
     setUsername(qUser);
@@ -190,11 +166,16 @@ export default function PrepPage() {
     <SiteChrome title="Prep">
       <div className="relative">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-56
-            bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.10),transparent_65%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-72
+            bg-[radial-gradient(ellipse_at_top,rgba(150,188,75,0.14),transparent_60%)]"
           aria-hidden
         />
-        <main className="relative max-w-3xl mx-auto px-4 py-7 sm:py-10 space-y-6">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-24 h-40 opacity-[0.07]
+            bg-[linear-gradient(90deg,transparent_0%,#81b64c_50%,transparent_100%)] blur-2xl"
+          aria-hidden
+        />
+        <main className="relative max-w-5xl mx-auto px-4 py-7 sm:py-10 space-y-6">
           <header className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90">
               Opponent prep
@@ -202,15 +183,15 @@ export default function PrepPage() {
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
               Current form head-to-head
             </h1>
-            <p className="text-sm text-chess-subtext leading-relaxed max-w-xl">
-              Last 100 games from public APIs — win rates by color, TPR, tilt
-              signals, and how they lose. Metadata only; no engine analysis.
+            <p className="text-sm text-chess-subtext leading-relaxed max-w-2xl">
+              Visual scouting from the last 100 games — form trend, color splits,
+              tilt pressure, and how they lose. Metadata only; no engine grind.
             </p>
           </header>
 
           <form
             onSubmit={(e) => void onSubmit(e)}
-            className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 p-4 space-y-3"
+            className="rounded-2xl border border-chess-border/80 bg-chess-panel/50 p-4 space-y-3 shadow-elev-1 backdrop-blur-sm"
           >
             <div className="flex flex-col sm:flex-row gap-2">
               <label className="flex-1 min-w-0">
@@ -282,30 +263,13 @@ export default function PrepPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-chess-accent text-sm font-bold text-white hover:bg-chess-accent-hover disabled:opacity-60 transition-colors"
+              className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-chess-accent text-sm font-bold text-white hover:bg-chess-accent-hover disabled:opacity-60 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
             >
               {loading ? "Working…" : "Analyze form"}
             </button>
           </form>
 
-          {loading && (
-            <div
-              className="rounded-2xl border border-chess-accent/25 bg-chess-accent/[0.06] px-4 py-3 text-sm text-chess-subtext"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-chess-accent animate-pulse" />
-                <span className="font-medium text-chess-text">
-                  Fetching and processing games
-                </span>
-              </div>
-              <p className="mt-1 text-[12px] text-chess-muted">
-                {phase ?? "Starting…"} Public APIs are rate-limited; this can take
-                a moment.
-              </p>
-            </div>
-          )}
+          {loading ? <LoadingSkeleton phase={phase} /> : null}
 
           {error && (
             <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
@@ -313,58 +277,27 @@ export default function PrepPage() {
             </div>
           )}
 
-          {result?.opponent && (
-            <div className="space-y-4">
-              <PlayerFormCard title={result.opponent.username} report={result.opponent} />
+          {result?.opponent && !loading ? (
+            <div className="space-y-5">
+              <PrepPlayerVisuals
+                title={result.opponent.username}
+                report={result.opponent}
+              />
               {result.self ? (
-                <PlayerFormCard title={`You · ${result.self.username}`} report={result.self} />
+                <PrepPlayerVisuals
+                  title={`You · ${result.self.username}`}
+                  report={result.self}
+                />
               ) : null}
-
-              {result.headToHead?.rows?.length ? (
-                <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/35 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-chess-hairline">
-                    <h2 className="text-base font-semibold text-chess-text">
-                      Head-to-head comparison
-                    </h2>
-                    <p className="text-[12px] text-chess-muted mt-0.5">
-                      Same sample window — last up to 100 games each
-                    </p>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-[11px] uppercase tracking-wider text-chess-muted">
-                          <th className="px-4 py-2 font-semibold">Metric</th>
-                          <th className="px-4 py-2 font-semibold">You</th>
-                          <th className="px-4 py-2 font-semibold">
-                            {result.opponent.username}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.headToHead.rows.map((row) => (
-                          <tr
-                            key={row.label}
-                            className="border-t border-chess-hairline/80 text-chess-subtext"
-                          >
-                            <td className="px-4 py-2.5 text-chess-text font-medium">
-                              {row.label}
-                            </td>
-                            <td className="px-4 py-2.5 tabular-nums">
-                              {formatCell(row, "self")}
-                            </td>
-                            <td className="px-4 py-2.5 tabular-nums">
-                              {formatCell(row, "opponent")}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
+              {result.headToHead?.rows?.length && result.self ? (
+                <PrepHeadToHeadVisuals
+                  rows={result.headToHead.rows}
+                  selfName={result.self.username}
+                  opponentName={result.opponent.username}
+                />
               ) : null}
             </div>
-          )}
+          ) : null}
         </main>
       </div>
     </SiteChrome>

@@ -104,6 +104,9 @@ describe("computeFormStats + tilt", () => {
     expect(stats.tilt.rapidRequeuesAfterLoss).toBe(2);
     expect(stats.terminations.timePct).toBeGreaterThan(0);
     expect(stats.tpr.value).not.toBeNull();
+    expect(stats.charts.formTrend).toHaveLength(4);
+    expect(stats.charts.wld.find((r) => r.key === "wins")?.value).toBe(1);
+    expect(stats.charts.terminations.some((r) => r.key === "time")).toBe(true);
   });
 });
 
