@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { UserShell } from "./components/UserShell";
 import AdminPage from "./pages/AdminPage";
 import SharePage from "./pages/SharePage";
@@ -42,7 +42,8 @@ function Root() {
             <Route path="/admin" element={<AdminPage />} />
             <Route element={<UserShell />}>
               <Route path="/" element={null} />
-              <Route path="/prep" element={<PrepPage />} />
+              <Route path="/h2h" element={<PrepPage />} />
+              <Route path="/prep" element={<Navigate to="/h2h" replace />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

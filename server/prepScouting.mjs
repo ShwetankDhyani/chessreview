@@ -1,18 +1,19 @@
 /**
- * LLM scouting report for prep form stats (server-only Gemini key).
+ * Short plain-English summary of recent form stats.
+ * Uses Gemini when GEMINI_API_KEY is set; otherwise a local fallback.
  */
 
 /**
  * @param {object} formReport buildFormReportFromGames result
- * @returns {Promise<string | null>}
+ * @returns {Promise<string>}
  */
-export async function generateScoutingReport(formReport) {
+export async function generateFormSummary(formReport) {
   const key =
     process.env.GEMINI_API_KEY?.trim() ||
     process.env.VITE_GEMINI_API_KEY?.trim() ||
     "";
   if (!key || key === "your_api_key_here") {
-    return fallbackScoutingReport(formReport);
+    return fallbackFormSummary(formReport);
   }
 
   try {
@@ -20,48 +21,57 @@ export async function generateScoutingReport(formReport) {
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const stats = formReport.stats;
-    const prompt = `You are a concise chess coach writing a scouting note.
-Write exactly 3 short sentences about this opponent's recent form.
-Use only the numbers given. No bullet points. No markdown.
+    const prompt = `Write exactly 3 short, plain sentences about this chess player's recent results.
+Sound like a person, not a coach brochure. Use only the numbers given. No bullet points. No markdown.
 Username: ${formReport.username}
 Games: ${stats.gamesAnalyzed}
 Overall W-L-D: ${stats.byColor.overall.wins}-${stats.byColor.overall.losses}-${stats.byColor.overall.draws} (score ${stats.byColor.overall.scorePct}%)
 White score: ${stats.byColor.white.scorePct}% over ${stats.byColor.white.played} games
 Black score: ${stats.byColor.black.scorePct}% over ${stats.byColor.black.played} games
 TPR: ${stats.tpr.value ?? "n/a"} vs avg opp ${stats.tpr.averageOpponentRating ?? "n/a"}
-Tilt index 0-100: ${stats.tilt.index} (loss streaks of 3+: ${stats.tilt.lossStreaksOf3Plus}, longest ${stats.tilt.longestLossStreak}, rapid requeues after losses: ${stats.tilt.rapidRequeuesAfterLoss})
-Loss terminations — time ${stats.terminations.timePct}%, resign ${stats.terminations.resignationPct}%, mate ${stats.terminations.matePct}%`;
+Tilt index 0-100: ${stats.tilt.index} (loss streaks of 3+: ${stats.tilt.lossStreaksOf3Plus}, longest ${stats.tilt.longestLossStreak}, games started within 30s of a loss: ${stats.tilt.rapidRequeuesAfterLoss})
+Losses ending on time ${stats.terminations.timePct}%, resign ${stats.terminations.resignationPct}%, mate ${stats.terminations.matePct}%`;
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 220 },
+      generationConfig: { temperature: 0.35, maxOutputTokens: 220 },
     });
     const text = result?.response?.text?.()?.trim();
     if (text) return text.slice(0, 800);
   } catch (e) {
-    console.warn("[prep] scouting LLM failed:", e);
+    console.warn("[h2h] summary failed:", e);
   }
-  return fallbackScoutingReport(formReport);
+  return fallbackFormSummary(formReport);
 }
 
-export function fallbackScoutingReport(formReport) {
+/** @deprecated Use generateFormSummary */
+export async function generateScoutingReport(formReport) {
+  return generateFormSummary(formReport);
+}
+
+export function fallbackFormSummary(formReport) {
   const s = formReport.stats;
   const o = s.byColor.overall;
   const colorBias =
     s.byColor.white.scorePct - s.byColor.black.scorePct >= 8
-      ? "Stronger results with White than Black recently."
+      ? "Doing better with White than Black in this stretch."
       : s.byColor.black.scorePct - s.byColor.white.scorePct >= 8
-        ? "Scoring better with Black than White in this sample."
-        : "Results are fairly balanced across colors.";
+        ? "Doing better with Black than White in this stretch."
+        : "White and Black results are about even.";
   const tiltNote =
     s.tilt.index >= 45
-      ? `Tilt looks elevated (index ${s.tilt.index}) with ${s.tilt.lossStreaksOf3Plus} loss streaks of 3+ and ${s.tilt.rapidRequeuesAfterLoss} sub-30s requeues after defeats.`
-      : `Emotional control looks steady (tilt index ${s.tilt.index}); loss streaks and rapid requeues are limited.`;
+      ? `A few rough patches show up — ${s.tilt.lossStreaksOf3Plus} streaks of 3+ losses, longest ${s.tilt.longestLossStreak}, and ${s.tilt.rapidRequeuesAfterLoss} quick rematches after a loss.`
+      : `Not many long losing streaks in the sample (tilt ${s.tilt.index}).`;
   const term =
     s.terminations.timePct >= 25
-      ? `A notable ${s.terminations.timePct}% of losses are on time — practical clock pressure can help.`
-      : `Losses skew toward resign/mate (${s.terminations.resignationPct}% resign / ${s.terminations.matePct}% mate) rather than flags.`;
+      ? `${s.terminations.timePct}% of losses are on time.`
+      : `Losses are mostly resign (${s.terminations.resignationPct}%) or mate (${s.terminations.matePct}%).`;
   return `${formReport.username} scores ${o.scorePct}% over ${s.gamesAnalyzed} recent games (TPR ${s.tpr.value ?? "n/a"}). ${colorBias} ${tiltNote} ${term}`
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** @deprecated Use fallbackFormSummary */
+export function fallbackScoutingReport(formReport) {
+  return fallbackFormSummary(formReport);
 }

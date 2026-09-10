@@ -10,6 +10,16 @@
       "has": [{ "type": "host", "value": "chessreview.org" }],
       "destination": "https://www.chessreview.org/:path*",
       "permanent": true
+    },
+    {
+      "source": "/prep",
+      "destination": "/h2h",
+      "permanent": true
+    },
+    {
+      "source": "/prep/:path*",
+      "destination": "/h2h",
+      "permanent": true
     }
   ],
   "headers": [
@@ -47,6 +57,14 @@
     },
     {
       "source": "/api/prep/analyze",
+      "destination": "/api/prep"
+    },
+    {
+      "source": "/api/h2h/analyze",
+      "destination": "/api/prep"
+    },
+    {
+      "source": "/api/h2h",
       "destination": "/api/prep"
     },
     {

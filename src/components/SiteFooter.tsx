@@ -94,10 +94,10 @@ export function SiteFooter() {
               ·
             </span>
             <Link
-              to="/prep"
+              to="/h2h"
               className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
-              Prep
+              H2H
             </Link>
             <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·

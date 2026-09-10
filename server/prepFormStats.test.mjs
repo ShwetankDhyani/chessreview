@@ -7,7 +7,7 @@ import {
   computeTpr,
   parsePgnHeaders,
 } from "./prepFormStats.mjs";
-import { fallbackScoutingReport } from "./prepScouting.mjs";
+import { fallbackFormSummary } from "./prepScouting.mjs";
 
 describe("parsePgnHeaders", () => {
   it("reads standard tag pairs", () => {
@@ -143,8 +143,8 @@ describe("buildFormReportFromGames", () => {
   });
 });
 
-describe("fallbackScoutingReport", () => {
-  it("returns three-ish sentence prose", () => {
+describe("fallbackFormSummary", () => {
+  it("returns plain prose", () => {
     const report = buildFormReportFromGames(
       [
         {
@@ -160,7 +160,7 @@ describe("fallbackScoutingReport", () => {
       ],
       "Alice"
     );
-    const text = fallbackScoutingReport(report);
+    const text = fallbackFormSummary(report);
     expect(text.toLowerCase()).toContain("alice");
     expect(text.length).toBeGreaterThan(40);
   });

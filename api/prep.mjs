@@ -1,8 +1,8 @@
 import { handlePrepRequest } from "../server/prepAnalyze.mjs";
 
 /**
- * Opponent prep / current-form API.
- * Rewrites: POST /api/prep/analyze → /api/prep
+ * H2H / recent-form API.
+ * Rewrites: POST /api/h2h/analyze and /api/prep/analyze → /api/prep
  */
 export default async function handler(req, res) {
   return handlePrepRequest(req, res);

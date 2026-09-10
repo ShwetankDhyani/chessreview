@@ -1,13 +1,24 @@
 /**
- * Opponent prep / current-form analyze — Vercel + Vite middleware.
+ * Opponent / self recent-form analyze — Vercel + Vite middleware.
  */
 
 import { buildFormReportFromGames } from "./prepFormStats.mjs";
 import { fetchRecentGamesForPrep } from "./prepGamesFetch.mjs";
 import { getPrepCache, setPrepCache, prepCacheTtlMs } from "./prepCache.mjs";
-import { generateScoutingReport } from "./prepScouting.mjs";
+import { generateFormSummary } from "./prepScouting.mjs";
 
 const PLATFORMS = new Set(["lichess", "chesscom"]);
+
+function normalizePlayerPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  const summary =
+    typeof payload.summary === "string" && payload.summary.trim()
+      ? payload.summary
+      : typeof payload.scoutingReport === "string"
+        ? payload.scoutingReport
+        : "";
+  return { ...payload, summary, scoutingReport: summary };
+}
 
 function normalizePlatform(value) {
   const p = String(value || "").trim().toLowerCase();
@@ -36,19 +47,22 @@ export async function analyzePlayerForm(input) {
   if (!input.bypassCache) {
     const cached = await getPrepCache(platform, username);
     if (cached.hit && cached.payload) {
-      return { ...cached.payload, cache: { hit: true, source: cached.source } };
+      const payload = normalizePlayerPayload(cached.payload);
+      return { ...payload, cache: { hit: true, source: cached.source } };
     }
   }
 
   const games = await fetchRecentGamesForPrep(platform, username, 100);
   const form = buildFormReportFromGames(games, username);
-  const scoutingReport = await generateScoutingReport(form);
+  const summary = await generateFormSummary(form);
   const payload = {
     username: form.username,
     platform,
     sampleSize: form.sampleSize,
     stats: form.stats,
-    scoutingReport,
+    summary,
+    // Keep old key so older clients still read a blurb.
+    scoutingReport: summary,
     generatedAt: new Date().toISOString(),
     cacheTtlMs: prepCacheTtlMs(),
   };
@@ -188,7 +202,7 @@ export async function handlePrepRequest(req, res) {
     const result = await runPrepAnalyze(body);
     sendJson(res, 200, result);
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Prep analyze failed";
+    const message = e instanceof Error ? e.message : "Couldn't load form";
     const status =
       /not found/i.test(message) || /must be/i.test(message) || /Missing/i.test(message)
         ? 400
@@ -201,7 +215,7 @@ export async function handlePrepRequest(req, res) {
 export function createPrepMiddleware() {
   return async (req, res, next) => {
     const url = req.url || "";
-    if (!url.startsWith("/api/prep")) return next();
+    if (!url.startsWith("/api/prep") && !url.startsWith("/api/h2h")) return next();
 
     if (req.method === "OPTIONS") {
       res.statusCode = 204;
@@ -227,7 +241,7 @@ export function createPrepMiddleware() {
         const result = await runPrepAnalyze(body);
         sendJson(res, 200, result);
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Prep analyze failed";
+        const message = e instanceof Error ? e.message : "Couldn't load form";
         const status =
           /not found/i.test(message) ||
           /must be/i.test(message) ||

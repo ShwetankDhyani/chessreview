@@ -52,12 +52,12 @@ function LoadingSkeleton({ phase }: { phase: string | null }) {
             <span className="relative rounded-full h-2.5 w-2.5 bg-chess-accent" />
           </span>
           <span className="text-sm font-semibold text-chess-text">
-            Building scouting dossier
+            Loading recent games
           </span>
         </div>
         <p className="mt-1 text-[12px] text-chess-muted">
-          {phase ?? "Starting…"} Public APIs are rate-limited; charts appear when
-          the sample is ready.
+          {phase ?? "Starting…"} Chess.com and Lichess can be slow; hang on a
+          second.
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -93,10 +93,10 @@ export default function PrepPage() {
   const autoStarted = useRef(false);
 
   usePageSeo({
-    title: "Opponent Prep — Current Form Head-to-Head | ChessReview",
+    title: "H2H — Recent form | ChessReview",
     description:
-      "Scout an opponent’s recent form from the last 100 games using PGN metadata only — charts for score trend, tilt, color splits, and terminations.",
-    path: "/prep",
+      "Compare recent form from the last 100 Chess.com or Lichess games — score, color splits, tilt, and how they lose. No engine analysis.",
+    path: "/h2h",
   });
 
   const runAnalyze = async (
@@ -106,14 +106,14 @@ export default function PrepPage() {
   ) => {
     setError(null);
     setLoading(true);
-    setPhase("Fetching recent games from the public API…");
+    setPhase("Fetching games…");
     setResult(null);
     try {
       const phaseTimer = window.setTimeout(() => {
-        setPhase("Parsing PGN headers and computing form…");
+        setPhase("Crunching results…");
       }, 1200);
       const phaseTimer2 = window.setTimeout(() => {
-        setPhase("Rendering charts and scouting summary…");
+        setPhase("Almost done…");
       }, 3200);
       const data = await analyzePrepForm({
         username: target,
@@ -126,7 +126,7 @@ export default function PrepPage() {
       setResult(data);
       setPhase(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Analyze failed");
+      setError(err instanceof Error ? err.message : "Couldn't load form");
       setPhase(null);
     } finally {
       setLoading(false);
@@ -163,7 +163,7 @@ export default function PrepPage() {
   };
 
   return (
-    <SiteChrome title="Prep">
+    <SiteChrome title="H2H">
       <div className="relative">
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-72
@@ -178,14 +178,14 @@ export default function PrepPage() {
         <main className="relative max-w-5xl mx-auto px-4 py-7 sm:py-10 space-y-6">
           <header className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90">
-              Opponent prep
+              Head-to-head
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
-              Current form head-to-head
+              H2H
             </h1>
             <p className="text-sm text-chess-subtext leading-relaxed max-w-2xl">
-              Visual scouting from the last 100 games — form trend, color splits,
-              tilt pressure, and how they lose. Metadata only; no engine grind.
+              Recent form from the last 100 games — score trend, White vs Black,
+              tilt, and how they lose. Public results only; nothing engine-based.
             </p>
           </header>
 
@@ -265,7 +265,7 @@ export default function PrepPage() {
               disabled={loading}
               className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-chess-accent text-sm font-bold text-white hover:bg-chess-accent-hover disabled:opacity-60 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
             >
-              {loading ? "Working…" : "Analyze form"}
+              {loading ? "Working…" : "Look up"}
             </button>
           </form>
 
