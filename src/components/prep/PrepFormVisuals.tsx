@@ -61,6 +61,7 @@ function RingGauge({
   sub,
   color,
   danger,
+  size = "md",
 }: {
   value: number;
   max?: number;
@@ -68,14 +69,20 @@ function RingGauge({
   sub?: string;
   color: string;
   danger?: boolean;
+  size?: "sm" | "md";
 }) {
   const pct = Math.max(0, Math.min(1, value / max));
-  const r = 42;
+  const r = size === "sm" ? 34 : 42;
   const c = 2 * Math.PI * r;
   const dash = c * pct;
+  const box = size === "sm" ? "h-[84px] w-[84px]" : "h-[108px] w-[108px]";
+  const valueCls =
+    size === "sm"
+      ? "text-lg font-bold tabular-nums text-chess-text leading-none"
+      : "text-xl font-bold tabular-nums text-chess-text leading-none";
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <div className="relative h-[108px] w-[108px]">
+      <div className={`relative ${box}`}>
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
           <circle
             cx="50"
@@ -83,7 +90,7 @@ function RingGauge({
             r={r}
             fill="none"
             stroke="rgba(255,255,255,0.06)"
-            strokeWidth="8"
+            strokeWidth={size === "sm" ? 7 : 8}
           />
           <circle
             cx="50"
@@ -91,7 +98,7 @@ function RingGauge({
             r={r}
             fill="none"
             stroke={color}
-            strokeWidth="8"
+            strokeWidth={size === "sm" ? 7 : 8}
             strokeLinecap="round"
             strokeDasharray={`${dash} ${c - dash}`}
             className="transition-[stroke-dasharray] duration-700 ease-out"
@@ -103,7 +110,7 @@ function RingGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
-          <span className="text-xl font-bold tabular-nums text-chess-text leading-none">
+          <span className={valueCls}>
             {Number.isFinite(value) ? Math.round(value) : "—"}
           </span>
           <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-chess-muted">
@@ -274,13 +281,19 @@ export function PrepPlayerVisuals({
   title,
   report,
   hideBrief = false,
+  compact = false,
 }: {
   title: string;
   report: PrepPlayerReport;
   hideBrief?: boolean;
+  /** Tighter layout for side-by-side compare columns. */
+  compact?: boolean;
 }) {
   const o = report.stats.byColor.overall;
   const charts = chartsOf(report);
+  const fillId = `prepFormFill-${String(report.username || "player")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")}-${compact ? "c" : "f"}`;
   const wldPie = useMemo(
     () =>
       charts.wld
@@ -299,20 +312,32 @@ export function PrepPlayerVisuals({
       })),
     [charts.terminations]
   );
+  const chartH = compact ? "h-[150px]" : "h-[180px]";
+  const gaugeSize = compact ? "sm" : "md";
 
   return (
-    <div className="space-y-3 spa-panel-enter">
-      <section className="relative overflow-hidden rounded-2xl border border-chess-accent/25 bg-gradient-to-br from-chess-accent/[0.12] via-chess-panel/60 to-chess-panel/20 p-4 sm:p-5">
+    <div className="space-y-3 spa-panel-enter min-w-0">
+      <section className="relative overflow-hidden rounded-2xl border border-chess-accent/25 bg-gradient-to-br from-chess-accent/[0.12] via-chess-panel/60 to-chess-panel/20 p-3.5 sm:p-4">
         <div
           className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-chess-accent/15 blur-3xl"
           aria-hidden
         />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 space-y-1.5">
+        <div
+          className={`relative flex flex-col gap-3 ${
+            compact
+              ? ""
+              : "sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+          }`}
+        >
+          <div className="min-w-0 space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-chess-accent/90">
               Recent form
             </p>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-chess-text truncate">
+            <h2
+              className={`${
+                compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+              } font-bold tracking-tight text-chess-text truncate`}
+            >
               {title}
             </h2>
             {report.stats.vsRating?.archetypeTitle ? (
@@ -338,12 +363,17 @@ export function PrepPlayerVisuals({
               />
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 flex-shrink-0">
+          <div
+            className={`flex flex-wrap items-center ${
+              compact ? "justify-start gap-3" : "justify-center gap-4 sm:gap-5"
+            } flex-shrink-0`}
+          >
             <RingGauge
               value={o.scorePct}
               label="Score"
               sub={`${o.wins}–${o.losses}–${o.draws}`}
               color={ACCENT}
+              size={gaugeSize}
             />
             <RingGauge
               value={report.stats.tpr.value ?? 0}
@@ -355,6 +385,7 @@ export function PrepPlayerVisuals({
                   : "n/a"
               }
               color="#94c455"
+              size={gaugeSize}
             />
             <RingGauge
               value={report.stats.tilt.index}
@@ -366,10 +397,11 @@ export function PrepPlayerVisuals({
               }
               color={report.stats.tilt.index >= 50 ? LOSS : ACCENT}
               danger={report.stats.tilt.index >= 50}
+              size={gaugeSize}
             />
           </div>
         </div>
-        <div className="relative mt-4 pt-3 border-t border-chess-hairline">
+        <div className="relative mt-3 pt-3 border-t border-chess-hairline">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-chess-muted">
               Last {Math.min(40, charts.resultsSpark.length)} results
@@ -384,13 +416,17 @@ export function PrepPlayerVisuals({
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div
+        className={`grid grid-cols-1 gap-3 ${
+          compact ? "" : "lg:grid-cols-2"
+        }`}
+      >
         <ChartCard title="Form trend" hint="Rolling 10-game score %">
-          <div className="h-[180px] w-full">
+          <div className={`${chartH} w-full`}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={charts.formTrend}>
                 <defs>
-                  <linearGradient id="prepFormFill" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={ACCENT} stopOpacity={0.45} />
                     <stop offset="100%" stopColor={ACCENT} stopOpacity={0.02} />
                   </linearGradient>
@@ -420,7 +456,7 @@ export function PrepPlayerVisuals({
                   dataKey="scorePct"
                   stroke={ACCENT}
                   strokeWidth={2.2}
-                  fill="url(#prepFormFill)"
+                  fill={`url(#${fillId})`}
                   animationDuration={900}
                 />
               </AreaChart>
@@ -429,7 +465,7 @@ export function PrepPlayerVisuals({
         </ChartCard>
 
         <ChartCard title="Results mix" hint="Win / draw / loss">
-          <div className="h-[180px] w-full flex items-center">
+          <div className={`${chartH} w-full flex items-center`}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -474,7 +510,7 @@ export function PrepPlayerVisuals({
         </ChartCard>
 
         <ChartCard title="Color performance" hint="Score % by side">
-          <div className="h-[180px] w-full">
+          <div className={`${chartH} w-full`}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={charts.byColorScore}
@@ -522,7 +558,7 @@ export function PrepPlayerVisuals({
             title="Vs rating"
             hint={`±${report.stats.vsRating?.gap ?? 100} Elo · much higher/lower`}
           >
-            <div className="h-[180px] w-full">
+            <div className={`${chartH} w-full`}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={charts.byRatingScore}
@@ -578,7 +614,7 @@ export function PrepPlayerVisuals({
         ) : null}
 
         <ChartCard title="How they lose" hint="Termination split">
-          <div className="h-[180px] w-full flex items-center">
+          <div className={`${chartH} w-full flex items-center`}>
             {termPie.length === 0 ? (
               <p className="text-sm text-chess-muted px-2">No losses in sample</p>
             ) : (
