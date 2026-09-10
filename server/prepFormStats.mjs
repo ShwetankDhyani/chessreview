@@ -35,8 +35,8 @@ export function parsePgnDateTimeMs(isoLike, time) {
   return Number.isFinite(ms) ? ms : null;
 }
 
-/** Rating gap (Elo) before a game counts as higher / lower opposition. */
-export const VS_RATING_GAP = 40;
+/** Elo gap before a game counts as *much* higher / lower opposition. */
+export const VS_RATING_GAP = 100;
 /** Minimum games in the primary band before we trust the split. */
 export const VS_RATING_MIN_GAMES = 8;
 /** Softer floor for the contrasting band (allows sparse but loud signals). */
@@ -106,6 +106,9 @@ export function ratingBandForGame(ownRating, opponentRating, gap = VS_RATING_GAP
 }
 
 /**
+ * Dramatic matchup labels only for *large* Elo gaps (±VS_RATING_GAP).
+ * Mild score differences vs near-peers must not read as giant-killer / feasting.
+ *
  * @param {{ higher: { played: number, scorePct: number }, lower: { played: number, scorePct: number }, peer?: { played: number, scorePct: number } }} bands
  * @param {{ minGames?: number, minOther?: number }} [opts]
  * @returns {{ key: string | null, title: string | null, gapPct: number | null }}
@@ -130,26 +133,30 @@ export function deriveVsRatingArchetype(bands, opts = {}) {
   }
   const gapPct = Math.round((higher.scorePct - lower.scorePct) * 10) / 10;
 
-  // Soft vs weaker, sharp vs stronger.
+  // Soft vs much-weaker, sharp vs much-stronger.
   if (
-    gapPct >= 12 &&
-    lower.scorePct < 48 &&
+    gapPct >= 18 &&
+    lower.scorePct < 42 &&
     higher.scorePct >= 50
   ) {
     return { key: "nerfed_gun", title: "Nerfed gun", gapPct };
   }
-  // Strong relative results against higher-rated opposition.
-  if (gapPct >= 10 && higher.scorePct >= 48) {
+  // Holding or better vs opponents ~100+ Elo higher.
+  if (higher.scorePct >= 52 && gapPct >= 18) {
     return { key: "giant_killer", title: "Giant killer", gapPct };
   }
-  // Punishes lower-rated, struggles when outrated.
-  if (gapPct <= -12 && lower.scorePct >= 55) {
+  // Crushing much-weaker opposition while struggling vs much-stronger.
+  if (
+    lower.scorePct >= 78 &&
+    higher.scorePct < 40 &&
+    gapPct <= -25
+  ) {
     return { key: "feasts_lower", title: "Feasts lower", gapPct };
   }
-  if (lower.scorePct >= 62 && higher.scorePct < 42) {
+  if (lower.scorePct >= 82 && higher.scorePct < 38) {
     return { key: "feasts_lower", title: "Feasts lower", gapPct };
   }
-  return { key: "even", title: null, gapPct };
+  return { key: null, title: null, gapPct };
 }
 
 /**
@@ -473,19 +480,19 @@ export function computeFormStats(games) {
       byRatingScore: [
         {
           key: "higher",
-          label: "Higher",
+          label: "Much higher",
           scorePct: vsRating.higher.scorePct,
           played: vsRating.higher.played,
         },
         {
           key: "peer",
-          label: "Peer",
+          label: "Near",
           scorePct: vsRating.peer.scorePct,
           played: vsRating.peer.played,
         },
         {
           key: "lower",
-          label: "Lower",
+          label: "Much lower",
           scorePct: vsRating.lower.scorePct,
           played: vsRating.lower.played,
         },

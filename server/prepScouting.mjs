@@ -127,36 +127,25 @@ export function buildFormBrief(formReport) {
   }
 
   const vs = s.vsRating;
-  if (vs?.higher && vs?.lower) {
+  if (vs?.higher && vs?.lower && vs.archetype) {
     const hi = vs.higher;
     const lo = vs.lower;
-    const minGames = vs.minGames || 8;
-    const minOther = vs.minOther || 4;
-    const enough =
-      (hi.played >= minGames && lo.played >= minOther) ||
-      (lo.played >= minGames && hi.played >= minOther);
-    if (enough) {
-      if (vs.archetype === "nerfed_gun") {
-        notes.push({
-          label: "Matchups",
-          body: `Nerfed gun energy — soft against lower-rated (${lo.scorePct}% over ${lo.played}), then suddenly sharp vs higher (${hi.scorePct}% over ${hi.played}).`,
-        });
-      } else if (vs.archetype === "giant_killer") {
-        notes.push({
-          label: "Matchups",
-          body: `Giant-killer stretch — ${hi.scorePct}% against higher-rated foes (${hi.played} games) versus ${lo.scorePct}% when favored (${lo.played}).`,
-        });
-      } else if (vs.archetype === "feasts_lower") {
-        notes.push({
-          label: "Matchups",
-          body: `Feasting on the field — ${lo.scorePct}% against lower-rated opposition (${lo.played}), but only ${hi.scorePct}% when the rating tilts the other way (${hi.played}).`,
-        });
-      } else if (vs.archetype === "even") {
-        notes.push({
-          label: "Matchups",
-          body: `No wild rating-band story — ${hi.scorePct}% vs higher (${hi.played}), ${lo.scorePct}% vs lower (${lo.played}).`,
-        });
-      }
+    const gap = vs.gap || 100;
+    if (vs.archetype === "nerfed_gun") {
+      notes.push({
+        label: "Matchups",
+        body: `Nerfed gun energy — soft against opponents ${gap}+ Elo lower (${lo.scorePct}% over ${lo.played}), then suddenly sharp vs ${gap}+ higher (${hi.scorePct}% over ${hi.played}).`,
+      });
+    } else if (vs.archetype === "giant_killer") {
+      notes.push({
+        label: "Matchups",
+        body: `Giant-killer stretch — ${hi.scorePct}% against opponents ${gap}+ Elo higher (${hi.played} games), versus ${lo.scorePct}% when ${gap}+ Elo favored (${lo.played}).`,
+      });
+    } else if (vs.archetype === "feasts_lower") {
+      notes.push({
+        label: "Matchups",
+        body: `Feasting on much weaker fields — ${lo.scorePct}% against opponents ${gap}+ Elo lower (${lo.played}), but only ${hi.scorePct}% vs ${gap}+ higher (${hi.played}).`,
+      });
     }
   }
 

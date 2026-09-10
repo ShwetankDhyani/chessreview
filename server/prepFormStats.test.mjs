@@ -40,23 +40,33 @@ describe("classifyGameFromHeaders", () => {
 });
 
 describe("ratingBandForGame + deriveVsRatingArchetype", () => {
-  it("bands by rating gap", () => {
+  it("only bands much higher / lower (~100 Elo)", () => {
     expect(ratingBandForGame(1600, 1700)).toBe("higher");
     expect(ratingBandForGame(1600, 1500)).toBe("lower");
+    expect(ratingBandForGame(1600, 1680)).toBe("peer");
     expect(ratingBandForGame(1600, 1620)).toBe("peer");
     expect(ratingBandForGame(null, 1700)).toBe(null);
   });
 
-  it("allows a thinner contrasting band", () => {
+  it("allows a thinner contrasting band for loud mismatches", () => {
     expect(
       deriveVsRatingArchetype({
         higher: { played: 8, scorePct: 0 },
-        lower: { played: 4, scorePct: 75 },
+        lower: { played: 4, scorePct: 85 },
       }).key
     ).toBe("feasts_lower");
   });
 
-  it("labels nerfed gun / giant killer / feasts lower", () => {
+  it("ignores mild near-peer score gaps (not feasting)", () => {
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 45, scorePct: 52.2 },
+        lower: { played: 25, scorePct: 70 },
+      }).key
+    ).toBe(null);
+  });
+
+  it("labels nerfed gun / giant killer / feasts lower only when extreme", () => {
     expect(
       deriveVsRatingArchetype({
         higher: { played: 20, scorePct: 58 },
@@ -65,16 +75,22 @@ describe("ratingBandForGame + deriveVsRatingArchetype", () => {
     ).toBe("nerfed_gun");
     expect(
       deriveVsRatingArchetype({
-        higher: { played: 20, scorePct: 58 },
-        lower: { played: 20, scorePct: 48 },
+        higher: { played: 20, scorePct: 60 },
+        lower: { played: 20, scorePct: 42 },
       }).key
     ).toBe("giant_killer");
+    expect(
+      deriveVsRatingArchetype({
+        higher: { played: 20, scorePct: 30 },
+        lower: { played: 20, scorePct: 85 },
+      }).key
+    ).toBe("feasts_lower");
     expect(
       deriveVsRatingArchetype({
         higher: { played: 20, scorePct: 35 },
         lower: { played: 20, scorePct: 68 },
       }).key
-    ).toBe("feasts_lower");
+    ).toBe(null);
   });
 });
 
