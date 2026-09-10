@@ -94,8 +94,7 @@ export default function PrepPage() {
 
   usePageSeo({
     title: "H2H — Recent form | ChessReview",
-    description:
-      "Recent form from the last 100 Chess.com or Lichess games. Results only — no engine.",
+    description: "Trends for the last 100 Chess.com or Lichess games.",
     path: "/h2h",
   });
 
@@ -184,7 +183,7 @@ export default function PrepPage() {
               H2H
             </h1>
             <p className="text-sm text-chess-subtext leading-relaxed max-w-xl">
-              Last 100 games. Results only.
+              Trends for the last 100 games.
             </p>
           </header>
 
