@@ -95,7 +95,7 @@ export default function PrepPage() {
   usePageSeo({
     title: "H2H — Recent form | ChessReview",
     description:
-      "Compare recent form from the last 100 Chess.com or Lichess games — score, color splits, tilt, and how they lose. No engine analysis.",
+      "Recent form from the last 100 Chess.com or Lichess games. Results only — no engine.",
     path: "/h2h",
   });
 
@@ -183,9 +183,8 @@ export default function PrepPage() {
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
               H2H
             </h1>
-            <p className="text-sm text-chess-subtext leading-relaxed max-w-2xl">
-              Recent form from the last 100 games — score trend, White vs Black,
-              tilt, and how they lose. Public results only; nothing engine-based.
+            <p className="text-sm text-chess-subtext leading-relaxed max-w-xl">
+              Last 100 games. Results only.
             </p>
           </header>
 
