@@ -18,7 +18,7 @@ export async function analyzePrepForm(
   };
   if (!res.ok) {
     throw new Error(
-      typeof data.error === "string" ? data.error : "Couldn’t load form"
+      typeof data.error === "string" ? data.error : "Couldn't load form"
     );
   }
   // Normalize older cached payloads.
