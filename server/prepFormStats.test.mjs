@@ -7,7 +7,7 @@ import {
   computeTpr,
   parsePgnHeaders,
 } from "./prepFormStats.mjs";
-import { fallbackFormSummary } from "./prepScouting.mjs";
+import { fallbackFormSummary, buildFormBrief } from "./prepScouting.mjs";
 
 describe("parsePgnHeaders", () => {
   it("reads standard tag pairs", () => {
@@ -163,5 +163,31 @@ describe("fallbackFormSummary", () => {
     const text = fallbackFormSummary(report);
     expect(text.toLowerCase()).toContain("alice");
     expect(text.length).toBeGreaterThan(40);
+  });
+});
+
+describe("buildFormBrief", () => {
+  it("returns headline and labeled notes", () => {
+    const games = [];
+    for (let i = 0; i < 10; i++) {
+      const asWhite = i % 2 === 0;
+      games.push({
+        white: asWhite ? "Alice" : "Bob",
+        black: asWhite ? "Bob" : "Alice",
+        whiteRating: 1600,
+        blackRating: 1500,
+        whiteResult: asWhite ? "win" : "resigned",
+        blackResult: asWhite ? "resigned" : "win",
+        endTime: 1000 + i * 600,
+        pgn: `[White "${asWhite ? "Alice" : "Bob"}"]\n[Black "${asWhite ? "Bob" : "Alice"}"]\n[Result "${asWhite ? "1-0" : "0-1"}"]\n`,
+      });
+    }
+    const report = buildFormReportFromGames(games, "Alice");
+    const brief = buildFormBrief(report);
+    expect(brief.headline.toLowerCase()).toContain("alice");
+    expect(brief.notes.length).toBeGreaterThanOrEqual(2);
+    expect(brief.notes.some((n) => n.label === "Colors")).toBe(true);
+    expect(brief.notes.some((n) => n.label === "Tilt")).toBe(true);
+    expect(brief.plain).toContain(brief.headline);
   });
 });

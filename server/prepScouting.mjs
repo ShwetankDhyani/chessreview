@@ -1,77 +1,188 @@
 /**
- * Short plain-English summary of recent form stats.
- * Uses Gemini when GEMINI_API_KEY is set; otherwise a local fallback.
+ * Personality-forward H2H form brief.
+ * Prefers a structured local write-up (reliable formatting); Gemini can polish
+ * the headline when GEMINI_API_KEY is set.
  */
 
 /**
- * @param {object} formReport buildFormReportFromGames result
- * @returns {Promise<string>}
+ * @typedef {{ label: string, body: string }} BriefNote
+ * @typedef {{ headline: string, notes: BriefNote[], plain: string }} FormBrief
  */
-export async function generateFormSummary(formReport) {
+
+/**
+ * @param {object} formReport
+ * @returns {FormBrief}
+ */
+export function buildFormBrief(formReport) {
+  const name = String(formReport.username || "This player").trim() || "This player";
+  const s = formReport.stats;
+  const o = s.byColor.overall;
+  const w = s.byColor.white;
+  const b = s.byColor.black;
+  const tpr = s.tpr.value;
+  const avgOpp = s.tpr.averageOpponentRating;
+  const score = o.scorePct;
+  const record = `${o.wins}–${o.losses}–${o.draws}`;
+
+  let headline;
+  if (score >= 58) {
+    headline = `${name} has been on a roll — ${score}% over ${s.gamesAnalyzed} games (${record}).`;
+  } else if (score <= 42) {
+    headline = `${name} is grinding through a tough stretch — ${score}% across ${s.gamesAnalyzed} games (${record}).`;
+  } else {
+    headline = `${name} is right on the knife-edge: ${score}% over ${s.gamesAnalyzed} games (${record}).`;
+  }
+  if (tpr != null && avgOpp != null) {
+    const delta = tpr - avgOpp;
+    if (Math.abs(delta) <= 25) {
+      headline += ` TPR ${tpr} sits almost on top of the opposition (${avgOpp}).`;
+    } else if (delta > 0) {
+      headline += ` TPR ${tpr} is a bit above the room (avg opp ${avgOpp}).`;
+    } else {
+      headline += ` TPR ${tpr} trails the room a touch (avg opp ${avgOpp}).`;
+    }
+  } else if (tpr != null) {
+    headline += ` Performance rating lands at ${tpr}.`;
+  }
+
+  /** @type {BriefNote[]} */
+  const notes = [];
+
+  const colorGap = w.scorePct - b.scorePct;
+  if (w.played > 0 && b.played > 0) {
+    if (colorGap >= 8) {
+      notes.push({
+        label: "Colors",
+        body: `Comfortable with White (${w.scorePct}% over ${w.played}) and clearly less so with Black (${b.scorePct}% over ${b.played}). Worth leaning on that gap.`,
+      });
+    } else if (colorGap <= -8) {
+      notes.push({
+        label: "Colors",
+        body: `Black is the happier color right now (${b.scorePct}% over ${b.played}) versus White (${w.scorePct}% over ${w.played}).`,
+      });
+    } else if (colorGap >= 3) {
+      notes.push({
+        label: "Colors",
+        body: `Slight edge with White in this stretch (${w.scorePct}% over ${w.played}) versus Black (${b.scorePct}% over ${b.played}).`,
+      });
+    } else if (colorGap <= -3) {
+      notes.push({
+        label: "Colors",
+        body: `Slight edge with Black here (${b.scorePct}% over ${b.played}) versus White (${w.scorePct}% over ${w.played}).`,
+      });
+    } else {
+      notes.push({
+        label: "Colors",
+        body: `No big color story — White ${w.scorePct}% (${w.played} games), Black ${b.scorePct}% (${b.played}). Pretty even either way.`,
+      });
+    }
+  }
+
+  if (s.tilt.index >= 55) {
+    notes.push({
+      label: "Tilt",
+      body: `The rough patches stick. ${s.tilt.lossStreaksOf3Plus} streaks of 3+ losses (longest ${s.tilt.longestLossStreak})${
+        s.tilt.rapidRequeuesAfterLoss > 0
+          ? `, and ${s.tilt.rapidRequeuesAfterLoss} times they jumped straight back in after a loss`
+          : ", though they aren't rage-queueing after defeats"
+      }.`,
+    });
+  } else if (s.tilt.index >= 35) {
+    notes.push({
+      label: "Tilt",
+      body: `Some wobble, nothing wild — tilt sits at ${s.tilt.index}, with ${s.tilt.lossStreaksOf3Plus} longer losing runs (longest ${s.tilt.longestLossStreak}).`,
+    });
+  } else {
+    notes.push({
+      label: "Tilt",
+      body: `Keeps a fairly cool head in this sample (tilt ${s.tilt.index}). Long losing runs are rare.`,
+    });
+  }
+
+  if (s.terminations.losses > 0) {
+    const parts = [];
+    if (s.terminations.resignationPct >= 40) {
+      parts.push(`resigning a lot (${s.terminations.resignationPct}%)`);
+    }
+    if (s.terminations.timePct >= 20) {
+      parts.push(`flagging often (${s.terminations.timePct}% on time)`);
+    }
+    if (s.terminations.matePct >= 25) {
+      parts.push(`getting mated (${s.terminations.matePct}%)`);
+    }
+    if (parts.length === 0) {
+      parts.push(
+        `resign ${s.terminations.resignationPct}%, time ${s.terminations.timePct}%, mate ${s.terminations.matePct}%`
+      );
+    }
+    notes.push({
+      label: "How it ends",
+      body: `When things go south, they're mostly ${parts.join(", ")}.`,
+    });
+  }
+
+  const plain = [headline, ...notes.map((n) => `${n.label}: ${n.body}`)].join(
+    " "
+  );
+
+  return { headline, notes, plain };
+}
+
+/**
+ * @param {object} formReport
+ * @returns {Promise<FormBrief>}
+ */
+export async function generateFormBrief(formReport) {
+  const brief = buildFormBrief(formReport);
   const key =
     process.env.GEMINI_API_KEY?.trim() ||
     process.env.VITE_GEMINI_API_KEY?.trim() ||
     "";
-  if (!key || key === "your_api_key_here") {
-    return fallbackFormSummary(formReport);
-  }
+  if (!key || key === "your_api_key_here") return brief;
 
   try {
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const stats = formReport.stats;
-    const prompt = `Write exactly 3 short, plain sentences about this chess player's recent results.
-Sound like a person, not a coach brochure. Use only the numbers given. No bullet points. No markdown.
-Username: ${formReport.username}
-Games: ${stats.gamesAnalyzed}
-Overall W-L-D: ${stats.byColor.overall.wins}-${stats.byColor.overall.losses}-${stats.byColor.overall.draws} (score ${stats.byColor.overall.scorePct}%)
-White score: ${stats.byColor.white.scorePct}% over ${stats.byColor.white.played} games
-Black score: ${stats.byColor.black.scorePct}% over ${stats.byColor.black.played} games
-TPR: ${stats.tpr.value ?? "n/a"} vs avg opp ${stats.tpr.averageOpponentRating ?? "n/a"}
-Tilt index 0-100: ${stats.tilt.index} (loss streaks of 3+: ${stats.tilt.lossStreaksOf3Plus}, longest ${stats.tilt.longestLossStreak}, games started within 30s of a loss: ${stats.tilt.rapidRequeuesAfterLoss})
-Losses ending on time ${stats.terminations.timePct}%, resign ${stats.terminations.resignationPct}%, mate ${stats.terminations.matePct}%`;
-
+    const prompt = `Rewrite this chess form headline in 1-2 punchy sentences. Keep every number. Sound human, a bit wry, not corporate. No markdown.
+Headline: ${brief.headline}`;
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.35, maxOutputTokens: 220 },
+      generationConfig: { temperature: 0.55, maxOutputTokens: 120 },
     });
     const text = result?.response?.text?.()?.trim();
-    if (text) return text.slice(0, 800);
+    if (text) {
+      const headline = text.slice(0, 320);
+      return {
+        ...brief,
+        headline,
+        plain: [headline, ...brief.notes.map((n) => `${n.label}: ${n.body}`)].join(
+          " "
+        ),
+      };
+    }
   } catch (e) {
-    console.warn("[h2h] summary failed:", e);
+    console.warn("[h2h] brief headline polish failed:", e);
   }
-  return fallbackFormSummary(formReport);
+  return brief;
 }
 
-/** @deprecated Use generateFormSummary */
+/** @returns {Promise<string>} */
+export async function generateFormSummary(formReport) {
+  const brief = await generateFormBrief(formReport);
+  return brief.plain;
+}
+
+/** @deprecated */
 export async function generateScoutingReport(formReport) {
   return generateFormSummary(formReport);
 }
 
 export function fallbackFormSummary(formReport) {
-  const s = formReport.stats;
-  const o = s.byColor.overall;
-  const colorBias =
-    s.byColor.white.scorePct - s.byColor.black.scorePct >= 8
-      ? "Doing better with White than Black in this stretch."
-      : s.byColor.black.scorePct - s.byColor.white.scorePct >= 8
-        ? "Doing better with Black than White in this stretch."
-        : "White and Black results are about even.";
-  const tiltNote =
-    s.tilt.index >= 45
-      ? `A few rough patches show up — ${s.tilt.lossStreaksOf3Plus} streaks of 3+ losses, longest ${s.tilt.longestLossStreak}, and ${s.tilt.rapidRequeuesAfterLoss} quick rematches after a loss.`
-      : `Not many long losing streaks in the sample (tilt ${s.tilt.index}).`;
-  const term =
-    s.terminations.timePct >= 25
-      ? `${s.terminations.timePct}% of losses are on time.`
-      : `Losses are mostly resign (${s.terminations.resignationPct}%) or mate (${s.terminations.matePct}%).`;
-  return `${formReport.username} scores ${o.scorePct}% over ${s.gamesAnalyzed} recent games (TPR ${s.tpr.value ?? "n/a"}). ${colorBias} ${tiltNote} ${term}`
-    .replace(/\s+/g, " ")
-    .trim();
+  return buildFormBrief(formReport).plain;
 }
 
-/** @deprecated Use fallbackFormSummary */
+/** @deprecated */
 export function fallbackScoutingReport(formReport) {
   return fallbackFormSummary(formReport);
 }

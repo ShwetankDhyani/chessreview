@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import type {
+  PrepFormBrief,
   PrepFormCharts,
   PrepHeadToHeadRow,
   PrepPlayerReport,
@@ -115,6 +116,44 @@ function RingGauge({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function FormBriefBlock({
+  brief,
+  fallback,
+}: {
+  brief?: PrepFormBrief | null;
+  fallback?: string;
+}) {
+  if (brief?.headline) {
+    return (
+      <div className="max-w-xl pt-2 space-y-3">
+        <p className="text-[14px] sm:text-[15px] leading-snug text-chess-text font-medium">
+          {brief.headline}
+        </p>
+        {brief.notes?.length ? (
+          <ul className="space-y-2.5 border-l border-chess-accent/35 pl-3">
+            {brief.notes.map((note) => (
+              <li key={note.label} className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-chess-accent/85">
+                  {note.label}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-chess-subtext">
+                  {note.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    );
+  }
+  if (!fallback) return null;
+  return (
+    <p className="text-[13px] leading-relaxed text-chess-subtext max-w-xl pt-1">
+      {fallback}
+    </p>
   );
 }
 
@@ -228,9 +267,10 @@ export function PrepPlayerVisuals({
                 ? ` · avg opp ${report.stats.tpr.averageOpponentRating}`
                 : ""}
             </p>
-            <p className="text-[13px] leading-relaxed text-chess-subtext max-w-xl pt-1">
-              {report.summary || report.scoutingReport}
-            </p>
+            <FormBriefBlock
+              brief={report.brief}
+              fallback={report.summary || report.scoutingReport}
+            />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 flex-shrink-0">
             <RingGauge
