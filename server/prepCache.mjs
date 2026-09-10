@@ -26,7 +26,8 @@ function supabaseBase() {
 export function prepCacheKey(platform, username) {
   const p = String(platform || "").toLowerCase();
   const u = String(username || "").trim().toLowerCase();
-  return createHash("sha1").update(`${p}:${u}`).digest("hex");
+  // v2: includes chart series in payload.
+  return createHash("sha1").update(`v2:${p}:${u}`).digest("hex");
 }
 
 export function prepCacheTtlMs() {

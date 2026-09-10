@@ -9,6 +9,38 @@ export interface PrepColorSplit {
   scorePct: number;
 }
 
+export interface PrepChartPoint {
+  n: number;
+  scorePct: number;
+  result: "win" | "loss" | "draw";
+  color: "white" | "black";
+}
+
+export interface PrepSparkPoint {
+  i: number;
+  outcome: "win" | "loss" | "draw";
+  value: number;
+  color: "white" | "black";
+}
+
+export interface PrepFormCharts {
+  formTrend: PrepChartPoint[];
+  resultsSpark: PrepSparkPoint[];
+  wld: Array<{ key: string; label: string; value: number }>;
+  byColorScore: Array<{
+    key: string;
+    label: string;
+    scorePct: number;
+    played: number;
+  }>;
+  terminations: Array<{
+    key: string;
+    label: string;
+    value: number;
+    pct: number;
+  }>;
+}
+
 export interface PrepFormStats {
   gamesAnalyzed: number;
   byColor: {
@@ -37,6 +69,7 @@ export interface PrepFormStats {
     otherPct: number;
     counts: Record<string, number>;
   };
+  charts?: PrepFormCharts;
 }
 
 export interface PrepPlayerReport {
