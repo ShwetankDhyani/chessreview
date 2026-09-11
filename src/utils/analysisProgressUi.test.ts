@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePredictedProgress, formatEtaGuess } from "./analysisProgressUi";
+import { computePredictedProgress } from "./analysisProgressUi";
 
 describe("analysisProgressUi", () => {
   it("advances percent with elapsed time even when engine progress is low", () => {
@@ -28,11 +28,5 @@ describe("analysisProgressUi", () => {
     });
     expect(late.predictedMs).toBeGreaterThan(25_000);
     expect(late.display).toBeGreaterThan(80);
-  });
-
-  it("formats ETA as a rough estimate, not exact", () => {
-    expect(formatEtaGuess(47)).toMatch(/estimate/i);
-    expect(formatEtaGuess(47)).not.toMatch(/47s/);
-    expect(formatEtaGuess(95)).toMatch(/min/i);
   });
 });
