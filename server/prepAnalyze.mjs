@@ -6,6 +6,7 @@ import { buildFormReportFromGames } from "./prepFormStats.mjs";
 import { fetchRecentGamesForPrep } from "./prepGamesFetch.mjs";
 import { getPrepCache, setPrepCache, prepCacheTtlMs } from "./prepCache.mjs";
 import { generateFormBrief, buildCompareEdgeBrief } from "./prepScouting.mjs";
+import { recordPrepLookupFromAnalyze } from "./prepStats.mjs";
 
 const PLATFORMS = new Set(["lichess", "chesscom"]);
 
@@ -232,12 +233,20 @@ export async function handlePrepRequest(req, res) {
     return;
   }
 
+  const started = Date.now();
   try {
     const body =
       typeof req.body === "string"
         ? JSON.parse(req.body || "{}")
         : req.body ?? {};
     const result = await runPrepAnalyze(body);
+    recordPrepLookupFromAnalyze({
+      body,
+      result,
+      durationMs: Date.now() - started,
+      headers: req.headers,
+      source: "h2h",
+    });
     sendJson(res, 200, result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Couldn't load form";
@@ -274,9 +283,17 @@ export function createPrepMiddleware() {
       raw += chunk;
     });
     req.on("end", async () => {
+      const started = Date.now();
       try {
         const body = raw ? JSON.parse(raw) : {};
         const result = await runPrepAnalyze(body);
+        recordPrepLookupFromAnalyze({
+          body,
+          result,
+          durationMs: Date.now() - started,
+          headers: req.headers,
+          source: "h2h",
+        });
         sendJson(res, 200, result);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Couldn't load form";
