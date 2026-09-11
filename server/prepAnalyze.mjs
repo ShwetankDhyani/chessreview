@@ -240,14 +240,19 @@ export async function handlePrepRequest(req, res) {
         ? JSON.parse(req.body || "{}")
         : req.body ?? {};
     const result = await runPrepAnalyze(body);
-    recordPrepLookupFromAnalyze({
+    // Must await: Vercel freezes background work after the response is sent,
+    // which is why admin previously showed no H2H history.
+    const recorded = await recordPrepLookupFromAnalyze({
       body,
       result,
       durationMs: Date.now() - started,
       headers: req.headers,
       source: "h2h",
     });
-    sendJson(res, 200, result);
+    sendJson(res, 200, {
+      ...result,
+      usageRecorded: !!(recorded && recorded.ok),
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Couldn't load form";
     const status =
@@ -287,14 +292,17 @@ export function createPrepMiddleware() {
       try {
         const body = raw ? JSON.parse(raw) : {};
         const result = await runPrepAnalyze(body);
-        recordPrepLookupFromAnalyze({
+        const recorded = await recordPrepLookupFromAnalyze({
           body,
           result,
           durationMs: Date.now() - started,
           headers: req.headers,
           source: "h2h",
         });
-        sendJson(res, 200, result);
+        sendJson(res, 200, {
+          ...result,
+          usageRecorded: !!(recorded && recorded.ok),
+        });
       } catch (e) {
         const message = e instanceof Error ? e.message : "Couldn't load form";
         const status =

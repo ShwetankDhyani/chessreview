@@ -103,7 +103,7 @@ Optional: run `supabase/saved_reviews.sql` in Supabase and set `SUPABASE_URL` + 
 
 For H2H form caching (`POST /api/h2h/analyze`, also available as `/api/prep/analyze`), also run `supabase/prep_form_cache.sql`. Without Supabase, results cache in memory for 24h per server instance.
 
-For H2H usage analytics in `/admin` (lookups, countries, compare mode, cache hits, history), also run `supabase/prep_lookup_events.sql`. Without Supabase, lookups are stored in the same engine `data/review-stats.json` file (`prepEvents`).
+For H2H usage analytics in `/admin` (lookups, countries, compare mode, cache hits, history), also run `supabase/prep_lookup_events.sql`. **If you skip that migration**, lookups still record into `prep_form_cache` as fallback event rows (and/or the engine file store). Without Supabase, lookups are stored in the same engine `data/review-stats.json` file (`prepEvents`).
 
 If admin review history was previously capped at 80 rows, run `supabase/admin_full_history.sql` once so `get_admin_review_stats` returns the full event list.
 

@@ -1,10 +1,15 @@
 /**
  * Unified stats API (Hobby plan ≤12 serverless functions).
- * Rewrites keep /api/stats/public|admin|timing working.
+ * Rewrites keep /api/stats/public|admin|timing|prep working.
  */
 
 import { getAdminStats, getPublicStats, getTimingStats } from "../server/reviewStats.mjs";
 import { getSiteSettings, setSiteSettings } from "../server/siteSettings.mjs";
+import {
+  geoFromHeaders,
+  normalizePrepLookupPayload,
+  recordPrepLookupEvent,
+} from "../server/prepStats.mjs";
 
 function adminKey(req) {
   return (
@@ -15,7 +20,9 @@ function adminKey(req) {
 
 function kindOf(req) {
   const raw = String(req.query?.kind ?? "public").toLowerCase();
-  if (raw === "admin" || raw === "timing" || raw === "public") return raw;
+  if (raw === "admin" || raw === "timing" || raw === "public" || raw === "prep") {
+    return raw;
+  }
   return "public";
 }
 
@@ -54,6 +61,21 @@ export default async function handler(req, res) {
           ? { homeGamesNewsSlug: settings.homeGamesNewsSlug ?? null }
           : {}),
       });
+    }
+
+    // Client-side H2H usage ping (mirrors /api/review-events for reviews).
+    if (kind === "prep") {
+      if (req.method !== "POST") {
+        return res.status(405).json({ error: "POST only" });
+      }
+      const body =
+        typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body ?? {};
+      const row = normalizePrepLookupPayload(body, geoFromHeaders(req.headers));
+      if (!row.username || row.username === "Unknown") {
+        return res.status(400).json({ error: "Missing username" });
+      }
+      const result = await recordPrepLookupEvent(row);
+      return res.status(200).json({ ok: true, ...result });
     }
 
     // admin
