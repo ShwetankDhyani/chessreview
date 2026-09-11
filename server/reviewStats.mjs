@@ -316,6 +316,20 @@ export async function getAdminStats() {
     return withPrepStats(stats);
   }
 
+  try {
+    const { fileAdminStats } = await import("./reviewStatsFile.mjs");
+    const file = fileAdminStats();
+    const hasFileData =
+      (file.recentTotal ?? file.recent?.length ?? 0) > 0 ||
+      (file.prep?.lookupsServed ?? 0) > 0 ||
+      (file.reviewsServed ?? 0) > 0;
+    if (hasFileData || reviewsBaseline() > 0) {
+      return withPrepStats(file);
+    }
+  } catch {
+    /* no local file store */
+  }
+
   return withPrepStats({
     configured: reviewsBaseline() > 0,
     count: reviewsBaseline(),
