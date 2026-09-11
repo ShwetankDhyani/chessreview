@@ -268,8 +268,16 @@ export async function getTimingStats() {
 
 async function withPrepStats(stats) {
   try {
-    const { getPrepAdminStats } = await import("./prepStats.mjs");
-    stats.prep = await getPrepAdminStats(stats.prep ?? null);
+    const {
+      getPrepAdminStats,
+      stripH2hFromReviewStats,
+      preferRicherPrep,
+    } = await import("./prepStats.mjs");
+    // Recover H2H rows stored via the legacy /stats/review compat path.
+    const { stats: cleaned, prepFromReviews } = stripH2hFromReviewStats(stats);
+    Object.assign(stats, cleaned);
+    const dedicated = await getPrepAdminStats(stats.prep ?? null);
+    stats.prep = preferRicherPrep(dedicated, prepFromReviews);
   } catch {
     if (!stats.prep) {
       stats.prep = {

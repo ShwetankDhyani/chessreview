@@ -17,7 +17,11 @@ import {
 } from "./reviewTimingStats.mjs";
 import { fileAdminSavedSummary } from "./reviewSaves.mjs";
 
-const DATA_DIR = process.env.REVIEW_STATS_DIR ?? join(process.cwd(), "data");
+const DATA_DIR =
+  process.env.REVIEW_STATS_DIR ??
+  (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    ? join("/tmp", "chessreview-stats")
+    : join(process.cwd(), "data"));
 const STATS_FILE = join(DATA_DIR, "review-stats.json");
 
 function parseBaseline() {

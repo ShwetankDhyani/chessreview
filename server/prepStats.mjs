@@ -261,6 +261,134 @@ function aggregatePrepEvents(events) {
   };
 }
 
+/** Review-shaped engine rows used before /stats/prep existed. */
+export function isH2hReviewEvent(event) {
+  if (!event || typeof event !== "object") return false;
+  const source = String(event.source ?? "").toLowerCase();
+  if (source === "h2h" || source === "h2h-client" || source === "h2h-compat") {
+    return true;
+  }
+  const runId = String(event.run_id ?? "");
+  return runId.startsWith("h2h-") || runId.startsWith("h2h:");
+}
+
+export function reviewEventToPrepLookup(event) {
+  const result = String(event.result ?? "").toLowerCase();
+  const black = String(event.black_player ?? "").trim();
+  const self =
+    !black || black === "-" || black === "—" || black.toLowerCase() === "unknown"
+      ? null
+      : black;
+  return {
+    looked_up_at: event.reviewed_at || event.looked_up_at || new Date().toISOString(),
+    username: event.white_player || event.username || "Unknown",
+    platform: event.reviewer_platform || "unknown",
+    self_username: self,
+    self_platform: self ? event.reviewer_platform || null : null,
+    compare: result === "compare" || result === "cmp",
+    compare_skipped: result === "skipped" || result === "skip",
+    compare_skip_reason: null,
+    cache_hit: null,
+    self_cache_hit: null,
+    sample_size: event.plies ?? null,
+    self_sample_size: null,
+    duration_ms: event.duration_ms ?? null,
+    country_code: event.country_code ?? null,
+    region: event.region ?? null,
+    city: event.city ?? null,
+    source: event.source || "h2h-compat",
+  };
+}
+
+export function extractPrepFromReviewEvents(recent) {
+  const events = [];
+  for (const row of Array.isArray(recent) ? recent : []) {
+    if (!isH2hReviewEvent(row)) continue;
+    events.push(reviewEventToPrepLookup(row));
+  }
+  if (!events.length) return emptyPrepAdminStats();
+  return aggregatePrepEvents(events);
+}
+
+function recomputeCountries(events) {
+  const map = new Map();
+  for (const e of events) {
+    const code = e.country_code;
+    if (!code) continue;
+    map.set(code, (map.get(code) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .map(([countryCode, count]) => ({ countryCode, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function recomputeByDepth(events) {
+  const map = new Map();
+  for (const e of events) {
+    const d = e.depth;
+    if (!d) continue;
+    const row = map.get(d) ?? { depth: d, count: 0, totalMs: 0 };
+    row.count += 1;
+    row.totalMs += e.duration_ms ?? 0;
+    map.set(d, row);
+  }
+  return [...map.values()]
+    .map((r) => ({
+      depth: r.depth,
+      count: r.count,
+      avgDurationMs: r.count ? Math.round(r.totalMs / r.count) : 0,
+    }))
+    .sort((a, b) => a.depth - b.depth);
+}
+
+/**
+ * Pull H2H compat rows out of review history so they don't pollute review stats.
+ */
+export function stripH2hFromReviewStats(stats) {
+  if (!stats || typeof stats !== "object") {
+    return { stats, prepFromReviews: emptyPrepAdminStats() };
+  }
+  const recent = Array.isArray(stats.recent) ? stats.recent : [];
+  const reviewRows = [];
+  const h2hRows = [];
+  for (const row of recent) {
+    if (isH2hReviewEvent(row)) h2hRows.push(row);
+    else reviewRows.push(row);
+  }
+  if (!h2hRows.length) {
+    return { stats, prepFromReviews: emptyPrepAdminStats() };
+  }
+
+  const prepFromReviews = extractPrepFromReviewEvents(h2hRows);
+  const countries = recomputeCountries(reviewRows);
+  const next = {
+    ...stats,
+    recent: reviewRows,
+    recentTotal: reviewRows.length,
+    countries,
+    countryCount: countries.length,
+    byDepth: recomputeByDepth(reviewRows),
+    reviewsServed: Math.max(
+      0,
+      (stats.reviewsServed ?? stats.count ?? reviewRows.length) - h2hRows.length
+    ),
+    count: Math.max(
+      0,
+      (stats.count ?? stats.reviewsServed ?? reviewRows.length) - h2hRows.length
+    ),
+  };
+  if (typeof stats.liveReviews === "number") {
+    next.liveReviews = Math.max(0, stats.liveReviews - h2hRows.length);
+  }
+  return { stats: next, prepFromReviews };
+}
+
+export function preferRicherPrep(a, b) {
+  const aN = a?.lookupsServed ?? a?.recentTotal ?? 0;
+  const bN = b?.lookupsServed ?? b?.recentTotal ?? 0;
+  return bN > aN ? b : a;
+}
+
 async function dbPrepAdminStatsFromCacheFallback() {
   if (!isSupabaseConfigured()) return emptyPrepAdminStats();
   try {
@@ -306,28 +434,59 @@ async function dbPrepAdminStats() {
  * Prefer dedicated Supabase stats; if empty/missing, keep engine/file fallback.
  */
 export async function getPrepAdminStats(fallback = null) {
+  let best = emptyPrepAdminStats();
+  if (hasPrepData(fallback)) {
+    best = { ...emptyPrepAdminStats(), ...fallback };
+  }
+
   if (isSupabaseConfigured()) {
     const stats = await dbPrepAdminStats();
-    if (hasPrepData(stats)) return stats;
-    if (hasPrepData(fallback)) {
-      return { ...emptyPrepAdminStats(), ...fallback };
-    }
-    return stats;
+    best = preferRicherPrep(best, stats);
   }
-  if (hasPrepData(fallback)) {
-    return { ...emptyPrepAdminStats(), ...fallback };
-  }
+
+  if (hasPrepData(best)) return best;
+
   try {
     const { filePrepAdminStats } = await import("./reviewStatsFile.mjs");
-    return filePrepAdminStats();
+    return preferRicherPrep(best, filePrepAdminStats());
   } catch {
-    return emptyPrepAdminStats();
+    return best;
   }
+}
+
+/** Map a prep lookup into the legacy /stats/review shape (old engines). */
+export function prepRowToCompatReviewPayload(row) {
+  const mode = row.compare_skipped
+    ? "skipped"
+    : row.compare
+      ? "compare"
+      : "solo";
+  return {
+    runId: `h2h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    username: row.self_username || row.username,
+    reviewerPlatform: row.platform,
+    whitePlayer: row.username,
+    blackPlayer: row.self_username || "-",
+    whiteRating: null,
+    blackRating: null,
+    result: mode,
+    plies: row.sample_size,
+    depth: 1,
+    durationMs: row.duration_ms ?? 0,
+    timezone: row.timezone,
+    locale: row.locale,
+    source: "h2h",
+    countryCode: row.country_code,
+    region: row.region,
+    city: row.city,
+  };
 }
 
 async function postEnginePrep(row) {
   const base = engineStatsUrl();
   if (!base) return null;
+
+  // Prefer native endpoint when the engine has been updated.
   try {
     const res = await fetch(`${base}/stats/prep`, {
       method: "POST",
@@ -335,8 +494,25 @@ async function postEnginePrep(row) {
       body: JSON.stringify(row),
       signal: AbortSignal.timeout(10_000),
     });
+    if (res.ok) {
+      const data = await res.json();
+      return { ...data, via: "engine-prep" };
+    }
+  } catch {
+    /* try compat path */
+  }
+
+  // Old engines only know /stats/review — tag source=h2h and recover on read.
+  try {
+    const res = await fetch(`${base}/stats/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(prepRowToCompatReviewPayload(row)),
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) return null;
-    return res.json();
+    const data = await res.json();
+    return { ...data, via: "engine-compat" };
   } catch {
     return null;
   }
@@ -367,24 +543,33 @@ async function insertSupabasePrep(row) {
 
 /**
  * Persist one successful H2H lookup. Prefer awaiting this on serverless.
+ * Engine-first (same as reviews) so /admin works without Supabase.
  */
 export async function recordPrepLookupEvent(row) {
   try {
     const vias = [];
+
+    // Engine first — production admin reads engine stats by default.
+    const engine = await postEnginePrep(row);
+    if (engine?.ok) vias.push(engine.via || "engine");
 
     if (isSupabaseConfigured()) {
       const sb = await insertSupabasePrep(row);
       if (sb.ok) vias.push(sb.via || "supabase");
     }
 
-    // Always try engine when available (admin often reads engine first).
-    const engine = await postEnginePrep(row);
-    if (engine?.ok) vias.push("engine");
-
     if (vias.length) return { ok: true, via: vias.join("+") };
 
-    const { fileLogPrep } = await import("./reviewStatsFile.mjs");
-    return { ok: true, via: "file", ...fileLogPrep(row) };
+    try {
+      const { fileLogPrep } = await import("./reviewStatsFile.mjs");
+      return { ok: true, via: "file", ...fileLogPrep(row) };
+    } catch (fileErr) {
+      return {
+        ok: false,
+        reason:
+          fileErr instanceof Error ? fileErr.message : "file_store_failed",
+      };
+    }
   } catch (e) {
     console.warn(
       "[prepStats] record failed:",
