@@ -422,6 +422,60 @@ export function createReviewStatsMiddleware() {
       return;
     }
 
+    if (
+      (url === "/api/stats/prep" ||
+        url === "/api/prep-events" ||
+        url === "/api/h2h-events") &&
+      req.method === "OPTIONS"
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
+    if (
+      (url === "/api/stats/prep" ||
+        url === "/api/prep-events" ||
+        url === "/api/h2h-events") &&
+      req.method === "POST"
+    ) {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      void (async () => {
+        try {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const raw = Buffer.concat(chunks).toString("utf8");
+          const body = raw ? JSON.parse(raw) : {};
+          const {
+            normalizePrepLookupPayload,
+            recordPrepLookupEvent,
+            geoFromHeaders: prepGeo,
+          } = await import("./prepStats.mjs");
+          const row = normalizePrepLookupPayload(body, prepGeo(req.headers));
+          if (!row.username || row.username === "Unknown") {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: "Missing username" }));
+            return;
+          }
+          const result = await recordPrepLookupEvent(row);
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true, ...result }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(
+            JSON.stringify({
+              error: e instanceof Error ? e.message : "Invalid payload",
+            })
+          );
+        }
+      })();
+      return;
+    }
+
     if (url === "/api/stats/admin" && req.method === "OPTIONS") {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

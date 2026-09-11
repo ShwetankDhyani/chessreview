@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildPrepLookupRow } from "./prepStats.mjs";
+import {
+  buildPrepLookupRow,
+  normalizePrepLookupPayload,
+} from "./prepStats.mjs";
 
 describe("buildPrepLookupRow", () => {
   it("records a solo lookup with cache hit and geo", () => {
@@ -87,5 +90,30 @@ describe("buildPrepLookupRow", () => {
     expect(row.compare).toBe(false);
     expect(row.compare_skipped).toBe(true);
     expect(row.compare_skip_reason).toBe("platform_mismatch");
+  });
+});
+
+describe("normalizePrepLookupPayload", () => {
+  it("maps camelCase client payload + geo headers", () => {
+    const row = normalizePrepLookupPayload(
+      {
+        username: "Hikaru",
+        platform: "chesscom",
+        compare: true,
+        selfUsername: "Me",
+        selfPlatform: "chesscom",
+        cacheHit: false,
+        durationMs: 900,
+        source: "h2h-client",
+      },
+      { country_code: "US", city: "Austin" }
+    );
+    expect(row.username).toBe("Hikaru");
+    expect(row.compare).toBe(true);
+    expect(row.self_username).toBe("Me");
+    expect(row.cache_hit).toBe(false);
+    expect(row.duration_ms).toBe(900);
+    expect(row.country_code).toBe("US");
+    expect(row.source).toBe("h2h-client");
   });
 });

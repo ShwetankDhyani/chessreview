@@ -7,7 +7,7 @@ import {
 } from "../components/prep/PrepFormVisuals";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
-import { analyzePrepForm } from "../utils/prepApi";
+import { analyzePrepForm, recordPrepLookupCompleted } from "../utils/prepApi";
 import { safeGetItem, safeGetJson } from "../utils/safeStorage";
 import type {
   PrepAnalyzeResponse,
@@ -116,16 +116,26 @@ export default function PrepPage() {
       const phaseTimer2 = window.setTimeout(() => {
         setPhase("Almost done…");
       }, 3200);
-      const data = await analyzePrepForm({
+      const started = Date.now();
+      const reqBody = {
         username: target,
         platform: plat,
         selfUsername: withSelf && linked?.name ? linked.name : undefined,
         selfPlatform: withSelf && linked?.platform ? linked.platform : undefined,
-      });
+      };
+      const data = await analyzePrepForm(reqBody);
       window.clearTimeout(phaseTimer);
       window.clearTimeout(phaseTimer2);
       setResult(data);
       setPhase(null);
+      // Fallback only when the analyze function could not persist usage.
+      if (!data.usageRecorded) {
+        recordPrepLookupCompleted({
+          request: reqBody,
+          response: data,
+          durationMs: Date.now() - started,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load form");
       setPhase(null);

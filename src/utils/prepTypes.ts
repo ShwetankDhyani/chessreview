@@ -139,6 +139,8 @@ export interface PrepAnalyzeResponse {
   /** Set when compare was requested but skipped (e.g. platform mismatch). */
   compareSkipped?: { reason: string; message: string } | null;
   headToHead: { rows: PrepHeadToHeadRow[] } | null;
+  /** Server-side usage analytics persisted successfully. */
+  usageRecorded?: boolean;
   error?: string;
 }
 

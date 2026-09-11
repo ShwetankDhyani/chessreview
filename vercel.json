@@ -56,6 +56,18 @@
       "destination": "/api/stats?kind=timing"
     },
     {
+      "source": "/api/stats/prep",
+      "destination": "/api/stats?kind=prep"
+    },
+    {
+      "source": "/api/prep-events",
+      "destination": "/api/stats?kind=prep"
+    },
+    {
+      "source": "/api/h2h-events",
+      "destination": "/api/stats?kind=prep"
+    },
+    {
       "source": "/api/prep/analyze",
       "destination": "/api/prep"
     },
