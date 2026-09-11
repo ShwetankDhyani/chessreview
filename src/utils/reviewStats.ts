@@ -50,6 +50,56 @@ export interface SavedGamesSummary {
   byUser: SavedGamesByUser[];
 }
 
+export interface PrepCountryStat {
+  countryCode: string;
+  count: number;
+}
+
+export interface PrepPlatformStat {
+  platform: string;
+  count: number;
+}
+
+export interface RecentPrepLookupRow {
+  looked_up_at: string;
+  username: string;
+  platform: string;
+  self_username: string | null;
+  self_platform: string | null;
+  compare: boolean;
+  compare_skipped: boolean;
+  compare_skip_reason: string | null;
+  cache_hit: boolean | null;
+  self_cache_hit: boolean | null;
+  sample_size: number | null;
+  self_sample_size: number | null;
+  duration_ms: number | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
+  source: string | null;
+}
+
+export interface PrepAdminStats {
+  lookupsServed: number;
+  countryCount: number;
+  countries: PrepCountryStat[];
+  byPlatform: PrepPlatformStat[];
+  modeSummary: {
+    solo: number;
+    compare: number;
+    compareSkipped: number;
+  };
+  cacheSummary: {
+    hits: number;
+    misses: number;
+    hitRatePct: number | null;
+  };
+  avgDurationMs: number | null;
+  recent: RecentPrepLookupRow[];
+  recentTotal: number;
+}
+
 export interface AdminReviewStats extends PublicReviewStats {
   byDepth?: DepthStat[];
   ratingSummary?: {
@@ -61,6 +111,8 @@ export interface AdminReviewStats extends PublicReviewStats {
   recent?: RecentReviewRow[];
   recentTotal?: number;
   savedGames?: SavedGamesSummary;
+  /** H2H / prep lookup analytics (parallel to reviews). */
+  prep?: PrepAdminStats;
 }
 
 /** Public Chess.com / Lichess profile URL for a linked reviewer account. */

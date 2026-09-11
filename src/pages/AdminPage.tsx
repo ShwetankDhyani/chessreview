@@ -14,6 +14,7 @@ import {
   formatReviewsServed,
   platformLabel,
   type AdminReviewStats,
+  type RecentPrepLookupRow,
   type RecentReviewRow,
 } from "../utils/reviewStats";
 import {
@@ -70,7 +71,11 @@ function formatDuration(ms: number) {
   return `${(ms / 60_000).toFixed(1)}m`;
 }
 
-function locationLabel(row: RecentReviewRow) {
+function locationLabel(row: {
+  city: string | null;
+  region: string | null;
+  country_code: string | null;
+}) {
   const parts = [row.city, row.region, countryLabel(row.country_code)].filter(
     Boolean
   );
@@ -87,6 +92,18 @@ function playersLabel(row: RecentReviewRow) {
   return `${w} vs ${b}`;
 }
 
+function prepModeLabel(row: RecentPrepLookupRow) {
+  if (row.compare_skipped) return "Compare skipped";
+  if (row.compare) return "Compare";
+  return "Solo";
+}
+
+function prepCacheLabel(hit: boolean | null | undefined) {
+  if (hit === true) return "Hit";
+  if (hit === false) return "Miss";
+  return "—";
+}
+
 export default function AdminPage() {
   usePageSeo({
     title: "Admin — ChessReview",
@@ -101,6 +118,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recentPage, setRecentPage] = useState(0);
+  const [prepRecentPage, setPrepRecentPage] = useState(0);
   const [testingMode, setTestingMode] = useState(false);
   const [testingBusy, setTestingBusy] = useState(false);
   const [testingError, setTestingError] = useState<string | null>(null);
@@ -120,6 +138,7 @@ export default function AdminPage() {
       const data = await fetchAdminStats(key);
       setStats(data);
       setRecentPage(0);
+      setPrepRecentPage(0);
       saveSessionAdminKey(key);
       setAdminKey(key);
       try {
@@ -229,6 +248,21 @@ export default function AdminPage() {
     return all.slice(start, start + RECENT_PAGE_SIZE);
   }, [stats?.recent, recentPage]);
 
+  const prep = stats?.prep;
+  const prepLookups = prep?.lookupsServed ?? 0;
+  const prepRecentTotal = prep?.recentTotal ?? prep?.recent?.length ?? 0;
+  const prepRecentPageCount = Math.max(
+    1,
+    Math.ceil(prepRecentTotal / RECENT_PAGE_SIZE)
+  );
+  const prepRecentSlice = useMemo(() => {
+    const all = prep?.recent ?? [];
+    const start = prepRecentPage * RECENT_PAGE_SIZE;
+    return all.slice(start, start + RECENT_PAGE_SIZE);
+  }, [prep?.recent, prepRecentPage]);
+  const prepCountryRows = prep?.countries ?? [];
+  const prepCountryChartHeight = Math.max(prepCountryRows.length * 28, 160);
+
   const savedGames = stats?.savedGames;
   const savedTotal = savedGames?.total ?? 0;
   const savedByUser = savedGames?.byUser ?? [];
@@ -241,6 +275,19 @@ export default function AdminPage() {
       setRecentPage(Math.max(0, recentPageCount - 1));
     }
   }, [recentPage, recentPageCount]);
+
+  useEffect(() => {
+    if (prepRecentPage > 0 && prepRecentPage >= prepRecentPageCount) {
+      setPrepRecentPage(Math.max(0, prepRecentPageCount - 1));
+    }
+  }, [prepRecentPage, prepRecentPageCount]);
+
+  const prepRecentStart =
+    prepRecentTotal === 0 ? 0 : prepRecentPage * RECENT_PAGE_SIZE + 1;
+  const prepRecentEnd = Math.min(
+    prepRecentTotal,
+    (prepRecentPage + 1) * RECENT_PAGE_SIZE
+  );
 
   if (!adminKey || error === "Invalid admin key") {
     return (
@@ -450,6 +497,46 @@ export default function AdminPage() {
                 value={
                   stats.ratingSummary?.avgBlack
                     ? String(stats.ratingSummary.avgBlack)
+                    : "—"
+                }
+              />
+            </div>
+          )}
+        </AdminSection>
+
+        <AdminSection
+          id="h2h-overview"
+          title="H2H overview"
+          description="Head-to-head form lookup volume and reach."
+          defaultOpen
+          badge={prepLookups > 0 ? formatReviewsServed(prepLookups) : undefined}
+        >
+          {loading && !stats ? (
+            <p className="text-sm text-chess-muted">Loading…</p>
+          ) : !stats ? (
+            <p className="text-sm text-chess-muted">
+              Could not load H2H stats.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Lookups served"
+                value={formatReviewsServed(prepLookups)}
+                accent
+              />
+              <StatCard
+                label="Countries"
+                value={String(prep?.countryCount ?? 0)}
+              />
+              <StatCard
+                label="Compare mode"
+                value={String(prep?.modeSummary?.compare ?? 0)}
+              />
+              <StatCard
+                label="Cache hit rate"
+                value={
+                  prep?.cacheSummary?.hitRatePct != null
+                    ? `${prep.cacheSummary.hitRatePct}%`
                     : "—"
                 }
               />
@@ -771,6 +858,295 @@ export default function AdminPage() {
                       )
                     }
                     disabled={recentPage >= recentPageCount - 1}
+                    className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold hover:bg-chess-hover disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </AdminSection>
+
+        <AdminSection
+          id="h2h-analytics"
+          title="H2H analytics"
+          description="Breakdowns by country, platform, and lookup mode."
+          defaultOpen={false}
+          badge={
+            prepCountryRows.length > 0
+              ? `${prepCountryRows.length} countries`
+              : undefined
+          }
+        >
+          {!prep || prepLookups === 0 ? (
+            <p className="text-sm text-chess-muted">No H2H lookups yet.</p>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+                  By country
+                </h3>
+                {prepCountryRows.length === 0 ? (
+                  <p className="text-sm text-chess-muted">No country data yet.</p>
+                ) : (
+                  <div className="max-h-[28rem] overflow-y-auto">
+                    <div
+                      style={{
+                        height: prepCountryChartHeight,
+                        minHeight: prepCountryChartHeight,
+                      }}
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={prepCountryRows}
+                          margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                        >
+                          <XAxis
+                            type="number"
+                            allowDecimals={false}
+                            tick={{ fill: "#666", fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="countryCode"
+                            width={88}
+                            tick={{ fill: "#888", fontSize: 10 }}
+                            tickFormatter={(code) =>
+                              countryLabel(String(code))
+                            }
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.[0]) return null;
+                              const row = payload[0].payload as {
+                                countryCode: string;
+                                count: number;
+                              };
+                              return (
+                                <div className="rounded-lg border border-chess-border bg-chess-panel px-2 py-1 text-xs">
+                                  {countryLabel(row.countryCode)}: {row.count}
+                                </div>
+                              );
+                            }}
+                          />
+                          <Bar
+                            dataKey="count"
+                            fill="#96bc4b"
+                            radius={[0, 4, 4, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+                    By platform
+                  </h3>
+                  {(prep.byPlatform?.length ?? 0) === 0 ? (
+                    <p className="text-sm text-chess-muted">
+                      No platform breakdown yet.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-chess-border/50 text-left text-chess-muted">
+                            <th className="py-2 pr-3">Platform</th>
+                            <th className="py-2">Lookups</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prep.byPlatform?.map((row) => (
+                            <tr
+                              key={row.platform}
+                              className="border-b border-chess-border/30"
+                            >
+                              <td className="py-2 pr-3">
+                                {platformLabel(row.platform)}
+                              </td>
+                              <td className="py-2 tabular-nums">{row.count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
+                    Mode & cache
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <StatCard
+                      label="Solo"
+                      value={String(prep.modeSummary?.solo ?? 0)}
+                    />
+                    <StatCard
+                      label="Compare"
+                      value={String(prep.modeSummary?.compare ?? 0)}
+                    />
+                    <StatCard
+                      label="Compare skipped"
+                      value={String(prep.modeSummary?.compareSkipped ?? 0)}
+                    />
+                    <StatCard
+                      label="Avg duration"
+                      value={
+                        prep.avgDurationMs != null
+                          ? formatDuration(prep.avgDurationMs)
+                          : "—"
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </AdminSection>
+
+        <AdminSection
+          id="h2h-recent"
+          title="H2H history"
+          description="Every successful form lookup, newest first."
+          defaultOpen={false}
+          badge={prepRecentTotal > 0 ? String(prepRecentTotal) : undefined}
+        >
+          {!prep || prepRecentTotal === 0 ? (
+            <p className="text-sm text-chess-muted">No H2H lookups yet.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-chess-border/60">
+                <table className="w-full min-w-[720px] text-xs">
+                  <thead>
+                    <tr className="bg-chess-bg/40 text-left text-chess-muted">
+                      <th className="px-3 py-2">When</th>
+                      <th className="px-3 py-2">Opponent</th>
+                      <th className="px-3 py-2">Mode</th>
+                      <th className="px-3 py-2">You</th>
+                      <th className="px-3 py-2">Location</th>
+                      <th className="px-3 py-2">Cache</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prepRecentSlice.map((row, i) => {
+                      const oppUrl = chessProfileUrl(row.platform, row.username);
+                      const selfUrl = chessProfileUrl(
+                        row.self_platform ?? row.platform,
+                        row.self_username
+                      );
+                      return (
+                        <tr
+                          key={`${row.looked_up_at}-${i}`}
+                          className="border-t border-chess-border/30 hover:bg-chess-hover/20"
+                        >
+                          <td className="whitespace-nowrap px-3 py-2 text-chess-muted">
+                            {formatWhen(row.looked_up_at)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {oppUrl ? (
+                              <a
+                                href={oppUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-chess-accent hover:underline"
+                              >
+                                {row.username}
+                              </a>
+                            ) : (
+                              <span className="font-medium">{row.username}</span>
+                            )}
+                            <div className="text-chess-muted">
+                              {platformLabel(row.platform)}
+                              {row.sample_size != null
+                                ? ` · ${row.sample_size} games`
+                                : ""}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-chess-muted">
+                            {prepModeLabel(row)}
+                            {row.duration_ms != null ? (
+                              <div className="tabular-nums">
+                                {formatDuration(row.duration_ms)}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.self_username ? (
+                              <span>
+                                {selfUrl ? (
+                                  <a
+                                    href={selfUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-medium text-chess-accent hover:underline"
+                                  >
+                                    {row.self_username}
+                                  </a>
+                                ) : (
+                                  <span className="font-medium">
+                                    {row.self_username}
+                                  </span>
+                                )}
+                                {row.self_platform ? (
+                                  <span className="text-chess-muted">
+                                    {" "}
+                                    · {platformLabel(row.self_platform)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-chess-muted">
+                            {locationLabel(row)}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums text-chess-muted">
+                            {prepCacheLabel(row.cache_hit)}
+                            {row.compare && row.self_cache_hit != null
+                              ? ` / ${prepCacheLabel(row.self_cache_hit)}`
+                              : ""}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {prepRecentTotal > RECENT_PAGE_SIZE && (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPrepRecentPage((p) => Math.max(0, p - 1))
+                    }
+                    disabled={prepRecentPage <= 0}
+                    className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold hover:bg-chess-hover disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-[11px] tabular-nums text-chess-muted">
+                    {prepRecentStart}–{prepRecentEnd} of {prepRecentTotal}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPrepRecentPage((p) =>
+                        Math.min(prepRecentPageCount - 1, p + 1)
+                      )
+                    }
+                    disabled={prepRecentPage >= prepRecentPageCount - 1}
                     className="rounded-lg border border-chess-border px-3 py-1.5 text-xs font-semibold hover:bg-chess-hover disabled:pointer-events-none disabled:opacity-40"
                   >
                     Next →

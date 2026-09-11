@@ -266,6 +266,28 @@ export async function getTimingStats() {
   };
 }
 
+async function withPrepStats(stats) {
+  try {
+    const { getPrepAdminStats } = await import("./prepStats.mjs");
+    stats.prep = await getPrepAdminStats(stats.prep ?? null);
+  } catch {
+    if (!stats.prep) {
+      stats.prep = {
+        lookupsServed: 0,
+        countryCount: 0,
+        countries: [],
+        byPlatform: [],
+        modeSummary: { solo: 0, compare: 0, compareSkipped: 0 },
+        cacheSummary: { hits: 0, misses: 0, hitRatePct: null },
+        avgDurationMs: null,
+        recent: [],
+        recentTotal: 0,
+      };
+    }
+  }
+  return stats;
+}
+
 export async function getAdminStats() {
   const engine = await fetchEngineJson("/stats/admin", {
     headers: {
@@ -280,7 +302,7 @@ export async function getAdminStats() {
     if (engine.recentTotal == null && Array.isArray(engine.recent)) {
       engine.recentTotal = engine.recent.length;
     }
-    return engine;
+    return withPrepStats(engine);
   }
 
   if (isSupabaseConfigured()) {
@@ -291,10 +313,10 @@ export async function getAdminStats() {
     if (stats.recentTotal == null && Array.isArray(stats.recent)) {
       stats.recentTotal = stats.recent.length;
     }
-    return stats;
+    return withPrepStats(stats);
   }
 
-  return {
+  return withPrepStats({
     configured: reviewsBaseline() > 0,
     count: reviewsBaseline(),
     reviewsServed: reviewsBaseline(),
@@ -305,7 +327,7 @@ export async function getAdminStats() {
     recent: [],
     recentTotal: 0,
     savedGames: { total: 0, byUser: [] },
-  };
+  });
 }
 
 export async function recordReviewEvent(row) {

@@ -30,6 +30,8 @@ function defaultState() {
     baseline: parseBaseline(),
     liveCount: 0,
     events: [],
+    prepEvents: [],
+    prepLiveCount: 0,
     testingMode: false,
   };
 }
@@ -60,6 +62,8 @@ function loadState() {
       baseline: parsed.baseline ?? parseBaseline(),
       events: Array.isArray(parsed.events) ? parsed.events : [],
       liveCount: Number(parsed.liveCount) || 0,
+      prepEvents: Array.isArray(parsed.prepEvents) ? parsed.prepEvents : [],
+      prepLiveCount: Number(parsed.prepLiveCount) || 0,
       testingMode: !!parsed.testingMode,
       ...( "homeGamesNewsSlug" in parsed
         ? {
@@ -139,6 +143,68 @@ function ratingSummary(events) {
   };
 }
 
+function prepPlatformBreakdown(events) {
+  const map = new Map();
+  for (const e of events) {
+    const platform = e.platform || "unknown";
+    map.set(platform, (map.get(platform) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function prepModeSummary(events) {
+  let solo = 0;
+  let compare = 0;
+  let compareSkipped = 0;
+  for (const e of events) {
+    if (e.compare_skipped) compareSkipped += 1;
+    else if (e.compare) compare += 1;
+    else solo += 1;
+  }
+  return { solo, compare, compareSkipped };
+}
+
+function prepCacheSummary(events) {
+  let hits = 0;
+  let misses = 0;
+  for (const e of events) {
+    if (e.cache_hit === true) hits += 1;
+    else if (e.cache_hit === false) misses += 1;
+  }
+  const known = hits + misses;
+  return {
+    hits,
+    misses,
+    hitRatePct: known ? Math.round((100 * hits) / known) : null,
+  };
+}
+
+export function filePrepAdminStats() {
+  const s = loadState();
+  const events = s.prepEvents ?? [];
+  const countries = countryBreakdown(events);
+  const withDuration = events.filter((e) => e.duration_ms != null);
+  const avgDurationMs = withDuration.length
+    ? Math.round(
+        withDuration.reduce((sum, e) => sum + (e.duration_ms ?? 0), 0) /
+          withDuration.length
+      )
+    : null;
+  return {
+    lookupsServed: s.prepLiveCount || events.length,
+    countryCount: countries.length,
+    countries,
+    byPlatform: prepPlatformBreakdown(events),
+    modeSummary: prepModeSummary(events),
+    cacheSummary: prepCacheSummary(events),
+    avgDurationMs,
+    recent: events,
+    recentTotal: events.length,
+  };
+}
+
 export function fileAdminStats() {
   const s = loadState();
   const events = s.events;
@@ -157,9 +223,23 @@ export function fileAdminStats() {
     recent: events,
     recentTotal: events.length,
     savedGames: fileAdminSavedSummary(),
+    prep: filePrepAdminStats(),
     tracking: "engine-file",
     testingMode: !!s.testingMode,
   };
+}
+
+export function fileLogPrep(row) {
+  const s = loadState();
+  const event = {
+    ...row,
+    looked_up_at: new Date().toISOString(),
+  };
+  s.prepLiveCount = (Number(s.prepLiveCount) || 0) + 1;
+  if (!Array.isArray(s.prepEvents)) s.prepEvents = [];
+  s.prepEvents.unshift(event);
+  saveState(s);
+  return { count: s.prepLiveCount };
 }
 
 export function fileSetTestingMode(testingMode) {
@@ -254,6 +334,35 @@ export function handleEngineStatsRequest(req, res, url, { adminSecret, readJsonB
           return;
         }
         const result = fileLogReview(row);
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, ...result }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
+  if (url.pathname === "/stats/prep" && req.method === "POST") {
+    void (async () => {
+      try {
+        const body = await readJsonBody(req);
+        const geo = geoFromHeaders(req.headers);
+        const row = {
+          ...body,
+          country_code: body.country_code ?? geo.country_code,
+          region: body.region ?? geo.region,
+          city: body.city ?? geo.city,
+          latitude: body.latitude ?? geo.latitude,
+          longitude: body.longitude ?? geo.longitude,
+        };
+        if (!row.username || !row.platform) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: "Missing username/platform" }));
+          return;
+        }
+        const result = fileLogPrep(row);
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true, ...result }));
       } catch (e) {
