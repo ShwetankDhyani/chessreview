@@ -155,6 +155,50 @@
       "destination": "/privacy-crawler.html"
     },
     {
+      "source": "/free-chess-game-review",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/free-chess-game-review-crawler.html"
+    },
+    {
+      "source": "/free-vs-chesscom-game-review",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/free-vs-chesscom-game-review-crawler.html"
+    },
+    {
+      "source": "/chessreview-vs-chessda",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/chessreview-vs-chessda-crawler.html"
+    },
+    {
+      "source": "/learn",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/learn-crawler.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

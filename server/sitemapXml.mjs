@@ -7,6 +7,30 @@ const SITE_ORIGIN = "https://www.chessreview.org";
 const STATIC_URLS = [
   { path: "/", changefreq: "weekly", priority: "1.0" },
   { path: "/about", changefreq: "monthly", priority: "0.8" },
+  { path: "/free-chess-game-review", changefreq: "weekly", priority: "0.9" },
+  {
+    path: "/free-vs-chesscom-game-review",
+    changefreq: "monthly",
+    priority: "0.85",
+  },
+  { path: "/chessreview-vs-chessda", changefreq: "monthly", priority: "0.85" },
+  { path: "/learn", changefreq: "weekly", priority: "0.8" },
+  {
+    path: "/learn/how-to-read-a-game-review",
+    changefreq: "monthly",
+    priority: "0.75",
+  },
+  {
+    path: "/learn/move-classifications",
+    changefreq: "monthly",
+    priority: "0.75",
+  },
+  {
+    path: "/learn/accuracy-and-rating",
+    changefreq: "monthly",
+    priority: "0.75",
+  },
+  { path: "/h2h", changefreq: "weekly", priority: "0.8" },
   { path: "/blog", changefreq: "weekly", priority: "0.8" },
   { path: "/privacy", changefreq: "yearly", priority: "0.3" },
 ];
