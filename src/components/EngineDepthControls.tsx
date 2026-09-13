@@ -120,7 +120,7 @@ export function EngineDepthControls({
             (ui.tone === "offline" && onRetry ? onRetry : onToggleDepthMenu)();
           }}
           aria-expanded={showDepthMenu}
-          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 font-mono text-xs font-bold transition-colors ${styles.mobileBtn}`}
+          className={`inline-flex h-8 sm:h-9 items-center gap-1 rounded-lg border px-2 font-mono text-[11px] sm:text-xs font-bold transition-colors ${styles.mobileBtn}`}
           title={ui.title}
         >
           {statusDot}

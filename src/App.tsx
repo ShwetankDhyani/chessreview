@@ -1844,7 +1844,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       </h1>
       <SiteBrandBar
         trailing={
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2">
           <EngineDepthControls
             depth={depth}
             engineBackend={engineBackend}

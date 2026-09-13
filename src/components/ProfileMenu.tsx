@@ -1,4 +1,5 @@
 import { useEffect, useRef, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { FeedbackSettings } from "./FeedbackSettings";
 import {
   hapticSelection,
@@ -169,7 +170,7 @@ export function ProfileMenu({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={activeUser ? `Profile: ${activeUser.name}` : "Sign in"}
-        className={`group inline-flex h-9 items-center gap-2 rounded-lg border px-2 sm:px-2.5 transition-all duration-150
+        className={`group inline-flex h-8 sm:h-9 items-center gap-1.5 sm:gap-2 rounded-lg border px-1.5 sm:px-2.5 transition-all duration-150
           ${
             open
               ? "border-chess-accent/45 bg-chess-surface shadow-[inset_0_0_0_1px_rgba(129,182,76,0.12)]"
@@ -414,6 +415,22 @@ export function ProfileMenu({
                 Maximum of 5 profiles reached.
               </p>
             )}
+
+            <section className="border-b border-chess-border/70 px-1 py-1 sm:hidden">
+              <p className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-chess-muted">
+                Explore
+              </p>
+              <Link
+                to="/learn"
+                onClick={() => {
+                  hapticTap();
+                  onClose();
+                }}
+                className="flex items-center rounded-lg px-2.5 py-2 text-[13px] font-semibold text-chess-subtext transition-colors hover:bg-chess-hover hover:text-chess-text"
+              >
+                Learn
+              </Link>
+            </section>
 
             <section className="px-1 pb-1 pt-1">
               <p className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-chess-muted">
