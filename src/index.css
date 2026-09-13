@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --site-footer: 36px;
-  /* Mobile stack (bottom → top): footer, then Games/Moves/Review tabs */
+  /* Must match SiteFooter content row height (not including safe-area padding). */
+  --site-footer: 40px;
+  /* Mobile stack (bottom → top): footer (+ safe-area), then Games/Moves/Review tabs */
   --mobile-footer-stack: calc(var(--site-footer) + env(safe-area-inset-bottom, 0px));
   --mobile-tab-bar-h: 56px;
   --mobile-tab-bar: calc(var(--mobile-tab-bar-h) + var(--mobile-footer-stack));
@@ -36,8 +37,8 @@ html[data-testing-mode="1"] {
 
 @media (max-width: 1023px) {
   :root {
-    --page-pad-inline: max(0.375rem, env(safe-area-inset-left, 0px));
-    --page-pad-inline-end: max(0.375rem, env(safe-area-inset-right, 0px));
+    --page-pad-inline: max(0.75rem, env(safe-area-inset-left, 0px));
+    --page-pad-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
   }
 }
 

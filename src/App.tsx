@@ -1913,7 +1913,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md shadow-elev-up"
           style={{ bottom: "var(--mobile-footer-stack)" }}
         >
-          <div className="page-inline-pad flex min-h-[56px]">
+          <div className="page-inline-pad flex h-[var(--mobile-tab-bar-h)]">
           {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
             const isActive = tab === t;
             const label = t === "games" ? "Games" : t === "moves" ? "Moves" : "Review";

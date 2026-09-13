@@ -21,6 +21,9 @@ function SettingsGearIcon({ className = "" }: { className?: string }) {
   );
 }
 
+const linkClass =
+  "text-[11px] sm:text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap";
+
 export function SiteFooter() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [showAdminEntry, setShowAdminEntry] = useState(
@@ -52,11 +55,16 @@ export function SiteFooter() {
   return (
     <>
       <footer
-        className="flex-shrink-0 z-40 border-t border-chess-hairline bg-chess-panel/90 backdrop-blur-md
+        className="site-footer flex-shrink-0 z-40 overflow-hidden border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md
           fixed left-0 right-0 bottom-0 lg:static
           pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="page-inline-pad relative flex items-center justify-center min-h-[calc(var(--site-footer)+4px)] py-1">
+        {/*
+          Height must stay exactly --site-footer. Mobile tabs sit at
+          --mobile-footer-stack (= footer + safe-area). Extra padding/py or
+          absolutely positioned badges used to make this taller and overlap.
+        */}
+        <div className="page-inline-pad relative flex h-[var(--site-footer)] items-center justify-center">
           {showAdminEntry && (
             <div className="absolute left-[var(--page-pad-inline)] top-1/2 -translate-y-1/2">
               <Link
@@ -70,33 +78,28 @@ export function SiteFooter() {
               </Link>
             </div>
           )}
-          <div className="flex items-center gap-4 sm:gap-5">
+
+          <nav
+            className="flex items-center justify-center gap-3 sm:gap-5"
+            aria-label="Site"
+          >
             <Link
               to="/h2h"
-              className="relative inline-flex items-center text-[12px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide"
+              className="inline-flex items-center gap-1 text-[11px] sm:text-[12px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap"
             >
               H2H
-              <span className="h2h-new-badge" aria-hidden>
+              <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
                 New
               </span>
               <span className="sr-only"> (new feature)</span>
             </Link>
-            <Link
-              to="/learn"
-              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
+            <Link to="/learn" className={linkClass}>
               Learn
             </Link>
-            <Link
-              to="/blog"
-              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
+            <Link to="/blog" className={`${linkClass} hidden sm:inline`}>
               Blog
             </Link>
-            <Link
-              to="/about"
-              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
+            <Link to="/about" className={`${linkClass} hidden sm:inline`}>
               About
             </Link>
             <button
@@ -105,13 +108,13 @@ export function SiteFooter() {
                 hapticTap();
                 setHelpOpen(true);
               }}
-              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+              className={linkClass}
             >
               Donate
             </button>
+          </nav>
 
-          </div>
-          <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
+          <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 hidden -translate-y-1/2 lg:block">
             <ReviewOdometer />
           </div>
         </div>
