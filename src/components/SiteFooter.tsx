@@ -81,6 +81,15 @@ export function SiteFooter() {
               ·
             </span>
             <Link
+              to="/learn"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              Learn
+            </Link>
+            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
+              ·
+            </span>
+            <Link
               to="/h2h"
               className="relative inline-flex items-center text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
