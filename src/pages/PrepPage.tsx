@@ -203,33 +203,38 @@ export default function PrepPage() {
             result?.self && result?.compareBrief ? "max-w-6xl" : "max-w-5xl"
           }`}
         >
-          <header className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90 inline-flex items-center gap-2">
-              Head-to-head
+          <header className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-chess-accent/25 bg-chess-accent/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-chess-accent">
+              Rematch prep
               <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
                 New
               </span>
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-chess-text">
-              H2H
+            </div>
+            <h1 className="text-3xl sm:text-[2.5rem] font-extrabold tracking-[-0.03em] text-chess-text">
+              Know their form before you sit down
             </h1>
-            <p className="text-sm text-chess-subtext leading-relaxed max-w-xl">
-              Free rematch prep for club players: paste a Chess.com or Lichess
-              username and see score, tilt, colors, and how they tend to lose
-              across the last 100 games — no Stockfish wait, no account.
+            <p className="text-[15px] text-chess-subtext leading-relaxed">
+              Paste a Chess.com or Lichess username. See score, tilt, colors, and
+              how they tend to lose across the last 100 games — free, no account,
+              no Stockfish wait.
             </p>
-            <p className="text-[12px] text-chess-muted leading-relaxed max-w-xl">
-              After the game, use{" "}
-              <Link to="/" className="font-semibold text-chess-accent hover:underline">
-                free unlimited game review
-              </Link>{" "}
-              for move classifications and engine lines.
+            <p className="cr-trust-row">
+              <span>Public games only</span>
+              <span aria-hidden>·</span>
+              <span>Same-site compare</span>
+              <span aria-hidden>·</span>
+              <span>
+                Then{" "}
+                <Link to="/" className="font-semibold text-chess-accent hover:underline">
+                  review the game
+                </Link>
+              </span>
             </p>
           </header>
 
           <form
             onSubmit={(e) => void onSubmit(e)}
-            className="rounded-2xl border border-chess-border/80 bg-chess-panel/50 p-4 space-y-3 shadow-elev-1 backdrop-blur-sm"
+            className="cr-panel p-4 sm:p-5 space-y-3.5"
           >
             <div className="flex flex-col sm:flex-row gap-2">
               <label className="flex-1 min-w-0">
@@ -240,7 +245,7 @@ export default function PrepPage() {
                   placeholder="Opponent username"
                   autoComplete="off"
                   spellCheck={false}
-                  className="w-full h-10 rounded-lg border border-chess-border bg-chess-surface px-3 text-sm text-chess-text placeholder:text-chess-muted focus:outline-none focus:border-chess-accent/50"
+                  className="cr-field"
                 />
               </label>
               <div className="flex rounded-lg border border-chess-border overflow-hidden">
@@ -259,7 +264,7 @@ export default function PrepPage() {
                     }}
                     className={`h-10 px-3 text-[12px] font-semibold transition-colors ${
                       platform === id
-                        ? "bg-chess-accent text-white"
+                        ? "bg-chess-accent text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
                         : "bg-chess-surface text-chess-subtext hover:text-chess-text"
                     }`}
                   >
@@ -318,7 +323,7 @@ export default function PrepPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-chess-accent text-sm font-bold text-white hover:bg-chess-accent-hover disabled:opacity-60 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+              className="cr-btn-primary h-10 px-5 disabled:opacity-60"
             >
               {loading ? "Working…" : "Look up"}
             </button>

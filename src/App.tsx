@@ -1839,7 +1839,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     !showBoardAnalyzeOverlay;
 
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+    <div className="relative h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+      <div className="site-ambient" aria-hidden />
+      <div className="relative z-[1] flex h-full min-h-0 flex-col">
       <h1 className="sr-only">
         ChessReview — Free chess game analysis online for club and amateur players
       </h1>
@@ -1988,8 +1990,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <LatestBlogNews className="mx-3 mt-2 flex-shrink-0" />
-                <SupportAppeal className="mx-3 mt-2 flex-shrink-0" />
                 <H2hTeaser className="mx-3 mt-2 flex-shrink-0" />
                 <GameList
                   username=""
@@ -1999,6 +1999,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
+                <LatestBlogNews className="mx-3 mt-2 mb-2 flex-shrink-0" />
+                <SupportAppeal className="mx-3 mb-3 flex-shrink-0" />
               </div>
             )}
 
@@ -2405,8 +2407,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
-                <SupportAppeal className="page-inline-pad mt-2 flex-shrink-0 w-full" />
                 <H2hTeaser className="page-inline-pad mt-2 flex-shrink-0 w-full" />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <GameList
@@ -2418,6 +2418,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     onOpenActiveReview={openActiveReview}
                   />
                 </div>
+                <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
+                <SupportAppeal className="page-inline-pad mt-2 mb-2 flex-shrink-0 w-full" />
             </div>
             )}
 
@@ -2628,6 +2630,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         }}
         onDelete={(id) => void handleDeleteSavedReview(id)}
       />
+      </div>
     </div>
   );
 }

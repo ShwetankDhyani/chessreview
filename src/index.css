@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --site-footer: 32px;
+  --site-footer: 36px;
   /* Mobile stack (bottom → top): footer, then Games/Moves/Review tabs */
   --mobile-footer-stack: calc(var(--site-footer) + env(safe-area-inset-bottom, 0px));
   --mobile-tab-bar-h: 56px;
@@ -91,12 +91,12 @@ html[data-testing-mode="1"] {
 
   body {
     @apply bg-chess-bg text-chess-text;
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: "Manrope", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    letter-spacing: -0.006em;
+    font-feature-settings: "ss01", "ss02";
+    letter-spacing: -0.011em;
     -webkit-user-select: auto;
     user-select: auto;
   }
@@ -1241,26 +1241,25 @@ html[data-testing-mode="1"] {
   animation: coachInsightIn 0.28s ease-out forwards;
 }
 
-/* H2H discovery: small glowing "New" chip on the feature entry. */
+/* H2H discovery: quiet "New" chip — finished products don't strobe. */
 .h2h-new-badge {
   position: absolute;
-  top: -0.55rem;
-  right: -1.45rem;
+  top: -0.5rem;
+  right: -1.35rem;
   z-index: 1;
-  padding: 0.08rem 0.28rem;
-  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 999px;
   font-size: 0.5625rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   line-height: 1.2;
   text-transform: uppercase;
-  color: #0f1a0a;
-  background: #9fd45a;
+  color: #142010;
+  background: linear-gradient(180deg, #a6d964 0%, #81b64c 100%);
   box-shadow:
-    0 0 0 1px rgba(159, 212, 90, 0.35),
-    0 0 8px rgba(129, 182, 76, 0.55),
-    0 0 16px rgba(129, 182, 76, 0.28);
-  animation: h2hNewGlow 2.2s ease-in-out infinite;
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 1px rgba(129, 182, 76, 0.35),
+    0 4px 10px -4px rgba(129, 182, 76, 0.45);
   pointer-events: none;
 }
 
@@ -1268,31 +1267,65 @@ html[data-testing-mode="1"] {
   position: static;
   top: auto;
   right: auto;
-  margin-left: 0.15rem;
-}
-
-@keyframes h2hNewGlow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(159, 212, 90, 0.35),
-      0 0 6px rgba(129, 182, 76, 0.45),
-      0 0 12px rgba(129, 182, 76, 0.2);
-    filter: brightness(1);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(180, 230, 110, 0.55),
-      0 0 10px rgba(129, 182, 76, 0.75),
-      0 0 20px rgba(129, 182, 76, 0.4);
-    filter: brightness(1.08);
-  }
+  margin-left: 0.2rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .h2h-new-badge {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@layer components {
+  .site-ambient {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 90% 55% at 50% -8%, rgba(129, 182, 76, 0.14), transparent 58%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(129, 182, 76, 0.05), transparent 50%);
+  }
+
+  .cr-panel {
+    @apply rounded-2xl border border-chess-border/70 bg-chess-panel/55 shadow-elev-1;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 8px 24px -12px rgba(0, 0, 0, 0.35);
+  }
+
+  .cr-btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-chess-accent px-3.5 py-2 text-sm font-bold tracking-tight text-white transition-all duration-200 ease-soft;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 1px 2px rgba(0, 0, 0, 0.22),
+      0 6px 16px -6px rgba(129, 182, 76, 0.45);
+  }
+
+  .cr-btn-primary:hover {
+    @apply bg-chess-accent-hover;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.26),
+      0 2px 4px rgba(0, 0, 0, 0.22),
+      0 8px 20px -6px rgba(129, 182, 76, 0.55);
+  }
+
+  .cr-btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .cr-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-chess-accent/40 bg-chess-accent/5 px-3.5 py-2 text-sm font-semibold tracking-tight text-chess-accent transition-colors duration-200 ease-soft hover:bg-chess-accent/12;
+  }
+
+  .cr-trust-row {
+    @apply flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-chess-muted;
+  }
+
+  .cr-field {
+    @apply w-full h-10 rounded-lg border border-chess-border bg-chess-surface px-3 text-sm text-chess-text placeholder:text-chess-muted transition-colors duration-200 ease-soft focus:outline-none focus:border-chess-accent/50 focus:ring-1 focus:ring-chess-accent/20;
   }
 }
 

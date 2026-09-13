@@ -4,7 +4,7 @@ import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 
 const DISMISS_KEY = "cr_h2h_teaser_dismissed";
 
-/** Compact Games-tab promo for head-to-head form prep. */
+/** Quiet Games-tab strip for head-to-head form prep. */
 export function H2hTeaser({ className = "" }: { className?: string }) {
   const [hidden, setHidden] = useState(() => {
     try {
@@ -27,37 +27,25 @@ export function H2hTeaser({ className = "" }: { className?: string }) {
 
   return (
     <div
-      className={`rounded-xl border border-chess-accent/25 bg-gradient-to-br from-chess-accent/[0.1] via-chess-panel/50 to-transparent px-3.5 py-3 ${className}`}
+      className={`flex items-center gap-3 rounded-xl border border-chess-border/60 bg-chess-panel/40 px-3 py-2.5 ${className}`}
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-chess-accent/90 inline-flex items-center gap-2">
-            Facing someone again?
-            <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
-              New
-            </span>
-          </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-chess-subtext">
-            Check recent form on{" "}
-            <span className="font-semibold text-chess-text">H2H</span> — last
-            100 games, no Stockfish wait.
-          </p>
-          <Link
-            to="/h2h"
-            className="mt-2.5 inline-flex items-center rounded-lg bg-chess-accent px-3 py-1.5 text-xs font-bold text-chess-bg transition-opacity hover:opacity-90"
-          >
-            Open H2H
-          </Link>
-        </div>
-        <button
-          type="button"
-          onClick={() => setHidden(true)}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-chess-muted transition-colors hover:bg-white/5 hover:text-chess-text"
-          aria-label="Dismiss H2H tip"
-        >
-          ×
-        </button>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] leading-snug text-chess-subtext">
+          <span className="font-semibold text-chess-text">Rematch soon?</span>{" "}
+          Scout their last 100 games on H2H — no engine wait.
+        </p>
       </div>
+      <Link to="/h2h" className="cr-btn-secondary flex-shrink-0 text-xs px-2.5 py-1.5">
+        Open H2H
+      </Link>
+      <button
+        type="button"
+        onClick={() => setHidden(true)}
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-chess-muted transition-colors hover:bg-white/5 hover:text-chess-text"
+        aria-label="Dismiss H2H tip"
+      >
+        ×
+      </button>
     </div>
   );
 }

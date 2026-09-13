@@ -29,14 +29,14 @@ export function MarketingPageLayout({
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-chess-accent/90">
               {eyebrow}
             </p>
-            <h1 className="text-3xl font-bold tracking-tight text-chess-text sm:text-4xl">
+            <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-chess-text sm:text-[2.35rem]">
               {title}
             </h1>
-            <p className="max-w-md text-sm leading-relaxed text-chess-subtext sm:text-[15px]">
+            <p className="max-w-lg text-[15px] leading-relaxed text-chess-subtext">
               {lead}
             </p>
             <div className="h-px w-16 bg-gradient-to-r from-chess-accent/70 to-transparent" />
-            <p className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[11px] font-medium text-chess-muted">
+            <p className="cr-trust-row pt-1">
               <span>Free &amp; unlimited</span>
               <span className="text-chess-border-strong/70" aria-hidden>
                 ·
@@ -53,7 +53,7 @@ export function MarketingPageLayout({
             </p>
           </header>
           {children}
-          <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-4">
+          <section className="cr-panel px-4 py-4">
             <p className="text-sm font-semibold text-chess-text">
               Review a game — or scout the rematch
             </p>
@@ -61,16 +61,10 @@ export function MarketingPageLayout({
               Free Stockfish review after the game. H2H form prep before the next one.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Link
-                to="/"
-                className="inline-flex rounded-lg bg-chess-accent px-3.5 py-2 text-sm font-semibold text-chess-bg transition-opacity hover:opacity-90"
-              >
+              <Link to="/" className="cr-btn-primary">
                 Start a free game review
               </Link>
-              <Link
-                to="/h2h"
-                className="inline-flex rounded-lg border border-chess-accent/40 px-3.5 py-2 text-sm font-semibold text-chess-accent transition-colors hover:bg-chess-accent/10"
-              >
+              <Link to="/h2h" className="cr-btn-secondary">
                 Open H2H
               </Link>
             </div>
@@ -110,7 +104,7 @@ export function MarketingFaq({
         {items.map((item) => (
           <div
             key={item.question}
-            className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-3.5"
+            className="cr-panel px-4 py-3.5"
           >
             <dt className="text-sm font-semibold text-chess-text">
               {item.question}
@@ -136,7 +130,7 @@ export function MarketingLinkList({
         <li key={item.to}>
           <Link
             to={item.to}
-            className="block rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-3 transition-colors hover:border-chess-accent/40"
+            className="cr-panel block px-4 py-3 transition-colors hover:border-chess-accent/40"
           >
             <span className="text-sm font-semibold text-chess-accent">
               {item.label}
