@@ -96,7 +96,7 @@ export default function PrepPage() {
   usePageSeo({
     title: "H2H — Recent form | ChessReview",
     description:
-      "Trends across the last 100 Chess.com or Lichess games — score, tilt, colors, and matchups.",
+      "H2H form prep: scout a Chess.com or Lichess opponent across their last 100 games — score, tilt, colors, and matchups. Free rematch prep on ChessReview.",
     path: "/h2h",
   });
 
@@ -214,7 +214,16 @@ export default function PrepPage() {
               H2H
             </h1>
             <p className="text-sm text-chess-subtext leading-relaxed max-w-xl">
-              Trends across the last 100 games.
+              Free rematch prep for club players: paste a Chess.com or Lichess
+              username and see score, tilt, colors, and how they tend to lose
+              across the last 100 games — no Stockfish wait, no account.
+            </p>
+            <p className="text-[12px] text-chess-muted leading-relaxed max-w-xl">
+              After the game, use{" "}
+              <Link to="/" className="font-semibold text-chess-accent hover:underline">
+                free unlimited game review
+              </Link>{" "}
+              for move classifications and engine lines.
             </p>
           </header>
 

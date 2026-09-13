@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { SiteFooter } from "../components/SiteFooter";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { MoveList } from "../components/MoveList";
 import { ReviewSessionView } from "../components/ReviewSessionView";
@@ -257,12 +258,20 @@ export default function SharePage() {
           </div>
         </div>
         <div className="flex-1 min-w-0" />
-        <Link
-          to="/"
-          className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover transition-colors font-semibold"
-        >
-          Analyze yours
-        </Link>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Link
+            to="/h2h"
+            className="text-xs px-3 py-1.5 rounded-lg border border-chess-accent/40 text-chess-accent hover:bg-chess-accent/10 transition-colors font-semibold"
+          >
+            H2H
+          </Link>
+          <Link
+            to="/"
+            className="text-xs px-3 py-1.5 rounded-lg border border-chess-border hover:bg-chess-hover transition-colors font-semibold"
+          >
+            Analyze yours
+          </Link>
+        </div>
       </header>
 
       <ShareTabBar tab={tab} onTab={setTab} />
@@ -303,7 +312,7 @@ export default function SharePage() {
                       to="/"
                       className="text-chess-accent hover:underline font-medium"
                     >
-                      Review your own games on ChessReview
+                      Review your own games
                     </Link>
                   </p>
                 </div>
@@ -346,7 +355,7 @@ export default function SharePage() {
                       to="/"
                       className="text-chess-accent hover:underline font-medium"
                     >
-                      Review your own games on ChessReview
+                      Review your own games
                     </Link>
                   </p>
                 </div>

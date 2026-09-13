@@ -66,7 +66,7 @@ export default function FreeVsChesscomPage() {
                 ["Account", "Required on Chess.com", "Not required"],
                 ["Import", "Your Chess.com games", "Chess.com, Lichess, or PGN"],
                 ["Engine feel", "Polished coach report", "Stockfish lines + classifications"],
-                ["Extra", "Platform ecosystem", "H2H form prep on ChessReview"],
+                ["Extra", "Platform ecosystem", "H2H form prep"], 
               ].map(([topic, left, right]) => (
                 <tr key={topic} className="border-t border-chess-border/60">
                   <td className="px-3 py-2 font-medium text-chess-text">{topic}</td>
@@ -77,10 +77,17 @@ export default function FreeVsChesscomPage() {
             </tbody>
           </table>
         </div>
+        <p className="text-sm text-chess-subtext">
+          Rematching the same opponent?{" "}
+          <Link to="/h2h" className="font-semibold text-chess-accent hover:underline">
+            Open H2H form prep
+          </Link>
+          .
+        </p>
         <p className="text-xs text-chess-muted">
           Membership details can change on Chess.com; this page reflects the
           common free-vs-paid split players run into when they want more than
-          one polished review a day.
+          one polished review a day. For rematch prep, open H2H on ChessReview.
         </p>
       </MarketingSection>
 
@@ -91,7 +98,7 @@ export default function FreeVsChesscomPage() {
           <Link to="/free-chess-game-review" className="font-semibold text-chess-accent hover:underline">
             ChessReview
           </Link>{" "}
-          when you want another free unlimited pass at the same PGN — clear
+          when you want another free unlimited pass at the same PGN — or open H2H for form prep — clear
           classifications, accuracy, and engine lines without waiting on a daily
           gate.
         </p>

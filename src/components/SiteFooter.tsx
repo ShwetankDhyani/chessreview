@@ -72,10 +72,14 @@ export function SiteFooter() {
           )}
           <div className="flex items-center gap-3">
             <Link
-              to="/blog"
-              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+              to="/h2h"
+              className="relative inline-flex items-center text-[11px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide"
             >
-              Blog
+              H2H
+              <span className="h2h-new-badge" aria-hidden>
+                New
+              </span>
+              <span className="sr-only"> (new feature)</span>
             </Link>
             <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·
@@ -90,14 +94,19 @@ export function SiteFooter() {
               ·
             </span>
             <Link
-              to="/h2h"
-              className="relative inline-flex items-center text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+              to="/blog"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
-              H2H
-              <span className="h2h-new-badge" aria-hidden>
-                New
-              </span>
-              <span className="sr-only"> (new feature)</span>
+              Blog
+            </Link>
+            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
+              ·
+            </span>
+            <Link
+              to="/about"
+              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              About
             </Link>
             <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
               ·
@@ -112,6 +121,7 @@ export function SiteFooter() {
             >
               Donate
             </button>
+
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
             <ReviewOdometer />

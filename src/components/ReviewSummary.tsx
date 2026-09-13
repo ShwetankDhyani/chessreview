@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import React, { useEffect, useMemo, useState } from "react";
 import type {
   ReviewSummary as ReviewSummaryType,
@@ -41,6 +42,7 @@ interface ReviewSummaryProps {
   sharing?: boolean;
   shareUrl?: string | null;
   shareError?: string | null;
+  h2hHref?: string | null;
 }
 
 const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
@@ -265,6 +267,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   sharing = false,
   shareUrl = null,
   shareError = null,
+  h2hHref = null,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [excludeBookAndForced, setExcludeBookAndForced] = useState(readExcludePref);
@@ -473,6 +476,22 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
           />
         </ReviewSection>
       )}
+
+
+      <div className="mt-4 rounded-xl border border-chess-accent/25 bg-gradient-to-br from-chess-accent/[0.08] to-transparent px-3.5 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-chess-accent/90">
+          Rematch coming up?
+        </p>
+        <p className="mt-1 text-[12px] leading-relaxed text-chess-subtext">
+          Scout recent form on H2H before the next game — last 100 results, no engine wait.
+        </p>
+        <Link
+          to={h2hHref || "/h2h"}
+          className="mt-2.5 inline-flex items-center rounded-lg bg-chess-accent px-3 py-1.5 text-xs font-bold text-chess-bg transition-opacity hover:opacity-90"
+        >
+          Open H2H form prep
+        </Link>
+      </div>
 
       {onShare && (
         <div className="mt-auto pt-5 border-t border-chess-hairline space-y-2">

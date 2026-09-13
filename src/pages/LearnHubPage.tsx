@@ -49,6 +49,18 @@ export default function LearnHubPage() {
         />
       </MarketingSection>
 
+      <MarketingSection title="Tools">
+        <MarketingLinkList
+          items={[
+            {
+              to: "/h2h",
+              label: "H2H — head-to-head form prep",
+              blurb: "Scout an opponent’s last 100 games before a rematch.",
+            },
+          ]}
+        />
+      </MarketingSection>
+
       <MarketingSection title="Compare">
         <MarketingLinkList
           items={[

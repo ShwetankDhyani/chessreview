@@ -55,17 +55,25 @@ export function MarketingPageLayout({
           {children}
           <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-4">
             <p className="text-sm font-semibold text-chess-text">
-              Ready to review a game?
+              Review a game — or scout the rematch
             </p>
             <p className="mt-1 text-sm leading-relaxed text-chess-muted">
-              Paste a Chess.com or Lichess link, or a PGN — no sign-up.
+              Free Stockfish review after the game. H2H form prep before the next one.
             </p>
-            <Link
-              to="/"
-              className="mt-3 inline-flex rounded-lg bg-chess-accent px-3.5 py-2 text-sm font-semibold text-chess-bg transition-opacity hover:opacity-90"
-            >
-              Start a free game review
-            </Link>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                to="/"
+                className="inline-flex rounded-lg bg-chess-accent px-3.5 py-2 text-sm font-semibold text-chess-bg transition-opacity hover:opacity-90"
+              >
+                Start a free game review
+              </Link>
+              <Link
+                to="/h2h"
+                className="inline-flex rounded-lg border border-chess-accent/40 px-3.5 py-2 text-sm font-semibold text-chess-accent transition-colors hover:bg-chess-accent/10"
+              >
+                Open H2H
+              </Link>
+            </div>
           </section>
         </main>
       </div>

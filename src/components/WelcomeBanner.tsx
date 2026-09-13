@@ -11,9 +11,9 @@ export function WelcomeBanner({ onDismiss }: WelcomeBannerProps) {
             Free chess game review — no sign-up
           </h2>
           <p className="text-xs sm:text-[13px] text-chess-muted mt-1.5 leading-relaxed">
-            Paste a Chess.com or Lichess link, or your PGN. ChessReview gives
-            clear move ratings, accuracy scores, and Stockfish analysis for club
-            and amateur players — free, with nothing to subscribe to.
+            Paste a Chess.com or Lichess link, or your PGN for a free Stockfish review.
+            Facing the same opponent again? Open H2H for recent-form prep — no
+            account, no daily limit.
           </p>
         </div>
         <button
