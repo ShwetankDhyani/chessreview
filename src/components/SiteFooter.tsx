@@ -56,7 +56,7 @@ export function SiteFooter() {
           fixed left-0 right-0 bottom-0 lg:static
           pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="page-inline-pad relative flex items-center justify-center min-h-[var(--site-footer)]">
+        <div className="page-inline-pad relative flex items-center justify-center min-h-[calc(var(--site-footer)+4px)] py-1">
           {showAdminEntry && (
             <div className="absolute left-[var(--page-pad-inline)] top-1/2 -translate-y-1/2">
               <Link
@@ -70,28 +70,10 @@ export function SiteFooter() {
               </Link>
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <Link
-              to="/blog"
-              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
-              Blog
-            </Link>
-            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
-              ·
-            </span>
-            <Link
-              to="/learn"
-              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
-            >
-              Learn
-            </Link>
-            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
-              ·
-            </span>
+          <div className="flex items-center gap-4 sm:gap-5">
             <Link
               to="/h2h"
-              className="relative inline-flex items-center text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+              className="relative inline-flex items-center text-[12px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide"
             >
               H2H
               <span className="h2h-new-badge" aria-hidden>
@@ -99,19 +81,35 @@ export function SiteFooter() {
               </span>
               <span className="sr-only"> (new feature)</span>
             </Link>
-            <span className="text-chess-border-strong/70 text-[10px]" aria-hidden>
-              ·
-            </span>
+            <Link
+              to="/learn"
+              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              Learn
+            </Link>
+            <Link
+              to="/blog"
+              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              Blog
+            </Link>
+            <Link
+              to="/about"
+              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+            >
+              About
+            </Link>
             <button
               type="button"
               onClick={() => {
                 hapticTap();
                 setHelpOpen(true);
               }}
-              className="text-[11px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
+              className="text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide"
             >
               Donate
             </button>
+
           </div>
           <div className="absolute right-[var(--page-pad-inline-end)] top-1/2 -translate-y-1/2">
             <ReviewOdometer />

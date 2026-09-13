@@ -100,6 +100,11 @@ export const HOME_FAQ = [
     answer:
       "ChessReview is a free hobby project focused on readable move classifications, accuracy, and Stockfish lines without a subscription wall. Import the same Chess.com or Lichess games you already play.",
   },
+  {
+    question: "What is H2H on ChessReview?",
+    answer:
+      "H2H (head-to-head) is free form prep: paste a Chess.com or Lichess username to see trends across their last 100 games — score, tilt, colors, and matchups — before a rematch. It is separate from Stockfish game review.",
+  },
 ] as const;
 
 /** Home-page structured data — keep in sync with index.html `#cr-home-jsonld`. */
@@ -140,6 +145,7 @@ export function homeJsonLdGraph(): Record<string, unknown> {
           "Move classification and accuracy scores",
           "Stockfish engine analysis",
           "Eval graph and critical moments",
+          "H2H form prep from recent Chess.com and Lichess games",
           "No account required",
         ],
         areaServed: [

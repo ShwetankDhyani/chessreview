@@ -211,7 +211,7 @@ function ChartCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-chess-border/70 bg-chess-panel/40 p-3.5 sm:p-4 shadow-elev-1 ${className}`}
+      className={`rounded-xl border border-chess-border/50 bg-chess-panel/30 p-3.5 sm:p-4 ${className}`}
     >
       <div className="mb-3 flex items-end justify-between gap-2">
         <h3 className="text-[13px] font-semibold tracking-tight text-chess-text">
@@ -778,7 +778,7 @@ export function PrepHeadToHeadVisuals({
   );
 
   return (
-    <section className="space-y-3 rounded-2xl border border-chess-border/70 bg-chess-panel/40 p-4 shadow-elev-1">
+    <section className="space-y-3 rounded-xl border border-chess-border/50 bg-chess-panel/30 p-4">
       <div>
         <h2 className="text-base font-semibold text-chess-text">
           Head-to-head

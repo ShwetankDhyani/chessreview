@@ -199,6 +199,17 @@
       "destination": "/learn-crawler.html"
     },
     {
+      "source": "/h2h",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+        }
+      ],
+      "destination": "/h2h-crawler.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

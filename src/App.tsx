@@ -97,6 +97,9 @@ import { shouldShowEngineLineGlow } from "./utils/engineLineGlow";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
+import { SiteBrandBar } from "./components/SiteBrandBar";
+import { H2hTeaser } from "./components/H2hTeaser";
+import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
 import { LatestBlogNews } from "./components/LatestBlogNews";
 import { SupportAppeal } from "./components/SupportAppeal";
 import { recordReviewCompletion } from "./utils/reviewCache";
@@ -1836,31 +1839,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     !showBoardAnalyzeOverlay;
 
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+    <div className="relative h-full min-h-0 overflow-hidden bg-chess-bg text-chess-text font-sans flex flex-col">
+      <div className="site-ambient" aria-hidden />
+      <div className="relative z-[1] flex h-full min-h-0 flex-col">
       <h1 className="sr-only">
         ChessReview — Free chess game analysis online for club and amateur players
       </h1>
-      <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2 bg-chess-panel shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-chess-border after:via-chess-accent/30 after:to-chess-border">
-        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chess-accent/25 to-chess-accent/[0.04] border border-chess-accent/35 text-chess-accent select-none shadow-rim"
-            aria-hidden
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M5.5 21h13l-.7-3.4H6.2L5.5 21zM6.5 16h11l-.5-2H7L6.5 16zM7.2 12.6h9.6c-.3-1-1-2.4-2-3.4l1.7-1.7-1.4-1.4-1.7 1.7c-1-1-2.4-1.7-3.4-2L11 4l-1.6.4c-1 .3-2.4 1-3.4 2L4.3 4.7 2.9 6.1l1.7 1.7c-1 1-1.7 2.4-2 3.4l4.6 1.4zM12 3a1 1 0 0 1 1 1v1h-2V4a1 1 0 0 1 1-1z" />
-            </svg>
-          </span>
-          <span className="font-bold text-[17px] tracking-tight leading-none inline-flex items-baseline">
-            <span className="text-chess-subtext">Chess</span>
-            <span className="text-chess-accent">Review</span>
-            <span className="ml-0.5 text-chess-muted font-medium text-xs tracking-normal">
-              .org
-            </span>
-          </span>
-        </div>
-        <div className="flex-1 min-w-0" />
-
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+      <SiteBrandBar
+        trailing={
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <EngineDepthControls
             depth={depth}
             engineBackend={engineBackend}
@@ -1905,7 +1892,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             }}
           />
         </div>
-      </header>
+        }
+      />
 
       {loadError && (
         <div className="flex-shrink-0 px-4 py-2 border-b border-red-900/40">
@@ -2002,8 +1990,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <LatestBlogNews className="mx-3 mt-2 flex-shrink-0" />
-                <SupportAppeal className="mx-3 mt-2 flex-shrink-0" />
+                <H2hTeaser className="mx-3 mt-2 flex-shrink-0" />
                 <GameList
                   username=""
                   onGameSelect={selectGame}
@@ -2012,6 +1999,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
+                <LatestBlogNews className="mx-3 mt-2 mb-2 flex-shrink-0" />
+                <SupportAppeal className="mx-3 mb-3 flex-shrink-0" />
               </div>
             )}
 
@@ -2141,6 +2130,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       sharing={sharing}
                       shareUrl={shareUrl}
                       shareError={shareError}
+                      h2hHref={(() => {
+                        const opp = pickH2hOpponent({
+                          whiteName: playerNames.white,
+                          blackName: playerNames.black,
+                          activeUsername: activeUser?.name ?? null
+                        });
+                        if (!opp) return "/h2h";
+                        const plat =
+                          activeUser?.platform === "lichess" ? "lichess" : "chesscom";
+                        return h2hLookupPath(opp, plat);
+                      })()}
                     />
                   </>
                 ) : (
@@ -2407,8 +2407,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
-                <SupportAppeal className="page-inline-pad mt-2 flex-shrink-0 w-full" />
+                <H2hTeaser className="page-inline-pad mt-2 flex-shrink-0 w-full" />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <GameList
                     username=""
@@ -2419,6 +2418,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     onOpenActiveReview={openActiveReview}
                   />
                 </div>
+                <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
+                <SupportAppeal className="page-inline-pad mt-2 mb-2 flex-shrink-0 w-full" />
             </div>
             )}
 
@@ -2444,6 +2445,17 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       sharing={sharing}
                       shareUrl={shareUrl}
                       shareError={shareError}
+                      h2hHref={(() => {
+                        const opp = pickH2hOpponent({
+                          whiteName: playerNames.white,
+                          blackName: playerNames.black,
+                          activeUsername: activeUser?.name ?? null
+                        });
+                        if (!opp) return "/h2h";
+                        const plat =
+                          activeUser?.platform === "lichess" ? "lichess" : "chesscom";
+                        return h2hLookupPath(opp, plat);
+                      })()}
                   />
                 ) : (
                   <ReviewEmptyState onGoToGames={() => setTab("games")} />
@@ -2618,6 +2630,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         }}
         onDelete={(id) => void handleDeleteSavedReview(id)}
       />
+      </div>
     </div>
   );
 }
