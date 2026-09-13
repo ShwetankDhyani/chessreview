@@ -24,7 +24,7 @@ function SettingsGearIcon({ className = "" }: { className?: string }) {
 const linkClass =
   "text-[11px] sm:text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap";
 
-export function SiteFooter() {
+export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } = {}) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [showAdminEntry, setShowAdminEntry] = useState(
     () => !!loadSessionAdminKey()
@@ -55,14 +55,12 @@ export function SiteFooter() {
   return (
     <>
       <footer
-        className="site-footer flex-shrink-0 z-40 overflow-hidden border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md
-          fixed left-0 right-0 bottom-0 lg:static
-          pb-[env(safe-area-inset-bottom,0px)]"
+        className={`${hideOnMobile ? "hidden lg:block " : ""}site-footer flex-shrink-0 z-40 overflow-hidden border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md fixed left-0 right-0 bottom-0 lg:static pb-[env(safe-area-inset-bottom,0px)]`}
       >
         {/*
-          Height must stay exactly --site-footer. Mobile tabs sit at
-          --mobile-footer-stack (= footer + safe-area). Extra padding/py or
-          absolutely positioned badges used to make this taller and overlap.
+          Content row height must stay exactly --site-footer so SiteChrome
+          mobile padding (--mobile-footer-stack) matches. App shell hides this
+          footer on small screens to leave only the Games/Moves/Review tabs.
         */}
         <div className="page-inline-pad relative flex h-[var(--site-footer)] items-center justify-center">
           {showAdminEntry && (
@@ -88,10 +86,6 @@ export function SiteFooter() {
               className="inline-flex items-center gap-1 text-[11px] sm:text-[12px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap"
             >
               H2H
-              <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
-                New
-              </span>
-              <span className="sr-only"> (new feature)</span>
             </Link>
             <Link to="/learn" className={linkClass}>
               Learn
