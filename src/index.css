@@ -1317,7 +1317,14 @@ html[data-testing-mode="1"] {
   }
 
   .cr-btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border border-chess-accent/40 bg-chess-accent/5 px-3.5 py-2 text-sm font-semibold tracking-tight text-chess-accent transition-colors duration-200 ease-soft hover:bg-chess-accent/12;
+    @apply inline-flex items-center justify-center rounded-lg border px-3.5 py-2 text-sm font-semibold tracking-tight transition-colors duration-200 ease-soft;
+    border-color: rgb(129 182 76 / 0.4);
+    background-color: rgb(129 182 76 / 0.05);
+    color: #81b64c;
+  }
+  
+  .cr-btn-secondary:hover {
+    background-color: rgb(129 182 76 / 0.12);
   }
 
   .cr-trust-row {
@@ -1325,7 +1332,19 @@ html[data-testing-mode="1"] {
   }
 
   .cr-field {
-    @apply w-full h-10 rounded-lg border border-chess-border bg-chess-surface px-3 text-sm text-chess-text placeholder:text-chess-muted transition-colors duration-200 ease-soft focus:outline-none focus:border-chess-accent/50 focus:ring-1 focus:ring-chess-accent/20;
+    @apply w-full h-10 rounded-lg border px-3 text-sm transition-colors duration-200 ease-soft focus:outline-none focus:ring-1;
+    border-color: #3f3c39;
+    background-color: #3a3633;
+    color: #f1f1f1;
+  }
+  
+  .cr-field::placeholder {
+    color: #8b8784;
+  }
+  
+  .cr-field:focus {
+    border-color: rgb(129 182 76 / 0.5);
+    --tw-ring-color: rgb(129 182 76 / 0.2);
   }
 }
 
