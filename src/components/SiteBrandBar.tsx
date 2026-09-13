@@ -47,7 +47,7 @@ export function SiteBrandBar({
   );
 
   return (
-    <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-2.5 bg-chess-panel/95 backdrop-blur-md shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
+    <header className="relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad bg-chess-panel/95 backdrop-blur-md shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
       {brandAsLink ? (
         <Link
           to="/"
@@ -65,17 +65,8 @@ export function SiteBrandBar({
       >
         <NavLink to="/h2h" className={navClass}>
           H2H
-          <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
-            New
-          </span>
-          <span className="sr-only"> (new feature)</span>
         </NavLink>
-        <NavLink
-          to="/learn"
-          className={({ isActive }) =>
-            `${navClass({ isActive })} hidden sm:inline-flex`
-          }
-        >
+        <NavLink to="/learn" className={navClass}>
           Learn
         </NavLink>
       </nav>

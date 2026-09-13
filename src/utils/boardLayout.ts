@@ -11,10 +11,15 @@ export const DESKTOP_LAYOUT = {
   horizontalPad: 48,
 } as const;
 
-/** Mobile moves-tab chrome (px) — used to reserve commentary space below the board. */
+/**
+ * Mobile moves-tab chrome (px) — keep in sync with CSS:
+ * `--app-header-h` (2.75rem ≈ 44) and `--mobile-tab-bar-h` (52).
+ * `tabBar` is the tab row only; safe-area is handled via CSS padding on the
+ * fixed tab bar / `--mobile-chrome-bottom`, not double-counted here.
+ */
 export const MOBILE_LAYOUT = {
-  header: 48,
-  tabBar: 88,
+  header: 44,
+  tabBar: 52,
   topPad: 6,
   playerTags: 44,
   evalDockCollapsed: 32,
@@ -22,8 +27,8 @@ export const MOBILE_LAYOUT = {
   evalBar: 20,
   inlinePad: 8,
   /** Commentary should claim at least this share of the main column. */
-  coachMinRatio: 0.28,
-  coachMinPx: 160,
+  coachMinRatio: 0.24,
+  coachMinPx: 140,
 } as const;
 
 export function computeDesktopBoardSize(

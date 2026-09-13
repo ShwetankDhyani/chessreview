@@ -206,9 +206,6 @@ export default function PrepPage() {
           <header className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-chess-accent/25 bg-chess-accent/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-chess-accent">
               Rematch prep
-              <span className="h2h-new-badge h2h-new-badge--inline" aria-hidden>
-                New
-              </span>
             </div>
             <h1 className="text-3xl sm:text-[2.5rem] font-extrabold tracking-[-0.03em] text-chess-text">
               Know their form before you sit down

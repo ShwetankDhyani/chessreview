@@ -98,10 +98,7 @@ import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { SiteBrandBar } from "./components/SiteBrandBar";
-import { H2hTeaser } from "./components/H2hTeaser";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
-import { LatestBlogNews } from "./components/LatestBlogNews";
-import { SupportAppeal } from "./components/SupportAppeal";
 import { recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
@@ -1911,7 +1908,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
         <div
           className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md shadow-elev-up"
-          style={{ bottom: "var(--mobile-footer-stack)" }}
+          style={{ bottom: 0, paddingBottom: "var(--mobile-safe-bottom)" }}
         >
           <div className="page-inline-pad flex h-[var(--mobile-tab-bar-h)]">
           {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
@@ -1990,7 +1987,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <H2hTeaser className="mx-3 mt-2 flex-shrink-0" />
                 <GameList
                   username=""
                   onGameSelect={selectGame}
@@ -1999,8 +1995,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
-                <LatestBlogNews className="mx-3 mt-2 mb-2 flex-shrink-0" />
-                <SupportAppeal className="mx-3 mb-3 flex-shrink-0" />
               </div>
             )}
 
@@ -2407,7 +2401,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     <WelcomeBanner onDismiss={dismissWelcome} />
                   </div>
                 )}
-                <H2hTeaser className="page-inline-pad mt-2 flex-shrink-0 w-full" />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <GameList
                     username=""
@@ -2418,8 +2411,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     onOpenActiveReview={openActiveReview}
                   />
                 </div>
-                <LatestBlogNews className="page-inline-pad mt-2 flex-shrink-0 w-full" />
-                <SupportAppeal className="page-inline-pad mt-2 mb-2 flex-shrink-0 w-full" />
+
             </div>
             )}
 
@@ -2615,7 +2607,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         </main>
       </div>
 
-      <SiteFooter />
+      <SiteFooter hideOnMobile />
 
       <SavedGamesModal
         open={showSavedGamesModal}

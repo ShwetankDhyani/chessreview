@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { SiteFooter } from "../components/SiteFooter";
 import { ReviewSummaryPanel } from "../components/ReviewSummary";
 import { MoveList } from "../components/MoveList";
 import { ReviewSessionView } from "../components/ReviewSessionView";
@@ -340,7 +339,7 @@ export default function SharePage() {
               {showStats && (
                 <div
                   className="flex-1 overflow-y-auto min-h-0 mobile-review-scroll page-inline-pad pt-2"
-                  style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+                  style={{ paddingBottom: "calc(0.75rem + var(--mobile-safe-bottom))" }}
                 >
                   <ReviewSummaryPanel
                     summary={summary}
