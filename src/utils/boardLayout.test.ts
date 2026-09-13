@@ -9,8 +9,9 @@ describe("computeMobileBoardSize", () => {
   });
 
   it("shrinks further when eval graph is expanded", () => {
-    const closed = computeMobileBoardSize(390, 844, { evalGraphOpen: false });
-    const open = computeMobileBoardSize(390, 844, { evalGraphOpen: true });
+    // Short viewport so height (not width) is the binding constraint.
+    const closed = computeMobileBoardSize(390, 640, { evalGraphOpen: false });
+    const open = computeMobileBoardSize(390, 640, { evalGraphOpen: true });
     expect(open).toBeLessThan(closed);
   });
 });
