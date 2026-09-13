@@ -58,7 +58,7 @@ export function SiteBrandBar({
       )}
 
       <nav
-        className="hidden sm:flex items-center gap-3 ml-0.5 min-w-0"
+        className="flex items-center gap-2 sm:gap-3 ml-0.5 min-w-0"
         aria-label="Product"
       >
         <NavLink to="/h2h" className={navClass}>
@@ -68,7 +68,12 @@ export function SiteBrandBar({
           </span>
           <span className="sr-only"> (new feature)</span>
         </NavLink>
-        <NavLink to="/learn" className={navClass}>
+        <NavLink
+          to="/learn"
+          className={({ isActive }) =>
+            `${navClass({ isActive })} hidden sm:inline-flex`
+          }
+        >
           Learn
         </NavLink>
       </nav>
