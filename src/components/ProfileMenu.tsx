@@ -1,4 +1,5 @@
 import { useEffect, useRef, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { FeedbackSettings } from "./FeedbackSettings";
 import {
@@ -131,15 +132,15 @@ export function ProfileMenu({
 }: ProfileMenuProps) {
   const profileInitial = activeUser ? initialOf(activeUser.name) : null;
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent | TouchEvent) => {
-      const root = rootRef.current;
-      if (!root) return;
-      if (e.target instanceof Node && !root.contains(e.target)) {
-        onClose();
-      }
+      if (!(e.target instanceof Node)) return;
+      if (rootRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      onClose();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -204,21 +205,22 @@ export function ProfileMenu({
         <Chevron open={open} />
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-[2px] lg:hidden"
-          onClick={onClose}
-          aria-hidden
-        />
-      )}
-
-      {open && (
-        <div
-          role="dialog"
-          aria-label="Account"
-          className="fixed left-2 right-2 top-[calc(var(--app-header-h)+0.35rem)] z-[70] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
-            lg:absolute lg:inset-auto lg:right-0 lg:top-[calc(100%+0.4rem)] lg:left-auto lg:w-[19.5rem]"
-        >
+      {open &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[80] bg-black/55 backdrop-blur-[2px] lg:hidden"
+              onClick={onClose}
+              aria-hidden
+            />
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label="Account"
+              className="fixed z-[90] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
+              left-2 right-2 top-[calc(var(--app-header-h)+0.35rem)]
+              lg:left-auto lg:right-3 lg:top-[calc(var(--app-header-h)+0.35rem)] lg:w-[19.5rem]"
+            >
           <div className="flex items-center justify-between border-b border-chess-border/70 bg-chess-bg/40 px-3.5 py-2.5">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-chess-muted">
@@ -449,8 +451,10 @@ export function ProfileMenu({
               <FeedbackSettings className="border-0 px-2 py-1" />
             </section>
           </div>
-        </div>
-      )}
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }

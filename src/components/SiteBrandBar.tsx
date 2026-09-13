@@ -43,7 +43,16 @@ export function SiteBrandBar({
   );
 
   return (
-    <header className="relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad overflow-hidden bg-chess-panel/95 backdrop-blur-md shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
+    <header className="relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
+      {/*
+        Blur/fill live on a sibling layer — NOT on the header itself — so
+        position:fixed menus (profile, depth) are not trapped by backdrop-filter
+        containing blocks, and are not clipped by overflow-hidden.
+      */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 bg-chess-panel/95 backdrop-blur-md"
+        aria-hidden
+      />
       {brandAsLink ? (
         <Link
           to="/"
