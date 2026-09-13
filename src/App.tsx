@@ -99,8 +99,6 @@ import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { SiteBrandBar } from "./components/SiteBrandBar";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
-import { LatestBlogNews } from "./components/LatestBlogNews";
-import { SupportAppeal } from "./components/SupportAppeal";
 import { recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
@@ -1997,8 +1995,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
-                <LatestBlogNews className="mx-3 mt-2 mb-2 flex-shrink-0" />
-                <SupportAppeal className="mx-3 mb-3 flex-shrink-0" />
               </div>
             )}
 

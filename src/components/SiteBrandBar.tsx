@@ -47,7 +47,7 @@ export function SiteBrandBar({
   );
 
   return (
-    <header className="relative z-50 flex flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad min-h-[var(--app-header-h)] py-1.5 bg-chess-panel/95 backdrop-blur-md shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
+    <header className="relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad bg-chess-panel/95 backdrop-blur-md shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
       {brandAsLink ? (
         <Link
           to="/"

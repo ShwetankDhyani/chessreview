@@ -46,7 +46,7 @@ export function HelpModal({
           onClose();
         }}
       />
-      <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 p-5 sm:p-6">
+      <div className="relative w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] sm:pb-6">
         <div className="flex items-start justify-between gap-3 mb-3">
           <h2 id="help-title" className="text-base font-bold text-chess-text">
             {readOnlyContact || !showSupport ? "Contact" : "Donate"}

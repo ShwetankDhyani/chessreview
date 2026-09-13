@@ -1047,10 +1047,17 @@ html[data-testing-mode="1"] {
 
 .mobile-coach-pane {
   flex: 1 1 40%;
-  min-height: 38dvh;
+  /* Prefer board height on short phones; grow when there is room. */
+  min-height: min(28dvh, 12rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+@media (max-height: 700px) {
+  .mobile-coach-pane {
+    min-height: min(22dvh, 9rem);
+  }
 }
 
 .mobile-coach-pane .review-flow-coach {
