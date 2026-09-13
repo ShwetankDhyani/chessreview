@@ -416,10 +416,20 @@ export function ProfileMenu({
               </p>
             )}
 
-            <section className="border-b border-chess-border/70 px-1 py-1 sm:hidden">
+            <section className="border-b border-chess-border/70 px-1 py-1 lg:hidden">
               <p className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-chess-muted">
                 Explore
               </p>
+              <Link
+                to="/h2h"
+                onClick={() => {
+                  hapticTap();
+                  onClose();
+                }}
+                className="flex items-center rounded-lg px-2.5 py-2 text-[13px] font-semibold text-chess-accent transition-colors hover:bg-chess-hover"
+              >
+                H2H
+              </Link>
               <Link
                 to="/learn"
                 onClick={() => {
