@@ -1956,27 +1956,29 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
         {/* Sidebar — desktop only (avoid duplicate GameList fetch on mobile) */}
         {isDesktop && (
-        <aside className="w-72 flex-shrink-0 bg-chess-sidebar border-r border-chess-hairline flex flex-col overflow-hidden">
-          <div className="flex bg-chess-bg/40 border-b border-chess-hairline">
-            {(["games", "moves", "review"] as SidebarTab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  hapticSelection();
-                  setTab(t);
-                }}
-                className={`relative flex-1 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] transition-colors duration-200 ease-soft ${
-                  tab === t
-                    ? "text-chess-accent"
-                    : "text-chess-muted hover:text-chess-text hover:bg-white/[0.02]"
-                }`}
-              >
-                {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
-                {tab === t && (
-                  <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-chess-accent" />
-                )}
-              </button>
-            ))}
+        <aside className="w-80 lg:w-[22rem] flex-shrink-0 bg-chess-sidebar/95 border-r border-chess-hairline flex flex-col overflow-hidden shadow-elev-1">
+          <div className="p-2 bg-chess-canvas/60 border-b border-chess-hairline">
+            <div className="flex p-1 rounded-xl bg-chess-panel/80 border border-chess-hairline/80">
+            {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
+              const isActive = tab === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => {
+                    hapticSelection();
+                    setTab(t);
+                  }}
+                  className={`relative flex-1 py-1.5 text-xs tracking-[0.06em] rounded-lg transition-all duration-200 ease-soft ${
+                    isActive
+                      ? "bg-chess-surface text-chess-text font-bold shadow-elev-1 border border-chess-hairline"
+                      : "text-chess-muted font-medium hover:text-chess-text hover:bg-white/[0.03]"
+                  }`}
+                >
+                  {t === "games" ? "Games" : t === "moves" ? "Moves" : "Review"}
+                </button>
+              );
+            })}
+            </div>
           </div>
 
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col overscroll-contain">
@@ -2326,10 +2328,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
               {/* Coach panel — move notes, eval, engine line */}
               {moves.length > 0 && (
-                <div className="w-56 flex-shrink-0 flex flex-col bg-chess-panel border border-chess-hairline rounded-xl overflow-hidden self-stretch shadow-elev-2">
-                  <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-chess-border bg-chess-bg/40 flex-shrink-0">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-chess-text uppercase tracking-[0.08em]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-chess-accent" />
+                <div className="w-64 xl:w-72 flex-shrink-0 flex flex-col bg-chess-panel/90 backdrop-blur-md border border-chess-hairline rounded-2xl overflow-hidden self-stretch shadow-elev-3">
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-chess-hairline bg-white/[0.02] flex-shrink-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-chess-text uppercase tracking-[0.09em]">
+                      <span className="h-2 w-2 rounded-full bg-chess-accent shadow-[0_0_8px_rgba(129,182,76,0.6)]" />
                       Coach
                     </span>
                     <EvalBadge
@@ -2741,28 +2743,31 @@ function PlayerTag({
 
   return (
     <div
-      className={`flex items-center w-full rounded-md transition-all ${
-        compact ? "px-1.5 py-1 gap-1.5" : "px-2 py-1.5 gap-2.5"
+      className={`flex items-center w-full rounded-xl border border-chess-hairline/70 bg-chess-card/65 backdrop-blur-md shadow-elev-1 transition-all duration-200 ease-soft ${
+        compact ? "px-2 py-1 gap-2" : "px-3 py-1.5 gap-2.5"
       } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <div
-          className={`rounded-sm border flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
+          className={`rounded-md border flex-shrink-0 shadow-sm transition-transform ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
           style={{
-            backgroundColor: color === "white" ? "#f0eee5" : "#1f1d1b",
-            borderColor: color === "white" ? "#cdcbc4" : "#5a5754",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+            backgroundColor: color === "white" ? "#f5f3ec" : "#1a1816",
+            borderColor: color === "white" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.12)",
+            boxShadow: color === "white" 
+              ? "inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 3px rgba(0,0,0,0.3)" 
+              : "inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 3px rgba(0,0,0,0.4)",
           }}
+          aria-hidden
         />
         <span
-          className={`font-semibold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-sm"}`}
+          className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-[13px] sm:text-sm"}`}
         >
           {name}
         </span>
         {rating && (
           <span
-            className={`text-chess-muted flex-shrink-0 tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}
+            className={`text-chess-muted flex-shrink-0 tabular-nums font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05] ${compact ? "text-[10px]" : "text-[11px]"}`}
           >
             {rating}
           </span>
@@ -2770,19 +2775,21 @@ function PlayerTag({
         {didWin && (
           <span
             title="Winner"
-            className={`leading-none ml-0.5 ${compact ? "text-xs" : "text-sm"}`}
+            className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold leading-none ${compact ? "text-[10px]" : "text-xs"}`}
           >
-            👑
+            👑 Win
           </span>
         )}
         {isDraw && (
-          <span className="text-[10px] font-bold text-chess-muted ml-0.5">½-½</span>
+          <span className="text-[10px] font-bold text-chess-muted px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05]">
+            ½-½
+          </span>
         )}
       </div>
       {trailing}
       {hasClock && (
         <span
-          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${
+          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums px-2 py-0.5 rounded-lg bg-chess-canvas/80 border border-chess-hairline shadow-inner ${
             clockSecs !== null && clockSecs < 30 ? "animate-pulse" : ""
           }`}
           style={{ color: clockColor_ }}

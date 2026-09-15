@@ -16,7 +16,10 @@ describe("buildPgnFilename", () => {
 describe("copyPgnToClipboard", () => {
   it("writes trimmed PGN via the clipboard API", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
+    if (typeof (globalThis as any).navigator === "undefined") {
+      (globalThis as any).navigator = {};
+    }
+    Object.defineProperty((globalThis as any).navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
