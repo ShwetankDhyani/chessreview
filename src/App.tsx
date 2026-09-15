@@ -77,6 +77,7 @@ import {
   canAnimateBoardStep,
   highlightFromMove,
   highlightFromUci,
+  resolveBoardLastMoveHighlight,
   resolveBoardNavStep,
 } from "./utils/boardPosition";
 import { AnalyzeNowButton } from "./components/AnalyzeNowButton";
@@ -314,6 +315,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [showBestMove, setShowBestMove] = useState(true);
   const [continuationActive, setContinuationActive] = useState(false);
   const [continuationFen, setContinuationFen] = useState<string | null>(null);
+  const [continuationHighlight, setContinuationHighlight] = useState<{ from: string; to: string } | null>(null);
   const [continuationEval, setContinuationEval] = useState<EvalResult | null>(null);
   const [continuationArrow, setContinuationArrow] = useState<{ from: string; to: string } | null>(null);
   const [continuationNav, setContinuationNav] = useState<ContinuationNavHandlers | null>(null);
@@ -712,6 +714,13 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setContinuationArrow(arrow);
   }, []);
 
+  const handleContinuationHighlight = useCallback(
+    (hl: { from: string; to: string } | null) => {
+      setContinuationHighlight(hl);
+    },
+    []
+  );
+
   const handleRegisterContinuationNav = useCallback(
     (nav: ContinuationNavHandlers | null) => {
       setContinuationNav(nav);
@@ -723,6 +732,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setContinuationNav(null);
     setContinuationActive(false);
     setContinuationFen(null);
+    setContinuationHighlight(null);
     setContinuationEval(null);
     setContinuationArrow(null);
     clearBoardTimers();
@@ -814,6 +824,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       await recheckEngine();
       setContinuationActive(false);
       setContinuationFen(null);
+      setContinuationHighlight(null);
       setContinuationEval(null);
       setContinuationArrow(null);
 
@@ -1734,20 +1745,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   });
 
   const boardLastMoveHighlight = useMemo(() => {
-    // Only leave the game-move highlight when the board fen is actually on a
-    // continuation (user stepped into the better line). Mounting the viewer
-    // alone used to clear highlights via continuationActive and hid badges.
-    if (continuationFen) {
-      if (currentMoveIdx > 0) {
-        return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
-      }
-      return null;
-    }
-    if (currentMoveIdx >= 0) {
-      return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
-    }
-    return moveAnim;
-  }, [continuationFen, moveAnim, currentMoveIdx, moves]);
+    return resolveBoardLastMoveHighlight({
+      continuationFen,
+      continuationHighlight,
+      currentMoveIdx,
+      moves,
+      moveAnim,
+    });
+  }, [continuationFen, continuationHighlight, moveAnim, currentMoveIdx, moves]);
 
   useAnalysisBoardReplay({
     active: isAnalyzing,
@@ -2368,6 +2373,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       moves={moves}
                       runId={reviewResult?.run.runId}
                       onContinuationFen={handleContinuationFen}
+                      onContinuationHighlight={handleContinuationHighlight}
                       onContinuationEval={handleContinuationEval}
                       onContinuationActive={handleContinuationActive}
                       onContinuationArrow={handleContinuationArrow}
@@ -2603,6 +2609,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     moves={moves}
                     runId={reviewResult?.run.runId}
                     onContinuationFen={handleContinuationFen}
+                    onContinuationHighlight={handleContinuationHighlight}
                     onContinuationEval={handleContinuationEval}
                     onContinuationActive={handleContinuationActive}
                     onContinuationArrow={handleContinuationArrow}
