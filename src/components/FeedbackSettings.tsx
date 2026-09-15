@@ -100,7 +100,7 @@ export function FeedbackSettings({ className = "" }: { className?: string }) {
             onClick={() => handleThemeChange("liquid-glass")}
             className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 px-2 text-[11px] font-semibold transition-all ${
               theme === "liquid-glass"
-                ? "bg-white/[0.18] text-white shadow-sm border border-white/30 backdrop-blur-md"
+                ? "bg-chess-accent/20 text-white shadow-sm border border-chess-accent/50 backdrop-blur-md"
                 : "text-chess-muted hover:text-chess-text hover:bg-chess-hover/40"
             }`}
           >
