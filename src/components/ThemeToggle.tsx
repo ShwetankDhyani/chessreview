@@ -37,9 +37,9 @@ export function ThemeToggle({
           ? "Theme: Liquid Glass — click for Classic"
           : "Theme: Classic — click for Liquid Glass"
       }
-      className={`group relative inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-200 ease-soft ${
+      className={`ThemeToggle group relative inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-200 ease-soft ${
         isGlass
-          ? "border border-white/20 bg-white/[0.08] text-white hover:bg-white/[0.14]"
+          ? "border border-white/30 bg-gradient-to-b from-white/25 to-white/[0.07] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl hover:from-white/32 hover:to-white/12"
           : "border border-chess-hairline bg-chess-surface/90 text-chess-subtext shadow-elev-1 hover:border-chess-hairline-strong hover:bg-chess-hover hover:text-chess-text"
       } ${
         showLabel
