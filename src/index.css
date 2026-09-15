@@ -1490,8 +1490,20 @@ html[data-theme="liquid-glass"] body {
 
 /* Let ambient be the visible scene — opaque page fills kill refraction */
 html[data-theme="liquid-glass"] .bg-chess-bg,
-html[data-theme="liquid-glass"] [class*="bg-chess-bg"] {
+html[data-theme="liquid-glass"] .bg-chess-sidebar,
+html[data-theme="liquid-glass"] .bg-chess-sidebar\/95,
+html[data-theme="liquid-glass"] .bg-chess-canvas\/60 {
   background-color: transparent !important;
+}
+
+/* Desktop sidebar / common opaque panel utilities → glass */
+html[data-theme="liquid-glass"] .bg-chess-panel,
+html[data-theme="liquid-glass"] .bg-chess-panel\/90,
+html[data-theme="liquid-glass"] .bg-chess-panel\/95,
+html[data-theme="liquid-glass"] .bg-chess-panel\/80 {
+  background-color: rgba(22, 30, 24, 0.45) !important;
+  backdrop-filter: blur(var(--lg-blur-panel)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(180%);
 }
 
 /* Luminous depth — colorful washes glass can actually refract */
