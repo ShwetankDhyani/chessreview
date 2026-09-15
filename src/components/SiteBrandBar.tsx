@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "./ThemeToggle";
 
 function BrandMark() {
   return (
@@ -31,10 +32,12 @@ export function SiteBrandBar({
   trailing,
   title,
   brandAsLink = true,
+  showThemeToggle = true,
 }: {
   trailing?: ReactNode;
   title?: string;
   brandAsLink?: boolean;
+  showThemeToggle?: boolean;
 }) {
   const brandInner = (
     <span className="group flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -43,14 +46,14 @@ export function SiteBrandBar({
   );
 
   return (
-    <header className="relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
+    <header className="site-brand-header relative z-50 flex h-[var(--app-header-h)] flex-shrink-0 items-center gap-2 sm:gap-3 page-inline-pad shadow-elev-1 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-chess-accent/35 after:to-transparent">
       {/*
         Blur/fill live on a sibling layer — NOT on the header itself — so
         position:fixed menus (profile, depth) are not trapped by backdrop-filter
         containing blocks, and are not clipped by overflow-hidden.
       */}
       <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-chess-panel/95 backdrop-blur-md"
+        className="site-brand-backdrop pointer-events-none absolute inset-0 -z-10 bg-chess-panel/95 backdrop-blur-md"
         aria-hidden
       />
       {brandAsLink ? (
@@ -73,11 +76,10 @@ export function SiteBrandBar({
         </span>
       ) : null}
 
-      {trailing ? (
-        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
-          {trailing}
-        </div>
-      ) : null}
+      <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+        {showThemeToggle ? <ThemeToggle /> : null}
+        {trailing}
+      </div>
     </header>
   );
 }

@@ -1907,7 +1907,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         {/* ── Mobile bottom tab bar ── */}
         {/* Rendered inside the sidebar on desktop; on mobile it's a fixed bottom bar */}
         <div
-          className="lg:hidden fixed left-0 right-0 z-50 border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md shadow-elev-up"
+          className="mobile-bottom-nav lg:hidden fixed left-0 right-0 z-50 border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md shadow-elev-up"
           style={{ bottom: 0, paddingBottom: "var(--mobile-safe-bottom)" }}
         >
           <div className="page-inline-pad flex h-[var(--mobile-tab-bar-h)]">
