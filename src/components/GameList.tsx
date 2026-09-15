@@ -131,6 +131,8 @@ export const GameList: React.FC<GameListProps> = ({
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSucceededRef = useRef(false);
   const loadGenRef = useRef(0);
+  /** Set after a successful fetch for the current linked account (even if empty). */
+  const fetchedForAccountRef = useRef<string | null>(null);
   const gamesRef = useRef(games);
   gamesRef.current = games;
   /**
@@ -210,10 +212,12 @@ export const GameList: React.FC<GameListProps> = ({
         setGames([]);
         gamesRef.current = [];
       }
+      fetchedForAccountRef.current = null;
       loadGames(saved, savedPlat);
       return;
     }
 
+    fetchedForAccountRef.current = `${savedPlat}:${saved.trim().toLowerCase()}`;
     if (!meta || Date.now() - meta.at > GAMES_CACHE_TTL_MS) {
       loadGames(saved, savedPlat, { background: true });
     }
@@ -250,15 +254,34 @@ export const GameList: React.FC<GameListProps> = ({
       if (detail?.name) {
         setInputVal(detail.name);
         setPlatform(detail.platform);
+        fetchedForAccountRef.current = null;
         loadGames(detail.name, detail.platform);
       } else {
         setInputVal("");
+        fetchedForAccountRef.current = null;
       }
     };
     window.addEventListener("cr_profile_switch", onSwitch);
     return () => window.removeEventListener("cr_profile_switch", onSwitch);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * A linked profile must never sit idle with an empty Games tab.
+   * Covers missed switch events, cancelled fetches, and remount races.
+   * Skips accounts that already completed a fetch (including empty archives).
+   */
+  useEffect(() => {
+    const name = inputVal.trim();
+    if (!name) return;
+    if (loading || refreshing) return;
+    if (games.length > 0) return;
+    if (gamesError) return;
+    const accountKey = `${platform}:${name.toLowerCase()}`;
+    if (fetchedForAccountRef.current === accountKey) return;
+    loadGames(name, platform);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputVal, platform, loading, refreshing, games.length, gamesError]);
 
   /** Ratings are decorative — never let them delay or fail the game list. */
   const loadStatsInBackground = useCallback(
@@ -319,6 +342,7 @@ export const GameList: React.FC<GameListProps> = ({
       setGames(list);
       gamesRef.current = list;
       loadSucceededRef.current = true;
+      fetchedForAccountRef.current = `${plat}:${name.toLowerCase()}`;
       clearSlowTimer();
       setShowSlowRetry(false);
       setGamesError(null);
@@ -381,7 +405,13 @@ export const GameList: React.FC<GameListProps> = ({
     setLoading(false);
     clearSlowTimer();
     setShowSlowRetry(false);
-    setGamesError(null);
+    fetchedForAccountRef.current = null;
+    // Keep a retryable error so a linked profile never looks "loaded but empty".
+    setGamesError({
+      code: "GAME_LOAD_CANCELLED",
+      message: "Fetch cancelled — tap retry to load games.",
+      retryable: true,
+    });
   }, [clearSlowTimer, abortInFlightLoad]);
 
   const handleRetry = () => {
@@ -664,11 +694,19 @@ export const GameList: React.FC<GameListProps> = ({
             ) : null}
 
             <div className="mobile-surface-list flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              {games.length === 0 && !loading && (
+              {games.length === 0 && !loading && !gamesError && (
                 <div className="mobile-surface-section py-4 flex flex-col gap-2 items-center">
+                  <p className="text-xs text-chess-subtext text-center px-3">
+                    No games found for this profile yet.
+                  </p>
                   <button type="button" onClick={handleGo} className="mobile-chip mobile-chip--active">
                     Fetch games
                   </button>
+                  <PgnPastePanel onLoad={onGameSelect} compact />
+                </div>
+              )}
+              {games.length === 0 && !loading && gamesError && (
+                <div className="mobile-surface-section py-3 flex flex-col gap-2 items-center">
                   <PgnPastePanel onLoad={onGameSelect} compact />
                 </div>
               )}

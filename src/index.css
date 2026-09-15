@@ -1870,6 +1870,26 @@ html[data-theme="liquid-glass"] .scrollbar-track-chess-bg {
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
+/* Secondary text must stay readable on frosted / luminous glass */
+html[data-theme="liquid-glass"] .text-chess-muted {
+  color: rgba(214, 222, 210, 0.78) !important;
+}
+html[data-theme="liquid-glass"] .text-chess-muted\/85,
+html[data-theme="liquid-glass"] .text-chess-muted\/80 {
+  color: rgba(214, 222, 210, 0.72) !important;
+}
+html[data-theme="liquid-glass"] .text-chess-subtext {
+  color: rgba(232, 238, 228, 0.9) !important;
+}
+html[data-theme="liquid-glass"] .text-chess-text {
+  color: #f7faf5 !important;
+}
+html[data-theme="liquid-glass"] .placeholder\:text-chess-muted::placeholder,
+html[data-theme="liquid-glass"] input::placeholder,
+html[data-theme="liquid-glass"] textarea::placeholder {
+  color: rgba(200, 210, 198, 0.55) !important;
+}
+
 html[data-theme="liquid-glass"] button.ThemeToggle {
   background: linear-gradient(
     165deg,

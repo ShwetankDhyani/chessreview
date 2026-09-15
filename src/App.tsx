@@ -100,7 +100,7 @@ import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { SiteBrandBar } from "./components/SiteBrandBar";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
-import { recordReviewCompletion } from "./utils/reviewCache";
+import { clearCachedReviewsForProfile, recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
 import { createShareLink, shareUrlForId } from "./utils/shareReview";
 import { usePageSeo } from "./hooks/usePageSeo";
@@ -108,6 +108,7 @@ import { DEFAULT_SEO, homeJsonLd } from "./utils/seo";
 import { InlineErrorNotice } from "./components/InlineErrorNotice";
 import { SavedGamesModal } from "./components/SavedGamesModal";
 import {
+  deleteAllSavedReviewsForProfile,
   deleteSavedReview,
   listSavedReviews,
   loadSavedReviewById,
@@ -641,13 +642,29 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   };
 
   const removeProfile = (idx: number) => {
+    const removed = profilesRef.current[idx];
     const isRemovingActive = idx === activeProfileIdx;
     const updated = profilesRef.current.filter((_, i) => i !== idx);
     const newActiveIdx = activeProfileIdx >= updated.length
       ? Math.max(0, updated.length - 1)
       : activeProfileIdx > idx ? activeProfileIdx - 1 : activeProfileIdx;
     saveProfiles(updated, newActiveIdx);
-    
+
+    // Unlinking must also drop that account's cloud + local saved reviews.
+    if (removed) {
+      clearCachedReviewsForProfile(removed);
+      void deleteAllSavedReviewsForProfile({
+        platform: removed.platform,
+        username: removed.name,
+      }).catch(() => {
+        /* best-effort cloud cleanup */
+      });
+      if (isRemovingActive) {
+        clearSessionReviewPin();
+        setSavedReviews([]);
+      }
+    }
+
     if (updated.length === 0) {
       safeRemoveItem("cr_username");
       safeRemoveItem("cr_platform");
@@ -1889,6 +1906,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             savedCount={savedReviews.length}
             savedLoading={savedReviewsLoading}
             onOpenSavedGames={() => {
+              setShowAddProfile(false);
               setShowSavedGamesModal(true);
               void refreshSavedReviews();
             }}
@@ -1987,24 +2005,26 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           </div>
 
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col overscroll-contain">
-            {tab === "games" && (
-              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                {showWelcome && !pgn && (
-                  <div className="px-3 pt-3 flex-shrink-0">
-                    <WelcomeBanner onDismiss={dismissWelcome} />
-                  </div>
-                )}
-                <GameList
-                  username=""
-                  onGameSelect={selectGame}
-                  onLinkProfile={openProfilePanel}
-                  selectedGameId={sessionGameId ?? undefined}
-                  activeReview={activeReview}
-                  onOpenActiveReview={openActiveReview}
-                />
-              </div>
-            )}
-
+            {/* Keep GameList mounted so profile switches always reload games. */}
+            <div
+              className={`flex flex-col flex-1 min-h-0 overflow-hidden ${
+                tab === "games" ? "" : "hidden"
+              }`}
+            >
+              {showWelcome && !pgn && tab === "games" && (
+                <div className="px-3 pt-3 flex-shrink-0">
+                  <WelcomeBanner onDismiss={dismissWelcome} />
+                </div>
+              )}
+              <GameList
+                username=""
+                onGameSelect={selectGame}
+                onLinkProfile={openProfilePanel}
+                selectedGameId={sessionGameId ?? undefined}
+                activeReview={activeReview}
+                onOpenActiveReview={openActiveReview}
+              />
+            </div>
 
             {tab === "moves" && (
               <div className="flex flex-col h-full overflow-y-auto min-h-0">
@@ -2399,27 +2419,30 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
           {/* ── Mobile: one shell for Games / Moves / Review (shared header padding) ── */}
           <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            {tab === "games" && (
+            {/* Keep GameList mounted off-tab so profile switches still fetch games. */}
+            {!isDesktop && (
             <div
-              className="flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar"
+              className={`flex-1 min-h-0 overflow-hidden flex flex-col bg-chess-sidebar ${
+                tab === "games" ? "" : "hidden"
+              }`}
               style={{ paddingBottom: "var(--mobile-chrome-bottom)" }}
+              aria-hidden={tab !== "games"}
             >
-                {showWelcome && !pgn && (
-                  <div className="page-inline-pad pt-2 flex-shrink-0 w-full">
-                    <WelcomeBanner onDismiss={dismissWelcome} />
-                  </div>
-                )}
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <GameList
-                    username=""
-                    onGameSelect={selectGame}
-                    onLinkProfile={openProfilePanel}
-                    selectedGameId={sessionGameId ?? undefined}
-                    activeReview={activeReview}
-                    onOpenActiveReview={openActiveReview}
-                  />
+              {showWelcome && !pgn && tab === "games" && (
+                <div className="page-inline-pad pt-2 flex-shrink-0 w-full">
+                  <WelcomeBanner onDismiss={dismissWelcome} />
                 </div>
-
+              )}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <GameList
+                  username=""
+                  onGameSelect={selectGame}
+                  onLinkProfile={openProfilePanel}
+                  selectedGameId={sessionGameId ?? undefined}
+                  activeReview={activeReview}
+                  onOpenActiveReview={openActiveReview}
+                />
+              </div>
             </div>
             )}
 

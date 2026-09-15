@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { hapticSoft, hapticTap, notifyWarning } from "../utils/chessSounds";
 import type { SavedReviewListItem } from "../utils/savedReviews";
 
@@ -20,22 +21,23 @@ export function SavedGamesModal({
 }: SavedGamesModalProps) {
   if (!open) return null;
 
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-[80] bg-black/60"
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="saved-games-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
+        aria-label="Close"
         onClick={() => {
           hapticSoft();
           onClose();
         }}
-        aria-hidden
       />
-      <div
-        className="fixed left-1/2 top-1/2 z-[90] w-[min(92vw,28rem)] max-h-[min(80dvh,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 flex flex-col overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="saved-games-title"
-      >
+      <div className="glass-sheet relative z-[1] w-[min(92vw,28rem)] max-h-[min(80dvh,32rem)] rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-chess-border bg-chess-bg/40">
           <h2 id="saved-games-title" className="text-sm font-semibold text-chess-text">
             Saved games
@@ -55,9 +57,9 @@ export function SavedGamesModal({
 
         <div className="flex-1 overflow-y-auto p-3">
           {loading ? (
-            <p className="text-xs text-chess-muted text-center py-8">Loading saved games…</p>
+            <p className="text-xs text-chess-subtext text-center py-8">Loading saved games…</p>
           ) : items.length === 0 ? (
-            <p className="text-xs text-chess-muted text-center py-8">
+            <p className="text-xs text-chess-subtext text-center py-8">
               No saved games yet. Complete a review, then tap the save icon under the board.
             </p>
           ) : (
@@ -78,7 +80,7 @@ export function SavedGamesModal({
                     <div className="truncate text-[13px] font-medium text-chess-text">
                       {item.whiteName} vs {item.blackName}
                     </div>
-                    <div className="text-[11px] text-chess-muted mt-0.5">
+                    <div className="text-[11px] text-chess-subtext mt-0.5">
                       {item.movesCount} moves · {new Date(item.savedAt).toLocaleDateString()}
                     </div>
                   </button>
@@ -89,7 +91,7 @@ export function SavedGamesModal({
                         notifyWarning();
                         onDelete(item.id);
                       }}
-                      className="text-[11px] text-chess-muted hover:text-red-300"
+                      className="rounded-md px-2 py-1 text-[11px] font-semibold text-red-300/90 hover:bg-red-500/15 hover:text-red-200"
                     >
                       Delete
                     </button>
@@ -100,6 +102,7 @@ export function SavedGamesModal({
           )}
         </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
 }
