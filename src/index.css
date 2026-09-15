@@ -1625,14 +1625,18 @@ html[data-theme="liquid-glass"] .glass-sheet {
     0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* Elevated panels — real frosted glass, lighter than chrome */
+/* Elevated panels — frosted but opaque enough for readable type */
 html[data-theme="liquid-glass"] .cr-panel,
 html[data-theme="liquid-glass"] .mobile-surface {
-  background: var(--lg-panel-fill);
-  background-color: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(var(--lg-blur-panel)) saturate(190%);
-  -webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(
+    180deg,
+    rgba(36, 44, 38, 0.92) 0%,
+    rgba(22, 28, 24, 0.94) 100%
+  );
+  background-color: rgba(22, 28, 24, 0.92);
+  backdrop-filter: blur(var(--lg-blur-panel)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: var(--lg-specular), 0 14px 36px -14px rgba(0, 0, 0, 0.55);
 }
 
@@ -1686,26 +1690,27 @@ html[data-theme="liquid-glass"] .cr-field:focus {
 }
 
 html[data-theme="liquid-glass"] .mobile-chip {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.07) 100%);
   backdrop-filter: blur(var(--lg-blur-chip)) saturate(160%);
   -webkit-backdrop-filter: blur(var(--lg-blur-chip)) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(245, 250, 242, 0.92);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 html[data-theme="liquid-glass"] .mobile-chip:hover:not(.mobile-chip--active) {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
   color: #fff;
 }
 
 html[data-theme="liquid-glass"] .mobile-chip--active {
-  background: linear-gradient(135deg, rgba(160, 210, 100, 0.45) 0%, rgba(104, 150, 62, 0.5) 100%);
+  background: linear-gradient(135deg, rgba(160, 210, 100, 0.55) 0%, rgba(104, 150, 62, 0.62) 100%);
   backdrop-filter: blur(12px) saturate(170%);
   -webkit-backdrop-filter: blur(12px) saturate(170%);
-  border: 1px solid rgba(200, 240, 150, 0.45);
+  border: 1px solid rgba(220, 250, 170, 0.55);
   color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
     0 4px 14px -4px rgba(129, 182, 76, 0.45);
@@ -1782,6 +1787,10 @@ html[data-theme="liquid-glass"] .mobile-list-row {
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
+html[data-theme="liquid-glass"] .mobile-list-row .bg-white\/\[0\.055\] {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
 html[data-theme="liquid-glass"] .mobile-list-row:hover {
   background: rgba(255, 255, 255, 0.06);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -1789,11 +1798,19 @@ html[data-theme="liquid-glass"] .mobile-list-row:hover {
 
 html[data-theme="liquid-glass"] .mobile-list-row--active,
 html[data-theme="liquid-glass"] .mobile-list-row--active:hover {
-  background: linear-gradient(135deg, rgba(160, 210, 100, 0.18) 0%, rgba(129, 182, 76, 0.1) 100%);
-  border: 1px solid rgba(180, 230, 120, 0.35);
+  background: linear-gradient(135deg, rgba(70, 110, 40, 0.95) 0%, rgba(42, 68, 28, 0.96) 100%);
+  border: 1px solid rgba(200, 240, 150, 0.45);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 4px 16px -8px rgba(129, 182, 76, 0.35);
+    0 4px 16px -8px rgba(129, 182, 76, 0.45);
+}
+
+/* Avoid accent-on-green wash on the previous-review pin */
+html[data-theme="liquid-glass"] .mobile-list-row--active .text-chess-accent {
+  color: #f2fadb !important;
+}
+html[data-theme="liquid-glass"] .mobile-list-row--active .bg-chess-accent\/25 {
+  background-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 html[data-theme="liquid-glass"] .mobile-result-badge--win {
@@ -1872,22 +1889,41 @@ html[data-theme="liquid-glass"] .scrollbar-track-chess-bg {
 
 /* Secondary text must stay readable on frosted / luminous glass */
 html[data-theme="liquid-glass"] .text-chess-muted {
-  color: rgba(214, 222, 210, 0.78) !important;
+  color: rgba(228, 234, 224, 0.88) !important;
 }
 html[data-theme="liquid-glass"] .text-chess-muted\/85,
 html[data-theme="liquid-glass"] .text-chess-muted\/80 {
-  color: rgba(214, 222, 210, 0.72) !important;
+  color: rgba(224, 232, 220, 0.84) !important;
 }
 html[data-theme="liquid-glass"] .text-chess-subtext {
-  color: rgba(232, 238, 228, 0.9) !important;
+  color: rgba(240, 246, 236, 0.94) !important;
 }
 html[data-theme="liquid-glass"] .text-chess-text {
-  color: #f7faf5 !important;
+  color: #fafdf7 !important;
 }
 html[data-theme="liquid-glass"] .placeholder\:text-chess-muted::placeholder,
+html[data-theme="liquid-glass"] .placeholder\:text-chess-muted\/80::placeholder,
 html[data-theme="liquid-glass"] input::placeholder,
 html[data-theme="liquid-glass"] textarea::placeholder {
-  color: rgba(200, 210, 198, 0.55) !important;
+  color: rgba(210, 220, 206, 0.72) !important;
+}
+
+/* Desktop sidebar tabs / selects on glass */
+html[data-theme="liquid-glass"] aside select,
+html[data-theme="liquid-glass"] .mobile-surface select {
+  color: rgba(240, 246, 236, 0.92);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="liquid-glass"] .mobile-field,
+html[data-theme="liquid-glass"] .cr-field,
+html[data-theme="liquid-glass"] input.mobile-field,
+html[data-theme="liquid-glass"] .mobile-surface input[type="text"],
+html[data-theme="liquid-glass"] .mobile-surface input[type="search"] {
+  color: #f7faf5;
+  background: rgba(8, 12, 9, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 html[data-theme="liquid-glass"] button.ThemeToggle {
