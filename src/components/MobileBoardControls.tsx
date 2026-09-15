@@ -39,41 +39,32 @@ export function MobileBoardControls({
     onFlip();
   };
 
-  if (moveCount <= 0) {
-    return (
-      <div className="ml-auto flex items-center gap-1.5">
+  const label = moveCount > 0 ? formatChessMoveCounter(moveIndex, moveCount) : null;
+
+  return (
+    <div className="w-full flex items-center justify-between px-1 py-1">
+      <div className="flex items-center gap-2">
+        {label && (
+          <span
+            className="text-[11px] text-chess-muted font-mono tabular-nums"
+            title="Full move number"
+          >
+            {label}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 ml-auto">
         {leading}
         <button
           type="button"
           onClick={flip}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-chess-surface/60 text-chess-subtext hover:text-chess-text hover:bg-chess-hover active:scale-[0.94] transition-all touch-manipulation"
           aria-label="Flip board"
+          title="Flip board"
         >
           <FlipBoardIcon />
         </button>
       </div>
-    );
-  }
-
-  const label = formatChessMoveCounter(moveIndex, moveCount);
-
-  return (
-    <div className="ml-auto flex flex-shrink-0 items-center gap-1.5">
-      {leading}
-      <span
-        className="text-[11px] text-chess-muted font-mono tabular-nums"
-        title="Full move number"
-      >
-        {label}
-      </span>
-      <button
-        type="button"
-        onClick={flip}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-chess-hairline bg-chess-surface text-chess-subtext shadow-elev-1 transition-all duration-200 ease-soft hover:border-chess-accent/35 hover:text-chess-accent hover:bg-chess-hover active:scale-[0.94] active:bg-chess-hover touch-manipulation"
-        aria-label="Flip board"
-      >
-        <FlipBoardIcon />
-      </button>
     </div>
   );
 }

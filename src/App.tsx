@@ -2525,33 +2525,41 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
-                trailing={
-                  <MobileBoardControls
-                    moveIndex={currentMoveIdx}
-                    moveCount={
-                      gamePlyCount || moves.length || replayFrames.length
-                    }
-                    onFlip={() => setBoardFlipped((f) => !f)}
-                    leading={
-                      (canReanalyze || canSaveCurrentReview || canExportPgn) ? (
-                        <BoardReviewActions
-                          inline
-                          canReanalyze={canReanalyze}
-                          canSave={canSaveCurrentReview}
-                          canExportPgn={canExportPgn}
-                          saving={savingReview}
-                          isAnalyzing={isAnalyzing}
-                          saveMessage={null}
-                          onReanalyze={requestReanalysis}
-                          onSave={() => void handleSaveReview()}
-                          onDownloadPgn={handleDownloadPgn}
-                          onCopyPgn={handleCopyPgn}
-                        />
-                      ) : undefined
-                    }
-                  />
-                }
               />
+              <div className="flex items-center justify-between w-full px-1 py-1">
+                <span className="text-xs font-mono text-chess-muted tabular-nums">
+                  {formatChessMoveCounter(
+                    currentMoveIdx,
+                    gamePlyCount || moves.length || replayFrames.length
+                  )}
+                </span>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  {(canReanalyze || canSaveCurrentReview || canExportPgn) && (
+                    <BoardReviewActions
+                      inline
+                      canReanalyze={canReanalyze}
+                      canSave={canSaveCurrentReview}
+                      canExportPgn={canExportPgn}
+                      saving={savingReview}
+                      isAnalyzing={isAnalyzing}
+                      saveMessage={null}
+                      onReanalyze={requestReanalysis}
+                      onSave={() => void handleSaveReview()}
+                      onDownloadPgn={handleDownloadPgn}
+                      onCopyPgn={handleCopyPgn}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setBoardFlipped((f) => !f)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-chess-subtext hover:text-chess-text hover:bg-white/[0.08] active:scale-95 transition-all"
+                    title="Flip board"
+                    aria-label="Flip board"
+                  >
+                    <FlipBoardIcon />
+                  </button>
+                </div>
+              </div>
               {moves.length > 0 && (
                 <EvalChartPanel
                   moves={moves}
@@ -2743,31 +2751,28 @@ function PlayerTag({
 
   return (
     <div
-      className={`flex items-center w-full rounded-xl border border-chess-hairline/70 bg-chess-card/65 backdrop-blur-md shadow-elev-1 transition-all duration-200 ease-soft ${
-        compact ? "px-2 py-1 gap-2" : "px-3 py-1.5 gap-2.5"
+      className={`flex items-center w-full py-1 transition-all ${
+        compact ? "px-1 gap-2" : "px-1.5 gap-2.5"
       } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
         <div
-          className={`rounded-md border flex-shrink-0 shadow-sm transition-transform ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
+          className={`rounded-sm flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
           style={{
-            backgroundColor: color === "white" ? "#f5f3ec" : "#1a1816",
-            borderColor: color === "white" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.12)",
-            boxShadow: color === "white" 
-              ? "inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 3px rgba(0,0,0,0.3)" 
-              : "inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 3px rgba(0,0,0,0.4)",
+            backgroundColor: color === "white" ? "#f5f3ec" : "#22201d",
+            border: color === "white" ? "1px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.2)",
           }}
           aria-hidden
         />
         <span
-          className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-[13px] sm:text-sm"}`}
+          className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-[13px]" : "text-sm"}`}
         >
           {name}
         </span>
         {rating && (
           <span
-            className={`text-chess-muted flex-shrink-0 tabular-nums font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05] ${compact ? "text-[10px]" : "text-[11px]"}`}
+            className={`text-chess-muted flex-shrink-0 tabular-nums font-mono ${compact ? "text-[11px]" : "text-xs"}`}
           >
             {rating}
           </span>
@@ -2775,13 +2780,13 @@ function PlayerTag({
         {didWin && (
           <span
             title="Winner"
-            className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold leading-none ${compact ? "text-[10px]" : "text-xs"}`}
+            className="text-xs leading-none ml-0.5 text-emerald-400 font-bold flex-shrink-0"
           >
-            👑 Win
+            👑
           </span>
         )}
         {isDraw && (
-          <span className="text-[10px] font-bold text-chess-muted px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05]">
+          <span className="text-[10px] font-bold text-chess-muted ml-0.5 flex-shrink-0">
             ½-½
           </span>
         )}
@@ -2789,7 +2794,7 @@ function PlayerTag({
       {trailing}
       {hasClock && (
         <span
-          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums px-2 py-0.5 rounded-lg bg-chess-canvas/80 border border-chess-hairline shadow-inner ${
+          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${
             clockSecs !== null && clockSecs < 30 ? "animate-pulse" : ""
           }`}
           style={{ color: clockColor_ }}

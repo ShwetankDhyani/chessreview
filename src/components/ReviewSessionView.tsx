@@ -359,13 +359,11 @@ export function ReviewSessionView({
             result={gameMeta?.result ?? null}
             isLastMove={currentMoveIdx === moves.length - 1}
             side={boardFlipped ? "b" : "w"}
-            trailing={
-              <MobileBoardControls
-                moveIndex={currentMoveIdx}
-                moveCount={moves.length}
-                onFlip={() => setBoardFlipped((f) => !f)}
-              />
-            }
+          />
+          <MobileBoardControls
+            moveIndex={currentMoveIdx}
+            moveCount={moves.length}
+            onFlip={() => setBoardFlipped((f) => !f)}
           />
           {moves.length > 0 && (
             <EvalChartPanel
