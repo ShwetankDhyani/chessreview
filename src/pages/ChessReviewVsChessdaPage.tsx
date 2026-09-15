@@ -11,7 +11,7 @@ const FAQ = [
   {
     question: "Are ChessReview and Chessda the same kind of tool?",
     answer:
-      "Both offer free browser-based game reviews with Stockfish-style analysis and no account wall. ChessReview also includes head-to-head form prep (H2H) and a club-player coaching voice around the review.",
+      "Both sit in the free browser-based game-review category with Stockfish-style analysis and no account wall. ChessReview also includes head-to-head form prep (H2H) and a club-player coaching voice around the review.",
   },
   {
     question: "Why choose ChessReview?",
