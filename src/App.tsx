@@ -98,6 +98,7 @@ import { shouldShowEngineLineGlow } from "./utils/engineLineGlow";
 import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
+import { InstallAppPrompt } from "./components/InstallAppPrompt";
 import { SiteBrandBar } from "./components/SiteBrandBar";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
 import { clearCachedReviewsForProfile, recordReviewCompletion } from "./utils/reviewCache";
@@ -2667,6 +2668,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       </div>
 
       <SiteFooter hideOnMobile />
+
+      {/* Mobile install offer — above the tab bar, available from any tab */}
+      <div
+        className="pointer-events-none fixed inset-x-0 z-[45] page-inline-pad lg:hidden"
+        style={{ bottom: "calc(var(--mobile-chrome-bottom) + 0.5rem)" }}
+      >
+        <div className="pointer-events-auto mx-auto max-w-lg">
+          <InstallAppPrompt />
+        </div>
+      </div>
 
       <SavedGamesModal
         open={showSavedGamesModal}
