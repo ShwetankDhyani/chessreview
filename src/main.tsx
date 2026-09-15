@@ -19,9 +19,11 @@ import LearnArticlePage from "./pages/LearnArticlePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppCrashScreen } from "./components/AppCrashScreen";
 import { installGlobalErrorHandlers } from "./utils/globalErrorHandlers";
+import { initTheme } from "./utils/theme";
 import "./index.css";
 
 installGlobalErrorHandlers();
+initTheme();
 
 /** Route changes clear a stuck boundary so navigation is always a way out. */
 function RoutedErrorBoundary({ children }: { children: React.ReactNode }) {
