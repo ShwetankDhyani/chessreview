@@ -9,22 +9,27 @@ export default {
           light: "#eeeed2",
         },
         chess: {
-          // Chess.com-inspired warm dark palette
-          bg: "#262421",
-          panel: "#312e2b",
-          sidebar: "#262421",
-          surface: "#3a3633",
-          border: "#3f3c39",
-          "border-strong": "#4a4744",
-          hover: "#3a3633",
-          muted: "#8b8784",
-          text: "#f1f1f1",
-          subtext: "#bdbab9",
+          // Chess.com-inspired warm dark palette with velvety depth
+          canvas: "#161513",
+          bg: "#1e1c19",
+          panel: "#262421",
+          sidebar: "#211f1c",
+          surface: "#312e2b",
+          card: "#2c2926",
+          "card-hover": "#35312d",
+          border: "#3d3935",
+          "border-strong": "#4d4843",
+          hover: "#383430",
+          muted: "#948f8b",
+          text: "#f5f5f5",
+          subtext: "#c4c0be",
           accent: "#81b64c",
           "accent-hover": "#94c455",
+          "accent-gradient-start": "#8bc34a",
+          "accent-gradient-end": "#68963e",
           // Translucent hairlines for matte/glass surfaces
           hairline: "rgba(255,255,255,0.07)",
-          "hairline-strong": "rgba(255,255,255,0.11)",
+          "hairline-strong": "rgba(255,255,255,0.12)",
         },
         move: {
           brilliant: "#1baca6",
@@ -53,19 +58,22 @@ export default {
        * surfaces read as lifted rather than outlined.
        */
       boxShadow: {
-        "elev-1": "0 1px 2px rgba(0,0,0,0.20), 0 1px 3px rgba(0,0,0,0.10)",
+        "elev-1": "0 1px 2px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12)",
         "elev-2":
-          "0 1px 2px rgba(0,0,0,0.20), 0 3px 8px -2px rgba(0,0,0,0.18), 0 8px 20px -6px rgba(0,0,0,0.16)",
+          "0 1px 2px rgba(0,0,0,0.24), 0 3px 8px -2px rgba(0,0,0,0.22), 0 8px 20px -6px rgba(0,0,0,0.20)",
         "elev-3":
-          "0 1px 2px rgba(0,0,0,0.22), 0 6px 14px -4px rgba(0,0,0,0.22), 0 16px 36px -10px rgba(0,0,0,0.24)",
+          "0 1px 2px rgba(0,0,0,0.26), 0 6px 14px -4px rgba(0,0,0,0.26), 0 16px 36px -10px rgba(0,0,0,0.30)",
         "elev-4":
-          "0 2px 4px rgba(0,0,0,0.24), 0 10px 24px -6px rgba(0,0,0,0.28), 0 28px 60px -16px rgba(0,0,0,0.34)",
+          "0 2px 4px rgba(0,0,0,0.28), 0 10px 24px -6px rgba(0,0,0,0.32), 0 28px 60px -16px rgba(0,0,0,0.40)",
+        "accent-glow": "0 0 20px -4px rgba(129, 182, 76, 0.45)",
+        "accent-glow-lg": "0 8px 30px -4px rgba(129, 182, 76, 0.55)",
         // Upward variant for bottom-anchored bars
         "elev-up":
-          "0 -1px 2px rgba(0,0,0,0.18), 0 -6px 16px -6px rgba(0,0,0,0.22), 0 -16px 34px -12px rgba(0,0,0,0.22)",
+          "0 -1px 2px rgba(0,0,0,0.20), 0 -6px 16px -6px rgba(0,0,0,0.24), 0 -16px 34px -12px rgba(0,0,0,0.26)",
         // Inner top highlight that gives matte panels a lit edge
-        rim: "inset 0 1px 0 rgba(255,255,255,0.05)",
-        "rim-strong": "inset 0 1px 0 rgba(255,255,255,0.08)",
+        rim: "inset 0 1px 0 rgba(255,255,255,0.06)",
+        "rim-strong": "inset 0 1px 0 rgba(255,255,255,0.12)",
+        "rim-accent": "inset 0 1px 0 rgba(255,255,255,0.35)",
       },
       transitionTimingFunction: {
         // Gentle deceleration for surface + color changes

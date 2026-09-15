@@ -392,13 +392,18 @@ export const GameList: React.FC<GameListProps> = ({
   };
 
 
-  const resultBadge = (result: "win" | "loss" | "draw") => {
-    const map = {
-      win: { label: "W", cls: "bg-move-best text-white" },
-      loss: { label: "L", cls: "bg-move-blunder text-white" },
-      draw: { label: "D", cls: "bg-chess-muted/80 text-white" },
-    };
-    const { label, cls } = map[result];
+  const resultBadge = (result: "win" | "loss" | "draw", isWhite: boolean) => {
+    const score = result === "draw" 
+      ? "½-½" 
+      : result === "win" 
+        ? (isWhite ? "1-0" : "0-1") 
+        : (isWhite ? "0-1" : "1-0");
+    const label = result === "draw" ? "½-½" : result === "win" ? `W ${score}` : `L ${score}`;
+    const cls = result === "win" 
+      ? "mobile-result-badge--win" 
+      : result === "loss" 
+        ? "mobile-result-badge--loss" 
+        : "mobile-result-badge--draw";
     return (
       <span className={`mobile-result-badge ${cls}`}>{label}</span>
     );
@@ -593,35 +598,41 @@ export const GameList: React.FC<GameListProps> = ({
             </div>
 
             {games.length > 0 && !loading && (
-              <div className="mobile-surface-section flex-shrink-0 py-2 space-y-1.5">
-                <input
-                  type="text"
-                  value={opponentSearch}
-                  onChange={(e) => setOpponentSearch(e.target.value)}
-                  placeholder="Search opponent…"
-                  className="mobile-field"
-                />
-                <div className="flex gap-1.5">
-                  <div className="mobile-segment">
+              <div className="mobile-surface-section flex-shrink-0 py-2 space-y-2">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-chess-muted text-[11px]">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    value={opponentSearch}
+                    onChange={(e) => setOpponentSearch(e.target.value)}
+                    placeholder="Search opponent…"
+                    className="w-full h-8 pl-8 pr-3 rounded-xl border border-chess-hairline bg-chess-canvas/80 text-xs text-chess-text placeholder:text-chess-muted/80 focus:outline-none focus:border-chess-accent/60 transition-all shadow-inner"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                  <div className="flex gap-1 flex-shrink-0">
                     {(["all", "win", "loss", "draw"] as ResultFilter[]).map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => { hapticSelection(); setResultFilter(r); }}
-                        className={`mobile-segment-btn ${
-                          resultFilter === r
-                            ? `mobile-segment-btn--active mobile-segment-btn--${r}`
-                            : ""
+                        className={`mobile-chip ${
+                          resultFilter === r ? "mobile-chip--active" : ""
                         }`}
                       >
-                        {r === "all" ? "All" : r === "win" ? "W" : r === "loss" ? "L" : "D"}
+                        {r === "all" ? "All" : r === "win" ? "Wins" : r === "loss" ? "Losses" : "Draws"}
                       </button>
                     ))}
                   </div>
                   <select
                     value={ratingSort}
                     onChange={(e) => setRatingSort(e.target.value as RatingSort)}
-                    className="mobile-field mobile-field--select"
+                    className="h-6 px-2 text-[10px] font-semibold rounded-full border border-chess-hairline bg-chess-panel/90 text-chess-muted focus:outline-none focus:text-chess-text ml-auto flex-shrink-0"
                     aria-label="Sort by opponent rating"
                   >
                     <option value="none">Rating ↕</option>
@@ -638,7 +649,7 @@ export const GameList: React.FC<GameListProps> = ({
                         onClick={() => { hapticSelection(); setFormatFilter(f); }}
                         className={`mobile-chip ${formatFilter === f ? "mobile-chip--active" : ""}`}
                       >
-                        {f === "all" ? "All" : f}
+                        {f === "all" ? "All Speeds" : f}
                       </button>
                     ))}
                   </div>
@@ -741,7 +752,7 @@ export const GameList: React.FC<GameListProps> = ({
                         {game.timeClass} · {formatDate(game.endTime)}
                       </div>
                     </div>
-                    {resultBadge(result)}
+                    {resultBadge(result, isWhite)}
                   </button>
                 );
               })}

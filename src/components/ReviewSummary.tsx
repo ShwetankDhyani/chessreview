@@ -218,39 +218,43 @@ function ReviewPlayersHeader({
   blackName: string;
 }) {
   return (
-    <div className="flex items-center justify-center gap-4 sm:gap-8 pb-4">
-      <div className="flex flex-col items-center min-w-0 flex-1 max-w-[9rem]">
-        <span
-          className="text-[1.75rem] leading-none select-none"
-          style={{
-            color: "#f0ede8",
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-          }}
-          aria-hidden
-        >
-          ♔
-        </span>
-        <span className="mt-2 text-sm font-semibold text-chess-text truncate w-full text-center">
-          {whiteName}
-        </span>
+    <div className="pb-3">
+      <div className="text-[10px] text-chess-muted font-bold uppercase tracking-[0.14em] text-center mb-2">
+        Players
       </div>
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-chess-muted flex-shrink-0">
-        vs
-      </span>
-      <div className="flex flex-col items-center min-w-0 flex-1 max-w-[9rem]">
-        <span
-          className="text-[1.75rem] leading-none select-none"
-          style={{
-            color: "#9a9a9a",
-            textShadow: "0 1px 2px rgba(0,0,0,0.55)",
-          }}
-          aria-hidden
-        >
-          ♚
-        </span>
-        <span className="mt-2 text-sm font-semibold text-chess-text truncate w-full text-center">
-          {blackName}
-        </span>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-chess-hairline bg-chess-card/85 shadow-elev-1 min-w-0">
+          <span
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-900 font-bold text-sm shadow-sm"
+            aria-hidden
+          >
+            ♔
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block text-xs font-bold text-chess-text truncate">
+              {whiteName}
+            </span>
+            <span className="block text-[9px] text-chess-muted font-semibold uppercase tracking-wider">
+              White
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-chess-hairline bg-chess-card/85 shadow-elev-1 min-w-0">
+          <span
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-stone-900 text-stone-200 border border-stone-700 font-bold text-sm shadow-sm"
+            aria-hidden
+          >
+            ♚
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block text-xs font-bold text-chess-text truncate">
+              {blackName}
+            </span>
+            <span className="block text-[9px] text-chess-muted font-semibold uppercase tracking-wider">
+              Black
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -405,7 +409,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
             return (
               <React.Fragment key={key}>
                 <div
-                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-chess-hover/25 rounded-lg transition-colors duration-200 ease-soft"
+                  className="grid items-center gap-x-1.5 sm:gap-x-2 py-1.5 min-w-0 hover:bg-white/[0.04] rounded-xl px-1 transition-colors duration-200 ease-soft"
                   style={{ gridTemplateColumns: MOVE_GRID }}
                 >
                   <div className="flex justify-end min-w-0 pr-1 border-r border-chess-hairline">
@@ -605,19 +609,20 @@ const CountBadge: React.FC<{
     type="button"
     onClick={onClick}
     disabled={!clickable}
-    className={`w-6 h-6 flex items-center justify-center text-xs font-bold tabular-nums rounded-md transition-all duration-200 ease-soft ${
+    className={`min-w-[1.75rem] h-6 px-1.5 flex items-center justify-center text-xs font-bold tabular-nums rounded-lg transition-all duration-200 ease-soft ${
       clickable
-        ? "cursor-pointer hover:scale-105 hover:brightness-125 active:scale-95"
+        ? "cursor-pointer hover:scale-105 active:scale-95"
         : "cursor-default"
-    } ${active ? "ring-1 ring-offset-1 ring-offset-chess-bg" : ""}`}
+    } ${active ? "ring-2 ring-offset-1 ring-offset-chess-canvas" : ""}`}
     style={{
       backgroundColor: active
-        ? `${color}44`
+        ? `${color}35`
         : count > 0
-          ? `${color}22`
+          ? `${color}18`
           : "transparent",
-      color: count > 0 ? color : "#444",
-      outline: active ? `1px solid ${color}88` : undefined,
+      color: count > 0 ? color : "#666",
+      border: count > 0 ? `1px solid ${color}45` : "1px solid transparent",
+      boxShadow: active ? `0 0 10px ${color}55` : undefined,
     }}
   >
     {count}
