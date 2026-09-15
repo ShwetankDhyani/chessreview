@@ -31,6 +31,7 @@ export interface MoveReviewPanelProps {
   moves?: AnalyzedMove[];
   runId?: string;
   onContinuationFen?: (fen: string | null) => void;
+  onContinuationHighlight?: (highlight: { from: string; to: string } | null) => void;
   onContinuationEval?: (eval_: EvalResult | null) => void;
   onContinuationActive?: (active: boolean) => void;
   onContinuationArrow?: (arrow: { from: string; to: string } | null) => void;
@@ -48,6 +49,7 @@ interface ContinuationViewerProps {
   accentColor?: string;
   label?: string;
   onFenChange?: (fen: string | null) => void;
+  onHighlightChange?: (highlight: { from: string; to: string } | null) => void;
   onEvalChange?: (eval_: EvalResult | null) => void;
   onActiveChange?: (active: boolean) => void;
   onArrowChange?: (arrow: { from: string; to: string } | null) => void;
@@ -70,7 +72,7 @@ function computeUcis(startFen: string, sans: string[]): string[] {
 
 const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   firstMove, line, startFen, actualMoveSan, evalBefore, accentColor = "#6daa6d", label = "Best continuation",
-  onFenChange, onEvalChange, onActiveChange, onArrowChange, onRegisterNav,
+  onFenChange, onHighlightChange, onEvalChange, onActiveChange, onArrowChange, onRegisterNav,
 }) => {
   const allMoves = [firstMove, ...line];
   const [step, setStep] = useState(0);
@@ -79,11 +81,13 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
   const evalCache = useRef<Map<string, EvalResult>>(new Map());
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFenChangeRef = useRef(onFenChange);
+  const onHighlightChangeRef = useRef(onHighlightChange);
   const onEvalChangeRef = useRef(onEvalChange);
   const onArrowChangeRef = useRef(onArrowChange);
   const onActiveChangeRef = useRef(onActiveChange);
   const continuationActiveRef = useRef(false);
   onFenChangeRef.current = onFenChange;
+  onHighlightChangeRef.current = onHighlightChange;
   onEvalChangeRef.current = onEvalChange;
   onArrowChangeRef.current = onArrowChange;
   onActiveChangeRef.current = onActiveChange;
@@ -123,7 +127,13 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       onFenChangeRef.current?.(fen);
       const uci = stepUcis[step - 1];
       if (uci) {
-        onArrowChangeRef.current?.({ from: uci.slice(0, 2), to: uci.slice(2, 4) });
+        const from = uci.slice(0, 2);
+        const to = uci.slice(2, 4);
+        onArrowChangeRef.current?.({ from, to });
+        onHighlightChangeRef.current?.({ from, to });
+      } else {
+        onArrowChangeRef.current?.(null);
+        onHighlightChangeRef.current?.(null);
       }
       const cached = evalCache.current.get(fen);
       if (cached) {
@@ -146,6 +156,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
     } else if (hasBeenInLineRef.current) {
       onFenChangeRef.current?.(startFen);
       onEvalChangeRef.current?.(evalBefore ?? null);
+      onHighlightChangeRef.current?.(null);
       setEvalWarning(null);
       const firstUci = stepUcis[0];
       if (firstUci) {
@@ -161,6 +172,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       // badges / last-move highlights stay visible for inaccuracy/mistake/blunder.
       onFenChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
+      onHighlightChangeRef.current?.(null);
       setEvalWarning(null);
       const firstUci = stepUcis[0];
       if (firstUci) {
@@ -187,6 +199,7 @@ const ContinuationViewer: React.FC<ContinuationViewerProps> = ({
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
       setContinuationActive(false);
       onFenChangeRef.current?.(null);
+      onHighlightChangeRef.current?.(null);
       onEvalChangeRef.current?.(null);
       onArrowChangeRef.current?.(null);
     };
@@ -301,6 +314,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
   moves,
   runId: _runId,
   onContinuationFen,
+  onContinuationHighlight,
   onContinuationEval,
   onContinuationActive,
   onContinuationArrow,
@@ -473,6 +487,7 @@ export const MoveReviewPanel: React.FC<MoveReviewPanelProps> = ({
             isNegative ? "Better line from here" : "Engine's top line from here"
           }
           onFenChange={onContinuationFen}
+          onHighlightChange={onContinuationHighlight}
           onEvalChange={onContinuationEval}
           onActiveChange={onContinuationActive}
           onArrowChange={onContinuationArrow}

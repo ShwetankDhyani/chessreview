@@ -141,3 +141,37 @@ export function resolveBoardNavStep(
   }
   return { fen: target.fenAfter, highlight: targetHighlight };
 }
+
+/**
+ * Resolves the square highlight for the board.
+ * In normal game review, highlights the current game move.
+ * In continuation exploration (better line):
+ * - If user stepped into a continuation move, highlights that continuation move's from/to squares.
+ * - If at step 0 (back at branch), highlights the move that led to the branch position.
+ */
+export function resolveBoardLastMoveHighlight(opts: {
+  continuationFen?: string | null;
+  continuationHighlight?: { from: string; to: string } | null;
+  currentMoveIdx: number;
+  moves: Array<{ uci?: string; san?: string; fenBefore?: string }>;
+  moveAnim?: { from: string; to: string } | null;
+}): { from: string; to: string } | null {
+  if (opts.continuationFen) {
+    if (opts.continuationHighlight) {
+      return opts.continuationHighlight;
+    }
+    if (opts.currentMoveIdx > 0) {
+      return highlightFromMove(opts.moves[opts.currentMoveIdx - 1] ?? {});
+    }
+    return null;
+  }
+  if (opts.currentMoveIdx >= 0) {
+    return (
+      highlightFromMove(opts.moves[opts.currentMoveIdx] ?? {}) ??
+      opts.moveAnim ??
+      null
+    );
+  }
+  return opts.moveAnim ?? null;
+}
+

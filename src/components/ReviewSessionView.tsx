@@ -69,6 +69,7 @@ export function ReviewSessionView({
     navigateToMove,
     stepBoardMove,
     handleContinuationFen,
+    handleContinuationHighlight,
     handleContinuationActive,
     handleContinuationEval,
     handleContinuationArrow,
@@ -106,6 +107,7 @@ export function ReviewSessionView({
       moves={moves}
       runId={runId}
       onContinuationFen={handleContinuationFen}
+      onContinuationHighlight={handleContinuationHighlight}
       onContinuationEval={handleContinuationEval}
       onContinuationActive={handleContinuationActive}
       onContinuationArrow={handleContinuationArrow}

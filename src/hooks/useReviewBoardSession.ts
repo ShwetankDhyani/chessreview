@@ -4,7 +4,7 @@ import {
   BOARD_START_FEN,
   canAnimateBoardStep,
   highlightFromMove,
-  highlightFromUci,
+  resolveBoardLastMoveHighlight,
   resolveBoardNavStep,
 } from "../utils/boardPosition";
 import { hapticSoft, playMoveFeedback } from "../utils/chessSounds";
@@ -72,6 +72,10 @@ export function useReviewBoardSession({
     from: string;
     to: string;
   } | null>(null);
+  const [continuationHighlight, setContinuationHighlight] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   const [continuationNav, setContinuationNav] =
     useState<ContinuationNavHandlers | null>(null);
   const [moveAnim, setMoveAnim] = useState<{ from: string; to: string } | null>(
@@ -115,6 +119,7 @@ export function useReviewBoardSession({
     setContinuationNav(null);
     setContinuationActive(false);
     setContinuationFen(null);
+    setContinuationHighlight(null);
     setContinuationEval(null);
     setContinuationArrow(null);
   }, []);
@@ -193,6 +198,13 @@ export function useReviewBoardSession({
     []
   );
 
+  const handleContinuationHighlight = useCallback(
+    (hl: { from: string; to: string } | null) => {
+      setContinuationHighlight(hl);
+    },
+    []
+  );
+
   const handleRegisterContinuationNav = useCallback(
     (nav: ContinuationNavHandlers | null) => {
       setContinuationNav(nav);
@@ -267,18 +279,14 @@ export function useReviewBoardSession({
   });
 
   const boardLastMoveHighlight = useMemo(() => {
-    // Only leave the game-move highlight when browsing a continuation fen.
-    if (continuationFen) {
-      if (currentMoveIdx > 0) {
-        return highlightFromMove(moves[currentMoveIdx - 1] ?? {});
-      }
-      return null;
-    }
-    if (currentMoveIdx >= 0) {
-      return highlightFromMove(moves[currentMoveIdx] ?? {}) ?? moveAnim;
-    }
-    return moveAnim;
-  }, [continuationFen, moveAnim, currentMoveIdx, moves]);
+    return resolveBoardLastMoveHighlight({
+      continuationFen,
+      continuationHighlight,
+      currentMoveIdx,
+      moves,
+      moveAnim,
+    });
+  }, [continuationFen, continuationHighlight, moveAnim, currentMoveIdx, moves]);
 
   const gameEnd = useMemo(() => {
     if (!gameMeta?.result || gameMeta.result === "*") return null;
@@ -328,6 +336,7 @@ export function useReviewBoardSession({
     continuationActive,
     continuationFen,
     continuationArrow,
+    continuationHighlight,
     engineLineGlow,
     continuationNav,
     boardPieceAnimMs,
@@ -335,6 +344,7 @@ export function useReviewBoardSession({
     navigateToMove,
     stepBoardMove,
     handleContinuationFen,
+    handleContinuationHighlight,
     handleContinuationActive,
     handleContinuationEval,
     handleContinuationArrow,
