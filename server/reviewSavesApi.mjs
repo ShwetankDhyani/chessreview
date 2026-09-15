@@ -48,13 +48,22 @@ export async function listSavedReviews(platform, username) {
       username
     )}`
   );
-  if (engine?.items) return engine;
+  // An empty engine list must not hide Supabase/file rows — only trust a
+  // non-empty engine response as authoritative.
+  if (Array.isArray(engine?.items) && engine.items.length > 0) {
+    return engine;
+  }
 
   if (isSupabaseConfigured()) {
-    return sbListSavedReviews(platform, username);
+    const sb = await sbListSavedReviews(platform, username);
+    if (Array.isArray(sb?.items) && sb.items.length > 0) return sb;
+    // Prefer a real empty engine payload over inventing [] from nowhere.
+    if (Array.isArray(engine?.items)) return engine;
+    return sb;
   }
 
   if (!isWritableStore()) {
+    if (Array.isArray(engine?.items)) return engine;
     return { ok: true, items: [] };
   }
   return { ok: true, items: fileListSavedReviews(platform, username) };

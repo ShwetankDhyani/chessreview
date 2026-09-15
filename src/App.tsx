@@ -641,7 +641,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     window.dispatchEvent(new CustomEvent("cr_profile_switch", { detail: { name: finalName, platform } }));
   };
 
-  const removeProfile = (idx: number) => {
+  /**
+   * Drop a linked profile from the local dock.
+   * Cloud saved reviews are only wiped on an explicit user unlink — never on
+   * auto-invalidation (transient 404s / rate limits), which used to erase saves.
+   */
+  const removeProfile = (
+    idx: number,
+    opts: { deleteCloudSaves?: boolean } = {}
+  ) => {
+    const deleteCloudSaves = opts.deleteCloudSaves === true;
     const removed = profilesRef.current[idx];
     const isRemovingActive = idx === activeProfileIdx;
     const updated = profilesRef.current.filter((_, i) => i !== idx);
@@ -650,15 +659,16 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       : activeProfileIdx > idx ? activeProfileIdx - 1 : activeProfileIdx;
     saveProfiles(updated, newActiveIdx);
 
-    // Unlinking must also drop that account's cloud + local saved reviews.
     if (removed) {
       clearCachedReviewsForProfile(removed);
-      void deleteAllSavedReviewsForProfile({
-        platform: removed.platform,
-        username: removed.name,
-      }).catch(() => {
-        /* best-effort cloud cleanup */
-      });
+      if (deleteCloudSaves) {
+        void deleteAllSavedReviewsForProfile({
+          platform: removed.platform,
+          username: removed.name,
+        }).catch(() => {
+          /* best-effort cloud cleanup */
+        });
+      }
       if (isRemovingActive) {
         clearSessionReviewPin();
         setSavedReviews([]);
@@ -692,8 +702,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
           p.platform === detail.platform &&
           p.name.toLowerCase() === detail.name!.toLowerCase()
       );
+      // Auto-unlink keeps cloud saves — only an explicit remove may wipe them.
       if (idx >= 0) {
-        removeProfile(idx);
+        removeProfile(idx, { deleteCloudSaves: false });
       }
     };
     window.addEventListener("cr_profile_invalid", onInvalidProfile);
@@ -1414,12 +1425,18 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     }
   }, [pgn, summary, moves, playerNames, reviewResult]);
 
+  const [savedReviewsLoadError, setSavedReviewsLoadError] = useState<string | null>(
+    null
+  );
+
   const refreshSavedReviews = useCallback(async () => {
     if (!activeUser?.name) {
       setSavedReviews([]);
+      setSavedReviewsLoadError(null);
       return;
     }
     setSavedReviewsLoading(true);
+    setSavedReviewsLoadError(null);
     try {
       const items = await listSavedReviews({
         platform: activeUser.platform,
@@ -1428,6 +1445,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
       setSavedReviews(items);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not load saved games";
+      setSavedReviewsLoadError(msg);
       setSaveReviewMessage(msg);
     } finally {
       setSavedReviewsLoading(false);
@@ -1886,7 +1904,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             activeProfileIdx={activeProfileIdx}
             activeUser={activeUser}
             onSwitchProfile={switchProfile}
-            onRemoveProfile={removeProfile}
+            onRemoveProfile={(i) => removeProfile(i, { deleteCloudSaves: true })}
             addPlatform={addProfilePlatform}
             onAddPlatformChange={(p) => {
               setAddProfilePlatform(p);
@@ -1906,9 +1924,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
             savedCount={savedReviews.length}
             savedLoading={savedReviewsLoading}
             onOpenSavedGames={() => {
-              setShowAddProfile(false);
               setShowSavedGamesModal(true);
               void refreshSavedReviews();
+              // Defer closing the sheet so the opening tap can't hit the modal backdrop.
+              window.setTimeout(() => setShowAddProfile(false), 0);
             }}
           />
         </div>
@@ -2654,6 +2673,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         onClose={() => setShowSavedGamesModal(false)}
         loading={savedReviewsLoading}
         items={savedReviews}
+        error={savedReviewsLoadError}
+        onRetry={() => void refreshSavedReviews()}
         onOpen={(id) => {
           void handleOpenSavedReview(id);
           setShowSavedGamesModal(false);
