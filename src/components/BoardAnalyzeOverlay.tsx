@@ -45,7 +45,7 @@ export function BoardAnalyzeOverlay({
     const done = conflict.done === true;
     return (
       <div
-        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-black/40 backdrop-blur-[2px] transition-all duration-200"
         aria-live="polite"
         role="dialog"
         aria-label={
@@ -54,10 +54,10 @@ export function BoardAnalyzeOverlay({
             : `Another review is already underway for ${conflict.runningLabel}`
         }
       >
-        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-xl border border-chess-border bg-chess-panel/95 backdrop-blur-sm px-5 py-4 shadow-[0_18px_56px_rgba(0,0,0,0.7)] min-w-[248px] max-w-[300px]">
+        <div className="analyze-now-plaque pointer-events-auto flex flex-col items-stretch gap-3.5 rounded-xl border border-white/15 px-5 py-4 shadow-[0_18px_56px_rgba(0,0,0,0.7)] min-w-[248px] max-w-[300px]">
           <div className="flex items-start gap-2.5">
             <span
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-chess-accent/15 border border-chess-accent/30 text-chess-accent"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
               aria-hidden
             >
               {done ? (
@@ -92,26 +92,26 @@ export function BoardAnalyzeOverlay({
               )}
             </span>
             <span className="text-left leading-tight min-w-0">
-              <span className="block text-sm font-bold text-chess-text">
+              <span className="block text-sm font-bold text-white">
                 {done
                   ? "You're on a different game"
                   : "Review already running"}
               </span>
-              <span className="mt-0.5 block text-[11px] font-medium text-chess-muted">
+              <span className="mt-0.5 block text-[11px] font-medium text-white/80">
                 {done ? (
                   <>
                     Previous review still open:{" "}
-                    <span className="text-chess-subtext font-semibold">
+                    <span className="text-emerald-300 font-semibold">
                       {conflict.runningLabel}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-chess-accent font-semibold tabular-nums">
+                    <span className="text-emerald-400 font-semibold tabular-nums">
                       {pct}%
                     </span>
                     {" · "}
-                    <span className="text-chess-subtext">
+                    <span className="text-white/90">
                       {conflict.runningLabel}
                     </span>
                   </>
@@ -241,7 +241,7 @@ export function BoardAnalyzeOverlay({
   if (state === "loading") {
     return (
       <div
-        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-black/35 backdrop-blur-[2px] transition-all duration-200"
         aria-live="polite"
       >
         <AnalyzeNowButton onClick={onAnalyze} variant="board" />

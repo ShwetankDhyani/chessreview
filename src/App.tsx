@@ -2087,9 +2087,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
+                        <div className="flex flex-col items-center justify-center h-full text-chess-subtext text-xs gap-2 px-3 text-center">
                           {analysisState === "loading" && (
-                            <span>Use Analyze now on the board or sidebar</span>
+                            <span className="font-medium">Use Analyze now on the board or sidebar</span>
                           )}
                           {analysisState === "idle" && (
                             <span>No game loaded</span>
