@@ -50,7 +50,7 @@ export function ThemeToggle({
       {isGlass ? (
         // Glass Sparkle / Liquid Orb Icon
         <svg
-          className="h-4 w-4 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] transition-transform duration-300 group-hover:scale-110"
+          className="h-4 w-4 text-chess-accent drop-shadow-[0_0_8px_rgba(129,182,76,0.6)] transition-transform duration-300 group-hover:scale-110"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -60,7 +60,7 @@ export function ThemeToggle({
           aria-hidden
         >
           {/* Glass sphere with specular highlight */}
-          <circle cx="12" cy="12" r="9" className="stroke-cyan-300" />
+          <circle cx="12" cy="12" r="9" className="stroke-chess-accent" />
           <path
             d="M8.5 8.5C9.5 7.5 11 7 12.5 7"
             stroke="white"
@@ -69,7 +69,7 @@ export function ThemeToggle({
           />
           <path
             d="M14.5 15.5C14 16 13.2 16.5 12 16.5"
-            className="stroke-cyan-400/80"
+            className="stroke-chess-accent/70"
             strokeWidth="1.5"
           />
         </svg>

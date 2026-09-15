@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type { MoveClassification } from "../types";
+import { getTheme, subscribeTheme, type SiteTheme } from "../utils/theme";
 import { BoardArrowOverlay } from "./BoardArrowOverlay";
 import { LastMoveSquareOverlay } from "./LastMoveSquareOverlay";
 import { MoveClassificationBadge } from "./MoveClassificationBadge";
@@ -25,8 +26,10 @@ export interface ReviewChessboardProps {
    * Forces a clean Chessboard remount so no stale animation plays.
    */
   remountKey?: number;
-  dimmed: boolean;
-  continuationActive: boolean;
+  /** Dim the board slightly while analyzing */
+  dimmed?: boolean;
+  /** True while auto-playing through an engine continuation line. */
+  continuationActive?: boolean;
   /** When true, show the pulsating engine-line edge glow (defaults to continuationActive). */
   engineLineGlow?: boolean;
   /** from/to squares for the move currently shown (always when available). */
@@ -55,6 +58,11 @@ export function ReviewChessboard({
 }: ReviewChessboardProps) {
   const boardHostRef = useRef<HTMLDivElement>(null);
   const [renderedWidth, setRenderedWidth] = useState(boardWidth);
+  const [theme, setLocalTheme] = useState<SiteTheme>(() => getTheme());
+
+  useEffect(() => {
+    return subscribeTheme((t) => setLocalTheme(t));
+  }, []);
 
   useLayoutEffect(() => {
     const node = boardHostRef.current;
@@ -116,9 +124,16 @@ export function ReviewChessboard({
           boardWidth={renderedWidth}
           boardOrientation={boardOrientation}
           arePiecesDraggable={false}
-          showBoardNotation={false}
-          customDarkSquareStyle={{ backgroundColor: "#769656" }}
-          customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
+          customDarkSquareStyle={
+            theme === "liquid-glass"
+              ? { backgroundColor: "rgba(110, 146, 80, 0.76)" }
+              : { backgroundColor: "#769656" }
+          }
+          customLightSquareStyle={
+            theme === "liquid-glass"
+              ? { backgroundColor: "rgba(238, 238, 218, 0.70)" }
+              : { backgroundColor: "#eeeed2" }
+          }
           customSquareStyles={squareStyles}
         />
         {lastMoveHighlight ? (
