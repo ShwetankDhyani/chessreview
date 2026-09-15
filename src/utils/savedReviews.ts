@@ -96,3 +96,21 @@ export async function deleteSavedReview(params: {
   )}`;
   await readJson(url, { method: "DELETE" });
 }
+
+/** Remove every cloud-saved review for a profile (used when unlinking). */
+export async function deleteAllSavedReviewsForProfile(profile: {
+  platform: "chesscom" | "lichess";
+  username: string;
+}): Promise<void> {
+  const items = await listSavedReviews(profile);
+  if (items.length === 0) return;
+  await Promise.all(
+    items.map((item) =>
+      deleteSavedReview({
+        id: item.id,
+        platform: profile.platform,
+        username: profile.username,
+      })
+    )
+  );
+}

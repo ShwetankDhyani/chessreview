@@ -121,3 +121,16 @@ export function saveReview(profile: ProfileRef, pgn: string, result: ReviewResul
     // Best-effort cache only.
   }
 }
+
+/** Drop local analysis cache entries belonging to a removed profile. */
+export function clearCachedReviewsForProfile(profile: {
+  name: string;
+  platform: "chesscom" | "lichess";
+}): void {
+  try {
+    const prefix = `${profileKey(profile)}:`;
+    writeRecords(readRecords().filter((r) => !r.key.startsWith(prefix)));
+  } catch {
+    // Best-effort only.
+  }
+}

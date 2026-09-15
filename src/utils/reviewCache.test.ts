@@ -1,64 +1,66 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-  countCachedReviews,
-  recordReviewCompletion,
+  clearCachedReviewsForProfile,
+  loadSavedReview,
+  saveReview,
 } from "./reviewCache";
-import { resetSafeStorageForTests, safeSetItem } from "./safeStorage";
+import type { ReviewResult } from "../types";
 
-function installWindow(localStorage: unknown) {
-  vi.stubGlobal("window", localStorage === undefined ? {} : { localStorage });
-  resetSafeStorageForTests();
-}
+const storage = new Map<string, string>();
 
-function workingStorage() {
-  const map = new Map<string, string>();
+beforeEach(() => {
+  storage.clear();
+  (globalThis as any).localStorage = {
+    getItem: (k: string) => storage.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      storage.set(k, v);
+    },
+    removeItem: (k: string) => {
+      storage.delete(k);
+    },
+  };
+});
+
+function stubResult(): ReviewResult {
   return {
-    getItem: (k: string) => (map.has(k) ? map.get(k)! : null),
-    setItem: (k: string, v: string) => void map.set(k, v),
-    removeItem: (k: string) => void map.delete(k),
+    moves: [],
+    summary: {
+      accuracyWhite: 50,
+      accuracyBlack: 50,
+      estimatedEloWhite: 1200,
+      estimatedEloBlack: 1200,
+      moveCounts: {
+        brilliant: 0,
+        great: 0,
+        best: 0,
+        excellent: 0,
+        good: 0,
+        book: 0,
+        inaccuracy: 0,
+        mistake: 0,
+        blunder: 0,
+        miss: 0,
+      },
+    } as ReviewResult["summary"],
+    run: null as unknown as ReviewResult["run"],
   };
 }
 
-beforeEach(() => {
-  installWindow(workingStorage());
-});
+describe("clearCachedReviewsForProfile", () => {
+  it("removes only that profile's cached reviews", () => {
+    const a = { name: "Alice", platform: "chesscom" as const };
+    const b = { name: "Bob", platform: "lichess" as const };
+    const result = stubResult();
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-  resetSafeStorageForTests();
-});
+    saveReview(a, "1. e4 e5", result);
+    saveReview(b, "1. d4 d5", result);
 
-describe("review completion count", () => {
-  it("starts at zero with empty storage", () => {
-    expect(countCachedReviews()).toBe(0);
-  });
+    expect(loadSavedReview(a, "1. e4 e5")).not.toBeNull();
+    expect(loadSavedReview(b, "1. d4 d5")).not.toBeNull();
 
-  it("increments on each completed review", () => {
-    recordReviewCompletion();
-    recordReviewCompletion();
-    expect(countCachedReviews()).toBe(2);
-  });
+    clearCachedReviewsForProfile(a);
 
-  it("falls back to cached result records when the counter is absent", () => {
-    safeSetItem(
-      "cr_saved_reviews_v1",
-      JSON.stringify([
-        { key: "local:guest:habc", savedAt: 1, result: { moves: [] } },
-        { key: "local:guest:hdef", savedAt: 2, result: { moves: [] } },
-      ])
-    );
-    expect(countCachedReviews()).toBe(2);
-  });
-
-  it("falls back to local timing samples from earlier sessions", () => {
-    safeSetItem(
-      "cr_review_timing_v1",
-      JSON.stringify([
-        { plies: 40, depth: 14, durationMs: 12_000, recordedAt: 1 },
-        { plies: 32, depth: 14, durationMs: 9_000, recordedAt: 2 },
-        { plies: 28, depth: 12, durationMs: 8_000, recordedAt: 3 },
-      ])
-    );
-    expect(countCachedReviews()).toBe(3);
+    expect(loadSavedReview(a, "1. e4 e5")).toBeNull();
+    expect(loadSavedReview(b, "1. d4 d5")).not.toBeNull();
   });
 });
