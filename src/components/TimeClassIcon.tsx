@@ -1,11 +1,11 @@
 /** Consistent time-class icons (same style on every platform / emoji renderer). */
 
 const STYLES = {
-  bullet: { stroke: "#d4a72c", label: "Bullet" },
-  blitz: { stroke: "#e07b39", label: "Blitz" },
-  rapid: { stroke: "#6a9fb5", label: "Rapid" },
-  daily: { stroke: "#9b8aa8", label: "Daily" },
-  classical: { stroke: "#8b9aa8", label: "Classical" },
+  bullet: { stroke: "#e8c04a", label: "Bullet" },
+  blitz: { stroke: "#f08a4b", label: "Blitz" },
+  rapid: { stroke: "#7eb8d0", label: "Rapid" },
+  daily: { stroke: "#b5a3c4", label: "Daily" },
+  classical: { stroke: "#a0b0c0", label: "Classical" },
 } as const;
 
 type TimeClass = keyof typeof STYLES;

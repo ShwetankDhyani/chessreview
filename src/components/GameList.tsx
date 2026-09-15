@@ -521,12 +521,12 @@ export const GameList: React.FC<GameListProps> = ({
           <div className="truncate text-[13px] font-semibold text-chess-text">
             {activeReview.label}
           </div>
-          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-chess-accent">
+          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
             {statusLabel}
             {pinnedGame ? ` · ${pinnedGame.timeClass}` : ""}
           </div>
         </div>
-        <span className="relative z-10 flex-shrink-0 text-[11px] font-bold tabular-nums text-chess-accent">
+        <span className="relative z-10 flex-shrink-0 text-[11px] font-bold tabular-nums text-white">
           {activeReview.done ? "Back" : `${pct}%`}
         </span>
       </button>
@@ -559,12 +559,12 @@ export const GameList: React.FC<GameListProps> = ({
                     </div>
                   )}
                   {games.length > 0 && !loading && (
-                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] tabular-nums text-chess-muted/85">
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] tabular-nums text-chess-subtext">
                       <span>
                         {filteredGames.length} of {games.length} games
                       </span>
                       {refreshing && (
-                        <span className="text-chess-accent/80">updating…</span>
+                        <span className="text-chess-accent/90">updating…</span>
                       )}
                     </p>
                   )}
@@ -782,11 +782,11 @@ export const GameList: React.FC<GameListProps> = ({
                         <span className="truncate text-[13px] font-semibold tracking-tight text-chess-text">
                           {opponent}
                         </span>
-                        <span className="flex-shrink-0 text-[11px] text-chess-muted tabular-nums">
+                        <span className="flex-shrink-0 text-[11px] text-chess-subtext tabular-nums">
                           {oppRating}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[10px] capitalize tracking-wide text-chess-muted/85">
+                      <div className="mt-0.5 text-[10px] capitalize tracking-wide text-chess-subtext">
                         {game.timeClass} · {formatDate(game.endTime)}
                       </div>
                     </div>
