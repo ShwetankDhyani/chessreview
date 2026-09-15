@@ -12,11 +12,13 @@ import {
 describe("theme utility", () => {
   let docAttrs: Record<string, string> = {};
   let eventListeners: Record<string, Array<(e: unknown) => void>> = {};
+  let themeColorContent = "#312e2b";
 
   beforeEach(() => {
     resetSafeStorageForTests();
     docAttrs = {};
     eventListeners = {};
+    themeColorContent = "#312e2b";
 
     vi.stubGlobal("document", {
       documentElement: {
@@ -27,6 +29,17 @@ describe("theme utility", () => {
         removeAttribute: (k: string) => {
           delete docAttrs[k];
         },
+      },
+      querySelector: (sel: string) => {
+        if (sel === 'meta[name="theme-color"]') {
+          return {
+            setAttribute: (_k: string, v: string) => {
+              themeColorContent = v;
+            },
+            getAttribute: () => themeColorContent,
+          };
+        }
+        return null;
       },
     });
 
@@ -69,6 +82,13 @@ describe("theme utility", () => {
     setTheme("liquid-glass");
     expect(getTheme()).toBe("liquid-glass");
     expect(docAttrs["data-theme"]).toBe("liquid-glass");
+    expect(themeColorContent).toBe("#121412");
+  });
+
+  it("restores classic browser theme-color", () => {
+    setTheme("liquid-glass");
+    setTheme("default");
+    expect(themeColorContent).toBe("#312e2b");
   });
 
   it("toggleTheme switches between default and liquid-glass", () => {
