@@ -437,14 +437,9 @@ html[data-testing-mode="1"] {
 }
 
 html[data-theme="liquid-glass"] .analyze-now-plaque {
-  background-color: rgba(18, 24, 20, 0.94) !important;
-  backdrop-filter: blur(36px) saturate(190%) contrast(105%) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(190%) contrast(105%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow:
-    0 28px 68px -12px rgba(0, 0, 0, 0.92),
-    0 10px 28px -4px rgba(0, 0, 0, 0.7),
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35) !important;
+  /* Stay opaque on the board — glass chrome must not wash out CTAs. */
+  background-color: rgba(16, 20, 17, 0.96);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .analyze-now-plaque-btn {
@@ -1433,387 +1428,268 @@ html[data-theme="liquid-glass"] .analyze-now-plaque {
 }
 
 /* ==========================================================================
-   Apple Liquid Glass Theme (Green & Gray Core Palette)
-   Authentic frosted glass transparency, specular highlights, refined emerald accents
+   Liquid Glass theme — selective chrome, solid core surfaces
+   Glass is for header / tabs / sheets only. Board + lists stay opaque.
    ========================================================================== */
 
-html[data-theme="liquid-glass"] body {
-  background-color: #121412;
-  color: #f3f5f3;
+html[data-theme="liquid-glass"] {
+  --lg-bg: #121412;
+  --lg-text: #f3f5f3;
+  --lg-muted: rgba(243, 245, 243, 0.62);
+  --lg-accent: #81b64c;
+  --lg-glass-fill: rgba(22, 26, 23, 0.72);
+  --lg-glass-fill-strong: rgba(16, 20, 17, 0.9);
+  --lg-glass-border: rgba(255, 255, 255, 0.12);
+  --lg-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --lg-glass-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
+  --lg-blur: 20px;
+  --lg-sat: 150%;
+  --lg-panel-fill: rgba(255, 255, 255, 0.035);
+  --lg-panel-border: rgba(255, 255, 255, 0.1);
+  color-scheme: dark;
 }
 
-/* Subtle, organic, diffused ambient lighting — NO radioactive corner halos */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-theme="liquid-glass"] {
+    --lg-blur: 0px;
+    --lg-sat: 100%;
+    --lg-glass-fill: #1a1f1b;
+    --lg-glass-fill-strong: #161b17;
+    --lg-panel-fill: #1c211d;
+  }
+}
+
+html[data-theme="liquid-glass"] body {
+  background-color: var(--lg-bg);
+  color: var(--lg-text);
+}
+
+/* Soft ambient wash — no neon corner halos */
 html[data-theme="liquid-glass"] .site-ambient {
   background:
-    radial-gradient(1200px 800px at 50% -10%, rgba(129, 182, 76, 0.10), transparent 70%),
-    radial-gradient(900px 600px at 50% 60%, rgba(129, 182, 76, 0.07), transparent 60%),
-    linear-gradient(180deg, #111311 0%, #151815 40%, #0f110f 100%);
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(129, 182, 76, 0.1), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 50% 70%, rgba(129, 182, 76, 0.04), transparent 55%),
+    linear-gradient(180deg, #111311 0%, #151815 45%, #0f110f 100%);
 }
 
-/* Glass Header & Floating Navigation */
+/* ---- Chrome only (true glass) ---- */
 html[data-theme="liquid-glass"] .site-brand-header::after {
   display: none;
 }
 
+html[data-theme="liquid-glass"] .site-brand-backdrop,
+html[data-theme="liquid-glass"] .mobile-bottom-nav,
+html[data-theme="liquid-glass"] .site-footer.fixed,
+html[data-theme="liquid-glass"] .glass-sheet {
+  background: var(--lg-glass-fill) !important;
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+  border-color: var(--lg-glass-border) !important;
+  box-shadow: var(--lg-glass-highlight), var(--lg-glass-shadow);
+}
+
 html[data-theme="liquid-glass"] .site-brand-backdrop {
-  background: rgba(22, 25, 23, 0.72) !important;
-  backdrop-filter: blur(28px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+  border-bottom: 1px solid var(--lg-glass-border) !important;
 }
 
 html[data-theme="liquid-glass"] .mobile-bottom-nav {
-  background: rgba(18, 20, 19, 0.78) !important;
-  backdrop-filter: blur(32px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18), 0 -8px 30px rgba(0, 0, 0, 0.4) !important;
+  border-top: 1px solid var(--lg-glass-border) !important;
 }
 
-/* ==========================================================================
-   Apple-Grade Frosted Glass Surfaces (ALL Panels, Sidebars, Cards & Surfaces)
-   ========================================================================== */
+html[data-theme="liquid-glass"] .glass-sheet {
+  background: var(--lg-glass-fill-strong) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
 
+/* ---- Content panels: translucent fill, NO blur (hierarchy + perf) ---- */
 html[data-theme="liquid-glass"] .cr-panel,
-html[data-theme="liquid-glass"] .mobile-surface,
-html[data-theme="liquid-glass"] [class*="bg-chess-sidebar"],
-html[data-theme="liquid-glass"] [class*="bg-chess-panel"] {
-  background-color: rgba(255, 255, 255, 0.045) !important;
-  backdrop-filter: blur(28px) saturate(180%) contrast(102%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(180%) contrast(102%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow:
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.30),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.15),
-    0 16px 36px -10px rgba(0, 0, 0, 0.45) !important;
+html[data-theme="liquid-glass"] .mobile-surface {
+  background-color: var(--lg-panel-fill);
+  border: 1px solid var(--lg-panel-border);
+  box-shadow: var(--lg-glass-highlight);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 html[data-theme="liquid-glass"] .mobile-surface {
-  border-radius: 1rem !important;
+  border-radius: 1rem;
 }
 
 html[data-theme="liquid-glass"] .mobile-surface-section + .mobile-surface-section,
 html[data-theme="liquid-glass"] .mobile-surface-list {
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
-html[data-theme="liquid-glass"] .cr-card,
-html[data-theme="liquid-glass"] [class*="bg-chess-card"] {
-  background-color: rgba(255, 255, 255, 0.055) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
-    0 4px 16px -2px rgba(0, 0, 0, 0.3) !important;
+html[data-theme="liquid-glass"] .cr-card {
+  background-color: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--lg-panel-border);
+  box-shadow: var(--lg-glass-highlight);
 }
 
-html[data-theme="liquid-glass"] .cr-card:hover,
-html[data-theme="liquid-glass"] [class*="bg-chess-card"]:hover,
-html[data-theme="liquid-glass"] [class*="bg-chess-card-hover"] {
-  background-color: rgba(255, 255, 255, 0.09) !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.38),
-    0 12px 28px -6px rgba(0, 0, 0, 0.45) !important;
+html[data-theme="liquid-glass"] .cr-card:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
-html[data-theme="liquid-glass"] [class*="bg-chess-surface"] {
-  background-color: rgba(255, 255, 255, 0.075) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-html[data-theme="liquid-glass"] [class*="bg-chess-hover"]:hover {
-  background-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-html[data-theme="liquid-glass"] [class*="bg-chess-canvas"] {
-  background-color: transparent !important;
-}
-
-html[data-theme="liquid-glass"] [class*="border-chess-hairline"] {
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-html[data-theme="liquid-glass"] [class*="border-chess-border"] {
-  border-color: rgba(255, 255, 255, 0.14) !important;
-}
-
-/* ==========================================================================
-   Inputs, Search Bars & Selection Controls
-   ========================================================================== */
-
+/* Inputs / chips: flat glass tint, no stacked blurs */
 html[data-theme="liquid-glass"] .mobile-field,
 html[data-theme="liquid-glass"] .cr-field {
-  background: rgba(255, 255, 255, 0.06) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22) !important;
-  border-radius: 0.65rem !important;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 html[data-theme="liquid-glass"] .mobile-field:focus,
 html[data-theme="liquid-glass"] .cr-field:focus {
-  border-color: rgba(129, 182, 76, 0.65) !important;
+  border-color: rgba(129, 182, 76, 0.55);
   box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.2),
-    0 0 0 3px rgba(129, 182, 76, 0.20) !important;
-  background: rgba(255, 255, 255, 0.09) !important;
+    inset 0 1px 2px rgba(0, 0, 0, 0.18),
+    0 0 0 3px rgba(129, 182, 76, 0.18);
+  background: rgba(255, 255, 255, 0.07);
 }
-
-html[data-theme="liquid-glass"] select {
-  background-color: rgba(255, 255, 255, 0.07) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.75) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-}
-
-/* ==========================================================================
-   Apple Frosted Pills, Filter Chips & Buttons
-   ========================================================================== */
 
 html[data-theme="liquid-glass"] .mobile-chip {
-  background: rgba(255, 255, 255, 0.065) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  color: rgba(255, 255, 255, 0.75) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-  border-radius: 9999px !important;
-  transition: all 0.18s ease;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 html[data-theme="liquid-glass"] .mobile-chip:hover:not(.mobile-chip--active) {
-  background: rgba(255, 255, 255, 0.11) !important;
-  border-color: rgba(255, 255, 255, 0.20) !important;
-  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
 }
 
 html[data-theme="liquid-glass"] .mobile-chip--active {
-  background: linear-gradient(135deg, rgba(139, 195, 74, 0.35) 0%, rgba(104, 150, 62, 0.40) 100%) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(129, 182, 76, 0.6) !important;
-  color: #ffffff !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
-    0 2px 10px -2px rgba(129, 182, 76, 0.45) !important;
-  border-radius: 9999px !important;
+  background: rgba(129, 182, 76, 0.28);
+  border-color: rgba(129, 182, 76, 0.5);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 html[data-theme="liquid-glass"] .mobile-icon-btn {
-  background: rgba(255, 255, 255, 0.065) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.82) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  border-radius: 0.65rem !important;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-html[data-theme="liquid-glass"] .mobile-icon-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.24) !important;
-  color: #ffffff !important;
-}
-
-/* Primary Liquid Green CTA Button */
 html[data-theme="liquid-glass"] .cr-btn-primary {
-  background: linear-gradient(135deg, rgba(139, 195, 74, 0.88) 0%, rgba(118, 169, 72, 0.92) 50%, rgba(104, 150, 62, 0.95) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  backdrop-filter: blur(12px) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5),
-    0 4px 18px -2px rgba(129, 182, 76, 0.5) !important;
+  background: linear-gradient(180deg, #8fc455 0%, #81b64c 55%, #6f9e3f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 4px 14px -4px rgba(129, 182, 76, 0.4);
 }
 
 html[data-theme="liquid-glass"] .cr-btn-primary:hover {
-  background: linear-gradient(135deg, rgba(152, 211, 83, 0.92) 0%, rgba(129, 182, 76, 0.95) 50%, rgba(111, 160, 65, 0.98) 100%) !important;
-  box-shadow:
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.65),
-    0 6px 24px -2px rgba(129, 182, 76, 0.65) !important;
+  background: linear-gradient(180deg, #9ad05f 0%, #89bf52 55%, #76a844 100%);
 }
 
 html[data-theme="liquid-glass"] .cr-btn-secondary {
-  background-color: rgba(255, 255, 255, 0.07) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: #f1f5f9 !important;
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
-  backdrop-filter: blur(16px);
-}
-
-html[data-theme="liquid-glass"] .cr-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(255, 255, 255, 0.30) !important;
-  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
 }
 
 html[data-theme="liquid-glass"] .cr-capsule-badge {
-  background-color: rgba(129, 182, 76, 0.15) !important;
-  border-color: rgba(129, 182, 76, 0.45) !important;
-  color: #9cd459 !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3),
-    0 0 16px -2px rgba(129, 182, 76, 0.4) !important;
+  background: rgba(129, 182, 76, 0.14);
+  border-color: rgba(129, 182, 76, 0.4);
+  color: #9cd459;
+  box-shadow: none;
 }
 
 html[data-theme="liquid-glass"] .cr-segmented {
-  background-color: rgba(255, 255, 255, 0.07) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 html[data-theme="liquid-glass"] .cr-segmented-item-active {
-  background: rgba(255, 255, 255, 0.20) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.32) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
-    0 2px 10px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 html[data-theme="liquid-glass"] .cr-text-gradient {
-  background: linear-gradient(135deg, #b4e87c 0%, #81b64c 50%, #68963e 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
+  background: linear-gradient(135deg, #b4e87c 0%, #81b64c 55%, #68963e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* ==========================================================================
-   Games List, Active Previous Review & Result Badges
-   ========================================================================== */
-
+/* List rows: quiet hover, no blur */
 html[data-theme="liquid-glass"] .mobile-list-row {
-  transition: background 0.15s ease, box-shadow 0.15s ease;
   border-radius: 0.65rem;
+  transition: background 0.15s ease;
 }
 
 html[data-theme="liquid-glass"] .mobile-list-row:hover {
-  background: rgba(255, 255, 255, 0.065) !important;
-  backdrop-filter: blur(12px) !important;
+  background: rgba(255, 255, 255, 0.045);
 }
 
 html[data-theme="liquid-glass"] .mobile-list-row--active,
 html[data-theme="liquid-glass"] .mobile-list-row--active:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(129, 182, 76, 0.5) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-    0 4px 16px -2px rgba(0, 0, 0, 0.35) !important;
-  border-radius: 0.75rem !important;
-}
-
-html[data-theme="liquid-glass"] .mobile-list-row--active [class*="bg-chess-accent/25"] {
-  background-color: rgba(129, 182, 76, 0.14) !important;
-}
-
-html[data-theme="liquid-glass"] .mobile-list-row--active [class*="bg-chess-accent/20"] {
-  background-color: rgba(129, 182, 76, 0.25) !important;
-  border: 1px solid rgba(129, 182, 76, 0.4);
+  background: rgba(129, 182, 76, 0.1);
+  border: 1px solid rgba(129, 182, 76, 0.35);
+  box-shadow: none;
 }
 
 html[data-theme="liquid-glass"] .mobile-result-badge--win {
-  background: linear-gradient(135deg, rgba(129, 182, 76, 0.85) 0%, rgba(104, 150, 62, 0.90) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 2px 8px -1px rgba(129, 182, 76, 0.4) !important;
-  backdrop-filter: blur(8px) !important;
+  background: #81b64c;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
 }
 
 html[data-theme="liquid-glass"] .mobile-result-badge--loss {
-  background: linear-gradient(135deg, rgba(220, 53, 69, 0.82) 0%, rgba(180, 40, 55, 0.88) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 2px 8px -1px rgba(220, 53, 69, 0.35) !important;
-  backdrop-filter: blur(8px) !important;
+  background: #c43c4a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: none;
 }
 
 html[data-theme="liquid-glass"] .mobile-result-badge--draw {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
-  backdrop-filter: blur(8px) !important;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-/* ==========================================================================
-   Liquid Glass Chessboard & Board Navigation Controls
-   ========================================================================== */
-
+/* Board: rim only — squares stay opaque in JS */
 html[data-theme="liquid-glass"] .board-viewport {
-  background: rgba(255, 255, 255, 0.045) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  background: transparent;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.16),
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.4),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.2),
-    0 20px 50px -10px rgba(0, 0, 0, 0.6) !important;
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 16px 36px -14px rgba(0, 0, 0, 0.55);
   border-radius: 12px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 html[data-theme="liquid-glass"] .board-nav-btn {
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  backdrop-filter: blur(16px) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 html[data-theme="liquid-glass"] .board-nav-btn:hover {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.11);
 }
 
 html[data-theme="liquid-glass"] .board-nav-btn--primary {
-  background: linear-gradient(135deg, rgba(139, 195, 74, 0.9) 0%, rgba(118, 169, 72, 0.92) 100%) !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    0 4px 16px -2px rgba(129, 182, 76, 0.55) !important;
+  background: linear-gradient(180deg, #8fc455 0%, #81b64c 100%);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* ==========================================================================
-   Coach Insight, Analysis & Modals
-   ========================================================================== */
-
-html[data-theme="liquid-glass"] .coach-insight-card {
-  background: rgba(255, 255, 255, 0.055) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 8px 24px -4px rgba(0, 0, 0, 0.35) !important;
-}
-
+html[data-theme="liquid-glass"] .coach-insight-card,
 html[data-theme="liquid-glass"] .analysis-status-card {
-  background: rgba(22, 26, 23, 0.75) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
-}
-
-html[data-theme="liquid-glass"] [role="dialog"],
-html[data-theme="liquid-glass"] [class*="bg-black/60"],
-html[data-theme="liquid-glass"] [class*="bg-black/70"] {
-  backdrop-filter: blur(18px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
-}
-
-html[data-theme="liquid-glass"] [role="dialog"] {
-  background: rgba(25, 30, 26, 0.78) !important;
-  backdrop-filter: blur(32px) saturate(190%) contrast(102%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(190%) contrast(102%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  box-shadow:
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.4),
-    0 24px 60px -10px rgba(0, 0, 0, 0.7) !important;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--lg-panel-border);
+  box-shadow: var(--lg-glass-highlight);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 html[data-theme="liquid-glass"] .scrollbar-track-chess-bg {
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="liquid-glass"] .mobile-chip,
+  html[data-theme="liquid-glass"] .mobile-list-row {
+    transition: none;
+  }
 }

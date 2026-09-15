@@ -217,7 +217,7 @@ export function ProfileMenu({
               ref={panelRef}
               role="dialog"
               aria-label="Account"
-              className="fixed z-[90] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
+              className="glass-sheet fixed z-[90] flex max-h-[min(78dvh,560px)] flex-col overflow-hidden rounded-2xl border border-chess-hairline-strong bg-chess-panel shadow-elev-4
               left-2 right-2 top-[calc(var(--app-header-h)+0.35rem)]
               lg:left-auto lg:right-3 lg:top-[calc(var(--app-header-h)+0.35rem)] lg:w-[19.5rem]"
             >

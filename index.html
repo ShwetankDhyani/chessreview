@@ -11,6 +11,17 @@
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="author" content="ChessReview" />
     <meta name="theme-color" content="#312e2b" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("chessreview-theme");
+          if (t !== "liquid-glass" && t !== "default") t = "default";
+          document.documentElement.setAttribute("data-theme", t);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", t === "liquid-glass" ? "#121412" : "#312e2b");
+        } catch (e) {}
+      })();
+    </script>
     <link rel="canonical" href="https://www.chessreview.org/" />
     <link rel="alternate" hreflang="en" href="https://www.chessreview.org/" />
     <link rel="alternate" hreflang="x-default" href="https://www.chessreview.org/" />

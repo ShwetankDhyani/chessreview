@@ -34,13 +34,13 @@ export function ThemeToggle({
       }
       title={
         isGlass
-          ? "Theme: Liquid Glass (Click for Classic)"
-          : "Theme: Classic (Click for Apple Liquid Glass)"
+          ? "Theme: Liquid Glass — click for Classic"
+          : "Theme: Classic — click for Liquid Glass"
       }
       className={`group relative inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-200 ease-soft ${
         isGlass
-          ? "bg-white/[0.12] text-white border border-white/30 shadow-[0_0_16px_rgba(255,255,255,0.2),inset_0_1px_1px_rgba(255,255,255,0.4)] backdrop-blur-xl hover:bg-white/[0.18]"
-          : "bg-chess-surface/90 text-chess-subtext border border-chess-hairline hover:border-chess-hairline-strong hover:text-chess-text hover:bg-chess-hover shadow-elev-1"
+          ? "border border-white/20 bg-white/[0.08] text-white hover:bg-white/[0.14]"
+          : "border border-chess-hairline bg-chess-surface/90 text-chess-subtext shadow-elev-1 hover:border-chess-hairline-strong hover:bg-chess-hover hover:text-chess-text"
       } ${
         showLabel
           ? "px-2.5 py-1 text-[12px] font-semibold"
@@ -48,33 +48,20 @@ export function ThemeToggle({
       } ${className}`}
     >
       {isGlass ? (
-        // Glass Sparkle / Liquid Orb Icon
         <svg
-          className="h-4 w-4 text-chess-accent drop-shadow-[0_0_8px_rgba(129,182,76,0.6)] transition-transform duration-300 group-hover:scale-110"
+          className="h-4 w-4 text-chess-accent transition-transform duration-300 group-hover:scale-110"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden
         >
-          {/* Glass sphere with specular highlight */}
-          <circle cx="12" cy="12" r="9" className="stroke-chess-accent" />
-          <path
-            d="M8.5 8.5C9.5 7.5 11 7 12.5 7"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <path
-            d="M14.5 15.5C14 16 13.2 16.5 12 16.5"
-            className="stroke-chess-accent/70"
-            strokeWidth="1.5"
-          />
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M8.5 9c1-.9 2.3-1.4 3.7-1.4" stroke="white" strokeWidth="1.6" />
         </svg>
       ) : (
-        // Classic Chessboard / Palette Icon
         <svg
           className="h-4 w-4 text-chess-muted transition-transform duration-300 group-hover:scale-110 group-hover:text-chess-accent"
           viewBox="0 0 24 24"
@@ -85,9 +72,8 @@ export function ThemeToggle({
           strokeLinejoin="round"
           aria-hidden
         >
-          {/* Glass droplet with spark */}
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-          <path d="M12 8a4 4 0 0 0-4 4" strokeWidth="1.5" />
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <path d="M4 12h16M12 4v16" />
         </svg>
       )}
 

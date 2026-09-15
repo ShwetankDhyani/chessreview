@@ -6,7 +6,7 @@ function BrandMark() {
   return (
     <>
       <span
-        className="flex h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-chess-accent/35 to-chess-accent/[0.08] border border-chess-accent/50 text-white select-none shadow-[0_0_14px_rgba(129,182,76,0.3)] transition-all duration-200 ease-soft group-hover:border-chess-accent group-hover:shadow-[0_0_20px_rgba(129,182,76,0.5)]"
+        className="flex h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-chess-accent/30 to-chess-accent/[0.06] border border-chess-accent/40 text-chess-accent select-none shadow-rim transition-colors duration-200 ease-soft group-hover:border-chess-accent/60"
         aria-hidden
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-chess-accent" aria-hidden>

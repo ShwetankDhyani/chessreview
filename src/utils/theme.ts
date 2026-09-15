@@ -2,8 +2,14 @@ import { safeGetItem, safeSetItem } from "./safeStorage";
 
 export type SiteTheme = "default" | "liquid-glass";
 
-const THEME_STORAGE_KEY = "chessreview-theme";
+/** Keep in sync with the blocking bootstrap in index.html. */
+export const THEME_STORAGE_KEY = "chessreview-theme";
 const THEME_CHANGE_EVENT = "chessreview-theme-change";
+
+export const THEME_BROWSER_COLORS: Record<SiteTheme, string> = {
+  default: "#312e2b",
+  "liquid-glass": "#121412",
+};
 
 /**
  * Get current theme from safe storage or default.
@@ -42,20 +48,31 @@ export function toggleTheme(): SiteTheme {
 }
 
 /**
- * Apply theme attribute to document element.
+ * Apply theme attribute + browser chrome color to the document.
  */
 export function applyThemeToDom(theme: SiteTheme): void {
   if (
-    typeof document !== "undefined" &&
-    document.documentElement &&
-    typeof document.documentElement.setAttribute === "function"
+    typeof document === "undefined" ||
+    !document.documentElement ||
+    typeof document.documentElement.setAttribute !== "function"
   ) {
-    document.documentElement.setAttribute("data-theme", theme);
+    return;
+  }
+
+  document.documentElement.setAttribute("data-theme", theme);
+
+  try {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content", THEME_BROWSER_COLORS[theme]);
+    }
+  } catch {
+    /* ignore */
   }
 }
 
 /**
- * Initialize theme on page load.
+ * Initialize theme on page load (after the index.html bootstrap).
  */
 export function initTheme(): SiteTheme {
   const current = getTheme();
