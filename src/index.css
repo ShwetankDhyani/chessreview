@@ -773,7 +773,16 @@ html[data-testing-mode="1"] {
 }
 
 /* Unified surfaces — match site panel tones, not a separate dark theme */
-.review-flow-stack,
+.review-flow-stack {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.review-flow-stack > * + * {
+  border-top: none;
+}
+
 .mobile-surface {
   border-radius: 0.625rem;
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -786,7 +795,6 @@ html[data-testing-mode="1"] {
 }
 
 @media (max-width: 1023px) {
-  .review-flow-stack,
   .mobile-surface {
     border-radius: 0.5rem;
     border-left: none;
@@ -794,7 +802,6 @@ html[data-testing-mode="1"] {
   }
 }
 
-.review-flow-stack > * + *,
 .mobile-surface-section + .mobile-surface-section,
 .mobile-surface-list {
   border-top: 1px solid rgba(255, 255, 255, 0.055);

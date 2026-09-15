@@ -52,22 +52,22 @@ export function PlayerTag({
 
   return (
     <div
-      className={`flex items-center w-full rounded-md transition-all ${
-        compact ? "px-1.5 py-1 gap-1.5" : "px-2 py-1.5 gap-2.5"
+      className={`flex items-center w-full py-1 transition-all ${
+        compact ? "px-1 gap-2" : "px-1.5 gap-2.5"
       } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
         <div
-          className={`rounded-sm border flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
+          className={`rounded-sm flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
           style={{
-            backgroundColor: color === "white" ? "#f0eee5" : "#1f1d1b",
-            borderColor: color === "white" ? "#cdcbc4" : "#5a5754",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+            backgroundColor: color === "white" ? "#f5f3ec" : "#22201d",
+            border: color === "white" ? "1px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.2)",
           }}
+          aria-hidden
         />
         <span
-          className={`font-semibold text-chess-text truncate tracking-tight ${compact ? "text-xs" : "text-sm"}`}
+          className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-[13px]" : "text-sm"}`}
         >
           {name}
         </span>
