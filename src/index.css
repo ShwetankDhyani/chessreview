@@ -1487,14 +1487,31 @@ html[data-theme="liquid-glass"] body {
   color: var(--lg-text);
 }
 
-/* Luminous depth — soft caustics that glass can refract */
+/* Luminous depth — colorful washes glass can actually refract */
 html[data-theme="liquid-glass"] .site-ambient {
   background:
-    radial-gradient(ellipse 110% 75% at 50% -22%, rgba(200, 240, 150, 0.22), transparent 58%),
-    radial-gradient(ellipse 60% 50% at 8% 35%, rgba(129, 182, 76, 0.12), transparent 62%),
-    radial-gradient(ellipse 55% 45% at 92% 48%, rgba(160, 210, 100, 0.08), transparent 60%),
-    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(0, 0, 0, 0.6), transparent 55%),
-    linear-gradient(180deg, #0e1210 0%, #121614 46%, #090b09 100%);
+    radial-gradient(ellipse 120% 80% at 50% -28%, rgba(210, 255, 150, 0.34), transparent 52%),
+    radial-gradient(ellipse 70% 55% at 0% 28%, rgba(129, 182, 76, 0.22), transparent 58%),
+    radial-gradient(ellipse 65% 50% at 100% 42%, rgba(120, 200, 160, 0.16), transparent 55%),
+    radial-gradient(ellipse 90% 45% at 50% 105%, rgba(0, 0, 0, 0.72), transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.04), transparent 35%),
+    linear-gradient(180deg, #101612 0%, #0d100e 50%, #070908 100%);
+}
+
+/* Soft light mesh so frosted blur has texture to pick up */
+html[data-theme="liquid-glass"] .site-ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.07) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 80% 40%, rgba(180, 230, 120, 0.08) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 75%, rgba(255, 255, 255, 0.05) 0 1px, transparent 1.5px);
+  background-size: 48px 48px, 72px 72px, 56px 56px;
+  background-position: 0 0, 12px 18px, 24px 8px;
+  mix-blend-mode: soft-light;
 }
 
 @keyframes lgSpecularSweep {
