@@ -442,17 +442,6 @@ export function ProfileMenu({
               >
                 Learn
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  hapticTap();
-                  onClose();
-                  window.dispatchEvent(new Event("cr_offer_install"));
-                }}
-                className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-chess-subtext transition-colors hover:bg-chess-hover hover:text-chess-text"
-              >
-                Install app
-              </button>
             </section>
 
             <section className="px-1 pb-1 pt-1">

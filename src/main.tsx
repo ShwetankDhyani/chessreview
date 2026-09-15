@@ -104,12 +104,3 @@ if (container) {
     "If this keeps happening, try a hard refresh.</p></div>";
   document.body.appendChild(notice);
 }
-
-// Register a thin app-shell service worker so mobile browsers can offer Install.
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* installability is best-effort */
-    });
-  });
-}
