@@ -1450,10 +1450,11 @@ html[data-theme="liquid-glass"] {
   --lg-glass-border-soft: rgba(255, 255, 255, 0.14);
   /* Specular rim = the “liquid” cue */
   --lg-specular:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
-    inset 1px 0 0 rgba(255, 255, 255, 0.1),
-    inset -1px 0 0 rgba(255, 255, 255, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08);
   --lg-glass-shadow:
     0 1px 0 rgba(255, 255, 255, 0.08),
     0 14px 44px -14px rgba(0, 0, 0, 0.7);
@@ -1487,15 +1488,21 @@ html[data-theme="liquid-glass"] body {
   color: var(--lg-text);
 }
 
+/* Let ambient be the visible scene — opaque page fills kill refraction */
+html[data-theme="liquid-glass"] .bg-chess-bg,
+html[data-theme="liquid-glass"] [class*="bg-chess-bg"] {
+  background-color: transparent !important;
+}
+
 /* Luminous depth — colorful washes glass can actually refract */
 html[data-theme="liquid-glass"] .site-ambient {
   background:
-    radial-gradient(ellipse 120% 80% at 50% -28%, rgba(210, 255, 150, 0.34), transparent 52%),
-    radial-gradient(ellipse 70% 55% at 0% 28%, rgba(129, 182, 76, 0.22), transparent 58%),
-    radial-gradient(ellipse 65% 50% at 100% 42%, rgba(120, 200, 160, 0.16), transparent 55%),
-    radial-gradient(ellipse 90% 45% at 50% 105%, rgba(0, 0, 0, 0.72), transparent 50%),
-    radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.04), transparent 35%),
-    linear-gradient(180deg, #101612 0%, #0d100e 50%, #070908 100%);
+    radial-gradient(ellipse 130% 90% at 50% -8%, rgba(210, 255, 150, 0.4), transparent 48%),
+    radial-gradient(ellipse 80% 60% at -5% 22%, rgba(129, 182, 76, 0.28), transparent 55%),
+    radial-gradient(ellipse 75% 55% at 105% 38%, rgba(120, 200, 160, 0.2), transparent 52%),
+    radial-gradient(ellipse 90% 50% at 50% 108%, rgba(0, 0, 0, 0.75), transparent 48%),
+    radial-gradient(circle at 28% 62%, rgba(255, 255, 255, 0.05), transparent 32%),
+    linear-gradient(180deg, #121a14 0%, #0d110f 46%, #070908 100%);
 }
 
 /* Soft light mesh so frosted blur has texture to pick up */
@@ -1596,11 +1603,11 @@ html[data-theme="liquid-glass"] .glass-sheet {
 html[data-theme="liquid-glass"] .cr-panel,
 html[data-theme="liquid-glass"] .mobile-surface {
   background: var(--lg-panel-fill);
-  background-color: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(var(--lg-blur-panel)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(180%);
-  border: 1px solid var(--lg-glass-border-soft);
-  box-shadow: var(--lg-specular), 0 12px 32px -14px rgba(0, 0, 0, 0.5);
+  background-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(var(--lg-blur-panel)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: var(--lg-specular), 0 14px 36px -14px rgba(0, 0, 0, 0.55);
 }
 
 html[data-theme="liquid-glass"] .mobile-surface {
