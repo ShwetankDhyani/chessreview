@@ -35,10 +35,10 @@ export function AnalyzeNowButton({
       disabled={disabled || !onClick}
       className={`pointer-events-auto disabled:opacity-50 group ${className}`}
     >
-      <div className="analyze-now-plaque flex flex-col items-stretch gap-3.5 rounded-2xl border border-chess-hairline-strong bg-chess-panel/95 backdrop-blur-md px-5 py-4 shadow-elev-4 min-w-[224px]">
+      <div className="analyze-now-plaque flex flex-col items-stretch gap-3.5 rounded-2xl border border-white/15 px-5 py-4 min-w-[230px]">
         <div className="flex items-center gap-2.5">
           <span
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-chess-accent/15 border border-chess-accent/30 text-chess-accent"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-sm"
             aria-hidden
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,15 +47,15 @@ export function AnalyzeNowButton({
             </svg>
           </span>
           <span className="text-left leading-tight">
-            <span className="block text-sm font-bold tracking-tight text-chess-text">
+            <span className="block text-[15px] font-bold tracking-tight text-white drop-shadow-sm">
               Game Review
             </span>
-            <span className="block text-[11px] font-medium leading-snug text-chess-muted mt-0.5">
-              Engine accuracy & move ratings
+            <span className="block text-[11px] font-medium leading-snug text-white/80 mt-0.5">
+              Engine accuracy &amp; move ratings
             </span>
           </span>
         </div>
-        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-lg bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_6px_-1px_rgba(0,0,0,0.25)] transition-all duration-200 ease-soft group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
+        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-xl bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_-1px_rgba(0,0,0,0.35)] transition-all duration-200 ease-soft group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M8 5v14l11-7z" />
           </svg>
