@@ -210,16 +210,58 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Pulled-back floating OTB seat — full board visible, no corner clip.
-  camera.fov = 36;
+  // Fit the full rim + piece tops inside the square canvas with padding.
+  // (WebGL clips at the canvas edge — CSS overflow cannot save us.)
+  const nearSign = boardOrientation === "white" ? 1 : -1;
+  const elev = 0.88;
+  const depth = 1.0;
+  const target = new THREE.Vector3(0, 0.05, 0);
+  const corners = [
+    new THREE.Vector3(-4.4, -0.22, -4.4),
+    new THREE.Vector3(4.4, -0.22, -4.4),
+    new THREE.Vector3(-4.4, -0.22, 4.4),
+    new THREE.Vector3(4.4, -0.22, 4.4),
+    new THREE.Vector3(-4.4, 1.3, -4.4),
+    new THREE.Vector3(4.4, 1.3, -4.4),
+    new THREE.Vector3(-4.4, 1.3, 4.4),
+    new THREE.Vector3(4.4, 1.3, 4.4),
+  ];
+
+  camera.fov = 34;
+  camera.aspect = 1;
   camera.updateProjectionMatrix();
-  const z = boardOrientation === "white" ? 10.8 : -10.8;
-  camera.position.set(0, 8.4, z);
-  controls.target.set(0, 0, 0);
-  controls.minDistance = 9;
-  controls.maxDistance = 18;
-  controls.maxPolarAngle = Math.PI * 0.46;
-  controls.minPolarAngle = Math.PI * 0.18;
+  controls.target.copy(target);
+
+  let lo = 9;
+  let hi = 22;
+  let best = 14;
+  const ndc = new THREE.Vector3();
+  for (let i = 0; i < 22; i++) {
+    const mid = (lo + hi) / 2;
+    camera.position.set(0, mid * elev, nearSign * mid * depth);
+    camera.lookAt(target);
+    camera.updateMatrixWorld(true);
+
+    let maxAbs = 0;
+    for (const corner of corners) {
+      ndc.copy(corner).project(camera);
+      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
+    }
+    // Keep ~18% margin so near-edge wood never kisses the canvas.
+    if (maxAbs > 0.82) {
+      lo = mid;
+    } else {
+      best = mid;
+      hi = mid;
+    }
+  }
+
+  camera.position.set(0, best * elev, nearSign * best * depth);
+  camera.lookAt(target);
+  controls.minDistance = best;
+  controls.maxDistance = best * 1.35;
+  controls.maxPolarAngle = Math.PI * 0.44;
+  controls.minPolarAngle = Math.PI * 0.22;
   controls.update();
 }
 
@@ -272,8 +314,7 @@ export function OtbChessboard3d({
     });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false;
     host.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -281,13 +322,11 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const key = new THREE.DirectionalLight(0xfff2dc, 1.15);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+    const key = new THREE.DirectionalLight(0xfff2dc, 1.05);
     key.position.set(4, 12, 6);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.35);
+    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.4);
     fill.position.set(-6, 6, -4);
     scene.add(fill);
 

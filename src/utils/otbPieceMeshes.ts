@@ -29,7 +29,7 @@ function add(
   const mesh = new THREE.Mesh(geo, material);
   mesh.position.y = y;
   mesh.scale.set(...scale);
-  mesh.castShadow = true;
+  mesh.castShadow = false;
   mesh.receiveShadow = true;
   group.add(mesh);
   return mesh;
@@ -85,7 +85,7 @@ export function createPieceMesh(
           m
         );
         tooth.position.set(Math.cos(a) * 0.14, 0.74, Math.sin(a) * 0.14);
-        tooth.castShadow = true;
+        tooth.castShadow = false;
         g.add(tooth);
       }
       break;
@@ -98,7 +98,7 @@ export function createPieceMesh(
       );
       neck.position.set(0.02, 0.5, 0);
       neck.rotation.z = -0.25;
-      neck.castShadow = true;
+      neck.castShadow = false;
       g.add(neck);
       const head = new THREE.Mesh(
         new THREE.BoxGeometry(0.22, 0.16, 0.18),
@@ -106,14 +106,14 @@ export function createPieceMesh(
       );
       head.position.set(0.1, 0.68, 0);
       head.rotation.z = -0.35;
-      head.castShadow = true;
+      head.castShadow = false;
       g.add(head);
       const ear = new THREE.Mesh(
         new THREE.ConeGeometry(0.06, 0.14, 8),
         m
       );
       ear.position.set(0.02, 0.8, 0.04);
-      ear.castShadow = true;
+      ear.castShadow = false;
       g.add(ear);
       break;
     }
@@ -161,7 +161,7 @@ export function createPieceMesh(
           m
         );
         tip.position.set(Math.cos(a) * 0.12, 1.0, Math.sin(a) * 0.12);
-        tip.castShadow = true;
+        tip.castShadow = false;
         g.add(tip);
       }
       add(g, new THREE.SphereGeometry(0.05, 12, 10), m, 1.08);
@@ -183,11 +183,11 @@ export function createPieceMesh(
       add(g, new THREE.CylinderGeometry(0.13, 0.13, 0.08, 20), m, 0.92);
       const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.06), m);
       crossV.position.y = 1.12;
-      crossV.castShadow = true;
+      crossV.castShadow = false;
       g.add(crossV);
       const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.06), m);
       crossH.position.y = 1.18;
-      crossH.castShadow = true;
+      crossH.castShadow = false;
       g.add(crossH);
       break;
     }
