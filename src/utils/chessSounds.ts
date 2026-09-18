@@ -340,12 +340,24 @@ function playWoodSound(ctx: AudioContext, kind: MoveSoundKind): void {
   }
 }
 
-export async function playMoveSound(kind: MoveSoundKind): Promise<void> {
+function getRunningCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (audioCtx && audioCtx.state === "running") return audioCtx;
+  return null;
+}
+
+export function playMoveSound(kind: MoveSoundKind): void {
   if (!soundsEnabled()) return;
+  const ctx = getRunningCtx();
+  if (ctx) {
+    playWoodSound(ctx, kind);
+    return;
+  }
   unlockChessAudio();
-  const ctx = await ensureAudioReady();
-  if (!ctx) return;
-  playWoodSound(ctx, kind);
+  void ensureAudioReady().then((readyCtx) => {
+    if (!readyCtx) return;
+    playWoodSound(readyCtx, kind);
+  });
 }
 
 /* ── Soft low announcement cues (rare) ────────────────────────────────── */
@@ -413,15 +425,15 @@ export function announce(kind: AnnounceKind): void {
  *   light / medium / rigid → buttons, toggles, board plies (toggle = board strength)
  */
 const VIBRATE: Record<SensoryKind, number | number[]> = {
-  selection: 15,
-  soft: 18,
-  light: 28,
-  medium: [18, 20, 28],
-  rigid: [26, 32, 34, 44],
-  heavy: [26, 28, 44],
-  success: [16, 36, 22, 46],
-  warning: [22, 46, 26],
-  error: [32, 42, 36, 48],
+  selection: 10,
+  soft: 14,
+  light: 18,
+  medium: 24,
+  rigid: 32,
+  heavy: 42,
+  success: [18, 22, 28],
+  warning: [22, 24, 20],
+  error: [32, 22, 38],
 };
 
 function vibrate(pattern: number | number[]): void {
@@ -429,25 +441,32 @@ function vibrate(pattern: number | number[]): void {
     return;
   }
   try {
+    // Cancel any stale in-flight vibration immediately so the new impulse starts at t=0
+    navigator.vibrate(0);
     navigator.vibrate(pattern);
   } catch {
     /* ignore */
   }
 }
 
-function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
+/** Pre-rendered haptic proxy audio buffer cache to avoid per-tap compute latency. */
+const hapticBufferCache = new Map<SensoryKind, AudioBuffer>();
+
+function getOrCreateHapticBuffer(ctx: AudioContext, kind: SensoryKind): AudioBuffer {
+  const cached = hapticBufferCache.get(kind);
+  if (cached && cached.sampleRate === ctx.sampleRate) return cached;
+
   const sampleRate = ctx.sampleRate;
-  // Nav bumped ~50% from prior; toggles/buttons use medium/rigid matching board plies.
   const profile: Record<SensoryKind, { hz: number; dur: number; peak: number }> = {
-    selection: { hz: 118, dur: 0.018, peak: 0.051 },
-    soft: { hz: 100, dur: 0.022, peak: 0.06 },
-    light: { hz: 90, dur: 0.03, peak: 0.095 },
-    medium: { hz: 82, dur: 0.034, peak: 0.11 },
-    rigid: { hz: 92, dur: 0.032, peak: 0.12 },
-    heavy: { hz: 70, dur: 0.044, peak: 0.135 },
-    success: { hz: 100, dur: 0.036, peak: 0.095 },
-    warning: { hz: 78, dur: 0.038, peak: 0.1 },
-    error: { hz: 64, dur: 0.048, peak: 0.125 },
+    selection: { hz: 118, dur: 0.016, peak: 0.054 },
+    soft: { hz: 100, dur: 0.02, peak: 0.065 },
+    light: { hz: 90, dur: 0.026, peak: 0.098 },
+    medium: { hz: 82, dur: 0.03, peak: 0.115 },
+    rigid: { hz: 92, dur: 0.03, peak: 0.125 },
+    heavy: { hz: 70, dur: 0.04, peak: 0.14 },
+    success: { hz: 100, dur: 0.034, peak: 0.098 },
+    warning: { hz: 78, dur: 0.036, peak: 0.1 },
+    error: { hz: 64, dur: 0.044, peak: 0.128 },
   };
   const p = profile[kind];
   const length = Math.max(1, Math.floor(sampleRate * p.dur));
@@ -462,6 +481,12 @@ function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
       (Math.random() * 2 - 1) * 0.06;
     data[i] = body * env * p.peak;
   }
+  hapticBufferCache.set(kind, buffer);
+  return buffer;
+}
+
+function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
+  const buffer = getOrCreateHapticBuffer(ctx, kind);
   const src = ctx.createBufferSource();
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
@@ -473,42 +498,51 @@ function playHapticProxy(ctx: AudioContext, kind: SensoryKind): void {
   filter.connect(gain);
   gain.gain.value = 1;
   gain.connect(ctx.destination);
-  src.start();
+  src.start(ctx.currentTime);
 }
 
 function sensoryGap(kind: SensoryKind): number {
   switch (kind) {
     case "selection":
-      return 12;
+      return 10;
     case "light":
     case "soft":
-      return 20;
+      return 16;
     case "medium":
     case "rigid":
-      return 28;
+      return 22;
     case "heavy":
-      return 60;
+      return 45;
     case "success":
     case "warning":
     case "error":
-      return 280;
+      return 240;
     default:
-      return 24;
+      return 18;
   }
 }
 
-/** Chrome haptic (navigation / buttons). */
+/** Chrome haptic (navigation / buttons) — executes immediately with zero async lag. */
 export function sensate(kind: SensoryKind): void {
   if (!hapticsEnabled()) return;
   if (!canFire(`s:${kind}`, sensoryGap(kind))) return;
 
+  // 1. Hardware vibration fires immediately on the calling frame
   vibrate(VIBRATE[kind]);
+
   if (!shouldPlayHapticProxy()) return;
-  unlockChessAudio();
-  void ensureAudioReady().then((ctx) => {
-    if (!ctx) return;
+
+  // 2. Play audio haptic proxy synchronously if AudioContext is running
+  const ctx = getRunningCtx();
+  if (ctx) {
     playHapticProxy(ctx, kind);
-  });
+  } else {
+    unlockChessAudio();
+    void ensureAudioReady().then((readyCtx) => {
+      if (!readyCtx) return;
+      playHapticProxy(readyCtx, kind);
+    });
+  }
 }
 
 /** Tabs, profile, filters — noticeable nav tap (~board × 0.5, +50% from prior). */
@@ -568,36 +602,50 @@ export function notifyReviewStart(): void {
 }
 
 const MOVE_VIBRATE: Record<MoveSoundKind, number | number[]> = {
-  move: [18, 20, 28],
-  capture: [26, 32, 34, 44],
-  castle: [20, 24, 22, 28],
-  check: [30, 36, 34],
-  promote: [22, 28, 24, 36, 26],
+  move: 22,
+  capture: [28, 20, 18],
+  castle: [18, 18, 18],
+  check: 32,
+  promote: [20, 18, 26],
 };
 
 /**
- * Board step: quiet Lichess-like wood sound for every ply + event-matched haptics.
+ * Board step: immediate crisp impulse + quiet Lichess-like wood sound for every ply.
  */
 export function playMoveFeedback(san: string): void {
   if (!san) return;
   const kind = soundKindFromSan(san);
-  unlockChessAudio();
-  void playMoveSound(kind);
 
-  if (!hapticsEnabled()) return;
-  if (!canFire(`move:${kind}`, 16)) return;
-  vibrate(MOVE_VIBRATE[kind]);
+  // 1. Hardware vibration fires immediately
+  if (hapticsEnabled() && canFire(`move:${kind}`, 16)) {
+    vibrate(MOVE_VIBRATE[kind]);
+  }
 
-  if (!shouldPlayHapticProxy()) return;
-  void ensureAudioReady().then((ctx) => {
-    if (!ctx) return;
-    const proxy: SensoryKind =
-      kind === "capture" || kind === "check" || kind === "promote"
-        ? "rigid"
-        : kind === "castle"
-          ? "medium"
+  // 2. Play wood sound and haptic proxy synchronously without awaiting promises
+  const ctx = getRunningCtx();
+  if (ctx) {
+    if (soundsEnabled()) {
+      playWoodSound(ctx, kind);
+    }
+    if (hapticsEnabled() && shouldPlayHapticProxy()) {
+      const proxy: SensoryKind =
+        kind === "capture" || kind === "check" || kind === "promote"
+          ? "rigid"
           : "medium";
-    // Board plies stay on the strong tier (medium/rigid), above nav selection.
-    playHapticProxy(ctx, proxy);
-  });
+      playHapticProxy(ctx, proxy);
+    }
+  } else {
+    unlockChessAudio();
+    void ensureAudioReady().then((readyCtx) => {
+      if (!readyCtx) return;
+      if (soundsEnabled()) playWoodSound(readyCtx, kind);
+      if (hapticsEnabled() && shouldPlayHapticProxy()) {
+        const proxy: SensoryKind =
+          kind === "capture" || kind === "check" || kind === "promote"
+            ? "rigid"
+            : "medium";
+        playHapticProxy(readyCtx, proxy);
+      }
+    });
+  }
 }
