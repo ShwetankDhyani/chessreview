@@ -210,59 +210,18 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Fit the full rim + piece tops inside the square canvas with padding.
-  // (WebGL clips at the canvas edge — CSS overflow cannot save us.)
-  const nearSign = boardOrientation === "white" ? 1 : -1;
-  const elev = 0.9;
-  const depth = 1.05;
-  const target = new THREE.Vector3(0, 0.05, 0);
-  const corners = [
-    new THREE.Vector3(-4.45, -0.25, -4.45),
-    new THREE.Vector3(4.45, -0.25, -4.45),
-    new THREE.Vector3(-4.45, -0.25, 4.45),
-    new THREE.Vector3(4.45, -0.25, 4.45),
-    new THREE.Vector3(-4.45, 1.35, -4.45),
-    new THREE.Vector3(4.45, 1.35, -4.45),
-    new THREE.Vector3(-4.45, 1.35, 4.45),
-    new THREE.Vector3(4.45, 1.35, 4.45),
-  ];
-
-  camera.fov = 32;
-  camera.aspect = 1;
+  // Fixed seat camera. Board content is pre-scaled (~0.72) so the full
+  // rim always clears the square canvas — no NDC fit fights with OrbitControls.
+  camera.fov = 36;
   camera.updateProjectionMatrix();
-  controls.target.copy(target);
-
-  let lo = 10;
-  let hi = 26;
-  let best = 16;
-  const ndc = new THREE.Vector3();
-  for (let i = 0; i < 24; i++) {
-    const mid = (lo + hi) / 2;
-    camera.position.set(0, mid * elev, nearSign * mid * depth);
-    camera.lookAt(target);
-    camera.updateMatrixWorld(true);
-
-    let maxAbs = 0;
-    for (const corner of corners) {
-      ndc.copy(corner).project(camera);
-      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
-    }
-    // ~25% margin — near wood edge must clear the canvas.
-    if (maxAbs > 0.75) {
-      lo = mid;
-    } else {
-      best = mid;
-      hi = mid;
-    }
-  }
-
-  camera.position.set(0, best * elev, nearSign * best * depth);
-  camera.lookAt(target);
-  const euclidean = best * Math.hypot(elev, depth);
-  controls.minDistance = euclidean;
-  controls.maxDistance = euclidean * 1.45;
-  controls.maxPolarAngle = Math.PI * 0.44;
-  controls.minPolarAngle = Math.PI * 0.22;
+  const z = boardOrientation === "white" ? 11.5 : -11.5;
+  camera.position.set(0, 9.0, z);
+  controls.target.set(0, 0, 0);
+  const dist = camera.position.distanceTo(controls.target);
+  controls.minDistance = dist;
+  controls.maxDistance = dist * 1.5;
+  controls.maxPolarAngle = Math.PI * 0.45;
+  controls.minPolarAngle = Math.PI * 0.2;
   controls.update();
 }
 
@@ -331,14 +290,18 @@ export function OtbChessboard3d({
     fill.position.set(-6, 6, -4);
     scene.add(fill);
 
+    const contentRoot = new THREE.Group();
+    // Shrink in-scene so perspective near-edge never hits the canvas.
+    contentRoot.scale.setScalar(0.72);
     const boardRoot = new THREE.Group();
     const piecesRoot = new THREE.Group();
     const arrowRoot = new THREE.Group();
     const squareMeshes: THREE.Mesh[] = [];
     buildBoard(boardRoot, squareMeshes);
-    scene.add(boardRoot);
-    scene.add(piecesRoot);
-    scene.add(arrowRoot);
+    contentRoot.add(boardRoot);
+    contentRoot.add(piecesRoot);
+    contentRoot.add(arrowRoot);
+    scene.add(contentRoot);
 
     setCameraForOrientation(camera, controls, boardOrientation);
 
