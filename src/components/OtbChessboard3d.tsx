@@ -287,8 +287,8 @@ function setCameraForOrientation(
     };
   };
 
-  const frameTarget = 0.995;
-  const pieceLimit = 0.999;
+  const frameTarget = 0.999;
+  const pieceLimit = 1.0;
   let lo = 0.75;
   let hi = 2.4;
   let bestScale = 1;
