@@ -7,8 +7,8 @@ type PieceRole = "p" | "n" | "b" | "r" | "q" | "k";
 const SEG = 72;
 
 /**
- * Photo-real lacquered wood — light oak/boxwood vs rosewood.
- * Uses Poly Haven PBR maps when provided.
+ * Lacquered wood tuned to ChessReview’s warm-dark UI:
+ * muted ivory / rosewood that sits on chess-bg panels (not blown white).
  */
 function mat(
   color: PieceColor,
@@ -23,25 +23,25 @@ function mat(
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0xc9a06a
-        : 0xb89888
+        ? 0x8f7350
+        : 0x7a6a60
       : light
-        ? 0xfff6e8 // pale maple / boxwood
-        : 0xe0a878, // warm rosewood lift so grain reads
+        ? 0x9e8e72 // aged boxwood — sits with chess-surface, not blown white
+        : 0x7a5640, // deep rosewood with panel warmth
     map: diff ?? null,
     normalMap: nor ?? null,
-    normalScale: new THREE.Vector2(accent ? 0.35 : 0.55, accent ? 0.35 : 0.55),
+    normalScale: new THREE.Vector2(accent ? 0.28 : 0.45, accent ? 0.28 : 0.45),
     roughnessMap: rough ?? null,
-    roughness: accent ? 0.38 : 0.28,
+    roughness: accent ? 0.5 : 0.42,
     metalness: 0.0,
-    clearcoat: accent ? 0.22 : 0.45,
-    clearcoatRoughness: 0.28,
-    reflectivity: 0.35,
-    envMapIntensity: 0.55,
+    clearcoat: accent ? 0.08 : 0.16,
+    clearcoatRoughness: 0.5,
+    reflectivity: 0.22,
+    envMapIntensity: 0.28,
   });
 }
 
-/** Pale maple frame maps (same light wood set). */
+/** Medium oak frame — warm brown that sits on chess-panel, not pale maple. */
 export function frameMaterials(maps?: OtbPbrMaps | null): {
   apron: THREE.MeshPhysicalMaterial;
   lip: THREE.MeshPhysicalMaterial;
@@ -49,46 +49,46 @@ export function frameMaterials(maps?: OtbPbrMaps | null): {
   const shared = {
     map: maps?.lightDiff ?? null,
     normalMap: maps?.lightNor ?? null,
-    normalScale: new THREE.Vector2(0.45, 0.45),
+    normalScale: new THREE.Vector2(0.4, 0.4),
     roughnessMap: maps?.lightRough ?? null,
     metalness: 0.0,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.45,
-    envMapIntensity: 0.35,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.55,
+    envMapIntensity: 0.28,
   } as const;
   return {
     apron: new THREE.MeshPhysicalMaterial({
       ...shared,
-      color: 0xfff0dc, // pale honey maple
-      roughness: 0.42,
+      color: 0x8f7355, // medium honey oak — cohesive with chess-surface browns
+      roughness: 0.55,
     }),
     lip: new THREE.MeshPhysicalMaterial({
       ...shared,
-      color: 0xf5e0c0,
-      roughness: 0.48,
+      color: 0x7a6248,
+      roughness: 0.58,
     }),
   };
 }
 
-/** Soft tournament square materials. */
+/** Squares match the 2D board / Tailwind board.* tokens. */
 export function squareMaterials(): {
   light: THREE.MeshPhysicalMaterial;
   dark: THREE.MeshPhysicalMaterial;
 } {
   return {
     light: new THREE.MeshPhysicalMaterial({
-      color: 0xf3ecd4,
-      roughness: 0.78,
+      color: 0xeeeed2,
+      roughness: 0.82,
       metalness: 0.0,
-      clearcoat: 0.08,
-      clearcoatRoughness: 0.6,
+      clearcoat: 0.04,
+      clearcoatRoughness: 0.7,
     }),
     dark: new THREE.MeshPhysicalMaterial({
       color: 0x769656,
-      roughness: 0.82,
+      roughness: 0.86,
       metalness: 0.0,
-      clearcoat: 0.05,
-      clearcoatRoughness: 0.7,
+      clearcoat: 0.03,
+      clearcoatRoughness: 0.75,
     }),
   };
 }

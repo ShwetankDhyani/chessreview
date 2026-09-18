@@ -26,8 +26,8 @@ import type { MoveClassification } from "../types";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
 
-const LIGHT = 0xf0ead2;
-const DARK = 0x6e9450;
+const LIGHT = 0xe4dfc8;
+const DARK = 0x6f8f52;
 const HI_FROM = 0xf7c948;
 const HI_TO = 0xe8b83a;
 const ARROW = 0xf7c948;
@@ -122,7 +122,7 @@ function buildBoard(
 
   const bed = new THREE.Mesh(
     new THREE.BoxGeometry(8.0, 0.03, 8.0),
-    new THREE.MeshStandardMaterial({ color: 0xf0dcc0, roughness: 0.85 })
+    new THREE.MeshStandardMaterial({ color: 0x6e5640, roughness: 0.88 })
   );
   bed.position.y = -0.03;
   bed.receiveShadow = true;
@@ -735,10 +735,10 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    // Studio table lighting — warm key, cool fill, soft rim for lacquered wood.
-    scene.add(new THREE.AmbientLight(0xfff8f0, 0.52));
-    scene.add(new THREE.HemisphereLight(0xfffaf4, 0x6a5a48, 0.42));
-    const key = new THREE.DirectionalLight(0xfff4e4, 1.05);
+    // Warm studio light tuned to chess-bg — avoids blown ivory pieces.
+    scene.add(new THREE.AmbientLight(0xfff0e4, 0.36));
+    scene.add(new THREE.HemisphereLight(0xfff4ea, 0x2a2620, 0.3));
+    const key = new THREE.DirectionalLight(0xffecda, 0.82);
     key.position.set(5, 14, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -751,10 +751,10 @@ export function OtbChessboard3d({
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.02;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xd0e0ff, 0.42);
+    const fill = new THREE.DirectionalLight(0xc8d0c4, 0.28);
     fill.position.set(-7, 7, -5);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xffe6c8, 0.32);
+    const rim = new THREE.DirectionalLight(0xe8d4b8, 0.2);
     rim.position.set(0, 4, 14);
     scene.add(rim);
 
