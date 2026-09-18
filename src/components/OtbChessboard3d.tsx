@@ -280,7 +280,7 @@ function setCameraForOrientation(
   for (let i = 0; i < 22; i++) {
     const mid = (lo + hi) / 2;
     const m = measure(mid, contentRoot.position);
-    if (m.maxAbs > 0.9) {
+    if (m.maxAbs > 0.92) {
       hi = mid;
     } else {
       bestScale = mid;
@@ -291,7 +291,6 @@ function setCameraForOrientation(
 
   // Center: shift content so projected mid → 0. Convert NDC mid to world
   // along camera right/up at the board distance.
-  const m1 = measure(bestScale, contentRoot.position);
   const dist = camera.position.distanceTo(target);
   const vFov = (camera.fov * Math.PI) / 180;
   const worldSpan = 2 * Math.tan(vFov / 2) * dist;
@@ -303,18 +302,22 @@ function setCameraForOrientation(
     .normalize();
   if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
   const camUp = new THREE.Vector3().crossVectors(right, viewDir).normalize();
-  // Move content opposite to mid (if midY < 0, board is low → move content up).
-  contentRoot.position
-    .addScaledVector(right, -m1.midX * (worldSpan / 2))
-    .addScaledVector(camUp, -m1.midY * (worldSpan / 2));
+
+  const centerOnce = () => {
+    const m = measure(bestScale, contentRoot.position);
+    contentRoot.position
+      .addScaledVector(right, -m.midX * (worldSpan / 2))
+      .addScaledVector(camUp, -m.midY * (worldSpan / 2));
+  };
+  centerOnce();
 
   // Re-fit scale after shift (shift can push corners out).
-  lo = bestScale * 0.7;
-  hi = bestScale * 1.15;
+  lo = bestScale * 0.75;
+  hi = bestScale * 1.12;
   for (let i = 0; i < 16; i++) {
     const mid = (lo + hi) / 2;
     const m = measure(mid, contentRoot.position);
-    if (m.maxAbs > 0.9) {
+    if (m.maxAbs > 0.92) {
       hi = mid;
     } else {
       bestScale = mid;
@@ -322,6 +325,14 @@ function setCameraForOrientation(
     }
   }
   contentRoot.scale.setScalar(bestScale);
+  centerOnce();
+
+  // Final trim if still oversize.
+  const mFinal = measure(bestScale, contentRoot.position);
+  if (mFinal.maxAbs > 0.94) {
+    bestScale *= 0.94 / mFinal.maxAbs;
+    contentRoot.scale.setScalar(bestScale);
+  }
   contentRoot.updateMatrixWorld(true);
 
   const euclidean = camera.position.distanceTo(target);
