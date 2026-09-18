@@ -222,17 +222,14 @@ export function createPieceMesh(
       add(g, new THREE.BoxGeometry(0.46, 0.1, 0.46), m, 0.82);
       for (let i = 0; i < 4; i++) {
         const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const tooth = new THREE.Mesh(
-          new THREE.BoxGeometry(0.15, 0.24, 0.15),
-          glyph
-        );
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.24, 0.15), m);
         tooth.position.set(Math.cos(a) * 0.185, 1.02, Math.sin(a) * 0.185);
         tooth.castShadow = true;
         tooth.receiveShadow = true;
         g.add(tooth);
       }
-      // Recessed well — dual-tone center from above
-      add(g, new THREE.BoxGeometry(0.2, 0.08, 0.2), accent, 0.9);
+      // Soft dual-tone well — subtle, not chalk caps
+      add(g, new THREE.BoxGeometry(0.2, 0.08, 0.2), glyph, 0.9);
       break;
     }
     case "n": {
@@ -333,11 +330,8 @@ export function createPieceMesh(
       add(g, new THREE.CylinderGeometry(0.18, 0.18, 0.05, 36), m, 1.2);
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        // Flat fins lying outward in XZ — star from above
-        const fin = new THREE.Mesh(
-          new THREE.BoxGeometry(0.28, 0.07, 0.08),
-          i % 2 === 0 ? glyph : m
-        );
+        // Fins stay body wood; hub carries the gentle dual-tone
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 0.08), m);
         fin.position.set(Math.cos(a) * 0.22, 1.24, Math.sin(a) * 0.22);
         fin.rotation.y = -a;
         fin.castShadow = true;
