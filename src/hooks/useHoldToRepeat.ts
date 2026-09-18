@@ -37,23 +37,25 @@ export function useHoldToRepeat(
       holdActiveRef.current = false;
       finishedRef.current = false;
       clear();
+
+      // Trigger the tap and haptics immediately on contact
+      onTap();
+
       holdRef.current = setTimeout(() => {
         holdActiveRef.current = true;
         onHoldStep();
         repeatRef.current = setInterval(onHoldStep, REPEAT_MS);
       }, HOLD_DELAY_MS);
     },
-    [enabled, onHoldStep, clear]
+    [enabled, onTap, onHoldStep, clear]
   );
 
   const end = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    const wasHold = holdActiveRef.current;
     clear();
     holdActiveRef.current = false;
-    if (!wasHold && enabled) onTap();
-  }, [enabled, onTap, clear]);
+  }, [clear]);
 
   return {
     onPointerDown,

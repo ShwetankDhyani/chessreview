@@ -15,7 +15,7 @@ import {
 import { coachShowsBestWas } from "../utils/moveFactSheet";
 import { boardMoveClassification } from "../utils/boardMoveClassification";
 import type { ReviewBoardSession } from "../hooks/useReviewBoardSession";
-import { hapticToggle } from "../utils/chessSounds";
+import { hapticSoft, hapticToggle } from "../utils/chessSounds";
 
 function useViewport() {
   const [viewport, setViewport] = useState(() => ({
@@ -211,8 +211,11 @@ export function ReviewSessionView({
                   <div className="h-px bg-chess-border my-1" />
                   <button
                     type="button"
-                    onClick={() => { navigateToMove(-1, false); }}
-                    className="board-nav-btn"
+                    onClick={() => {
+                      hapticSoft();
+                      navigateToMove(-1, false);
+                    }}
+                    className="board-nav-btn touch-manipulation"
                     title="Go to start"
                     aria-label="Go to start"
                   >
@@ -224,7 +227,7 @@ export function ReviewSessionView({
                     type="button"
                     onClick={() => stepBoardMove(-1)}
                     disabled={!canBoardStepBack}
-                    className="board-nav-btn"
+                    className="board-nav-btn touch-manipulation"
                     title="Previous move"
                     aria-label="Previous move"
                   >
@@ -236,7 +239,7 @@ export function ReviewSessionView({
                     type="button"
                     onClick={() => stepBoardMove(1)}
                     disabled={!canBoardStepForward}
-                    className="board-nav-btn board-nav-btn--primary"
+                    className="board-nav-btn board-nav-btn--primary touch-manipulation"
                     title="Next move"
                     aria-label="Next move"
                   >
@@ -246,8 +249,11 @@ export function ReviewSessionView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { navigateToMove(moves.length - 1, false); }}
-                    className="board-nav-btn"
+                    onClick={() => {
+                      hapticSoft();
+                      navigateToMove(moves.length - 1, false);
+                    }}
+                    className="board-nav-btn touch-manipulation"
                     title="Go to end"
                     aria-label="Go to end"
                   >
