@@ -68,11 +68,10 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const isLight = (file + rank) % 2 === 1;
-      // Unlit = exact classic hexes (#eeeed2 / #769656), same as flat 2D board.
-      // Lit StandardMaterial + ambient was bleaching the green.
+      // Lambert receives piece shadows without specular washout.
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.98, 0.06, 0.98),
-        new THREE.MeshBasicMaterial({
+        new THREE.MeshLambertMaterial({
           color: isLight ? LIGHT : DARK,
         })
       );
@@ -168,7 +167,7 @@ function applyHighlights(
     const file = mesh.userData.file as number;
     const rank = mesh.userData.rank as number;
     const square = `${String.fromCharCode(97 + file)}${rank + 1}`;
-    const mat = mesh.material as THREE.MeshBasicMaterial;
+    const mat = mesh.material as THREE.MeshLambertMaterial;
     const base = mesh.userData.baseColor as number;
     if (lastMove && square === lastMove.from) {
       mat.color.setHex(HI_FROM);

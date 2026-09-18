@@ -11,7 +11,7 @@ function makeGrainTexture(seed: number, light: boolean): THREE.CanvasTexture {
   canvas.height = size;
   const ctx = canvas.getContext("2d")!;
   // Bone ivory / charcoal — not near-white
-  const base = light ? "#c4b49a" : "#3a3a40";
+  const base = light ? "#b09a78" : "#3a3a42";
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
   for (let i = 0; i < 56; i++) {
@@ -66,8 +66,8 @@ function mat(color: PieceColor, accent = false): THREE.MeshStandardMaterial {
         ? 0x6e5840 // dark walnut rings / features on white
         : 0x8a8a96 // lighter rim features on black
       : light
-        ? 0xc2b090 // bone ivory — deliberately mid, not #f5f5f0
-        : 0x34343a,
+        ? 0xb09a78 // muted bone — readable against cream squares
+        : 0x3a3a42,
     map: grain(color),
     roughness: light ? 0.72 : 0.68,
     metalness: 0.02,
