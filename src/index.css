@@ -2008,7 +2008,7 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
     linear-gradient(180deg, rgba(40, 32, 24, 0.06), transparent 42%),
     var(--chess-panel, #f7f6f3);
   padding: 1.25rem 0.75rem 1.75rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .otb-proto__table {

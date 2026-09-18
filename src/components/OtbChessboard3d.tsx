@@ -221,68 +221,138 @@ function setCameraForOrientation(
   contentRoot: THREE.Group
 ) {
   // High mild-OTB seat (more overhead = squarer projection = more canvas fill).
-  // Scale-to-fill ~98% NDC on frame + far-rank piece tops. Skip content pan —
-  // perspective makes pan fight the near edge. Lock zoom so orbit can't clip.
+  // Fit the wooden frame hard to ~99.5% NDC; piece tops may approach the rim
+  // but must stay on-canvas. No lateral pan. Lock zoom-in.
   const nearSign = boardOrientation === "white" ? 1 : -1;
   const farSign = -nearSign;
-  const target = new THREE.Vector3(0, 0.12, 0);
-  camera.fov = 34;
+  const target = new THREE.Vector3(0, 0.1, 0);
+  camera.fov = 30;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  camera.position.set(0, 14.2, nearSign * 5.4);
+  // High seat, short throw: keep mild OTB depth while projecting nearly square.
+  camera.position.set(0, 15.8, nearSign * 3.2);
   controls.target.copy(target);
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
 
-  // Frame outer ≈ ±4.22. Piece height only budgeted on the far rank / sides —
-  // near-rank king tops blow out NDC and leave huge empty margins.
   const edge = 4.26;
-  const localCorners = [
+  const frameCorners = [
     new THREE.Vector3(-edge, -0.06, -edge),
     new THREE.Vector3(edge, -0.06, -edge),
     new THREE.Vector3(-edge, -0.06, edge),
     new THREE.Vector3(edge, -0.06, edge),
-    // Far rank piece clearance
+  ];
+  const pieceCorners = [
     new THREE.Vector3(-edge, 0.95, farSign * edge),
     new THREE.Vector3(edge, 0.95, farSign * edge),
-    // Side mid-height so knights/bishops near rim stay in frame
-    new THREE.Vector3(-edge, 0.72, 0),
-    new THREE.Vector3(edge, 0.72, 0),
+    new THREE.Vector3(-edge * 0.7, 0.85, nearSign * edge * 0.35),
+    new THREE.Vector3(edge * 0.7, 0.85, nearSign * edge * 0.35),
   ];
 
   contentRoot.position.set(0, 0, 0);
   contentRoot.scale.setScalar(1);
 
-  const measure = (scale: number) => {
+  const measureSet = (
+    corners: THREE.Vector3[],
+    scale: number,
+    posY: number,
+    posZ = 0
+  ) => {
     let maxAbs = 0;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minX = Infinity;
+    let maxX = -Infinity;
     const world = new THREE.Vector3();
     const ndc = new THREE.Vector3();
-    for (const c of localCorners) {
+    for (const c of corners) {
       world.copy(c).multiplyScalar(scale);
+      world.y += posY;
+      world.z += posZ;
       ndc.copy(world).project(camera);
       maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
+      minX = Math.min(minX, ndc.x);
+      maxX = Math.max(maxX, ndc.x);
+      minY = Math.min(minY, ndc.y);
+      maxY = Math.max(maxY, ndc.y);
     }
-    return maxAbs;
+    return {
+      maxAbs,
+      minX,
+      maxX,
+      minY,
+      maxY,
+      midX: (minX + maxX) / 2,
+      midY: (minY + maxY) / 2,
+    };
   };
 
-  const ndcTarget = 0.98;
-  let lo = 0.7;
-  let hi = 2.2;
+  const frameTarget = 0.995;
+  const pieceLimit = 0.999;
+  let lo = 0.75;
+  let hi = 2.4;
   let bestScale = 1;
   for (let i = 0; i < 28; i++) {
     const mid = (lo + hi) / 2;
-    if (measure(mid) > ndcTarget) {
+    const frame = measureSet(frameCorners, mid, 0);
+    const pieces = measureSet(pieceCorners, mid, 0);
+    if (frame.maxAbs > frameTarget || pieces.maxAbs > pieceLimit) {
       hi = mid;
     } else {
       bestScale = mid;
       lo = mid;
     }
   }
+
+  // Screen-vertical recenter: from this high seat, world +Y is mostly along the
+  // view ray, so nudge along depth (Z) instead — toward the far rank.
+  const depthSign = farSign;
+  const at0 = measureSet(frameCorners, bestScale, 0, 0);
+  const atEps = measureSet(frameCorners, bestScale, 0, depthSign * 0.2);
+  const dMid = atEps.midY - at0.midY;
+  let bestZ = 0;
+  if (Math.abs(dMid) > 1e-6) {
+    bestZ = depthSign * 0.2 * (-at0.midY) / dMid;
+  }
+  for (let i = 0; i < 12; i++) {
+    const frame = measureSet(frameCorners, bestScale, 0, bestZ);
+    if (frame.maxAbs <= frameTarget) break;
+    bestZ *= 0.7;
+  }
+
+  // Recenter frees headroom — push scale again with the depth offset applied.
+  lo = bestScale;
+  hi = Math.min(2.6, bestScale * 1.35);
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    const frame = measureSet(frameCorners, mid, 0, bestZ);
+    const pieces = measureSet(pieceCorners, mid, 0, bestZ);
+    if (frame.maxAbs > frameTarget || pieces.maxAbs > pieceLimit) {
+      hi = mid;
+    } else {
+      bestScale = mid;
+      lo = mid;
+    }
+  }
+
+  // Re-balance midY after the second scale pass.
+  const at1 = measureSet(frameCorners, bestScale, 0, bestZ);
+  const at2 = measureSet(frameCorners, bestScale, 0, bestZ + depthSign * 0.1);
+  const dMid2 = at2.midY - at1.midY;
+  if (Math.abs(dMid2) > 1e-6) {
+    bestZ += depthSign * 0.1 * (-at1.midY) / dMid2;
+  }
+  for (let i = 0; i < 10; i++) {
+    const frame = measureSet(frameCorners, bestScale, 0, bestZ);
+    if (frame.maxAbs <= frameTarget) break;
+    bestZ *= 0.75;
+  }
+
   contentRoot.scale.setScalar(bestScale);
+  contentRoot.position.set(0, 0, bestZ);
   contentRoot.updateMatrixWorld(true);
 
   const euclidean = camera.position.distanceTo(target);
-  // Allow gentle pull-back only — zooming in is what reintroduces clipping.
   controls.minDistance = euclidean;
   controls.maxDistance = euclidean * 1.35;
   controls.minPolarAngle = 0.12;
