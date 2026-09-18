@@ -4,11 +4,11 @@ import type { OtbPbrMaps } from "./otbTextures";
 type PieceColor = "w" | "b";
 type PieceRole = "p" | "n" | "b" | "r" | "q" | "k";
 
-const SEG = 72;
+const SEG = 64;
 
 /**
- * Lacquered wood tuned to ChessReview’s warm-dark UI.
- * Kept deliberately mute so ivory doesn’t bloom under the sitting camera.
+ * Materials tuned for review contrast on cream/green squares:
+ * cool bone whites (no warm maple wash) vs deep rosewood blacks.
  */
 function mat(
   color: PieceColor,
@@ -16,32 +16,34 @@ function mat(
   maps?: OtbPbrMaps | null
 ): THREE.MeshPhysicalMaterial {
   const light = color === "w";
-  const diff = light ? maps?.lightDiff : maps?.darkDiff;
-  const nor = light ? maps?.lightNor : maps?.darkNor;
-  const rough = light ? maps?.lightRough : maps?.darkRough;
+  // Whites skip warm maple albedo — it made pieces match light squares.
+  // Keep normal/roughness for wood feel; darks keep rosewood maps.
+  const diff = light ? null : maps?.darkDiff ?? null;
+  const nor = light ? maps?.lightNor ?? null : maps?.darkNor ?? null;
+  const rough = light ? maps?.lightRough ?? null : maps?.darkRough ?? null;
 
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0x7a6248
-        : 0x6a5a52
+        ? 0xb0a090
+        : 0x8a7870
       : light
-        ? 0x7e6e58 // quieter boxwood
-        : 0x5e4234, // quieter rosewood
-    map: diff ?? null,
-    normalMap: nor ?? null,
-    normalScale: new THREE.Vector2(accent ? 0.25 : 0.4, accent ? 0.25 : 0.4),
-    roughnessMap: rough ?? null,
-    roughness: accent ? 0.55 : 0.48,
+        ? 0xf2eee6 // cool bone — pops on cream + green squares
+        : 0x4a3228, // deep rosewood
+    map: diff,
+    normalMap: nor,
+    normalScale: new THREE.Vector2(accent ? 0.2 : 0.35, accent ? 0.2 : 0.35),
+    roughnessMap: rough,
+    roughness: light ? (accent ? 0.55 : 0.45) : accent ? 0.5 : 0.42,
     metalness: 0.0,
-    clearcoat: accent ? 0.05 : 0.1,
-    clearcoatRoughness: 0.58,
-    reflectivity: 0.16,
-    envMapIntensity: 0.2,
+    clearcoat: light ? 0.06 : 0.12,
+    clearcoatRoughness: 0.55,
+    reflectivity: 0.14,
+    envMapIntensity: 0.18,
   });
 }
 
-/** Medium oak frame — warm brown that sits on chess-panel, not pale maple. */
+/** Medium oak frame. */
 export function frameMaterials(maps?: OtbPbrMaps | null): {
   apron: THREE.MeshPhysicalMaterial;
   lip: THREE.MeshPhysicalMaterial;
@@ -70,22 +72,25 @@ export function frameMaterials(maps?: OtbPbrMaps | null): {
   };
 }
 
-/** Squares slightly softened for dark UI cohesion. */
+/**
+ * Squares: cooler sage-cream light so bone whites separate;
+ * green darks stay near board tokens.
+ */
 export function squareMaterials(): {
   light: THREE.MeshPhysicalMaterial;
   dark: THREE.MeshPhysicalMaterial;
 } {
   return {
     light: new THREE.MeshPhysicalMaterial({
-      color: 0xe4dfc8,
-      roughness: 0.88,
+      color: 0xd4d8c6, // cooler sage-cream — contrast vs bone pieces
+      roughness: 0.9,
       metalness: 0.0,
       clearcoat: 0.02,
-      clearcoatRoughness: 0.8,
+      clearcoatRoughness: 0.85,
     }),
     dark: new THREE.MeshPhysicalMaterial({
-      color: 0x6f8f52,
-      roughness: 0.9,
+      color: 0x6a8a4e,
+      roughness: 0.92,
       metalness: 0.0,
       clearcoat: 0.02,
       clearcoatRoughness: 0.85,
@@ -141,10 +146,18 @@ function pedestal(
   add(group, new THREE.CylinderGeometry(0.2, 0.24, 0.035, SEG), m, 0.175);
 }
 
+/** Dark glyph material — high-contrast top marks for overhead ID. */
+function glyphMat(color: PieceColor): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: color === "w" ? 0x5a5048 : 0x1a1410,
+    roughness: 0.7,
+    metalness: 0.0,
+  });
+}
+
 /**
- * Staunton meshes optimized for the sitting/top review camera:
- * each role keeps a distinct overhead silhouette (dot, square, horse,
- * cleft oval, spike ring, cross).
+ * Staunton meshes with exaggerated horizontal crowns so each role
+ * has a unique XZ silhouette from the review camera.
  */
 export function createPieceMesh(
   role: PieceRole,
@@ -154,222 +167,200 @@ export function createPieceMesh(
   const g = new THREE.Group();
   const m = mat(color, false, maps);
   const accent = mat(color, true, maps);
+  const glyph = glyphMat(color);
 
   pedestal(g, m, accent);
 
   switch (role) {
     case "p": {
-      // Smallest — slender stem + single ball; collar ring reads as a thin halo.
+      // Dot only — smallest round top.
       add(
         g,
         lathe([
-          [0.14, 0],
-          [0.12, 0.06],
-          [0.08, 0.22],
-          [0.095, 0.34],
-          [0.07, 0.42],
-          [0.055, 0.46],
+          [0.13, 0],
+          [0.11, 0.06],
+          [0.075, 0.22],
+          [0.09, 0.34],
+          [0.06, 0.42],
         ]),
         m,
         0.2
       );
-      add(g, new THREE.TorusGeometry(0.078, 0.02, 12, 40), accent, 0.66);
-      add(g, new THREE.SphereGeometry(0.1, 36, 28), m, 0.8);
+      add(g, new THREE.TorusGeometry(0.07, 0.016, 10, 32), accent, 0.64);
+      add(g, new THREE.SphereGeometry(0.095, 32, 24), m, 0.78);
       break;
     }
     case "r": {
-      // Square battlement crown — unmistakable from above.
+      // Square platform + 4 corner blocks — square from above.
+      add(
+        g,
+        lathe([
+          [0.15, 0],
+          [0.135, 0.08],
+          [0.12, 0.3],
+          [0.15, 0.48],
+        ]),
+        m,
+        0.2
+      );
+      add(g, new THREE.TorusGeometry(0.16, 0.016, 10, 36), accent, 0.7);
+      add(g, new THREE.BoxGeometry(0.46, 0.1, 0.46), m, 0.82);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.24, 0.15), m);
+        tooth.position.set(Math.cos(a) * 0.185, 1.02, Math.sin(a) * 0.185);
+        tooth.castShadow = true;
+        tooth.receiveShadow = true;
+        g.add(tooth);
+      }
+      // Dark well — reads as hollow square center from above
+      add(g, new THREE.BoxGeometry(0.2, 0.08, 0.2), glyph, 0.9);
+      break;
+    }
+    case "n": {
+      // Long snout in XZ — only non-radial silhouette.
+      add(g, new THREE.CylinderGeometry(0.12, 0.19, 0.13, 36), m, 0.26);
+      add(g, new THREE.TorusGeometry(0.135, 0.015, 10, 32), accent, 0.34);
+
+      const profile = new THREE.Shape();
+      profile.moveTo(-0.12, 0.0);
+      profile.lineTo(0.14, 0.0);
+      profile.lineTo(0.16, 0.12);
+      profile.bezierCurveTo(0.18, 0.3, 0.04, 0.44, -0.02, 0.56);
+      profile.bezierCurveTo(-0.02, 0.68, 0.14, 0.78, 0.28, 0.76);
+      profile.lineTo(0.58, 0.6);
+      profile.quadraticCurveTo(0.66, 0.5, 0.58, 0.42);
+      profile.lineTo(0.34, 0.44);
+      profile.lineTo(0.28, 0.36);
+      profile.bezierCurveTo(0.12, 0.34, -0.02, 0.24, -0.04, 0.14);
+      profile.bezierCurveTo(-0.08, 0.08, -0.14, 0.04, -0.12, 0.0);
+      profile.closePath();
+
+      const extrude = new THREE.ExtrudeGeometry(profile, {
+        depth: 0.28,
+        bevelEnabled: true,
+        bevelThickness: 0.035,
+        bevelSize: 0.028,
+        bevelSegments: 4,
+        curveSegments: 28,
+      });
+      extrude.translate(0, 0, -0.14);
+      const body = new THREE.Mesh(extrude, m);
+      body.position.set(0.04, 0.32, 0);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      g.add(body);
+
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.2, 14), m);
+      ear.position.set(0.06, 1.12, 0.02);
+      ear.rotation.z = -0.4;
+      ear.castShadow = true;
+      g.add(ear);
+
+      // Flat top “mane bar” so overhead reads as a directed bar, not a blob
+      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.1), glyph);
+      mane.position.set(0.12, 1.05, 0);
+      mane.castShadow = true;
+      g.add(mane);
+      break;
+    }
+    case "b": {
+      // Flattened oval + bold diagonal glyph slit.
+      add(
+        g,
+        lathe([
+          [0.135, 0],
+          [0.12, 0.08],
+          [0.08, 0.3],
+          [0.1, 0.52],
+          [0.07, 0.7],
+          [0.09, 0.84],
+        ]),
+        m,
+        0.2
+      );
+      add(g, new THREE.TorusGeometry(0.095, 0.015, 10, 32), accent, 0.96);
+      const mitre = new THREE.Mesh(new THREE.SphereGeometry(0.145, 32, 24), m);
+      mitre.scale.set(1.35, 0.75, 0.9); // oval from above
+      mitre.position.y = 1.08;
+      mitre.castShadow = true;
+      mitre.receiveShadow = true;
+      g.add(mitre);
+      // Slit glyph — dark bar across the oval (unique vs pawn)
+      const cleft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.36), glyph);
+      cleft.position.set(0, 1.16, 0);
+      cleft.rotation.y = Math.PI / 4;
+      cleft.castShadow = true;
+      g.add(cleft);
+      add(g, new THREE.SphereGeometry(0.042, 14, 12), m, 1.28);
+      break;
+    }
+    case "q": {
+      // Gear/star — 8 radial fins in the XZ plane.
       add(
         g,
         lathe([
           [0.155, 0],
           [0.14, 0.08],
-          [0.125, 0.28],
-          [0.14, 0.44],
-          [0.17, 0.54],
+          [0.1, 0.32],
+          [0.13, 0.52],
+          [0.09, 0.74],
+          [0.12, 0.9],
         ]),
         m,
         0.2
       );
-      add(g, new THREE.TorusGeometry(0.17, 0.018, 10, 40), accent, 0.74);
-      // Flat square cap — large so it reads from overhead
-      add(g, new THREE.BoxGeometry(0.42, 0.09, 0.42), m, 0.84);
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), m);
-        tooth.position.set(Math.cos(a) * 0.17, 1.02, Math.sin(a) * 0.17);
-        tooth.castShadow = true;
-        tooth.receiveShadow = true;
-        g.add(tooth);
-      }
-      add(g, new THREE.CylinderGeometry(0.1, 0.1, 0.06, 24), accent, 0.92);
-      break;
-    }
-    case "n": {
-      // Asymmetric horse — long snout axis is the top-down tell.
-      add(g, new THREE.CylinderGeometry(0.125, 0.195, 0.14, 40), m, 0.27);
-      add(g, new THREE.TorusGeometry(0.14, 0.016, 10, 36), accent, 0.36);
-
-      const profile = new THREE.Shape();
-      profile.moveTo(-0.1, 0.0);
-      profile.lineTo(0.12, 0.0);
-      profile.lineTo(0.14, 0.1);
-      profile.bezierCurveTo(0.16, 0.28, 0.02, 0.42, -0.04, 0.54);
-      profile.bezierCurveTo(-0.04, 0.66, 0.12, 0.76, 0.24, 0.74);
-      profile.lineTo(0.5, 0.62);
-      profile.quadraticCurveTo(0.58, 0.54, 0.52, 0.46);
-      profile.lineTo(0.32, 0.46);
-      profile.lineTo(0.26, 0.4);
-      profile.bezierCurveTo(0.12, 0.38, 0.0, 0.28, -0.02, 0.18);
-      profile.bezierCurveTo(-0.06, 0.1, -0.12, 0.05, -0.1, 0.0);
-      profile.closePath();
-
-      const extrude = new THREE.ExtrudeGeometry(profile, {
-        depth: 0.26,
-        bevelEnabled: true,
-        bevelThickness: 0.04,
-        bevelSize: 0.03,
-        bevelSegments: 5,
-        curveSegments: 32,
-      });
-      extrude.translate(0, 0, -0.13);
-      const body = new THREE.Mesh(extrude, m);
-      body.position.set(0.02, 0.34, 0);
-      body.castShadow = true;
-      body.receiveShadow = true;
-      g.add(body);
-
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 16), m);
-      ear.position.set(0.04, 1.1, 0.02);
-      ear.rotation.z = -0.45;
-      ear.castShadow = true;
-      g.add(ear);
-
-      const mane = new THREE.Mesh(
-        new THREE.BoxGeometry(0.06, 0.34, 0.08),
-        accent
-      );
-      mane.position.set(-0.06, 0.82, 0);
-      mane.rotation.z = -0.5;
-      mane.castShadow = true;
-      g.add(mane);
-
-      const eye = new THREE.Mesh(
-        new THREE.SphereGeometry(0.03, 12, 10),
-        accent
-      );
-      eye.position.set(0.26, 0.96, 0.11);
-      g.add(eye);
-      break;
-    }
-    case "b": {
-      // Mitre with wide diagonal cleft — oval + slit from above.
-      add(
-        g,
-        lathe([
-          [0.14, 0],
-          [0.125, 0.08],
-          [0.085, 0.28],
-          [0.11, 0.5],
-          [0.075, 0.66],
-          [0.1, 0.8],
-          [0.055, 0.88],
-        ]),
-        m,
-        0.2
-      );
-      add(g, new THREE.TorusGeometry(0.1, 0.016, 10, 36), accent, 0.98);
-      // Flattened oval mitre (wider in X) so top view ≠ pawn ball
-      const mitre = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 36, 28),
-        m
-      );
-      mitre.scale.set(1.25, 0.9, 0.8);
-      mitre.position.y = 1.1;
-      mitre.castShadow = true;
-      mitre.receiveShadow = true;
-      g.add(mitre);
-      // Deep cleft groove — dark accent reads as a slash from above
-      const cleft = new THREE.Mesh(
-        new THREE.BoxGeometry(0.065, 0.32, 0.32),
-        accent
-      );
-      cleft.position.set(0, 1.14, 0.04);
-      cleft.rotation.set(-0.2, 0, 0.55);
-      cleft.castShadow = true;
-      g.add(cleft);
-      add(g, new THREE.SphereGeometry(0.048, 16, 12), m, 1.34);
-      break;
-    }
-    case "q": {
-      // Coronet of outward spikes — star/ring from above.
-      add(
-        g,
-        lathe([
-          [0.16, 0],
-          [0.145, 0.08],
-          [0.105, 0.3],
-          [0.14, 0.5],
-          [0.095, 0.72],
-          [0.13, 0.88],
-          [0.1, 0.94],
-        ]),
-        m,
-        0.2
-      );
-      add(g, new THREE.TorusGeometry(0.15, 0.02, 10, 40), accent, 1.1);
-      add(g, new THREE.CylinderGeometry(0.16, 0.16, 0.07, 40), m, 1.16);
-      // Rim disc so the crown diameter reads clearly
-      add(g, new THREE.CylinderGeometry(0.22, 0.22, 0.035, 40), accent, 1.22);
+      add(g, new THREE.TorusGeometry(0.14, 0.018, 10, 36), accent, 1.06);
+      add(g, new THREE.CylinderGeometry(0.15, 0.15, 0.06, 36), m, 1.12);
+      // Hub disc
+      add(g, new THREE.CylinderGeometry(0.18, 0.18, 0.05, 36), m, 1.2);
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        const spike = new THREE.Mesh(
-          new THREE.ConeGeometry(0.042, 0.24, 12),
-          i % 2 === 0 ? accent : m
+        // Flat fins lying outward in XZ — star from above
+        const fin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.28, 0.07, 0.08),
+          i % 2 === 0 ? glyph : m
         );
-        spike.position.set(Math.cos(a) * 0.2, 1.36, Math.sin(a) * 0.2);
-        spike.rotation.x = Math.cos(a) * 0.4;
-        spike.rotation.z = -Math.sin(a) * 0.4;
-        spike.castShadow = true;
-        g.add(spike);
+        fin.position.set(Math.cos(a) * 0.22, 1.24, Math.sin(a) * 0.22);
+        fin.rotation.y = -a;
+        fin.castShadow = true;
+        g.add(fin);
       }
-      add(g, new THREE.SphereGeometry(0.065, 18, 14), accent, 1.5);
+      add(g, new THREE.SphereGeometry(0.07, 16, 12), accent, 1.36);
       break;
     }
     case "k": {
-      // Wide cross finial — clear + from every overhead angle.
+      // Bold + lying flat on a disc — cross from every overhead angle.
       add(
         g,
         lathe([
-          [0.16, 0],
-          [0.145, 0.08],
-          [0.105, 0.3],
-          [0.14, 0.5],
-          [0.1, 0.74],
-          [0.135, 0.92],
-          [0.11, 0.98],
+          [0.155, 0],
+          [0.14, 0.08],
+          [0.1, 0.32],
+          [0.13, 0.52],
+          [0.095, 0.76],
+          [0.125, 0.92],
         ]),
         m,
         0.2
       );
-      add(g, new THREE.TorusGeometry(0.14, 0.02, 10, 40), accent, 1.14);
-      add(g, new THREE.CylinderGeometry(0.15, 0.15, 0.07, 40), m, 1.2);
-      // Cap disc under the cross
-      add(g, new THREE.CylinderGeometry(0.13, 0.13, 0.045, 32), accent, 1.28);
-      const crossV = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 0.48, 0.1),
-        accent
-      );
-      crossV.position.y = 1.54;
-      crossV.castShadow = true;
-      g.add(crossV);
-      const crossH = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.1, 0.1),
-        accent
-      );
-      crossH.position.y = 1.6;
-      crossH.castShadow = true;
-      g.add(crossH);
+      add(g, new THREE.TorusGeometry(0.135, 0.018, 10, 36), accent, 1.08);
+      add(g, new THREE.CylinderGeometry(0.145, 0.145, 0.06, 36), m, 1.14);
+      add(g, new THREE.CylinderGeometry(0.16, 0.16, 0.05, 32), m, 1.22);
+      // Horizontal cross in XZ (not just a tall stick)
+      const armV = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.46), glyph);
+      armV.position.y = 1.32;
+      armV.castShadow = true;
+      g.add(armV);
+      const armH = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.1, 0.12), glyph);
+      armH.position.y = 1.32;
+      armH.castShadow = true;
+      g.add(armH);
+      // Short upright nub so it still reads as a king in seat view
+      const upright = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.28, 0.1), glyph);
+      upright.position.y = 1.48;
+      upright.castShadow = true;
+      g.add(upright);
       break;
     }
   }
