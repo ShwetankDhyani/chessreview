@@ -211,9 +211,20 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  const z = boardOrientation === "white" ? 9.2 : -9.2;
-  camera.position.set(0, 7.6, z);
-  controls.target.set(0, 0, 0);
+  // Frame so the foreshortened board nearly fills the square canvas —
+  // bias the look target toward the near ranks to kill empty top/side padding.
+  camera.fov = 34;
+  camera.updateProjectionMatrix();
+
+  const nearSign = boardOrientation === "white" ? 1 : -1;
+  const target = new THREE.Vector3(0, 0.08, nearSign * 1.05);
+  const dist = 6.55;
+  camera.position.set(0, dist * 0.68, nearSign * dist * 0.95);
+  controls.target.copy(target);
+  controls.minDistance = 5.2;
+  controls.maxDistance = 10.5;
+  controls.maxPolarAngle = Math.PI * 0.48;
+  controls.minPolarAngle = Math.PI * 0.22;
   controls.update();
 }
 
@@ -265,14 +276,16 @@ export function OtbChessboard3d({
     if (!host) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1c19);
+    // Transparent so leftover perspective margins match the review panel.
+    scene.background = null;
 
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: false,
+      alpha: true,
       powerPreference: "high-performance",
     });
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -281,12 +294,7 @@ export function OtbChessboard3d({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 8;
-    controls.maxDistance = 18;
-    controls.maxPolarAngle = Math.PI * 0.46;
-    controls.minPolarAngle = Math.PI * 0.18;
     controls.enablePan = false;
-    controls.target.set(0, 0, 0);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     const key = new THREE.DirectionalLight(0xfff2dc, 1.15);

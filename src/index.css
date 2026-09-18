@@ -2138,11 +2138,20 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
 }
 
 /* WebGL OTB board */
+.otb3d-viewport {
+  background: transparent;
+}
+
+.otb3d-canvas-host {
+  background: transparent;
+}
+
 .otb3d-canvas-host canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+  background: transparent;
 }
 
 .board-nav-btn[aria-pressed="true"] {

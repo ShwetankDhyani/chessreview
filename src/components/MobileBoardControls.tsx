@@ -24,26 +24,6 @@ export function FlipBoardIcon() {
   );
 }
 
-export function OtbViewIcon({ active }: { active?: boolean }) {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 14l8 4 8-4" />
-      <path d="M4 10l8 4 8-4" />
-      <path d="M4 6l8 4 8-4" opacity={active ? 1 : 0.55} />
-    </svg>
-  );
-}
-
 export function BoardViewToggleButton({
   className,
 }: {
@@ -54,7 +34,7 @@ export function BoardViewToggleButton({
 
   const classes =
     className ??
-    `flex h-7 w-7 items-center justify-center rounded-lg transition-all touch-manipulation active:scale-[0.94] ${
+    `flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 transition-all touch-manipulation active:scale-[0.94] ${
       otbActive
         ? "bg-chess-accent/25 text-chess-accent"
         : "bg-chess-surface/60 text-chess-subtext hover:text-chess-text hover:bg-chess-hover"
@@ -72,7 +52,7 @@ export function BoardViewToggleButton({
       aria-pressed={otbActive}
       title={otbActive ? "Flat board" : "3D table board"}
     >
-      <OtbViewIcon active={otbActive} />
+      <span className="text-[10px] font-bold tracking-wide leading-none">3D</span>
     </button>
   );
 }
