@@ -227,7 +227,7 @@ function syncPieces(
                 m instanceof THREE.MeshPhysicalMaterial
               ) {
                 m.envMap = pieceEnv;
-                m.envMapIntensity = 0.85;
+                m.envMapIntensity = 0.28;
                 m.needsUpdate = true;
               }
             }
@@ -389,9 +389,9 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    // Match the original board look: soft ambient + warm key + cool fill.
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const key = new THREE.DirectionalLight(0xfff2dc, 1.15);
+    // Soft lighting — whites blow out if key/ambient are too hot.
+    scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+    const key = new THREE.DirectionalLight(0xfff2dc, 0.85);
     key.position.set(4, 12, 6);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
@@ -403,11 +403,11 @@ export function OtbChessboard3d({
     key.shadow.camera.bottom = -10;
     key.shadow.bias = -0.0008;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.35);
+    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.4);
     fill.position.set(-6, 6, -4);
     scene.add(fill);
-    // Subtle rim for piece edges only — low enough not to bleach squares
-    const rim = new THREE.DirectionalLight(0xffffff, 0.18);
+    // Side skim for form on near pieces — keep dim
+    const rim = new THREE.DirectionalLight(0xffe8d0, 0.22);
     rim.position.set(0, 3.5, 12);
     scene.add(rim);
 
