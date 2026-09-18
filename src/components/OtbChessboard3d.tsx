@@ -10,6 +10,8 @@ import {
   type PieceRole,
 } from "../utils/otbPieceMeshes";
 import type { MoveClassification } from "../types";
+import { CLASSIFICATION_META } from "../utils/classificationMeta";
+import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
 
 const LIGHT = 0xeeeed2;
 const DARK = 0x769656;
@@ -40,6 +42,9 @@ type SceneBundle = {
   arrowRoot: THREE.Group;
   squareMeshes: THREE.Mesh[];
   pieceEnv: THREE.Texture;
+  /** Destination square for classification badge projection (null = hide). */
+  badgeSquare: string | null;
+  boardPx: number;
   raf: number;
   disposed: boolean;
 };
@@ -334,12 +339,24 @@ export function OtbChessboard3d({
   boardOrientation,
   dimmed = false,
   lastMoveHighlight,
+  moveClassification,
   continuationArrow,
   showBestMoveArrow,
   bestMove,
 }: OtbChessboard3dProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<SceneBundle | null>(null);
+
+  const classMeta =
+    moveClassification && CLASSIFICATION_META[moveClassification]
+      ? CLASSIFICATION_META[moveClassification]
+      : null;
+  const badgeSquare =
+    moveClassification && lastMoveHighlight?.to
+      ? lastMoveHighlight.to
+      : null;
+  const badgeSize = Math.max(22, Math.min(36, Math.round(boardWidth * 0.07)));
 
   const arrow = useMemo(() => {
     if (continuationArrow) {
@@ -424,6 +441,7 @@ export function OtbChessboard3d({
 
     setCameraForOrientation(camera, controls, boardOrientation, contentRoot);
 
+    const projectScratch = new THREE.Vector3();
     const bundle: SceneBundle = {
       renderer,
       scene,
@@ -434,16 +452,53 @@ export function OtbChessboard3d({
       arrowRoot,
       squareMeshes,
       pieceEnv,
+      badgeSquare: null,
+      boardPx: boardWidth,
       raf: 0,
       disposed: false,
     };
     bundleRef.current = bundle;
+
+    const syncBadge = () => {
+      const el = badgeRef.current;
+      if (!el) return;
+      const sq = bundle.badgeSquare;
+      if (!sq) {
+        el.style.visibility = "hidden";
+        return;
+      }
+      const world = squareToWorld(sq);
+      if (!world) {
+        el.style.visibility = "hidden";
+        return;
+      }
+      // Hover above the destination piece, nudged toward the far/h-file corner.
+      projectScratch.set(world.x + 0.28, 1.15, world.z - 0.28);
+      projectScratch.applyMatrix4(bundle.contentRoot.matrixWorld);
+      projectScratch.project(bundle.camera);
+      if (
+        projectScratch.z < -1 ||
+        projectScratch.z > 1 ||
+        Math.abs(projectScratch.x) > 1.15 ||
+        Math.abs(projectScratch.y) > 1.15
+      ) {
+        el.style.visibility = "hidden";
+        return;
+      }
+      const px = bundle.boardPx;
+      const x = (projectScratch.x * 0.5 + 0.5) * px;
+      const y = (-projectScratch.y * 0.5 + 0.5) * px;
+      const half = el.offsetWidth / 2 || Math.max(11, px * 0.035);
+      el.style.visibility = "visible";
+      el.style.transform = `translate(${x - half}px, ${y - half}px)`;
+    };
 
     const tick = () => {
       if (bundle.disposed) return;
       bundle.raf = requestAnimationFrame(tick);
       controls.update();
       renderer.render(scene, camera);
+      syncBadge();
     };
     tick();
 
@@ -467,6 +522,7 @@ export function OtbChessboard3d({
     const bundle = bundleRef.current;
     if (!bundle) return;
     const w = Math.max(1, boardWidth);
+    bundle.boardPx = w;
     bundle.renderer.setSize(w, w, false);
     bundle.camera.aspect = 1;
     bundle.camera.updateProjectionMatrix();
@@ -492,6 +548,12 @@ export function OtbChessboard3d({
     }
   }, [position, lastMoveHighlight, arrow]);
 
+  useEffect(() => {
+    const bundle = bundleRef.current;
+    if (!bundle) return;
+    bundle.badgeSquare = badgeSquare;
+  }, [badgeSquare]);
+
   return (
     <div
       className={`relative otb3d-viewport${dimmed ? " board-viewport--dimmed" : ""}`}
@@ -503,6 +565,28 @@ export function OtbChessboard3d({
         style={{ maxWidth: boardWidth }}
         aria-label="3D over-the-board chessboard"
       />
+      {classMeta && moveClassification ? (
+        <div
+          ref={badgeRef}
+          className="absolute left-0 top-0 pointer-events-none z-[45]"
+          style={{
+            width: badgeSize,
+            height: badgeSize,
+            visibility: "hidden",
+            willChange: "transform",
+            filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.65))",
+          }}
+          title={classMeta.label}
+          aria-label={classMeta.label}
+          data-classification={moveClassification}
+        >
+          <ClassificationBadgeSvg
+            type={moveClassification}
+            color={classMeta.color}
+            size={badgeSize}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
