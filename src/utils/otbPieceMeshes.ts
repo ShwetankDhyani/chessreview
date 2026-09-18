@@ -187,22 +187,22 @@ export function createPieceMesh(
 
   switch (role) {
     case "p": {
-      // Dot only — smallest round top.
+      // Dot only — smallest round top (keep below knight mass).
       add(
         g,
         lathe([
-          [0.13, 0],
-          [0.11, 0.06],
-          [0.075, 0.22],
-          [0.09, 0.34],
-          [0.06, 0.42],
+          [0.12, 0],
+          [0.1, 0.06],
+          [0.07, 0.2],
+          [0.085, 0.32],
+          [0.055, 0.4],
         ]),
         m,
         0.2
       );
-      add(g, new THREE.TorusGeometry(0.07, 0.016, 10, 32), accent, 0.64);
-      add(g, new THREE.SphereGeometry(0.095, 32, 24), m, 0.78);
-      add(g, new THREE.CylinderGeometry(0.04, 0.04, 0.02, 16), glyph, 0.88);
+      add(g, new THREE.TorusGeometry(0.065, 0.014, 10, 32), accent, 0.62);
+      add(g, new THREE.SphereGeometry(0.082, 32, 24), m, 0.74);
+      add(g, new THREE.CylinderGeometry(0.035, 0.035, 0.018, 16), glyph, 0.83);
       break;
     }
     case "r": {
@@ -233,47 +233,54 @@ export function createPieceMesh(
       break;
     }
     case "n": {
-      // Classic Staunton — compact head under king/queen visual mass.
-      add(g, new THREE.CylinderGeometry(0.095, 0.145, 0.09, 32), m, 0.24);
-      add(g, new THREE.TorusGeometry(0.1, 0.011, 10, 28), accent, 0.3);
+      // Classic Staunton: N above pawn/rook. Chunkier head so overhead
+      // footprint is a teardrop horse, not a thin extruded blade.
+      add(g, new THREE.CylinderGeometry(0.13, 0.19, 0.12, 40), m, 0.26);
+      add(g, new THREE.TorusGeometry(0.14, 0.017, 10, 36), accent, 0.34);
 
       const profile = new THREE.Shape();
-      profile.moveTo(-0.05, 0.0);
-      profile.lineTo(0.07, 0.0);
-      profile.lineTo(0.075, 0.05);
-      profile.bezierCurveTo(0.08, 0.13, 0.015, 0.2, -0.01, 0.25);
-      profile.bezierCurveTo(-0.01, 0.3, 0.05, 0.35, 0.1, 0.33);
-      profile.lineTo(0.2, 0.26);
-      profile.quadraticCurveTo(0.23, 0.22, 0.2, 0.19);
-      profile.lineTo(0.12, 0.19);
-      profile.lineTo(0.1, 0.15);
-      profile.bezierCurveTo(0.05, 0.13, -0.015, 0.1, -0.025, 0.06);
-      profile.bezierCurveTo(-0.04, 0.03, -0.055, 0.012, -0.05, 0.0);
+      // Thick neck → arched crest → blunt snout → jaw
+      profile.moveTo(-0.11, 0.0);
+      profile.lineTo(0.13, 0.0);
+      profile.lineTo(0.15, 0.12);
+      profile.bezierCurveTo(0.17, 0.3, 0.05, 0.46, 0.0, 0.58);
+      profile.bezierCurveTo(0.0, 0.7, 0.14, 0.8, 0.26, 0.78);
+      profile.lineTo(0.44, 0.66);
+      profile.quadraticCurveTo(0.52, 0.58, 0.46, 0.5);
+      profile.lineTo(0.3, 0.5);
+      profile.lineTo(0.26, 0.4);
+      profile.bezierCurveTo(0.12, 0.38, 0.0, 0.28, -0.02, 0.16);
+      profile.bezierCurveTo(-0.06, 0.1, -0.12, 0.04, -0.11, 0.0);
       profile.closePath();
 
       const extrude = new THREE.ExtrudeGeometry(profile, {
-        depth: 0.1,
+        // Wide enough that overhead XZ is a horse teardrop, not a blade
+        depth: 0.36,
         bevelEnabled: true,
-        bevelThickness: 0.014,
-        bevelSize: 0.01,
-        bevelSegments: 3,
-        curveSegments: 18,
+        bevelThickness: 0.04,
+        bevelSize: 0.028,
+        bevelSegments: 5,
+        curveSegments: 28,
       });
-      extrude.translate(0, 0, -0.05);
+      extrude.translate(0, 0, -0.18);
       const body = new THREE.Mesh(extrude, m);
-      body.position.set(0.01, 0.28, 0);
+      body.position.set(0.02, 0.34, 0);
       body.castShadow = true;
       body.receiveShadow = true;
       g.add(body);
 
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.085, 10), m);
-      ear.position.set(0.025, 0.66, 0.008);
-      ear.rotation.z = -0.35;
-      ear.castShadow = true;
-      g.add(ear);
+      // Twin ears — spaced so they read as ears from above
+      for (const z of [-0.07, 0.07]) {
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 12), m);
+        ear.position.set(0.05, 1.16, z);
+        ear.rotation.z = -0.4;
+        ear.castShadow = true;
+        g.add(ear);
+      }
 
-      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.035, 0.045), glyph);
-      mane.position.set(0.05, 0.62, 0);
+      // Broad mane plate on the crest — dual-tone top ID
+      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.14), glyph);
+      mane.position.set(0.12, 1.1, 0);
       mane.castShadow = true;
       g.add(mane);
       break;
