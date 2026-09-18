@@ -34,6 +34,7 @@ type SceneBundle = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
+  contentRoot: THREE.Group;
   piecesRoot: THREE.Group;
   arrowRoot: THREE.Group;
   squareMeshes: THREE.Mesh[];
@@ -42,17 +43,25 @@ type SceneBundle = {
 };
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
-  const rim = new THREE.Mesh(
-    new THREE.BoxGeometry(8.55, 0.07, 8.55),
-    new THREE.MeshStandardMaterial({
-      color: 0x5c4030,
-      roughness: 0.7,
-      metalness: 0.05,
-    })
-  );
-  rim.position.y = -0.055;
-  rim.receiveShadow = true;
-  root.add(rim);
+  // Thin edge frame only (no solid slab — a thick near face reads as "clipped").
+  const wood = new THREE.MeshStandardMaterial({
+    color: 0x5c4030,
+    roughness: 0.7,
+    metalness: 0.05,
+  });
+  const frameH = 0.08;
+  const frameT = 0.22;
+  const outer = 8.44;
+  const strip = (w: number, d: number, x: number, z: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, frameH, d), wood);
+    m.position.set(x, -frameH / 2, z);
+    m.receiveShadow = true;
+    root.add(m);
+  };
+  strip(outer, frameT, 0, 4.11); // near (rank 1)
+  strip(outer, frameT, 0, -4.11); // far
+  strip(frameT, outer - frameT * 2, -4.11, 0); // a-file
+  strip(frameT, outer - frameT * 2, 4.11, 0); // h-file
 
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
@@ -210,17 +219,60 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Seat camera. Content is scaled down so the wide near edge clears FOV.
-  camera.fov = 40;
+  // Mild OTB tilt (more overhead than dramatic) so the board can fill the
+  // square without the near edge blowing past the FOV.
+  const nearSign = boardOrientation === "white" ? 1 : -1;
+  const elev = 1.25;
+  const depth = 0.62;
+  const target = new THREE.Vector3(0, 0.2, nearSign * 0.35);
+  const corners = [
+    new THREE.Vector3(-4.25, -0.08, -4.25),
+    new THREE.Vector3(4.25, -0.08, -4.25),
+    new THREE.Vector3(-4.25, -0.08, 4.25),
+    new THREE.Vector3(4.25, -0.08, 4.25),
+    new THREE.Vector3(-4.25, 1.15, -4.25),
+    new THREE.Vector3(4.25, 1.15, -4.25),
+    new THREE.Vector3(-4.25, 1.15, 4.25),
+    new THREE.Vector3(4.25, 1.15, 4.25),
+  ];
+
+  camera.fov = 46;
+  camera.aspect = 1;
   camera.updateProjectionMatrix();
-  const z = boardOrientation === "white" ? 13.5 : -13.5;
-  camera.position.set(0, 10.5, z);
-  controls.target.set(0, 0, 0);
-  const dist = camera.position.distanceTo(controls.target);
-  controls.minDistance = dist;
-  controls.maxDistance = dist * 1.5;
-  controls.maxPolarAngle = Math.PI * 0.45;
-  controls.minPolarAngle = Math.PI * 0.2;
+  controls.target.copy(target);
+
+  let lo = 5;
+  let hi = 24;
+  let best = 11;
+  const ndc = new THREE.Vector3();
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    camera.position.set(0, mid * elev, nearSign * mid * depth);
+    camera.lookAt(target);
+    camera.updateMatrixWorld(true);
+
+    let maxAbs = 0;
+    for (const corner of corners) {
+      ndc.copy(corner).project(camera);
+      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
+    }
+    // Fill most of the square; tiny margin so wood never kisses the edge.
+    if (maxAbs > 0.93) {
+      lo = mid;
+    } else {
+      best = mid;
+      hi = mid;
+    }
+  }
+
+  camera.position.set(0, best * elev, nearSign * best * depth);
+  camera.lookAt(target);
+  const euclidean = camera.position.distanceTo(target);
+  controls.minDistance = euclidean;
+  controls.maxDistance = euclidean * 1.55;
+  // Keep polar range wide enough that OrbitControls won't clamp our seat angle.
+  controls.minPolarAngle = 0.05;
+  controls.maxPolarAngle = Math.PI * 0.49;
   controls.update();
 }
 
@@ -290,8 +342,7 @@ export function OtbChessboard3d({
     scene.add(fill);
 
     const contentRoot = new THREE.Group();
-    // Shrink in-scene so perspective near-edge never hits the canvas.
-    contentRoot.scale.setScalar(0.64);
+    contentRoot.scale.setScalar(1);
     const boardRoot = new THREE.Group();
     const piecesRoot = new THREE.Group();
     const arrowRoot = new THREE.Group();
@@ -309,6 +360,7 @@ export function OtbChessboard3d({
       scene,
       camera,
       controls,
+      contentRoot,
       piecesRoot,
       arrowRoot,
       squareMeshes,
@@ -349,7 +401,13 @@ export function OtbChessboard3d({
     bundle.camera.updateProjectionMatrix();
     bundle.renderer.domElement.style.width = "100%";
     bundle.renderer.domElement.style.height = "100%";
-  }, [boardWidth]);
+    // Re-fit after resize so the board still fills the square.
+    setCameraForOrientation(
+      bundle.camera,
+      bundle.controls,
+      boardOrientation
+    );
+  }, [boardWidth, boardOrientation]);
 
   useEffect(() => {
     const bundle = bundleRef.current;
