@@ -211,19 +211,20 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Fill the review square without clipping the far rank.
-  camera.fov = 36;
+  // Slightly elevated OTB angle so the board fills the review square
+  // more evenly (less empty side/top padding, no clipped ranks).
+  camera.fov = 40;
   camera.updateProjectionMatrix();
 
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const target = new THREE.Vector3(0, 0.1, nearSign * 0.55);
-  const dist = 7.05;
-  camera.position.set(0, dist * 0.7, nearSign * dist * 0.94);
+  const target = new THREE.Vector3(0, 0.05, nearSign * 0.15);
+  const dist = 7.8;
+  camera.position.set(0, dist * 0.82, nearSign * dist * 0.78);
   controls.target.copy(target);
-  controls.minDistance = 5.6;
-  controls.maxDistance = 11;
-  controls.maxPolarAngle = Math.PI * 0.48;
-  controls.minPolarAngle = Math.PI * 0.22;
+  controls.minDistance = 6;
+  controls.maxDistance = 12;
+  controls.maxPolarAngle = Math.PI * 0.46;
+  controls.minPolarAngle = Math.PI * 0.2;
   controls.update();
 }
 
