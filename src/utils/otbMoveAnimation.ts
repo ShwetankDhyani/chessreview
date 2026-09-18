@@ -1,8 +1,8 @@
-import { Chess, type Move, type Square } from "chess.js";
+import { type Move } from "chess.js";
 import {
-  canAnimateOneStep,
-  canAnimateUndoStep,
-  normalizeFen,
+  findOnePlyMove,
+  matchHighlightMove,
+  samePosition,
 } from "./boardPosition";
 
 export type OtbAnimDirection = "forward" | "undo";
@@ -15,6 +15,9 @@ export type OtbResolvedMove = {
   /** Rook glide for castling, if any. */
   rook: { from: string; to: string } | null;
 };
+
+/** Default glide when the parent board reports 0ms (false-negative animate gate). */
+export const OTB_DEFAULT_GLIDE_MS = 560;
 
 /** Ease — soft accelerate then settle (Harry-Potter glide). */
 export function easeInOutCubic(t: number): number {
@@ -57,55 +60,54 @@ function captureSquareFor(move: Move): string | null {
   return move.to;
 }
 
+function pack(
+  direction: OtbAnimDirection,
+  move: Move
+): OtbResolvedMove {
+  return {
+    direction,
+    move,
+    captureSquare: captureSquareFor(move),
+    rook: castlingRook(move.color, move.flags),
+  };
+}
+
 /**
  * Resolve a one-ply board step into a concrete chess.js move + extras.
  * Returns null when the FEN pair cannot be animated safely.
+ *
+ * Prefers `highlight` when it matches; otherwise scans legal moves so
+ * underpromotions / stale UCI / clock-drift FENs still glide.
  */
 export function resolveOtbMoveAnim(
   prevFen: string,
   targetFen: string,
-  highlight: { from: string; to: string }
+  highlight: { from: string; to: string } | null
 ): OtbResolvedMove | null {
-  const from = highlight.from as Square;
-  const to = highlight.to as Square;
+  if (samePosition(prevFen, targetFen)) return null;
 
-  if (canAnimateOneStep(prevFen, targetFen, highlight)) {
-    try {
-      const c = new Chess(normalizeFen(prevFen));
-      const move = c.move({ from, to, promotion: "q" });
-      if (!move) return null;
-      return {
-        direction: "forward",
-        move,
-        captureSquare: captureSquareFor(move),
-        rook: castlingRook(move.color, move.flags),
-      };
-    } catch {
-      return null;
-    }
+  if (highlight) {
+    const forward = matchHighlightMove(prevFen, targetFen, highlight);
+    if (forward) return pack("forward", forward);
+
+    const undo = matchHighlightMove(targetFen, prevFen, highlight);
+    if (undo) return pack("undo", undo);
   }
 
-  if (canAnimateUndoStep(prevFen, targetFen, highlight)) {
-    try {
-      const c = new Chess(normalizeFen(targetFen));
-      const move = c.move({ from, to, promotion: "q" });
-      if (!move) return null;
-      return {
-        direction: "undo",
-        move,
-        captureSquare: captureSquareFor(move),
-        rook: castlingRook(move.color, move.flags),
-      };
-    } catch {
-      return null;
-    }
-  }
+  const forwardScan = findOnePlyMove(prevFen, targetFen);
+  if (forwardScan) return pack("forward", forwardScan);
+
+  const undoScan = findOnePlyMove(targetFen, prevFen);
+  if (undoScan) return pack("undo", undoScan);
 
   return null;
 }
 
-/** Prefer a slightly longer glide than the 2D board for the 3D table feel. */
+/**
+ * Prefer parent duration when > 0; otherwise use the 3D default so false
+ * negatives from the 2D animate gate don't snap one-ply moves.
+ */
 export function otbGlideDurationMs(animationDuration: number): number {
-  if (animationDuration <= 0) return 0;
-  return Math.max(animationDuration, 560);
+  if (animationDuration > 0) return Math.max(animationDuration, OTB_DEFAULT_GLIDE_MS);
+  return OTB_DEFAULT_GLIDE_MS;
 }
