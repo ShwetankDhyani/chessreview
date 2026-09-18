@@ -223,11 +223,13 @@ function setCameraForOrientation(
   // Fixed mild-OTB seat. Scale the board to fill ~90% of the square —
   // more reliable than fighting OrbitControls with camera pans.
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const target = new THREE.Vector3(0, 0.2, 0);
-  camera.fov = 40;
+  const target = new THREE.Vector3(0, 0.15, 0);
+  camera.fov = 38;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  camera.position.set(0, 11.5, nearSign * 8.2);
+  // Higher seat — near/far projection closer, so scale-to-fit fills evenly
+  // without the near edge eating the bottom of the square.
+  camera.position.set(0, 13.5, nearSign * 6.8);
   controls.target.copy(target);
   camera.lookAt(target);
 
