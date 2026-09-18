@@ -680,6 +680,8 @@ export function OtbChessboard3d({
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
+      // Needed so screenshots / compositors can read the last frame.
+      preserveDrawingBuffer: true,
     });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));

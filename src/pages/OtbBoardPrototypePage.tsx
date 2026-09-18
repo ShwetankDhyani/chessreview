@@ -12,9 +12,9 @@ const OtbChessboard3d = lazy(() => import("../components/OtbChessboard3d"));
 /** Position before Bc4 develops. */
 const DEMO_BEFORE =
   "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 3 4";
-/** After Bf1-c4. */
+/** After Bf1-c4 (black to move). */
 const DEMO_AFTER =
-  "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
+  "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 4 4";
 const DEMO_FROM = "f1";
 const DEMO_TO = "c4";
 const BOARD_SIZE = 360;
@@ -47,11 +47,11 @@ export default function OtbBoardPrototypePage() {
   const replayMove = useCallback(() => {
     setAnimMs(0);
     setPlayed(false);
-    // Next frame: enable glide + advance FEN so the 3D board animates one ply.
-    requestAnimationFrame(() => {
+    // Let the "before" position commit/paint, then glide to the after FEN.
+    window.setTimeout(() => {
       setAnimMs(DEMO_ANIM_MS);
       setPlayed(true);
-    });
+    }, 48);
   }, []);
 
   const stepBack = useCallback(() => {
