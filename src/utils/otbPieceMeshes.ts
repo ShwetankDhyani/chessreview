@@ -23,25 +23,25 @@ function mat(
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0x8a6640
-        : 0xb0a098
+        ? 0xc9a06a
+        : 0xb89888
       : light
-        ? 0xf5e4c4 // pale boxwood tint over oak albedo
-        : 0x5c3c30, // warm rosewood — lighter so grain reads, not ebony
+        ? 0xfff6e8 // pale maple / boxwood
+        : 0xe0a878, // warm rosewood lift so grain reads
     map: diff ?? null,
     normalMap: nor ?? null,
-    normalScale: new THREE.Vector2(accent ? 0.4 : 0.65, accent ? 0.4 : 0.65),
+    normalScale: new THREE.Vector2(accent ? 0.35 : 0.55, accent ? 0.35 : 0.55),
     roughnessMap: rough ?? null,
-    roughness: accent ? 0.4 : 0.3,
-    metalness: 0.02,
-    clearcoat: accent ? 0.28 : 0.58,
-    clearcoatRoughness: 0.2,
-    reflectivity: 0.42,
-    envMapIntensity: 0.7,
+    roughness: accent ? 0.38 : 0.28,
+    metalness: 0.0,
+    clearcoat: accent ? 0.22 : 0.45,
+    clearcoatRoughness: 0.28,
+    reflectivity: 0.35,
+    envMapIntensity: 0.55,
   });
 }
 
-/** Light honey-oak frame maps (same light wood set, lower repeat). */
+/** Pale maple frame maps (same light wood set). */
 export function frameMaterials(maps?: OtbPbrMaps | null): {
   apron: THREE.MeshPhysicalMaterial;
   lip: THREE.MeshPhysicalMaterial;
@@ -49,23 +49,23 @@ export function frameMaterials(maps?: OtbPbrMaps | null): {
   const shared = {
     map: maps?.lightDiff ?? null,
     normalMap: maps?.lightNor ?? null,
-    normalScale: new THREE.Vector2(0.5, 0.5),
+    normalScale: new THREE.Vector2(0.45, 0.45),
     roughnessMap: maps?.lightRough ?? null,
-    metalness: 0.02,
-    clearcoat: 0.18,
-    clearcoatRoughness: 0.42,
-    envMapIntensity: 0.4,
+    metalness: 0.0,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.45,
+    envMapIntensity: 0.35,
   } as const;
   return {
     apron: new THREE.MeshPhysicalMaterial({
       ...shared,
-      color: 0xf0d4a8, // pale honey oak — not dark walnut
-      roughness: 0.46,
+      color: 0xfff0dc, // pale honey maple
+      roughness: 0.42,
     }),
     lip: new THREE.MeshPhysicalMaterial({
       ...shared,
-      color: 0xe2c090,
-      roughness: 0.5,
+      color: 0xf5e0c0,
+      roughness: 0.48,
     }),
   };
 }

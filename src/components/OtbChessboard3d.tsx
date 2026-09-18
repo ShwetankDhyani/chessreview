@@ -122,7 +122,7 @@ function buildBoard(
 
   const bed = new THREE.Mesh(
     new THREE.BoxGeometry(8.02, 0.04, 8.02),
-    new THREE.MeshStandardMaterial({ color: 0xe0c49a, roughness: 0.85 })
+    new THREE.MeshStandardMaterial({ color: 0xf0dcc0, roughness: 0.85 })
   );
   bed.position.y = -0.035;
   bed.receiveShadow = true;
@@ -736,9 +736,9 @@ export function OtbChessboard3d({
     controls.enablePan = false;
 
     // Studio table lighting — warm key, cool fill, soft rim for lacquered wood.
-    scene.add(new THREE.AmbientLight(0xfff6ea, 0.38));
-    scene.add(new THREE.HemisphereLight(0xfff8f0, 0x4a4034, 0.35));
-    const key = new THREE.DirectionalLight(0xfff1dc, 0.95);
+    scene.add(new THREE.AmbientLight(0xfff8f0, 0.52));
+    scene.add(new THREE.HemisphereLight(0xfffaf4, 0x6a5a48, 0.42));
+    const key = new THREE.DirectionalLight(0xfff4e4, 1.05);
     key.position.set(5, 14, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);

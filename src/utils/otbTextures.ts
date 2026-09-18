@@ -21,8 +21,8 @@ function prep(tex: THREE.Texture, srgb: boolean, repeat = 2.4): THREE.Texture {
 let cache: Promise<OtbPbrMaps> | null = null;
 
 /**
- * Load Poly Haven CC0 wood PBR maps from `/public/otb`.
- * Shared across board frame + pieces for a photo-real tournament set.
+ * Load Poly Haven CC0 wood PBR maps from `/public/otb`
+ * (white maple for light pieces/frame, rosewood for dark pieces).
  */
 export function loadOtbTextures(): Promise<OtbPbrMaps> {
   if (cache) return cache;
