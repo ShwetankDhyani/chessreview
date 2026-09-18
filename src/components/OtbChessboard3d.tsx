@@ -220,69 +220,50 @@ function setCameraForOrientation(
   boardOrientation: "white" | "black",
   contentRoot: THREE.Group
 ) {
-  // Fixed mild-OTB seat. Scale the board to fill ~90% of the square —
-  // more reliable than fighting OrbitControls with camera pans.
+  // Higher mild-OTB seat + scale-to-fill (~95% NDC). Skip content pan —
+  // perspective makes pan fight the near edge.
   const nearSign = boardOrientation === "white" ? 1 : -1;
   const target = new THREE.Vector3(0, 0.15, 0);
-  camera.fov = 38;
+  camera.fov = 40;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  // Higher seat — near/far projection closer, so scale-to-fit fills evenly
-  // without the near edge eating the bottom of the square.
-  camera.position.set(0, 13.5, nearSign * 6.8);
+  camera.position.set(0, 12.2, nearSign * 7.2);
   controls.target.copy(target);
   camera.lookAt(target);
+  camera.updateMatrixWorld(true);
 
   const localCorners = [
     new THREE.Vector3(-4.3, -0.1, -4.3),
     new THREE.Vector3(4.3, -0.1, -4.3),
     new THREE.Vector3(-4.3, -0.1, 4.3),
     new THREE.Vector3(4.3, -0.1, 4.3),
-    new THREE.Vector3(-4.3, 1.2, -4.3),
-    new THREE.Vector3(4.3, 1.2, -4.3),
-    new THREE.Vector3(-4.3, 1.2, 4.3),
-    new THREE.Vector3(4.3, 1.2, 4.3),
+    new THREE.Vector3(-4.3, 1.15, -4.3),
+    new THREE.Vector3(4.3, 1.15, -4.3),
+    new THREE.Vector3(-4.3, 1.15, 4.3),
+    new THREE.Vector3(4.3, 1.15, 4.3),
   ];
 
   contentRoot.position.set(0, 0, 0);
   contentRoot.scale.setScalar(1);
-  contentRoot.updateMatrixWorld(true);
 
-  const measure = (scale: number, pos: THREE.Vector3) => {
-    camera.updateMatrixWorld(true);
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
+  const measure = (scale: number) => {
+    let maxAbs = 0;
     const world = new THREE.Vector3();
     const ndc = new THREE.Vector3();
     for (const c of localCorners) {
-      world.copy(c).multiplyScalar(scale).add(pos);
+      world.copy(c).multiplyScalar(scale);
       ndc.copy(world).project(camera);
-      minX = Math.min(minX, ndc.x);
-      maxX = Math.max(maxX, ndc.x);
-      minY = Math.min(minY, ndc.y);
-      maxY = Math.max(maxY, ndc.y);
+      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
     }
-    return {
-      maxAbs: Math.max(
-        Math.abs(minX),
-        Math.abs(maxX),
-        Math.abs(minY),
-        Math.abs(maxY)
-      ),
-      midX: (minX + maxX) / 2,
-      midY: (minY + maxY) / 2,
-    };
+    return maxAbs;
   };
 
-  let lo = 0.45;
-  let hi = 1.35;
-  let bestScale = 0.85;
-  for (let i = 0; i < 22; i++) {
+  let lo = 0.55;
+  let hi = 1.6;
+  let bestScale = 1;
+  for (let i = 0; i < 24; i++) {
     const mid = (lo + hi) / 2;
-    const m = measure(mid, contentRoot.position);
-    if (m.maxAbs > 0.92) {
+    if (measure(mid) > 0.95) {
       hi = mid;
     } else {
       bestScale = mid;
@@ -290,51 +271,6 @@ function setCameraForOrientation(
     }
   }
   contentRoot.scale.setScalar(bestScale);
-
-  // Center: shift content so projected mid → 0. Convert NDC mid to world
-  // along camera right/up at the board distance.
-  const dist = camera.position.distanceTo(target);
-  const vFov = (camera.fov * Math.PI) / 180;
-  const worldSpan = 2 * Math.tan(vFov / 2) * dist;
-  const viewDir = new THREE.Vector3()
-    .subVectors(target, camera.position)
-    .normalize();
-  const right = new THREE.Vector3()
-    .crossVectors(viewDir, new THREE.Vector3(0, 1, 0))
-    .normalize();
-  if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
-  const camUp = new THREE.Vector3().crossVectors(right, viewDir).normalize();
-
-  const centerOnce = () => {
-    const m = measure(bestScale, contentRoot.position);
-    contentRoot.position
-      .addScaledVector(right, -m.midX * (worldSpan / 2))
-      .addScaledVector(camUp, -m.midY * (worldSpan / 2));
-  };
-  centerOnce();
-
-  // Re-fit scale after shift (shift can push corners out).
-  lo = bestScale * 0.75;
-  hi = bestScale * 1.12;
-  for (let i = 0; i < 16; i++) {
-    const mid = (lo + hi) / 2;
-    const m = measure(mid, contentRoot.position);
-    if (m.maxAbs > 0.92) {
-      hi = mid;
-    } else {
-      bestScale = mid;
-      lo = mid;
-    }
-  }
-  contentRoot.scale.setScalar(bestScale);
-  centerOnce();
-
-  // Final trim if still oversize.
-  const mFinal = measure(bestScale, contentRoot.position);
-  if (mFinal.maxAbs > 0.94) {
-    bestScale *= 0.94 / mFinal.maxAbs;
-    contentRoot.scale.setScalar(bestScale);
-  }
   contentRoot.updateMatrixWorld(true);
 
   const euclidean = camera.position.distanceTo(target);
