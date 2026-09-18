@@ -225,47 +225,47 @@ export function createPieceMesh(
       break;
     }
     case "n": {
-      // Classic Staunton — knight between bishop/rook, compact head.
-      add(g, new THREE.CylinderGeometry(0.1, 0.155, 0.1, 32), m, 0.24);
-      add(g, new THREE.TorusGeometry(0.11, 0.012, 10, 28), accent, 0.3);
+      // Classic Staunton — compact head under king/queen visual mass.
+      add(g, new THREE.CylinderGeometry(0.095, 0.145, 0.09, 32), m, 0.24);
+      add(g, new THREE.TorusGeometry(0.1, 0.011, 10, 28), accent, 0.3);
 
       const profile = new THREE.Shape();
-      profile.moveTo(-0.06, 0.0);
-      profile.lineTo(0.08, 0.0);
-      profile.lineTo(0.09, 0.06);
-      profile.bezierCurveTo(0.1, 0.16, 0.02, 0.24, -0.01, 0.3);
-      profile.bezierCurveTo(-0.01, 0.36, 0.06, 0.42, 0.12, 0.4);
-      profile.lineTo(0.26, 0.32);
-      profile.quadraticCurveTo(0.3, 0.27, 0.27, 0.23);
-      profile.lineTo(0.16, 0.23);
-      profile.lineTo(0.13, 0.18);
-      profile.bezierCurveTo(0.06, 0.16, -0.02, 0.12, -0.03, 0.07);
-      profile.bezierCurveTo(-0.05, 0.04, -0.07, 0.015, -0.06, 0.0);
+      profile.moveTo(-0.05, 0.0);
+      profile.lineTo(0.07, 0.0);
+      profile.lineTo(0.075, 0.05);
+      profile.bezierCurveTo(0.08, 0.13, 0.015, 0.2, -0.01, 0.25);
+      profile.bezierCurveTo(-0.01, 0.3, 0.05, 0.35, 0.1, 0.33);
+      profile.lineTo(0.2, 0.26);
+      profile.quadraticCurveTo(0.23, 0.22, 0.2, 0.19);
+      profile.lineTo(0.12, 0.19);
+      profile.lineTo(0.1, 0.15);
+      profile.bezierCurveTo(0.05, 0.13, -0.015, 0.1, -0.025, 0.06);
+      profile.bezierCurveTo(-0.04, 0.03, -0.055, 0.012, -0.05, 0.0);
       profile.closePath();
 
       const extrude = new THREE.ExtrudeGeometry(profile, {
-        depth: 0.12,
+        depth: 0.1,
         bevelEnabled: true,
-        bevelThickness: 0.016,
-        bevelSize: 0.012,
+        bevelThickness: 0.014,
+        bevelSize: 0.01,
         bevelSegments: 3,
-        curveSegments: 20,
+        curveSegments: 18,
       });
-      extrude.translate(0, 0, -0.06);
+      extrude.translate(0, 0, -0.05);
       const body = new THREE.Mesh(extrude, m);
-      body.position.set(0.015, 0.28, 0);
+      body.position.set(0.01, 0.28, 0);
       body.castShadow = true;
       body.receiveShadow = true;
       g.add(body);
 
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.1, 10), m);
-      ear.position.set(0.03, 0.72, 0.01);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.085, 10), m);
+      ear.position.set(0.025, 0.66, 0.008);
       ear.rotation.z = -0.35;
       ear.castShadow = true;
       g.add(ear);
 
-      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.055), glyph);
-      mane.position.set(0.06, 0.68, 0);
+      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.035, 0.045), glyph);
+      mane.position.set(0.05, 0.62, 0);
       mane.castShadow = true;
       g.add(mane);
       break;
