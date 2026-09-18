@@ -26,8 +26,8 @@ function mat(
         ? 0x7a6248
         : 0x6a5a52
       : light
-        ? 0x8a7a62 // muted boxwood — readable, not chalky
-        : 0x6a4a38, // deep rosewood
+        ? 0x7e6e58 // quieter boxwood
+        : 0x5e4234, // quieter rosewood
     map: diff ?? null,
     normalMap: nor ?? null,
     normalScale: new THREE.Vector2(accent ? 0.25 : 0.4, accent ? 0.25 : 0.4),
@@ -192,19 +192,17 @@ export function createPieceMesh(
         0.2
       );
       add(g, new THREE.TorusGeometry(0.17, 0.018, 10, 40), accent, 0.74);
-      // Flat square cap
-      add(g, new THREE.BoxGeometry(0.38, 0.08, 0.38), m, 0.84);
-      // Four corner merlons — square silhouette from top
+      // Flat square cap — large so it reads from overhead
+      add(g, new THREE.BoxGeometry(0.42, 0.09, 0.42), m, 0.84);
       for (let i = 0; i < 4; i++) {
         const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.12), m);
-        tooth.position.set(Math.cos(a) * 0.155, 1.0, Math.sin(a) * 0.155);
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), m);
+        tooth.position.set(Math.cos(a) * 0.17, 1.02, Math.sin(a) * 0.17);
         tooth.castShadow = true;
         tooth.receiveShadow = true;
         g.add(tooth);
       }
-      // Inner well so the crown reads hollow from above
-      add(g, new THREE.CylinderGeometry(0.09, 0.09, 0.06, 24), accent, 0.9);
+      add(g, new THREE.CylinderGeometry(0.1, 0.1, 0.06, 24), accent, 0.92);
       break;
     }
     case "n": {
@@ -283,24 +281,24 @@ export function createPieceMesh(
       add(g, new THREE.TorusGeometry(0.1, 0.016, 10, 36), accent, 0.98);
       // Flattened oval mitre (wider in X) so top view ≠ pawn ball
       const mitre = new THREE.Mesh(
-        new THREE.SphereGeometry(0.14, 36, 28),
+        new THREE.SphereGeometry(0.15, 36, 28),
         m
       );
-      mitre.scale.set(1.15, 0.95, 0.85);
+      mitre.scale.set(1.25, 0.9, 0.8);
       mitre.position.y = 1.1;
       mitre.castShadow = true;
       mitre.receiveShadow = true;
       g.add(mitre);
       // Deep cleft groove — dark accent reads as a slash from above
       const cleft = new THREE.Mesh(
-        new THREE.BoxGeometry(0.055, 0.3, 0.28),
+        new THREE.BoxGeometry(0.065, 0.32, 0.32),
         accent
       );
       cleft.position.set(0, 1.14, 0.04);
       cleft.rotation.set(-0.2, 0, 0.55);
       cleft.castShadow = true;
       g.add(cleft);
-      add(g, new THREE.SphereGeometry(0.045, 16, 12), m, 1.32);
+      add(g, new THREE.SphereGeometry(0.048, 16, 12), m, 1.34);
       break;
     }
     case "q": {
@@ -322,21 +320,20 @@ export function createPieceMesh(
       add(g, new THREE.TorusGeometry(0.15, 0.02, 10, 40), accent, 1.1);
       add(g, new THREE.CylinderGeometry(0.16, 0.16, 0.07, 40), m, 1.16);
       // Rim disc so the crown diameter reads clearly
-      add(g, new THREE.CylinderGeometry(0.2, 0.2, 0.03, 40), accent, 1.22);
+      add(g, new THREE.CylinderGeometry(0.22, 0.22, 0.035, 40), accent, 1.22);
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
         const spike = new THREE.Mesh(
-          new THREE.ConeGeometry(0.038, 0.22, 12),
+          new THREE.ConeGeometry(0.042, 0.24, 12),
           i % 2 === 0 ? accent : m
         );
-        // Push spikes outward + slightly up so they form a star from above
-        spike.position.set(Math.cos(a) * 0.175, 1.34, Math.sin(a) * 0.175);
-        spike.rotation.x = Math.cos(a) * 0.35;
-        spike.rotation.z = -Math.sin(a) * 0.35;
+        spike.position.set(Math.cos(a) * 0.2, 1.36, Math.sin(a) * 0.2);
+        spike.rotation.x = Math.cos(a) * 0.4;
+        spike.rotation.z = -Math.sin(a) * 0.4;
         spike.castShadow = true;
         g.add(spike);
       }
-      add(g, new THREE.SphereGeometry(0.06, 18, 14), accent, 1.48);
+      add(g, new THREE.SphereGeometry(0.065, 18, 14), accent, 1.5);
       break;
     }
     case "k": {
@@ -358,19 +355,19 @@ export function createPieceMesh(
       add(g, new THREE.TorusGeometry(0.14, 0.02, 10, 40), accent, 1.14);
       add(g, new THREE.CylinderGeometry(0.15, 0.15, 0.07, 40), m, 1.2);
       // Cap disc under the cross
-      add(g, new THREE.CylinderGeometry(0.12, 0.12, 0.04, 32), accent, 1.28);
+      add(g, new THREE.CylinderGeometry(0.13, 0.13, 0.045, 32), accent, 1.28);
       const crossV = new THREE.Mesh(
-        new THREE.BoxGeometry(0.09, 0.44, 0.09),
+        new THREE.BoxGeometry(0.1, 0.48, 0.1),
         accent
       );
-      crossV.position.y = 1.52;
+      crossV.position.y = 1.54;
       crossV.castShadow = true;
       g.add(crossV);
       const crossH = new THREE.Mesh(
-        new THREE.BoxGeometry(0.34, 0.09, 0.09),
+        new THREE.BoxGeometry(0.4, 0.1, 0.1),
         accent
       );
-      crossH.position.y = 1.58;
+      crossH.position.y = 1.6;
       crossH.castShadow = true;
       g.add(crossH);
       break;

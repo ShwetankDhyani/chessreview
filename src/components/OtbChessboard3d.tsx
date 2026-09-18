@@ -646,7 +646,7 @@ function setCameraForOrientation(
   const euclidean = camera.position.distanceTo(target);
   controls.minDistance = euclidean * 0.8;
   controls.maxDistance = euclidean * 1.6;
-  controls.minPolarAngle = 0.55;
+  controls.minPolarAngle = 0.32; // allow near-overhead for piece ID during review
   controls.maxPolarAngle = Math.PI * 0.48;
   controls.update();
 }
