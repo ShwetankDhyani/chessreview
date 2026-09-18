@@ -217,15 +217,21 @@ function syncPieces(piecesRoot: THREE.Group, fen: string) {
 function setCameraForOrientation(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
-  boardOrientation: "white" | "black"
+  boardOrientation: "white" | "black",
+  contentRoot: THREE.Group
 ) {
-  // Mild OTB seat. Fit so the projected board AABB fills the square,
-  // then pan so that AABB is centered (uses empty top instead of clipping bottom).
+  // Fixed mild-OTB seat. Scale the board to fill ~90% of the square —
+  // more reliable than fighting OrbitControls with camera pans.
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const elev = 1.15;
-  const depth = 0.72;
-  const target = new THREE.Vector3(0, 0.25, 0);
-  const corners = [
+  const target = new THREE.Vector3(0, 0.2, 0);
+  camera.fov = 40;
+  camera.aspect = 1;
+  camera.updateProjectionMatrix();
+  camera.position.set(0, 11.5, nearSign * 8.2);
+  controls.target.copy(target);
+  camera.lookAt(target);
+
+  const localCorners = [
     new THREE.Vector3(-4.3, -0.1, -4.3),
     new THREE.Vector3(4.3, -0.1, -4.3),
     new THREE.Vector3(-4.3, -0.1, 4.3),
@@ -236,29 +242,27 @@ function setCameraForOrientation(
     new THREE.Vector3(4.3, 1.2, 4.3),
   ];
 
-  camera.fov = 42;
-  camera.aspect = 1;
-  camera.updateProjectionMatrix();
+  contentRoot.position.set(0, 0, 0);
+  contentRoot.scale.setScalar(1);
+  contentRoot.updateMatrixWorld(true);
 
-  const measure = () => {
+  const measure = (scale: number, pos: THREE.Vector3) => {
     camera.updateMatrixWorld(true);
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
+    const world = new THREE.Vector3();
     const ndc = new THREE.Vector3();
-    for (const corner of corners) {
-      ndc.copy(corner).project(camera);
+    for (const c of localCorners) {
+      world.copy(c).multiplyScalar(scale).add(pos);
+      ndc.copy(world).project(camera);
       minX = Math.min(minX, ndc.x);
       maxX = Math.max(maxX, ndc.x);
       minY = Math.min(minY, ndc.y);
       maxY = Math.max(maxY, ndc.y);
     }
     return {
-      minX,
-      maxX,
-      minY,
-      maxY,
       maxAbs: Math.max(
         Math.abs(minX),
         Math.abs(maxX),
@@ -267,76 +271,62 @@ function setCameraForOrientation(
       ),
       midX: (minX + maxX) / 2,
       midY: (minY + maxY) / 2,
-      spanX: maxX - minX,
-      spanY: maxY - minY,
     };
   };
 
-  let lo = 5;
-  let hi = 26;
-  let best = 12;
-  for (let i = 0; i < 24; i++) {
+  let lo = 0.45;
+  let hi = 1.35;
+  let bestScale = 0.85;
+  for (let i = 0; i < 22; i++) {
     const mid = (lo + hi) / 2;
-    camera.position.set(0, mid * elev, nearSign * mid * depth);
-    controls.target.copy(target);
-    camera.lookAt(target);
-    const m = measure();
+    const m = measure(mid, contentRoot.position);
     if (m.maxAbs > 0.9) {
-      lo = mid;
-    } else {
-      best = mid;
       hi = mid;
+    } else {
+      bestScale = mid;
+      lo = mid;
     }
   }
+  contentRoot.scale.setScalar(bestScale);
 
-  camera.position.set(0, best * elev, nearSign * best * depth);
-  controls.target.copy(target);
-  camera.lookAt(target);
+  // Center: shift content so projected mid → 0. Convert NDC mid to world
+  // along camera right/up at the board distance.
+  const m1 = measure(bestScale, contentRoot.position);
+  const dist = camera.position.distanceTo(target);
+  const vFov = (camera.fov * Math.PI) / 180;
+  const worldSpan = 2 * Math.tan(vFov / 2) * dist;
+  const viewDir = new THREE.Vector3()
+    .subVectors(target, camera.position)
+    .normalize();
+  const right = new THREE.Vector3()
+    .crossVectors(viewDir, new THREE.Vector3(0, 1, 0))
+    .normalize();
+  if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+  const camUp = new THREE.Vector3().crossVectors(right, viewDir).normalize();
+  // Move content opposite to mid (if midY < 0, board is low → move content up).
+  contentRoot.position
+    .addScaledVector(right, -m1.midX * (worldSpan / 2))
+    .addScaledVector(camUp, -m1.midY * (worldSpan / 2));
 
-  // Iteratively center the projected AABB, then pull back if still oversize.
-  const worldUp = new THREE.Vector3(0, 1, 0);
-  const viewDir = new THREE.Vector3();
-  const right = new THREE.Vector3();
-  const camUp = new THREE.Vector3();
-  for (let i = 0; i < 14; i++) {
-    const m = measure();
-    if (
-      Math.abs(m.midX) < 0.015 &&
-      Math.abs(m.midY) < 0.015 &&
-      m.maxAbs <= 0.9
-    ) {
-      break;
-    }
-
-    const dist = camera.position.distanceTo(target);
-    const vFov = (camera.fov * Math.PI) / 180;
-    const worldSpan = 2 * Math.tan(vFov / 2) * dist;
-
-    viewDir.subVectors(target, camera.position).normalize();
-    right.crossVectors(viewDir, worldUp).normalize();
-    // If looking nearly along Y, fall back to world X.
-    if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
-    camUp.crossVectors(right, viewDir).normalize();
-
-    const panX = -m.midX * (worldSpan / 2);
-    const panY = -m.midY * (worldSpan / 2);
-    camera.position.addScaledVector(right, panX).addScaledVector(camUp, panY);
-    target.addScaledVector(right, panX).addScaledVector(camUp, panY);
-    controls.target.copy(target);
-    camera.lookAt(target);
-
-    const m2 = measure();
-    if (m2.maxAbs > 0.9) {
-      const pull = m2.maxAbs / 0.88;
-      const offset = camera.position.clone().sub(target).multiplyScalar(pull);
-      camera.position.copy(target).add(offset);
-      camera.lookAt(target);
+  // Re-fit scale after shift (shift can push corners out).
+  lo = bestScale * 0.7;
+  hi = bestScale * 1.15;
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2;
+    const m = measure(mid, contentRoot.position);
+    if (m.maxAbs > 0.9) {
+      hi = mid;
+    } else {
+      bestScale = mid;
+      lo = mid;
     }
   }
+  contentRoot.scale.setScalar(bestScale);
+  contentRoot.updateMatrixWorld(true);
 
   const euclidean = camera.position.distanceTo(target);
-  controls.minDistance = euclidean;
-  controls.maxDistance = euclidean * 1.55;
+  controls.minDistance = euclidean * 0.95;
+  controls.maxDistance = euclidean * 1.6;
   controls.minPolarAngle = 0.05;
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.update();
@@ -419,7 +409,7 @@ export function OtbChessboard3d({
     contentRoot.add(arrowRoot);
     scene.add(contentRoot);
 
-    setCameraForOrientation(camera, controls, boardOrientation);
+    setCameraForOrientation(camera, controls, boardOrientation, contentRoot);
 
     const bundle: SceneBundle = {
       renderer,
@@ -467,19 +457,13 @@ export function OtbChessboard3d({
     bundle.camera.updateProjectionMatrix();
     bundle.renderer.domElement.style.width = "100%";
     bundle.renderer.domElement.style.height = "100%";
-    // Re-fit after resize so the board still fills the square.
     setCameraForOrientation(
       bundle.camera,
       bundle.controls,
-      boardOrientation
+      boardOrientation,
+      bundle.contentRoot
     );
   }, [boardWidth, boardOrientation]);
-
-  useEffect(() => {
-    const bundle = bundleRef.current;
-    if (!bundle) return;
-    setCameraForOrientation(bundle.camera, bundle.controls, boardOrientation);
-  }, [boardOrientation]);
 
   useEffect(() => {
     const bundle = bundleRef.current;
