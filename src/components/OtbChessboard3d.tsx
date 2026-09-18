@@ -120,13 +120,13 @@ function makeArrowMesh(
   const uz = dz / len;
   const yaw = Math.atan2(ux, uz);
 
-  const headLen = Math.min(0.5, len * 0.34);
-  const headHalf = 0.28;
-  const halfShaft = 0.075;
-  const inset = 0.24;
-  const tipPull = 0.18;
-  const usable = Math.max(0.24, len - inset - tipPull);
-  const shaftLen = Math.max(0.05, usable - headLen);
+  const headLen = Math.min(0.42, len * 0.28);
+  const headHalf = 0.26;
+  const halfShaft = 0.07;
+  const inset = 0.28;
+  const tipPull = 0.42; // stop short of destination piece volume
+  const usable = Math.max(0.2, len - inset - tipPull);
+  const shaftLen = Math.max(0.04, usable - headLen);
 
   // One flat Shape — continuous silhouette, no cone/euler tip bugs.
   const shape = new THREE.Shape();
@@ -153,7 +153,7 @@ function makeArrowMesh(
   mesh.renderOrder = 2;
 
   const group = new THREE.Group();
-  group.position.set(a.x + ux * inset, 0.12, a.z + uz * inset);
+  group.position.set(a.x + ux * inset, 0.22, a.z + uz * inset);
   group.rotation.y = yaw;
   group.add(mesh);
   return group;

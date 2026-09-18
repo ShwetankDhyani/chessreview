@@ -65,7 +65,7 @@ function mat(color: PieceColor, accent = false): THREE.MeshPhysicalMaterial {
         : 0x6a6a74
       : light
         ? 0xe8dfd0
-        : 0x1a1a1e,
+        : 0x2c2c34,
     map: grain(color),
     roughness: light ? 0.45 : 0.5,
     metalness: light ? 0.05 : 0.1,
