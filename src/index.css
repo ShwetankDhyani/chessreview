@@ -1120,9 +1120,9 @@ html[data-testing-mode="1"] {
   background: #1a1816;
 }
 
-/* WebGL OTB board — desktop keeps the dark frame (looked best there).
-   Mobile alone needs a light fill behind the transparent canvas so
-   black pieces stay readable; sage-cream ties into site greens. */
+/* WebGL OTB board — transparent on desktop (dark chess-bg shows through).
+   Mobile uses a muted olive fill so dark pieces stay readable without a
+   bright cream island that fights the warm-dark site theme. */
 .otb3d-viewport {
   background: transparent;
   overflow: visible;
@@ -1144,7 +1144,7 @@ html[data-testing-mode="1"] {
 @media (max-width: 1023px) {
   .game-board-frame:has(.otb3d-viewport),
   .otb3d-viewport {
-    background: #d2dbc6;
+    background: #3e4538;
   }
 }
 
@@ -2018,25 +2018,25 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
   font-size: 1.55rem;
   line-height: 1.2;
   font-weight: 750;
-  color: var(--chess-text, #1a1a1a);
+  color: var(--chess-text, #f5f5f5);
 }
 
 .otb-proto__lede {
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.55;
-  color: var(--chess-subtext, #5a5a5a);
+  color: var(--chess-subtext, #c4c0be);
   max-width: 36rem;
 }
 
 .otb-proto__stage {
-  border: 1px solid var(--chess-border, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--chess-border, #3d3935);
   background:
-    radial-gradient(ellipse at 50% 18%, rgba(150, 188, 75, 0.14), transparent 55%),
-    linear-gradient(180deg, rgba(40, 32, 24, 0.06), transparent 42%),
-    var(--chess-panel, #f7f6f3);
+    radial-gradient(ellipse at 50% 18%, rgba(129, 182, 76, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(49, 46, 43, 0.9), rgba(30, 28, 25, 0.95));
   padding: 1.25rem 0.75rem 1.75rem;
   overflow: visible;
+  border-radius: 12px;
 }
 
 .otb-proto__table {
@@ -2084,25 +2084,26 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
 
 .otb-proto__preset {
   appearance: none;
-  border: 1px solid var(--chess-border, rgba(0, 0, 0, 0.16));
-  background: var(--chess-panel, #fff);
-  color: var(--chess-text, #1a1a1a);
+  border: 1px solid var(--chess-border, #3d3935);
+  background: var(--chess-surface, #312e2b);
+  color: var(--chess-text, #f5f5f5);
   font-size: 0.82rem;
   font-weight: 600;
   padding: 0.45rem 0.75rem;
+  border-radius: 8px;
   cursor: pointer;
 }
 
 .otb-proto__preset.is-active {
-  border-color: #6f8f3c;
-  background: rgba(150, 188, 75, 0.22);
-  color: #2d3d14;
+  border-color: rgba(129, 182, 76, 0.55);
+  background: rgba(129, 182, 76, 0.16);
+  color: var(--chess-accent, #81b64c);
 }
 
 .otb-proto__note {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--chess-subtext, #5a5a5a);
+  color: var(--chess-subtext, #c4c0be);
 }
 
 .otb-proto__slider {
