@@ -90,11 +90,11 @@ function buildBoard(
   const { apron, lip } = frameMaterials(maps);
   const sq = squareMaterials();
 
-  // Beveled frame — light honey oak (no dark tray under the board).
-  const frameH = 0.11;
-  const frameT = 0.32;
-  const outer = 8.68;
-  const lipW = 0.13;
+  // Thin honey-maple apron only — no disc/tray under the set.
+  const frameH = 0.08;
+  const frameT = 0.22;
+  const outer = 8.44;
+  const lipW = 0.1;
   const strip = (
     w: number,
     d: number,
@@ -109,22 +109,22 @@ function buildBoard(
     m.castShadow = true;
     root.add(m);
   };
-  strip(outer, frameT, 0, 4.18, -frameH / 2, apron);
-  strip(outer, frameT, 0, -4.18, -frameH / 2, apron);
-  strip(frameT, outer - frameT * 2, -4.18, 0, -frameH / 2, apron);
-  strip(frameT, outer - frameT * 2, 4.18, 0, -frameH / 2, apron);
+  strip(outer, frameT, 0, 4.11, -frameH / 2, apron);
+  strip(outer, frameT, 0, -4.11, -frameH / 2, apron);
+  strip(frameT, outer - frameT * 2, -4.11, 0, -frameH / 2, apron);
+  strip(frameT, outer - frameT * 2, 4.11, 0, -frameH / 2, apron);
 
-  const inner = 8.06;
-  strip(inner, lipW, 0, 4.0, 0.015, lip);
-  strip(inner, lipW, 0, -4.0, 0.015, lip);
-  strip(lipW, inner - lipW * 2, -4.0, 0, 0.015, lip);
-  strip(lipW, inner - lipW * 2, 4.0, 0, 0.015, lip);
+  const inner = 8.04;
+  strip(inner, lipW, 0, 4.0, 0.01, lip);
+  strip(inner, lipW, 0, -4.0, 0.01, lip);
+  strip(lipW, inner - lipW * 2, -4.0, 0, 0.01, lip);
+  strip(lipW, inner - lipW * 2, 4.0, 0, 0.01, lip);
 
   const bed = new THREE.Mesh(
-    new THREE.BoxGeometry(8.02, 0.04, 8.02),
+    new THREE.BoxGeometry(8.0, 0.03, 8.0),
     new THREE.MeshStandardMaterial({ color: 0xf0dcc0, roughness: 0.85 })
   );
-  bed.position.y = -0.035;
+  bed.position.y = -0.03;
   bed.receiveShadow = true;
   root.add(bed);
 
@@ -133,7 +133,7 @@ function buildBoard(
       const isLight = (file + rank) % 2 === 1;
       const mat = (isLight ? sq.light : sq.dark).clone();
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.975, 0.055, 0.975),
+        new THREE.BoxGeometry(0.98, 0.05, 0.98),
         mat
       );
       mesh.position.set(file - 3.5, 0.01, 3.5 - rank);
