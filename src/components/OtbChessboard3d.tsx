@@ -219,11 +219,6 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-function setCameraForOrientation(
-  camera: THREE.PerspectiveCamera,
-  controls: OrbitControls,
-  boardOrientation: "white" | "black"
-) {
   // Mild OTB seat. Fit so the projected board AABB fills the square,
   // then pan so that AABB is centered (uses empty top instead of clipping bottom).
   const nearSign = boardOrientation === "white" ? 1 : -1;
