@@ -49,6 +49,7 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
     color: 0x5c4030,
     roughness: 0.7,
     metalness: 0.05,
+    envMapIntensity: 0, // keep classic board colors — env is for pieces only
   });
   const frameH = 0.08;
   const frameT = 0.22;
@@ -71,8 +72,9 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
         new THREE.BoxGeometry(0.98, 0.06, 0.98),
         new THREE.MeshStandardMaterial({
           color: isLight ? LIGHT : DARK,
-          roughness: 0.85,
-          metalness: 0.02,
+          roughness: 0.92,
+          metalness: 0,
+          envMapIntensity: 0, // exact #eeeed2 / #769656 — no washed-out env sheen
         })
       );
       mesh.position.set(file - 3.5, 0, 3.5 - rank);
@@ -358,10 +360,10 @@ export function OtbChessboard3d({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.92;
+    // No ACES remap — it washed the classic green/cream board toward pastel.
     host.appendChild(renderer.domElement);
 
+    // Env map is for piece clearcoat/definition only (board mats use envMapIntensity 0).
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     pmrem.dispose();
@@ -371,10 +373,10 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    scene.add(new THREE.HemisphereLight(0xfff6e8, 0x5a6a4a, 0.48));
-    scene.add(new THREE.AmbientLight(0xffffff, 0.22));
-    const key = new THREE.DirectionalLight(0xfff1dc, 1.35);
-    key.position.set(6.5, 10, 8);
+    // Match the original board look: soft ambient + warm key + cool fill.
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const key = new THREE.DirectionalLight(0xfff2dc, 1.15);
+    key.position.set(4, 12, 6);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
     key.shadow.camera.near = 1;
@@ -385,11 +387,11 @@ export function OtbChessboard3d({
     key.shadow.camera.bottom = -10;
     key.shadow.bias = -0.0008;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xa8b8e0, 0.55);
-    fill.position.set(-8, 5, -4);
+    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.35);
+    fill.position.set(-6, 6, -4);
     scene.add(fill);
-    // Player-side rim so near pieces catch a highlight
-    const rim = new THREE.DirectionalLight(0xffffff, 0.35);
+    // Subtle rim for piece edges only — low enough not to bleach squares
+    const rim = new THREE.DirectionalLight(0xffffff, 0.18);
     rim.position.set(0, 3.5, 12);
     scene.add(rim);
 
