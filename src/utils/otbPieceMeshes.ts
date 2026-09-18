@@ -1,199 +1,96 @@
 import * as THREE from "three";
+import type { OtbPbrMaps } from "./otbTextures";
 
 type PieceColor = "w" | "b";
 type PieceRole = "p" | "n" | "b" | "r" | "q" | "k";
 
-const SEG = 64; // lathe / cylinder fidelity for a championship set
-
-/** Procedural wood grain — boxwood (light) or ebony (dark). */
-function makeWoodTexture(seed: number, light: boolean): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  // Boxwood ivory vs deep ebony — tournament Staunton palette
-  const base = light ? "#c9b48a" : "#16161c";
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, size, size);
-
-  // Growth rings / longitudinal grain
-  for (let i = 0; i < 90; i++) {
-    const x = ((seed * 17 + i * 13) % size) + 0.5;
-    const a = light ? 0.04 + (i % 6) * 0.012 : 0.05 + (i % 6) * 0.014;
-    ctx.strokeStyle = light
-      ? `rgba(90, 62, 28, ${a})`
-      : `rgba(210, 210, 220, ${a})`;
-    ctx.lineWidth = 0.8 + (i % 4) * 0.35;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    const wobble = ((i * 7) % 9) - 4;
-    ctx.bezierCurveTo(x + wobble, size * 0.35, x - wobble * 0.6, size * 0.65, x + wobble * 0.3, size);
-    ctx.stroke();
-  }
-
-  // Pore / fleck noise
-  for (let i = 0; i < 520; i++) {
-    const x = (seed * 13 + i * 47) % size;
-    const y = (seed * 29 + i * 31) % size;
-    ctx.fillStyle = light
-      ? `rgba(70, 45, 20, ${0.035 + (i % 5) * 0.012})`
-      : `rgba(255, 255, 255, ${0.03 + (i % 5) * 0.01})`;
-    ctx.fillRect(x, y, 1 + (i % 2), 1);
-  }
-
-  // Soft lacquer sheen bands
-  for (let i = 0; i < 8; i++) {
-    const y = ((seed * 11 + i * 31) % size);
-    ctx.fillStyle = light
-      ? `rgba(255, 248, 230, ${0.03 + (i % 3) * 0.01})`
-      : `rgba(255, 255, 255, ${0.02 + (i % 3) * 0.008})`;
-    ctx.fillRect(0, y, size, 2);
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2.2, 2.2);
-  tex.anisotropy = 8;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
-}
-
-/** Grayscale bump sibling of the wood albedo. */
-function makeWoodBump(seed: number): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#808080";
-  ctx.fillRect(0, 0, size, size);
-  for (let i = 0; i < 90; i++) {
-    const x = ((seed * 17 + i * 13) % size) + 0.5;
-    const v = 110 + (i % 7) * 12;
-    ctx.strokeStyle = `rgb(${v},${v},${v})`;
-    ctx.lineWidth = 1 + (i % 3);
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    const wobble = ((i * 7) % 9) - 4;
-    ctx.bezierCurveTo(x + wobble, size * 0.35, x - wobble * 0.6, size * 0.65, x + wobble * 0.3, size);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2.2, 2.2);
-  tex.needsUpdate = true;
-  return tex;
-}
-
-/** Walnut frame / table grain for the board rim. */
-export function makeWalnutTexture(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#5a3a22";
-  ctx.fillRect(0, 0, size, size);
-  for (let i = 0; i < 70; i++) {
-    const y = (i * 19 + 7) % size;
-    ctx.strokeStyle = `rgba(30, 16, 8, ${0.08 + (i % 5) * 0.03})`;
-    ctx.lineWidth = 1 + (i % 3);
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.bezierCurveTo(size * 0.3, y + 4, size * 0.7, y - 3, size, y + 2);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 400; i++) {
-    ctx.fillStyle = `rgba(20, 10, 4, ${0.04 + (i % 4) * 0.02})`;
-    ctx.fillRect((i * 37) % size, (i * 53) % size, 1, 1);
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(1.5, 1.5);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
-}
-
-/** Subtle felt / maple variation on playing squares. */
-export function makeSquareTexture(light: boolean): THREE.CanvasTexture {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = light ? "#f0ead2" : "#6e9450";
-  ctx.fillRect(0, 0, size, size);
-  for (let i = 0; i < 180; i++) {
-    const x = (i * 41) % size;
-    const y = (i * 73) % size;
-    ctx.fillStyle = light
-      ? `rgba(160, 140, 90, ${0.04 + (i % 3) * 0.02})`
-      : `rgba(20, 40, 10, ${0.05 + (i % 3) * 0.02})`;
-    ctx.fillRect(x, y, 2, 2);
-  }
-  // Soft vignette toward square edges
-  const g = ctx.createRadialGradient(64, 64, 20, 64, 64, 70);
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, light ? "rgba(80,60,30,0.06)" : "rgba(0,0,0,0.12)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
-}
-
-let whiteWood: THREE.CanvasTexture | null = null;
-let blackWood: THREE.CanvasTexture | null = null;
-let whiteBump: THREE.CanvasTexture | null = null;
-let blackBump: THREE.CanvasTexture | null = null;
-
-function wood(color: PieceColor): THREE.CanvasTexture {
-  if (color === "w") {
-    whiteWood ??= makeWoodTexture(3, true);
-    return whiteWood;
-  }
-  blackWood ??= makeWoodTexture(7, false);
-  return blackWood;
-}
-
-function bump(color: PieceColor): THREE.CanvasTexture {
-  if (color === "w") {
-    whiteBump ??= makeWoodBump(3);
-    return whiteBump;
-  }
-  blackBump ??= makeWoodBump(7);
-  return blackBump;
-}
+const SEG = 72;
 
 /**
- * Polished tournament wood — boxwood / ebony with clearcoat lacquer.
- * Accents are carved recesses (darker on white, lighter on black).
+ * Photo-real lacquered wood — light oak/boxwood vs rosewood.
+ * Uses Poly Haven PBR maps when provided.
  */
-function mat(color: PieceColor, accent = false): THREE.MeshPhysicalMaterial {
+function mat(
+  color: PieceColor,
+  accent = false,
+  maps?: OtbPbrMaps | null
+): THREE.MeshPhysicalMaterial {
   const light = color === "w";
+  const diff = light ? maps?.lightDiff : maps?.darkDiff;
+  const nor = light ? maps?.lightNor : maps?.darkNor;
+  const rough = light ? maps?.lightRough : maps?.darkRough;
+
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0x5c4228 // walnut collar / cleft on boxwood
-        : 0x8e8e9a // silvered highlight on ebony carvings
+        ? 0xc9a06a
+        : 0xb89888
       : light
-        ? 0xb8975e // warm boxwood — distinct from cream squares
-        : 0x1a1a20, // deep ebony
-    map: wood(color),
-    bumpMap: bump(color),
-    bumpScale: accent ? 0.018 : 0.028,
-    roughness: accent ? (light ? 0.52 : 0.48) : light ? 0.46 : 0.42,
-    metalness: 0.03,
-    clearcoat: accent ? 0.22 : 0.38,
-    clearcoatRoughness: 0.35,
-    reflectivity: 0.28,
-    envMapIntensity: 0.4,
+        ? 0xfff6e8 // pale maple / boxwood
+        : 0xe0a878, // warm rosewood lift so grain reads
+    map: diff ?? null,
+    normalMap: nor ?? null,
+    normalScale: new THREE.Vector2(accent ? 0.35 : 0.55, accent ? 0.35 : 0.55),
+    roughnessMap: rough ?? null,
+    roughness: accent ? 0.38 : 0.28,
+    metalness: 0.0,
+    clearcoat: accent ? 0.22 : 0.45,
+    clearcoatRoughness: 0.28,
+    reflectivity: 0.35,
+    envMapIntensity: 0.55,
   });
+}
+
+/** Pale maple frame maps (same light wood set). */
+export function frameMaterials(maps?: OtbPbrMaps | null): {
+  apron: THREE.MeshPhysicalMaterial;
+  lip: THREE.MeshPhysicalMaterial;
+} {
+  const shared = {
+    map: maps?.lightDiff ?? null,
+    normalMap: maps?.lightNor ?? null,
+    normalScale: new THREE.Vector2(0.45, 0.45),
+    roughnessMap: maps?.lightRough ?? null,
+    metalness: 0.0,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.45,
+    envMapIntensity: 0.35,
+  } as const;
+  return {
+    apron: new THREE.MeshPhysicalMaterial({
+      ...shared,
+      color: 0xfff0dc, // pale honey maple
+      roughness: 0.42,
+    }),
+    lip: new THREE.MeshPhysicalMaterial({
+      ...shared,
+      color: 0xf5e0c0,
+      roughness: 0.48,
+    }),
+  };
+}
+
+/** Soft tournament square materials. */
+export function squareMaterials(): {
+  light: THREE.MeshPhysicalMaterial;
+  dark: THREE.MeshPhysicalMaterial;
+} {
+  return {
+    light: new THREE.MeshPhysicalMaterial({
+      color: 0xf3ecd4,
+      roughness: 0.78,
+      metalness: 0.0,
+      clearcoat: 0.08,
+      clearcoatRoughness: 0.6,
+    }),
+    dark: new THREE.MeshPhysicalMaterial({
+      color: 0x769656,
+      roughness: 0.82,
+      metalness: 0.0,
+      clearcoat: 0.05,
+      clearcoatRoughness: 0.7,
+    }),
+  };
 }
 
 function add(
@@ -222,38 +119,39 @@ function lathe(
   );
 }
 
-/** Classic weighted Staunton base — wide foot, collar ring, throat. */
 function pedestal(
   group: THREE.Group,
   m: THREE.Material,
   accent: THREE.Material
 ) {
-  // Weighted foot
-  add(group, lathe([
-    [0.0, 0],
-    [0.34, 0],
-    [0.35, 0.02],
-    [0.32, 0.06],
-    [0.28, 0.09],
-  ]), m, 0);
-  // Step / plinth
+  add(
+    group,
+    lathe([
+      [0.0, 0],
+      [0.34, 0],
+      [0.35, 0.02],
+      [0.32, 0.06],
+      [0.28, 0.09],
+    ]),
+    m,
+    0
+  );
   add(group, new THREE.CylinderGeometry(0.26, 0.29, 0.045, SEG), m, 0.11);
-  // Accent collar — the classic Staunton tell
   add(group, new THREE.TorusGeometry(0.235, 0.022, 12, SEG), accent, 0.145);
   add(group, new THREE.CylinderGeometry(0.2, 0.24, 0.035, SEG), m, 0.175);
 }
 
 /**
- * Procedural championship Staunton set — boxwood & ebony, lacquered,
- * glanceable silhouettes at OTB viewing distance.
+ * Championship Staunton meshes with photo-real wood PBR when maps are ready.
  */
 export function createPieceMesh(
   role: PieceRole,
-  color: PieceColor
+  color: PieceColor,
+  maps?: OtbPbrMaps | null
 ): THREE.Group {
   const g = new THREE.Group();
-  const m = mat(color);
-  const accent = mat(color, true);
+  const m = mat(color, false, maps);
+  const accent = mat(color, true, maps);
 
   pedestal(g, m, accent);
 
@@ -273,7 +171,7 @@ export function createPieceMesh(
         0.2
       );
       add(g, new THREE.TorusGeometry(0.085, 0.018, 12, 40), accent, 0.64);
-      add(g, new THREE.SphereGeometry(0.115, 36, 28), m, 0.78);
+      add(g, new THREE.SphereGeometry(0.115, 40, 32), m, 0.78);
       break;
     }
     case "r": {
@@ -291,19 +189,14 @@ export function createPieceMesh(
       );
       add(g, new THREE.TorusGeometry(0.155, 0.016, 10, 40), accent, 0.72);
       add(g, new THREE.CylinderGeometry(0.185, 0.185, 0.11, 40), m, 0.82);
-      // Battlements
       for (let i = 0; i < 4; i++) {
         const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const tooth = new THREE.Mesh(
-          new THREE.BoxGeometry(0.1, 0.18, 0.1),
-          m
-        );
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.1), m);
         tooth.position.set(Math.cos(a) * 0.135, 0.98, Math.sin(a) * 0.135);
         tooth.castShadow = true;
         tooth.receiveShadow = true;
         g.add(tooth);
       }
-      // Inner well
       add(g, new THREE.CylinderGeometry(0.1, 0.1, 0.04, 24), accent, 0.9);
       break;
     }
@@ -312,7 +205,6 @@ export function createPieceMesh(
       add(g, new THREE.TorusGeometry(0.14, 0.016, 10, 36), accent, 0.36);
 
       const profile = new THREE.Shape();
-      // Carved horse — snout, jaw undercut, ear line, arched neck
       profile.moveTo(-0.08, 0.0);
       profile.lineTo(0.1, 0.0);
       profile.lineTo(0.12, 0.1);
@@ -331,8 +223,8 @@ export function createPieceMesh(
         bevelEnabled: true,
         bevelThickness: 0.035,
         bevelSize: 0.025,
-        bevelSegments: 4,
-        curveSegments: 28,
+        bevelSegments: 5,
+        curveSegments: 32,
       });
       extrude.translate(0, 0, -0.11);
       const body = new THREE.Mesh(extrude, m);
@@ -341,7 +233,7 @@ export function createPieceMesh(
       body.receiveShadow = true;
       g.add(body);
 
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.17, 14), m);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.17, 16), m);
       ear.position.set(0.04, 1.08, 0.02);
       ear.rotation.z = -0.45;
       ear.castShadow = true;
@@ -380,8 +272,7 @@ export function createPieceMesh(
         0.2
       );
       add(g, new THREE.TorusGeometry(0.095, 0.016, 10, 36), accent, 0.9);
-      add(g, new THREE.SphereGeometry(0.13, 36, 28), m, 1.02);
-      // Mitre cleft
+      add(g, new THREE.SphereGeometry(0.13, 40, 32), m, 1.02);
       const cleft = new THREE.Mesh(
         new THREE.BoxGeometry(0.045, 0.26, 0.22),
         accent
@@ -440,7 +331,6 @@ export function createPieceMesh(
       );
       add(g, new THREE.TorusGeometry(0.135, 0.018, 10, 40), accent, 1.12);
       add(g, new THREE.CylinderGeometry(0.145, 0.145, 0.07, 40), m, 1.18);
-      // Cross — slightly refined proportions
       const crossV = new THREE.Mesh(
         new THREE.BoxGeometry(0.075, 0.4, 0.075),
         accent

@@ -5,12 +5,13 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Chess } from "chess.js";
 import {
   createPieceMesh,
-  makeSquareTexture,
-  makeWalnutTexture,
+  frameMaterials,
+  squareMaterials,
   squareToWorld,
   type PieceColor,
   type PieceRole,
 } from "../utils/otbPieceMeshes";
+import { loadOtbTextures, type OtbPbrMaps } from "../utils/otbTextures";
 import {
   normalizeFen,
   samePosition,
@@ -67,6 +68,7 @@ type SceneBundle = {
   arrowRoot: THREE.Group;
   squareMeshes: THREE.Mesh[];
   pieceEnv: THREE.Texture;
+  pbrMaps: OtbPbrMaps | null;
   /** Destination square for classification badge projection (null = hide). */
   badgeSquare: string | null;
   boardOrientation: "white" | "black";
@@ -80,26 +82,19 @@ type SceneBundle = {
   pendingFen: string | null;
 };
 
-function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
-  const walnutMap = makeWalnutTexture();
-  const wood = new THREE.MeshStandardMaterial({
-    color: 0x8a5a32,
-    map: walnutMap,
-    roughness: 0.58,
-    metalness: 0.05,
-  });
-  const woodDark = new THREE.MeshStandardMaterial({
-    color: 0x6a4024,
-    map: walnutMap,
-    roughness: 0.64,
-    metalness: 0.04,
-  });
+function buildBoard(
+  root: THREE.Group,
+  squareMeshes: THREE.Mesh[],
+  maps: OtbPbrMaps | null
+) {
+  const { apron, lip } = frameMaterials(maps);
+  const sq = squareMaterials();
 
-  // Beveled championship frame — outer rim + raised lip around the squares.
-  const frameH = 0.12;
-  const frameT = 0.34;
-  const outer = 8.72;
-  const lip = 0.14;
+  // Thin honey-maple apron only — no disc/tray under the set.
+  const frameH = 0.08;
+  const frameT = 0.22;
+  const outer = 8.44;
+  const lipW = 0.1;
   const strip = (
     w: number,
     d: number,
@@ -114,56 +109,32 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
     m.castShadow = true;
     root.add(m);
   };
-  // Outer walnut apron
-  strip(outer, frameT, 0, 4.19, -frameH / 2, wood);
-  strip(outer, frameT, 0, -4.19, -frameH / 2, wood);
-  strip(frameT, outer - frameT * 2, -4.19, 0, -frameH / 2, wood);
-  strip(frameT, outer - frameT * 2, 4.19, 0, -frameH / 2, wood);
-  // Inner raised lip (darker walnut)
-  const inner = 8.08;
-  strip(inner, lip, 0, 4.0, 0.02, woodDark);
-  strip(inner, lip, 0, -4.0, 0.02, woodDark);
-  strip(lip, inner - lip * 2, -4.0, 0, 0.02, woodDark);
-  strip(lip, inner - lip * 2, 4.0, 0, 0.02, woodDark);
+  strip(outer, frameT, 0, 4.11, -frameH / 2, apron);
+  strip(outer, frameT, 0, -4.11, -frameH / 2, apron);
+  strip(frameT, outer - frameT * 2, -4.11, 0, -frameH / 2, apron);
+  strip(frameT, outer - frameT * 2, 4.11, 0, -frameH / 2, apron);
 
-  // Thin playing-surface slab under the squares (avoids see-through gaps)
+  const inner = 8.04;
+  strip(inner, lipW, 0, 4.0, 0.01, lip);
+  strip(inner, lipW, 0, -4.0, 0.01, lip);
+  strip(lipW, inner - lipW * 2, -4.0, 0, 0.01, lip);
+  strip(lipW, inner - lipW * 2, 4.0, 0, 0.01, lip);
+
   const bed = new THREE.Mesh(
-    new THREE.BoxGeometry(8.02, 0.04, 8.02),
-    new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.85 })
+    new THREE.BoxGeometry(8.0, 0.03, 8.0),
+    new THREE.MeshStandardMaterial({ color: 0xf0dcc0, roughness: 0.85 })
   );
-  bed.position.y = -0.04;
+  bed.position.y = -0.03;
   bed.receiveShadow = true;
   root.add(bed);
-
-  // Soft table disc under the set — grounds the board in the scene
-  const table = new THREE.Mesh(
-    new THREE.CylinderGeometry(6.2, 6.4, 0.08, 64),
-    new THREE.MeshStandardMaterial({
-      color: 0x2c241c,
-      map: walnutMap,
-      roughness: 0.75,
-      metalness: 0.02,
-    })
-  );
-  table.position.y = -0.14;
-  table.receiveShadow = true;
-  root.add(table);
-
-  const lightMap = makeSquareTexture(true);
-  const darkMap = makeSquareTexture(false);
 
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const isLight = (file + rank) % 2 === 1;
-      // Slight inset + soft sheen — tournament cloth / maple feel.
+      const mat = (isLight ? sq.light : sq.dark).clone();
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.975, 0.055, 0.975),
-        new THREE.MeshStandardMaterial({
-          color: isLight ? LIGHT : DARK,
-          map: isLight ? lightMap : darkMap,
-          roughness: isLight ? 0.72 : 0.78,
-          metalness: 0.02,
-        })
+        new THREE.BoxGeometry(0.98, 0.05, 0.98),
+        mat
       );
       mesh.position.set(file - 3.5, 0.01, 3.5 - rank);
       mesh.receiveShadow = true;
@@ -334,7 +305,8 @@ function findPieceAt(
 function syncPieces(
   piecesRoot: THREE.Group,
   fen: string,
-  pieceEnv: THREE.Texture | null
+  pieceEnv: THREE.Texture | null,
+  maps: OtbPbrMaps | null = null
 ) {
   clearGroup(piecesRoot);
   let chess: Chess;
@@ -356,7 +328,8 @@ function syncPieces(
       const square = `${String.fromCharCode(97 + f)}${8 - r}`;
       const mesh = createPieceMesh(
         cell.type as PieceRole,
-        cell.color as PieceColor
+        cell.color as PieceColor,
+        maps
       );
       placePieceMesh(
         mesh,
@@ -443,12 +416,12 @@ function beginMoveAnimation(
   const resolved = resolveOtbMoveAnim(prevFen, targetFen, highlight);
   if (!resolved) {
     cancelAnims(bundle);
-    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv);
+    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv, bundle.pbrMaps);
     return;
   }
 
   // Ensure actors match the board we're animating from.
-  syncPieces(bundle.piecesRoot, prevFen, bundle.pieceEnv);
+  syncPieces(bundle.piecesRoot, prevFen, bundle.pieceEnv, bundle.pbrMaps);
   cancelAnims(bundle);
   const token = bundle.animToken;
   const now = performance.now();
@@ -519,7 +492,7 @@ function beginMoveAnimation(
 
   // If somehow no anims started, snap.
   if (bundle.anims.length === 0) {
-    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv);
+    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv, bundle.pbrMaps);
     bundle.pendingFen = null;
     return;
   }
@@ -536,7 +509,7 @@ function beginMoveAnimation(
 function finishAnims(bundle: SceneBundle, fen: string) {
   bundle.anims.length = 0;
   bundle.pendingFen = null;
-  syncPieces(bundle.piecesRoot, fen, bundle.pieceEnv);
+  syncPieces(bundle.piecesRoot, fen, bundle.pieceEnv, bundle.pbrMaps);
 }
 
 function tickAnims(bundle: SceneBundle, now: number) {
@@ -699,6 +672,8 @@ export function OtbChessboard3d({
   const bundleRef = useRef<SceneBundle | null>(null);
   const animDurationRef = useRef(animationDuration);
   animDurationRef.current = animationDuration;
+  const lastMoveHighlightRef = useRef(lastMoveHighlight);
+  lastMoveHighlightRef.current = lastMoveHighlight;
 
   const classMeta =
     moveClassification && CLASSIFICATION_META[moveClassification]
@@ -761,9 +736,9 @@ export function OtbChessboard3d({
     controls.enablePan = false;
 
     // Studio table lighting — warm key, cool fill, soft rim for lacquered wood.
-    scene.add(new THREE.AmbientLight(0xfff6ea, 0.38));
-    scene.add(new THREE.HemisphereLight(0xfff8f0, 0x4a4034, 0.35));
-    const key = new THREE.DirectionalLight(0xfff1dc, 0.95);
+    scene.add(new THREE.AmbientLight(0xfff8f0, 0.52));
+    scene.add(new THREE.HemisphereLight(0xfffaf4, 0x6a5a48, 0.42));
+    const key = new THREE.DirectionalLight(0xfff4e4, 1.05);
     key.position.set(5, 14, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -789,7 +764,8 @@ export function OtbChessboard3d({
     const piecesRoot = new THREE.Group();
     const arrowRoot = new THREE.Group();
     const squareMeshes: THREE.Mesh[] = [];
-    buildBoard(boardRoot, squareMeshes);
+    // Build immediately with procedural fallbacks; swap in PBR maps when ready.
+    buildBoard(boardRoot, squareMeshes, null);
     contentRoot.add(boardRoot);
     contentRoot.add(piecesRoot);
     contentRoot.add(arrowRoot);
@@ -808,6 +784,7 @@ export function OtbChessboard3d({
       arrowRoot,
       squareMeshes,
       pieceEnv,
+      pbrMaps: null,
       badgeSquare: null,
       boardOrientation,
       boardPx: boardWidth,
@@ -820,6 +797,25 @@ export function OtbChessboard3d({
       pendingFen: null,
     };
     bundleRef.current = bundle;
+
+    void loadOtbTextures()
+      .then((maps) => {
+        if (bundle.disposed) return;
+        bundle.pbrMaps = maps;
+        // Rebuild frame with photo-real light oak maps (still no under-tray).
+        clearGroup(boardRoot);
+        squareMeshes.length = 0;
+        buildBoard(boardRoot, squareMeshes, maps);
+        const fen = bundle.prevFen;
+        if (fen) {
+          cancelAnims(bundle);
+          syncPieces(piecesRoot, fen, pieceEnv, maps);
+        }
+        applyHighlights(squareMeshes, lastMoveHighlightRef.current);
+      })
+      .catch(() => {
+        // Keep procedural materials if textures fail to load.
+      });
 
     const syncBadge = () => {
       const el = badgeRef.current;
@@ -931,7 +927,7 @@ export function OtbChessboard3d({
       );
     } else {
       cancelAnims(bundle);
-      syncPieces(bundle.piecesRoot, position, bundle.pieceEnv);
+      syncPieces(bundle.piecesRoot, position, bundle.pieceEnv, bundle.pbrMaps);
     }
     bundle.prevFen = position;
     applyHighlights(bundle.squareMeshes, lastMoveHighlight);
