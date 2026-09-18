@@ -736,9 +736,9 @@ export function OtbChessboard3d({
     controls.enablePan = false;
 
     // Warm studio light — kept soft so muted ivory stays readable, not chalky.
-    scene.add(new THREE.AmbientLight(0xffefe4, 0.32));
-    scene.add(new THREE.HemisphereLight(0xfff2e8, 0x2a2620, 0.28));
-    const key = new THREE.DirectionalLight(0xffe8d4, 0.72);
+    scene.add(new THREE.AmbientLight(0xffefe4, 0.3));
+    scene.add(new THREE.HemisphereLight(0xfff2e8, 0x2a2620, 0.26));
+    const key = new THREE.DirectionalLight(0xffe8d4, 0.64);
     key.position.set(5, 14, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
