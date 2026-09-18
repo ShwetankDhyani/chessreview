@@ -43,14 +43,14 @@ type SceneBundle = {
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
   const rim = new THREE.Mesh(
-    new THREE.BoxGeometry(8.5, 0.18, 8.5),
+    new THREE.BoxGeometry(8.55, 0.07, 8.55),
     new THREE.MeshStandardMaterial({
       color: 0x5c4030,
       roughness: 0.7,
       metalness: 0.05,
     })
   );
-  rim.position.y = -0.1;
+  rim.position.y = -0.055;
   rim.receiveShadow = true;
   root.add(rim);
 
@@ -291,7 +291,7 @@ export function OtbChessboard3d({
 
     const contentRoot = new THREE.Group();
     // Shrink in-scene so perspective near-edge never hits the canvas.
-    contentRoot.scale.setScalar(0.58);
+    contentRoot.scale.setScalar(0.64);
     const boardRoot = new THREE.Group();
     const piecesRoot = new THREE.Group();
     const arrowRoot = new THREE.Group();
