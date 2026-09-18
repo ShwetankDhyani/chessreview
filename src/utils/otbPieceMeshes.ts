@@ -25,8 +25,8 @@ function mat(
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0xb0a090
-        : 0x8a7870
+        ? 0xa89888 // muted taupe on bone
+        : 0xc8b8a4 // warm bone accent on rosewood — dual-tone for top ID
       : light
         ? 0xd4cfc4 // dulled bone — soft off-white, still above sage-cream squares
         : 0x4a3228, // deep rosewood
@@ -34,9 +34,9 @@ function mat(
     normalMap: nor,
     normalScale: new THREE.Vector2(accent ? 0.2 : 0.35, accent ? 0.2 : 0.35),
     roughnessMap: rough,
-    roughness: light ? (accent ? 0.62 : 0.55) : accent ? 0.5 : 0.42,
+    roughness: light ? (accent ? 0.62 : 0.55) : accent ? 0.55 : 0.42,
     metalness: 0.0,
-    clearcoat: light ? 0.02 : 0.1,
+    clearcoat: light ? 0.02 : accent ? 0.04 : 0.1,
     clearcoatRoughness: 0.65,
     reflectivity: 0.1,
     envMapIntensity: 0.1,
@@ -146,11 +146,14 @@ function pedestal(
   add(group, new THREE.CylinderGeometry(0.2, 0.24, 0.035, SEG), m, 0.175);
 }
 
-/** Dark glyph material — high-contrast top marks for overhead ID. */
+/**
+ * Top-ID glyphs: dark on bone whites, light bone on rosewood blacks
+ * so both sides get the same dual-tone contrast from above.
+ */
 function glyphMat(color: PieceColor): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color: color === "w" ? 0x5a5048 : 0x1a1410,
-    roughness: 0.7,
+    color: color === "w" ? 0x5a5048 : 0xd6cfc4,
+    roughness: 0.72,
     metalness: 0.0,
   });
 }
@@ -207,59 +210,62 @@ export function createPieceMesh(
       add(g, new THREE.BoxGeometry(0.46, 0.1, 0.46), m, 0.82);
       for (let i = 0; i < 4; i++) {
         const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.24, 0.15), m);
+        const tooth = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.24, 0.15),
+          glyph
+        );
         tooth.position.set(Math.cos(a) * 0.185, 1.02, Math.sin(a) * 0.185);
         tooth.castShadow = true;
         tooth.receiveShadow = true;
         g.add(tooth);
       }
-      // Dark well — reads as hollow square center from above
-      add(g, new THREE.BoxGeometry(0.2, 0.08, 0.2), glyph, 0.9);
+      // Recessed well — dual-tone center from above
+      add(g, new THREE.BoxGeometry(0.2, 0.08, 0.2), accent, 0.9);
       break;
     }
     case "n": {
-      // Long snout in XZ — only non-radial silhouette.
-      add(g, new THREE.CylinderGeometry(0.12, 0.19, 0.13, 36), m, 0.26);
-      add(g, new THREE.TorusGeometry(0.135, 0.015, 10, 32), accent, 0.34);
+      // Classic Staunton scale — compact head, not square-filling.
+      add(g, new THREE.CylinderGeometry(0.11, 0.17, 0.11, 36), m, 0.25);
+      add(g, new THREE.TorusGeometry(0.12, 0.014, 10, 32), accent, 0.32);
 
       const profile = new THREE.Shape();
-      profile.moveTo(-0.12, 0.0);
-      profile.lineTo(0.14, 0.0);
-      profile.lineTo(0.16, 0.12);
-      profile.bezierCurveTo(0.18, 0.3, 0.04, 0.44, -0.02, 0.56);
-      profile.bezierCurveTo(-0.02, 0.68, 0.14, 0.78, 0.28, 0.76);
-      profile.lineTo(0.58, 0.6);
-      profile.quadraticCurveTo(0.66, 0.5, 0.58, 0.42);
-      profile.lineTo(0.34, 0.44);
-      profile.lineTo(0.28, 0.36);
-      profile.bezierCurveTo(0.12, 0.34, -0.02, 0.24, -0.04, 0.14);
-      profile.bezierCurveTo(-0.08, 0.08, -0.14, 0.04, -0.12, 0.0);
+      profile.moveTo(-0.08, 0.0);
+      profile.lineTo(0.1, 0.0);
+      profile.lineTo(0.11, 0.08);
+      profile.bezierCurveTo(0.12, 0.2, 0.02, 0.3, -0.02, 0.38);
+      profile.bezierCurveTo(-0.02, 0.46, 0.08, 0.54, 0.16, 0.52);
+      profile.lineTo(0.34, 0.42);
+      profile.quadraticCurveTo(0.4, 0.36, 0.36, 0.3);
+      profile.lineTo(0.22, 0.3);
+      profile.lineTo(0.18, 0.24);
+      profile.bezierCurveTo(0.08, 0.22, -0.02, 0.16, -0.04, 0.1);
+      profile.bezierCurveTo(-0.06, 0.05, -0.09, 0.02, -0.08, 0.0);
       profile.closePath();
 
       const extrude = new THREE.ExtrudeGeometry(profile, {
-        depth: 0.28,
+        depth: 0.16,
         bevelEnabled: true,
-        bevelThickness: 0.035,
-        bevelSize: 0.028,
-        bevelSegments: 4,
-        curveSegments: 28,
+        bevelThickness: 0.022,
+        bevelSize: 0.018,
+        bevelSegments: 3,
+        curveSegments: 24,
       });
-      extrude.translate(0, 0, -0.14);
+      extrude.translate(0, 0, -0.08);
       const body = new THREE.Mesh(extrude, m);
-      body.position.set(0.04, 0.32, 0);
+      body.position.set(0.02, 0.3, 0);
       body.castShadow = true;
       body.receiveShadow = true;
       g.add(body);
 
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.2, 14), m);
-      ear.position.set(0.06, 1.12, 0.02);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.12, 12), m);
+      ear.position.set(0.04, 0.88, 0.015);
       ear.rotation.z = -0.4;
       ear.castShadow = true;
       g.add(ear);
 
-      // Flat top “mane bar” so overhead reads as a directed bar, not a blob
-      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.1), glyph);
-      mane.position.set(0.12, 1.05, 0);
+      // Compact mane bar — dual-tone top ID without giant mass
+      const mane = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.045, 0.07), glyph);
+      mane.position.set(0.08, 0.84, 0);
       mane.castShadow = true;
       g.add(mane);
       break;
