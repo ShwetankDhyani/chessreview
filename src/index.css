@@ -1120,6 +1120,31 @@ html[data-testing-mode="1"] {
   background: #1a1816;
 }
 
+/* 3D OTB canvas is transparent around the floating board — the dark frame
+   behind it made black pieces disappear on mobile. Use a warm table tone. */
+.game-board-frame:has(.otb3d-viewport) {
+  background: #dcd6c8;
+}
+
+/* WebGL OTB board */
+.otb3d-viewport {
+  background: #dcd6c8;
+  overflow: visible;
+}
+
+.otb3d-canvas-host {
+  background: transparent;
+  overflow: visible;
+}
+
+.otb3d-canvas-host canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+  background: transparent;
+}
+
 /* On-board analysis veil — uses board space during review */
 .board-analysis-veil {
   position: absolute;
@@ -2135,25 +2160,6 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
   .otb-proto__felt {
     transition: none;
   }
-}
-
-/* WebGL OTB board */
-.otb3d-viewport {
-  background: transparent;
-  overflow: visible;
-}
-
-.otb3d-canvas-host {
-  background: transparent;
-  overflow: visible;
-}
-
-.otb3d-canvas-host canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  touch-action: none;
-  background: transparent;
 }
 
 .board-nav-btn[aria-pressed="true"] {
