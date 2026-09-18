@@ -1,14 +1,30 @@
 /** Desktop layout constants for fitting the board + eval graph in the viewport */
 export const DESKTOP_LAYOUT = {
   header: 44,
+  /** SiteFooter (`--site-footer`) on desktop */
+  footer: 40,
   evalGraphBar: 30,
   evalGraphChart: 56,
-  verticalPad: 28,
-  playerRows: 54,
-  sidebar: 288,
-  coachPanel: 208,
-  navColumn: 48,
-  horizontalPad: 48,
+  /** Main column py + gaps around the board stack */
+  verticalPad: 20,
+  /** Top + bottom PlayerTag rows */
+  playerRows: 52,
+  /** Reanalyze / save / export row under the board */
+  reviewActions: 36,
+  /** Matches `aside` `lg:w-[22rem]` */
+  sidebar: 352,
+  /** Matches coach `xl:w-72` (use larger so board never clips it) */
+  coachPanel: 288,
+  /** Board nav strip `w-11` */
+  navColumn: 44,
+  /** Main column horizontal padding + gaps */
+  horizontalPad: 36,
+  evalBar: 28,
+  /**
+   * Soft ceiling — large enough to feel immersive on 1440p+/1080p,
+   * without swallowing the coach column on ultra-wide screens.
+   */
+  maxBoard: 960,
 } as const;
 
 /**
@@ -38,13 +54,13 @@ export function computeDesktopBoardSize(
 ): number {
   const coach = opts.hasAnalyzedMoves
     ? DESKTOP_LAYOUT.coachPanel + DESKTOP_LAYOUT.navColumn
-    : 0;
+    : DESKTOP_LAYOUT.navColumn;
   const maxW =
     winW -
     DESKTOP_LAYOUT.sidebar -
     coach -
     DESKTOP_LAYOUT.horizontalPad -
-    28; /* eval bar */
+    DESKTOP_LAYOUT.evalBar;
   const evalH = opts.hasAnalyzedMoves
     ? DESKTOP_LAYOUT.evalGraphBar +
       (opts.evalGraphOpen ? DESKTOP_LAYOUT.evalGraphChart : 0)
@@ -52,11 +68,13 @@ export function computeDesktopBoardSize(
   const maxH =
     winH -
     DESKTOP_LAYOUT.header -
+    DESKTOP_LAYOUT.footer -
     evalH -
     DESKTOP_LAYOUT.verticalPad -
-    DESKTOP_LAYOUT.playerRows;
+    DESKTOP_LAYOUT.playerRows -
+    DESKTOP_LAYOUT.reviewActions;
   const size = Math.floor(Math.min(maxW, maxH));
-  return Math.max(240, Math.min(size, 680));
+  return Math.max(280, Math.min(size, DESKTOP_LAYOUT.maxBoard));
 }
 
 /**
