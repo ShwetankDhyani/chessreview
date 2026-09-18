@@ -2136,3 +2136,16 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
     transition: none;
   }
 }
+
+/* WebGL OTB board */
+.otb3d-canvas-host canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+.board-nav-btn[aria-pressed="true"] {
+  color: var(--chess-accent, #96bc4b);
+  background: color-mix(in srgb, var(--chess-accent, #96bc4b) 22%, transparent);
+}

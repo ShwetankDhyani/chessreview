@@ -1,9 +1,12 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type { MoveClassification } from "../types";
+import { useBoardView } from "../hooks/useBoardView";
 import { BoardArrowOverlay } from "./BoardArrowOverlay";
 import { LastMoveSquareOverlay } from "./LastMoveSquareOverlay";
 import { MoveClassificationBadge } from "./MoveClassificationBadge";
+
+const OtbChessboard3d = lazy(() => import("./OtbChessboard3d"));
 
 export const LAST_MOVE_FROM_STYLE = {
   backgroundColor: "rgba(247, 201, 72, 0.72)",
@@ -25,10 +28,8 @@ export interface ReviewChessboardProps {
    * Forces a clean Chessboard remount so no stale animation plays.
    */
   remountKey?: number;
-  /** Dim the board slightly while analyzing */
-  dimmed?: boolean;
-  /** True while auto-playing through an engine continuation line. */
-  continuationActive?: boolean;
+  dimmed: boolean;
+  continuationActive: boolean;
   /** When true, show the pulsating engine-line edge glow (defaults to continuationActive). */
   engineLineGlow?: boolean;
   /** from/to squares for the move currently shown (always when available). */
@@ -57,6 +58,8 @@ export function ReviewChessboard({
 }: ReviewChessboardProps) {
   const boardHostRef = useRef<HTMLDivElement>(null);
   const [renderedWidth, setRenderedWidth] = useState(boardWidth);
+  const [boardView] = useBoardView();
+
   useLayoutEffect(() => {
     const node = boardHostRef.current;
     if (!node) return;
@@ -70,7 +73,39 @@ export function ReviewChessboard({
     const ro = new ResizeObserver(sync);
     ro.observe(node);
     return () => ro.disconnect();
-  }, [boardWidth]);
+  }, [boardWidth, boardView]);
+
+  if (boardView === "otb3d") {
+    return (
+      <div
+        ref={boardHostRef}
+        className={`relative${dimmed ? " board-viewport--dimmed" : ""}`}
+        style={{ width: boardWidth, maxWidth: "100%" }}
+      >
+        <Suspense
+          fallback={
+            <div
+              className="aspect-square w-full animate-pulse rounded-sm bg-chess-panel/60"
+              style={{ maxWidth: boardWidth }}
+              aria-label="Loading 3D board"
+            />
+          }
+        >
+          <OtbChessboard3d
+            position={position}
+            boardWidth={renderedWidth || boardWidth}
+            boardOrientation={boardOrientation}
+            dimmed={dimmed}
+            lastMoveHighlight={lastMoveHighlight}
+            moveClassification={moveClassification}
+            continuationArrow={continuationArrow}
+            showBestMoveArrow={showBestMoveArrow}
+            bestMove={bestMove}
+          />
+        </Suspense>
+      </div>
+    );
+  }
 
   const playedArrow = lastMoveHighlight
     ? ({ ...lastMoveHighlight, variant: "played" as const })
@@ -117,6 +152,7 @@ export function ReviewChessboard({
           boardWidth={renderedWidth}
           boardOrientation={boardOrientation}
           arePiecesDraggable={false}
+          showBoardNotation={false}
           customDarkSquareStyle={{ backgroundColor: "#769656" }}
           customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
           customSquareStyles={squareStyles}

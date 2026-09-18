@@ -4,7 +4,7 @@ import { EvalBar } from "./EvalBar";
 import { EvalBadge } from "./EvalBadge";
 import { EvalChartPanel } from "./EvalChartPanel";
 import { EngineLineNavBar } from "./EngineLineNavBar";
-import { MobileBoardControls } from "./MobileBoardControls";
+import { BoardViewToggleButton, MobileBoardControls } from "./MobileBoardControls";
 import { MobileBoardShell } from "./MobileBoardShell";
 import { MoveReviewPanel } from "./MoveReviewPanel";
 import { PlayerTag } from "./PlayerTag";
@@ -182,6 +182,7 @@ export function ReviewSessionView({
             </div>
 
             <div className="flex flex-col items-stretch gap-1 w-11">
+              <BoardViewToggleButton className="board-nav-btn" />
               <button
                 type="button"
                 onClick={() => setBoardFlipped((f) => !f)}
