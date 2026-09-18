@@ -210,12 +210,11 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Fixed seat camera. Board content is pre-scaled (~0.72) so the full
-  // rim always clears the square canvas — no NDC fit fights with OrbitControls.
-  camera.fov = 36;
+  // Seat camera. Content is scaled down so the wide near edge clears FOV.
+  camera.fov = 40;
   camera.updateProjectionMatrix();
-  const z = boardOrientation === "white" ? 11.5 : -11.5;
-  camera.position.set(0, 9.0, z);
+  const z = boardOrientation === "white" ? 13.5 : -13.5;
+  camera.position.set(0, 10.5, z);
   controls.target.set(0, 0, 0);
   const dist = camera.position.distanceTo(controls.target);
   controls.minDistance = dist;
@@ -292,7 +291,7 @@ export function OtbChessboard3d({
 
     const contentRoot = new THREE.Group();
     // Shrink in-scene so perspective near-edge never hits the canvas.
-    contentRoot.scale.setScalar(0.72);
+    contentRoot.scale.setScalar(0.58);
     const boardRoot = new THREE.Group();
     const piecesRoot = new THREE.Group();
     const arrowRoot = new THREE.Group();
