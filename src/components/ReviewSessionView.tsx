@@ -119,7 +119,7 @@ export function ReviewSessionView({
   if (layout === "desktop") {
     return (
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-        <div className="flex flex-1 items-center justify-center px-4 py-3 gap-4 min-h-0 overflow-hidden">
+        <div className="flex flex-1 items-center justify-center px-3 py-2 gap-3 min-h-0 overflow-hidden">
           <div className="flex items-stretch gap-2 max-h-full">
             <div className="relative flex flex-col gap-1">
               <div className="pl-[34px]">
