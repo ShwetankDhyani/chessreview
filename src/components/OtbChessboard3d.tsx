@@ -220,27 +220,34 @@ function setCameraForOrientation(
   boardOrientation: "white" | "black",
   contentRoot: THREE.Group
 ) {
-  // Higher mild-OTB seat + scale-to-fill (~95% NDC). Skip content pan —
-  // perspective makes pan fight the near edge.
+  // High mild-OTB seat (more overhead = squarer projection = more canvas fill).
+  // Scale-to-fill ~98% NDC on frame + far-rank piece tops. Skip content pan —
+  // perspective makes pan fight the near edge. Lock zoom so orbit can't clip.
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const target = new THREE.Vector3(0, 0.15, 0);
-  camera.fov = 40;
+  const farSign = -nearSign;
+  const target = new THREE.Vector3(0, 0.12, 0);
+  camera.fov = 34;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  camera.position.set(0, 12.2, nearSign * 7.2);
+  camera.position.set(0, 14.2, nearSign * 5.4);
   controls.target.copy(target);
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
 
+  // Frame outer ≈ ±4.22. Piece height only budgeted on the far rank / sides —
+  // near-rank king tops blow out NDC and leave huge empty margins.
+  const edge = 4.26;
   const localCorners = [
-    new THREE.Vector3(-4.3, -0.1, -4.3),
-    new THREE.Vector3(4.3, -0.1, -4.3),
-    new THREE.Vector3(-4.3, -0.1, 4.3),
-    new THREE.Vector3(4.3, -0.1, 4.3),
-    new THREE.Vector3(-4.3, 1.15, -4.3),
-    new THREE.Vector3(4.3, 1.15, -4.3),
-    new THREE.Vector3(-4.3, 1.15, 4.3),
-    new THREE.Vector3(4.3, 1.15, 4.3),
+    new THREE.Vector3(-edge, -0.06, -edge),
+    new THREE.Vector3(edge, -0.06, -edge),
+    new THREE.Vector3(-edge, -0.06, edge),
+    new THREE.Vector3(edge, -0.06, edge),
+    // Far rank piece clearance
+    new THREE.Vector3(-edge, 0.95, farSign * edge),
+    new THREE.Vector3(edge, 0.95, farSign * edge),
+    // Side mid-height so knights/bishops near rim stay in frame
+    new THREE.Vector3(-edge, 0.72, 0),
+    new THREE.Vector3(edge, 0.72, 0),
   ];
 
   contentRoot.position.set(0, 0, 0);
@@ -258,12 +265,13 @@ function setCameraForOrientation(
     return maxAbs;
   };
 
-  let lo = 0.55;
-  let hi = 1.6;
+  const ndcTarget = 0.98;
+  let lo = 0.7;
+  let hi = 2.2;
   let bestScale = 1;
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 28; i++) {
     const mid = (lo + hi) / 2;
-    if (measure(mid) > 0.95) {
+    if (measure(mid) > ndcTarget) {
       hi = mid;
     } else {
       bestScale = mid;
@@ -274,10 +282,11 @@ function setCameraForOrientation(
   contentRoot.updateMatrixWorld(true);
 
   const euclidean = camera.position.distanceTo(target);
-  controls.minDistance = euclidean * 0.95;
-  controls.maxDistance = euclidean * 1.6;
-  controls.minPolarAngle = 0.05;
-  controls.maxPolarAngle = Math.PI * 0.49;
+  // Allow gentle pull-back only — zooming in is what reintroduces clipping.
+  controls.minDistance = euclidean;
+  controls.maxDistance = euclidean * 1.35;
+  controls.minPolarAngle = 0.12;
+  controls.maxPolarAngle = Math.PI * 0.42;
   controls.update();
 }
 
