@@ -39,6 +39,7 @@ type SceneBundle = {
   piecesRoot: THREE.Group;
   arrowRoot: THREE.Group;
   squareMeshes: THREE.Mesh[];
+  pieceEnv: THREE.Texture;
   raf: number;
   disposed: boolean;
 };
@@ -187,7 +188,11 @@ function applyHighlights(
   }
 }
 
-function syncPieces(piecesRoot: THREE.Group, fen: string) {
+function syncPieces(
+  piecesRoot: THREE.Group,
+  fen: string,
+  pieceEnv: THREE.Texture | null
+) {
   clearGroup(piecesRoot);
   let chess: Chess;
   try {
@@ -217,6 +222,25 @@ function syncPieces(piecesRoot: THREE.Group, fen: string) {
       if (cell.type === "n") {
         // Snout is local +X; yaw so it faces the opponent (±Z).
         mesh.rotation.y = cell.color === "w" ? Math.PI / 2 : -Math.PI / 2;
+      }
+      if (pieceEnv) {
+        mesh.traverse((obj) => {
+          if (obj instanceof THREE.Mesh) {
+            const mats = Array.isArray(obj.material)
+              ? obj.material
+              : [obj.material];
+            for (const m of mats) {
+              if (
+                m instanceof THREE.MeshStandardMaterial ||
+                m instanceof THREE.MeshPhysicalMaterial
+              ) {
+                m.envMap = pieceEnv;
+                m.envMapIntensity = 0.85;
+                m.needsUpdate = true;
+              }
+            }
+          }
+        });
       }
       piecesRoot.add(mesh);
     }
@@ -363,9 +387,9 @@ export function OtbChessboard3d({
     // No ACES remap — it washed the classic green/cream board toward pastel.
     host.appendChild(renderer.domElement);
 
-    // Env map is for piece clearcoat/definition only (board mats use envMapIntensity 0).
+    // Env map for pieces only — never assign scene.environment (washes board greens).
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const pieceEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     pmrem.dispose();
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -418,6 +442,7 @@ export function OtbChessboard3d({
       piecesRoot,
       arrowRoot,
       squareMeshes,
+      pieceEnv,
       raf: 0,
       disposed: false,
     };
@@ -437,6 +462,7 @@ export function OtbChessboard3d({
       controls.dispose();
       clearGroup(piecesRoot);
       clearGroup(arrowRoot);
+      pieceEnv.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) {
         host.removeChild(renderer.domElement);
@@ -466,7 +492,7 @@ export function OtbChessboard3d({
   useEffect(() => {
     const bundle = bundleRef.current;
     if (!bundle) return;
-    syncPieces(bundle.piecesRoot, position);
+    syncPieces(bundle.piecesRoot, position, bundle.pieceEnv);
     applyHighlights(bundle.squareMeshes, lastMoveHighlight);
     clearGroup(bundle.arrowRoot);
     if (arrow) {
