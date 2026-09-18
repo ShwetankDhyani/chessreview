@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Chess } from "chess.js";
 import {
   createPieceMesh,
@@ -76,6 +77,7 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
       );
       mesh.position.set(file - 3.5, 0, 3.5 - rank);
       mesh.receiveShadow = true;
+      mesh.castShadow = false;
       mesh.userData.baseColor = isLight ? LIGHT : DARK;
       mesh.userData.file = file;
       mesh.userData.rank = rank;
@@ -109,7 +111,6 @@ function makeArrowMesh(
   const b = squareToWorld(to);
   if (!a || !b) return null;
 
-  const group = new THREE.Group();
   const dx = b.x - a.x;
   const dz = b.z - a.z;
   const len = Math.hypot(dx, dz);
@@ -117,39 +118,44 @@ function makeArrowMesh(
 
   const ux = dx / len;
   const uz = dz / len;
-  const shaftLen = Math.max(0.2, len - 0.55);
-  const shaft = new THREE.Mesh(
-    new THREE.BoxGeometry(0.14, 0.04, shaftLen),
-    new THREE.MeshStandardMaterial({
-      color,
-      transparent: true,
-      opacity: 0.88,
-      roughness: 0.5,
-      depthWrite: false,
-    })
-  );
-  shaft.position.set(
-    a.x + ux * (shaftLen / 2 + 0.2),
-    0.08,
-    a.z + uz * (shaftLen / 2 + 0.2)
-  );
-  shaft.rotation.y = Math.atan2(ux, uz);
-  group.add(shaft);
+  const yaw = Math.atan2(ux, uz);
 
-  const head = new THREE.Mesh(
-    new THREE.ConeGeometry(0.22, 0.42, 10),
-    new THREE.MeshStandardMaterial({
-      color,
-      transparent: true,
-      opacity: 0.92,
-      roughness: 0.5,
-      depthWrite: false,
-    })
-  );
-  head.position.set(b.x - ux * 0.28, 0.1, b.z - uz * 0.28);
-  head.rotation.x = Math.PI / 2;
-  head.rotation.z = Math.atan2(ux, uz);
-  group.add(head);
+  const headLen = Math.min(0.5, len * 0.34);
+  const headHalf = 0.28;
+  const halfShaft = 0.075;
+  const inset = 0.24;
+  const tipPull = 0.18;
+  const usable = Math.max(0.24, len - inset - tipPull);
+  const shaftLen = Math.max(0.05, usable - headLen);
+
+  // One flat Shape — continuous silhouette, no cone/euler tip bugs.
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfShaft, 0);
+  shape.lineTo(-halfShaft, shaftLen);
+  shape.lineTo(-headHalf, shaftLen);
+  shape.lineTo(0, shaftLen + headLen);
+  shape.lineTo(headHalf, shaftLen);
+  shape.lineTo(halfShaft, shaftLen);
+  shape.lineTo(halfShaft, 0);
+  shape.closePath();
+
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.rotateX(Math.PI / 2); // XY → XZ, +Y → +Z
+
+  const mat = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.88,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 2;
+
+  const group = new THREE.Group();
+  group.position.set(a.x + ux * inset, 0.12, a.z + uz * inset);
+  group.rotation.y = yaw;
+  group.add(mesh);
   return group;
 }
 
@@ -205,9 +211,10 @@ function syncPieces(piecesRoot: THREE.Group, fen: string) {
         cell.color as PieceColor
       );
       mesh.position.set(world.x, 0.02, world.z);
-      mesh.scale.setScalar(0.95);
+      mesh.scale.setScalar(1.02);
       if (cell.type === "n") {
-        mesh.rotation.y = cell.color === "w" ? 0 : Math.PI;
+        // Snout is local +X; yaw so it faces the opponent (±Z).
+        mesh.rotation.y = cell.color === "w" ? Math.PI / 2 : -Math.PI / 2;
       }
       piecesRoot.add(mesh);
     }
@@ -220,20 +227,34 @@ function setCameraForOrientation(
   boardOrientation: "white" | "black",
   contentRoot: THREE.Group
 ) {
-  // High mild-OTB seat (more overhead = squarer projection = more canvas fill).
-  // Fit the wooden frame hard to ~99.5% NDC; piece tops may approach the rim
-  // but must stay on-canvas. No lateral pan. Lock zoom-in.
+  // Sitting OTB seat — fix the viewing angle, then dolly distance to fit.
+  // (Scaling the board down made the same camera read as top-down.)
   const nearSign = boardOrientation === "white" ? 1 : -1;
   const farSign = -nearSign;
-  const target = new THREE.Vector3(0, 0.1, 0);
-  camera.fov = 28;
+  const target = new THREE.Vector3(0, 0.45, nearSign * 0.35);
+  camera.fov = 42;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  // Near-top-down mild OTB: squarer projection so the frame can fill the canvas.
-  camera.position.set(0, 17.2, nearSign * 2.15);
-  controls.target.copy(target);
-  camera.lookAt(target);
-  camera.updateMatrixWorld(true);
+
+  // ~52° from vertical ≈ eye-level across a table
+  const polar = 0.92;
+  const azimuth = nearSign > 0 ? 0 : Math.PI;
+
+  const placeCamera = (radius: number) => {
+    const sinP = Math.sin(polar);
+    const cosP = Math.cos(polar);
+    camera.position.set(
+      target.x + radius * sinP * Math.sin(azimuth),
+      target.y + radius * cosP,
+      target.z + radius * sinP * Math.cos(azimuth)
+    );
+    controls.target.copy(target);
+    camera.lookAt(target);
+    camera.updateMatrixWorld(true);
+  };
+
+  contentRoot.position.set(0, 0, 0);
+  contentRoot.scale.setScalar(1);
 
   const edge = 4.26;
   const frameCorners = [
@@ -243,120 +264,46 @@ function setCameraForOrientation(
     new THREE.Vector3(edge, -0.06, edge),
   ];
   const pieceCorners = [
-    new THREE.Vector3(-edge, 0.7, farSign * edge),
-    new THREE.Vector3(edge, 0.7, farSign * edge),
-    new THREE.Vector3(-edge * 0.55, 0.75, nearSign * edge * 0.2),
-    new THREE.Vector3(edge * 0.55, 0.75, nearSign * edge * 0.2),
+    new THREE.Vector3(-edge, 1.4, farSign * edge),
+    new THREE.Vector3(edge, 1.4, farSign * edge),
+    new THREE.Vector3(-edge * 0.35, 1.45, nearSign * edge * 0.6),
+    new THREE.Vector3(edge * 0.35, 1.45, nearSign * edge * 0.6),
+    new THREE.Vector3(0, 1.5, nearSign * edge),
   ];
 
-  contentRoot.position.set(0, 0, 0);
-  contentRoot.scale.setScalar(1);
-
-  const measureSet = (
-    corners: THREE.Vector3[],
-    scale: number,
-    posY: number,
-    posZ = 0
-  ) => {
+  const measure = (radius: number) => {
+    placeCamera(radius);
     let maxAbs = 0;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let minX = Infinity;
-    let maxX = -Infinity;
     const world = new THREE.Vector3();
     const ndc = new THREE.Vector3();
-    for (const c of corners) {
-      world.copy(c).multiplyScalar(scale);
-      world.y += posY;
-      world.z += posZ;
+    for (const c of [...frameCorners, ...pieceCorners]) {
+      world.copy(c);
       ndc.copy(world).project(camera);
       maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
-      minX = Math.min(minX, ndc.x);
-      maxX = Math.max(maxX, ndc.x);
-      minY = Math.min(minY, ndc.y);
-      maxY = Math.max(maxY, ndc.y);
     }
-    return {
-      maxAbs,
-      minX,
-      maxX,
-      minY,
-      maxY,
-      midX: (minX + maxX) / 2,
-      midY: (minY + maxY) / 2,
-    };
+    return maxAbs;
   };
 
-  const frameTarget = 0.999;
-  const pieceLimit = 1.05;
-  let lo = 0.75;
-  let hi = 2.4;
-  let bestScale = 1;
+  const ndcTarget = 0.93;
+  let lo = 8;
+  let hi = 22;
+  let bestR = 14;
   for (let i = 0; i < 28; i++) {
     const mid = (lo + hi) / 2;
-    const frame = measureSet(frameCorners, mid, 0);
-    const pieces = measureSet(pieceCorners, mid, 0);
-    if (frame.maxAbs > frameTarget || pieces.maxAbs > pieceLimit) {
-      hi = mid;
+    if (measure(mid) > ndcTarget) {
+      lo = mid; // too close — pull back
     } else {
-      bestScale = mid;
-      lo = mid;
+      bestR = mid;
+      hi = mid;
     }
   }
-
-  // Screen-vertical recenter: from this high seat, world +Y is mostly along the
-  // view ray, so nudge along depth (Z) instead — toward the far rank.
-  const depthSign = farSign;
-  const at0 = measureSet(frameCorners, bestScale, 0, 0);
-  const atEps = measureSet(frameCorners, bestScale, 0, depthSign * 0.2);
-  const dMid = atEps.midY - at0.midY;
-  let bestZ = 0;
-  if (Math.abs(dMid) > 1e-6) {
-    bestZ = depthSign * 0.2 * (-at0.midY) / dMid;
-  }
-  for (let i = 0; i < 12; i++) {
-    const frame = measureSet(frameCorners, bestScale, 0, bestZ);
-    if (frame.maxAbs <= frameTarget) break;
-    bestZ *= 0.7;
-  }
-
-  // Recenter frees headroom — push scale again with the depth offset applied.
-  lo = bestScale;
-  hi = Math.min(2.6, bestScale * 1.35);
-  for (let i = 0; i < 20; i++) {
-    const mid = (lo + hi) / 2;
-    const frame = measureSet(frameCorners, mid, 0, bestZ);
-    const pieces = measureSet(pieceCorners, mid, 0, bestZ);
-    if (frame.maxAbs > frameTarget || pieces.maxAbs > pieceLimit) {
-      hi = mid;
-    } else {
-      bestScale = mid;
-      lo = mid;
-    }
-  }
-
-  // Re-balance midY after the second scale pass.
-  const at1 = measureSet(frameCorners, bestScale, 0, bestZ);
-  const at2 = measureSet(frameCorners, bestScale, 0, bestZ + depthSign * 0.1);
-  const dMid2 = at2.midY - at1.midY;
-  if (Math.abs(dMid2) > 1e-6) {
-    bestZ += depthSign * 0.1 * (-at1.midY) / dMid2;
-  }
-  for (let i = 0; i < 10; i++) {
-    const frame = measureSet(frameCorners, bestScale, 0, bestZ);
-    if (frame.maxAbs <= frameTarget) break;
-    bestZ *= 0.75;
-  }
-
-  contentRoot.scale.setScalar(bestScale);
-  contentRoot.position.set(0, 0, bestZ);
-  contentRoot.updateMatrixWorld(true);
+  placeCamera(bestR);
 
   const euclidean = camera.position.distanceTo(target);
-  controls.minDistance = euclidean;
-  controls.maxDistance = euclidean * 1.35;
-  controls.minPolarAngle = 0.12;
-  controls.maxPolarAngle = Math.PI * 0.42;
+  controls.minDistance = euclidean * 0.8;
+  controls.maxDistance = euclidean * 1.6;
+  controls.minPolarAngle = 0.55;
+  controls.maxPolarAngle = Math.PI * 0.48;
   controls.update();
 }
 
@@ -409,21 +356,42 @@ export function OtbChessboard3d({
     });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = false;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.92;
     host.appendChild(renderer.domElement);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.62));
-    const key = new THREE.DirectionalLight(0xfff2dc, 1.05);
-    key.position.set(4, 12, 6);
+    scene.add(new THREE.HemisphereLight(0xfff6e8, 0x5a6a4a, 0.48));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+    const key = new THREE.DirectionalLight(0xfff1dc, 1.35);
+    key.position.set(6.5, 10, 8);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 40;
+    key.shadow.camera.left = -10;
+    key.shadow.camera.right = 10;
+    key.shadow.camera.top = 10;
+    key.shadow.camera.bottom = -10;
+    key.shadow.bias = -0.0008;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.4);
-    fill.position.set(-6, 6, -4);
+    const fill = new THREE.DirectionalLight(0xa8b8e0, 0.55);
+    fill.position.set(-8, 5, -4);
     scene.add(fill);
+    // Player-side rim so near pieces catch a highlight
+    const rim = new THREE.DirectionalLight(0xffffff, 0.35);
+    rim.position.set(0, 3.5, 12);
+    scene.add(rim);
 
     const contentRoot = new THREE.Group();
     contentRoot.scale.setScalar(1);
