@@ -32,7 +32,7 @@ const HI_FROM = 0xf7c948;
 const HI_TO = 0xe8b83a;
 const ARROW = 0xf7c948;
 const HINT = 0x9bc96a;
-const PIECE_Y = 0.02;
+const PIECE_Y = 0.035;
 
 export interface OtbChessboard3dProps {
   position: string;
@@ -735,11 +735,11 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    // Warm studio light — kept soft so muted ivory stays readable, not chalky.
-    scene.add(new THREE.AmbientLight(0xffefe4, 0.3));
-    scene.add(new THREE.HemisphereLight(0xfff2e8, 0x2a2620, 0.26));
-    const key = new THREE.DirectionalLight(0xffe8d4, 0.64);
-    key.position.set(5, 14, 7);
+    // High-end tournament studio lighting: warm key, soft ambient fill, and dual rim contour lights
+    scene.add(new THREE.AmbientLight(0xffefe4, 0.34));
+    scene.add(new THREE.HemisphereLight(0xfff5ea, 0x221d18, 0.28));
+    const key = new THREE.DirectionalLight(0xffeade, 0.72);
+    key.position.set(6, 15, 8);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.camera.near = 1;
@@ -751,12 +751,16 @@ export function OtbChessboard3d({
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.02;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc8d0c4, 0.28);
-    fill.position.set(-7, 7, -5);
+    const fill = new THREE.DirectionalLight(0xcad4dc, 0.32);
+    fill.position.set(-8, 8, -6);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xe8d4b8, 0.2);
-    rim.position.set(0, 4, 14);
-    scene.add(rim);
+    // Dual rim lights ensure pieces on both white and black sides have crisp edge separation
+    const frontRim = new THREE.DirectionalLight(0xf4e6d4, 0.28);
+    frontRim.position.set(0, 5, 13);
+    scene.add(frontRim);
+    const backRim = new THREE.DirectionalLight(0xdce6f4, 0.22);
+    backRim.position.set(0, 6, -13);
+    scene.add(backRim);
 
     const contentRoot = new THREE.Group();
     contentRoot.scale.setScalar(1);
