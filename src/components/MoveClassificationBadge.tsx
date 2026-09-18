@@ -25,8 +25,8 @@ export function MoveClassificationBadge({
   const meta = CLASSIFICATION_META[classification];
   if (!meta) return null;
 
-  const badge = Math.max(20, Math.min(34, Math.round(rect.size * 0.48)));
-  const inset = Math.max(1, Math.round(rect.size * 0.02));
+  const badge = Math.max(16, Math.min(26, Math.round(rect.size * 0.36)));
+  const inset = Math.max(1, Math.round(rect.size * 0.04));
 
   return (
     <div
