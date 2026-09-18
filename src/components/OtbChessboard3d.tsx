@@ -211,18 +211,17 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Frame so the foreshortened board nearly fills the square canvas —
-  // bias the look target toward the near ranks to kill empty top/side padding.
-  camera.fov = 34;
+  // Fill the review square without clipping the far rank.
+  camera.fov = 36;
   camera.updateProjectionMatrix();
 
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const target = new THREE.Vector3(0, 0.08, nearSign * 1.05);
-  const dist = 6.55;
-  camera.position.set(0, dist * 0.68, nearSign * dist * 0.95);
+  const target = new THREE.Vector3(0, 0.1, nearSign * 0.55);
+  const dist = 7.05;
+  camera.position.set(0, dist * 0.7, nearSign * dist * 0.94);
   controls.target.copy(target);
-  controls.minDistance = 5.2;
-  controls.maxDistance = 10.5;
+  controls.minDistance = 5.6;
+  controls.maxDistance = 11;
   controls.maxPolarAngle = Math.PI * 0.48;
   controls.minPolarAngle = Math.PI * 0.22;
   controls.update();
