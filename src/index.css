@@ -1120,15 +1120,11 @@ html[data-testing-mode="1"] {
   background: #1a1816;
 }
 
-/* 3D OTB canvas is transparent around the floating board — the dark frame
-   behind it made black pieces disappear on mobile. Use a warm table tone. */
-.game-board-frame:has(.otb3d-viewport) {
-  background: #dcd6c8;
-}
-
-/* WebGL OTB board */
+/* WebGL OTB board — desktop keeps the dark frame (looked best there).
+   Mobile alone needs a light fill behind the transparent canvas so
+   black pieces stay readable; sage-cream ties into site greens. */
 .otb3d-viewport {
-  background: #dcd6c8;
+  background: transparent;
   overflow: visible;
 }
 
@@ -1143,6 +1139,13 @@ html[data-testing-mode="1"] {
   height: 100% !important;
   touch-action: none;
   background: transparent;
+}
+
+@media (max-width: 1023px) {
+  .game-board-frame:has(.otb3d-viewport),
+  .otb3d-viewport {
+    background: #d2dbc6;
+  }
 }
 
 /* On-board analysis veil — uses board space during review */
