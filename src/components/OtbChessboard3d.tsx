@@ -226,11 +226,11 @@ function setCameraForOrientation(
   const nearSign = boardOrientation === "white" ? 1 : -1;
   const farSign = -nearSign;
   const target = new THREE.Vector3(0, 0.1, 0);
-  camera.fov = 30;
+  camera.fov = 28;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  // High seat, short throw: keep mild OTB depth while projecting nearly square.
-  camera.position.set(0, 15.8, nearSign * 3.2);
+  // Near-top-down mild OTB: squarer projection so the frame can fill the canvas.
+  camera.position.set(0, 17.2, nearSign * 2.15);
   controls.target.copy(target);
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
@@ -243,10 +243,10 @@ function setCameraForOrientation(
     new THREE.Vector3(edge, -0.06, edge),
   ];
   const pieceCorners = [
-    new THREE.Vector3(-edge, 0.95, farSign * edge),
-    new THREE.Vector3(edge, 0.95, farSign * edge),
-    new THREE.Vector3(-edge * 0.7, 0.85, nearSign * edge * 0.35),
-    new THREE.Vector3(edge * 0.7, 0.85, nearSign * edge * 0.35),
+    new THREE.Vector3(-edge, 0.7, farSign * edge),
+    new THREE.Vector3(edge, 0.7, farSign * edge),
+    new THREE.Vector3(-edge * 0.55, 0.75, nearSign * edge * 0.2),
+    new THREE.Vector3(edge * 0.55, 0.75, nearSign * edge * 0.2),
   ];
 
   contentRoot.position.set(0, 0, 0);
@@ -288,7 +288,7 @@ function setCameraForOrientation(
   };
 
   const frameTarget = 0.999;
-  const pieceLimit = 1.0;
+  const pieceLimit = 1.05;
   let lo = 0.75;
   let hi = 2.4;
   let bestScale = 1;
