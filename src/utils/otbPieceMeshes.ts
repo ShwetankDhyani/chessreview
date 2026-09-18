@@ -23,21 +23,21 @@ function mat(
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0xa88860
-        : 0x8a7870
+        ? 0x8f7350
+        : 0x7a6a60
       : light
-        ? 0xc4b396 // antique ivory — matches site #f5f3ec chip, not pure white
-        : 0x6e4a38, // deep rosewood — near chess-panel warmth
+        ? 0x9e8e72 // aged boxwood — sits with chess-surface, not blown white
+        : 0x7a5640, // deep rosewood with panel warmth
     map: diff ?? null,
     normalMap: nor ?? null,
-    normalScale: new THREE.Vector2(accent ? 0.3 : 0.5, accent ? 0.3 : 0.5),
+    normalScale: new THREE.Vector2(accent ? 0.28 : 0.45, accent ? 0.28 : 0.45),
     roughnessMap: rough ?? null,
-    roughness: accent ? 0.45 : 0.36,
+    roughness: accent ? 0.5 : 0.42,
     metalness: 0.0,
-    clearcoat: accent ? 0.14 : 0.28,
-    clearcoatRoughness: 0.4,
-    reflectivity: 0.28,
-    envMapIntensity: 0.4,
+    clearcoat: accent ? 0.08 : 0.16,
+    clearcoatRoughness: 0.5,
+    reflectivity: 0.22,
+    envMapIntensity: 0.28,
   });
 }
 

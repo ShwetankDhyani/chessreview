@@ -26,8 +26,8 @@ import type { MoveClassification } from "../types";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
 
-const LIGHT = 0xeeeed2;
-const DARK = 0x769656;
+const LIGHT = 0xe4dfc8;
+const DARK = 0x6f8f52;
 const HI_FROM = 0xf7c948;
 const HI_TO = 0xe8b83a;
 const ARROW = 0xf7c948;
