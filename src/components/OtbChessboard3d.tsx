@@ -67,7 +67,9 @@ type SceneBundle = {
   pieceEnv: THREE.Texture;
   /** Destination square for classification badge projection (null = hide). */
   badgeSquare: string | null;
+  boardOrientation: "white" | "black";
   boardPx: number;
+  badgePx: number;
   raf: number;
   disposed: boolean;
   anims: PieceAnim[];
@@ -649,7 +651,8 @@ export function OtbChessboard3d({
     moveClassification && lastMoveHighlight?.to
       ? lastMoveHighlight.to
       : null;
-  const badgeSize = Math.max(22, Math.min(36, Math.round(boardWidth * 0.07)));
+  // Compact pip beside the piece — large enough to read, small enough to clear.
+  const badgeSize = Math.max(14, Math.min(18, Math.round(boardWidth * 0.022)));
 
   const arrow = useMemo(() => {
     if (continuationArrow) {
@@ -748,7 +751,9 @@ export function OtbChessboard3d({
       squareMeshes,
       pieceEnv,
       badgeSquare: null,
+      boardOrientation,
       boardPx: boardWidth,
+      badgePx: Math.max(14, Math.min(18, Math.round(boardWidth * 0.022))),
       raf: 0,
       disposed: false,
       anims: [],
@@ -771,25 +776,26 @@ export function OtbChessboard3d({
         el.style.visibility = "hidden";
         return;
       }
-      // Hover above the destination piece, nudged toward the far/h-file corner.
-      projectScratch.set(world.x + 0.28, 1.15, world.z - 0.28);
+      // h-file floor edge of the destination square — beside the base, not in
+      // front of (covers) or above (covers crown) the piece.
+      projectScratch.set(world.x + 0.64, 0.14, world.z);
       projectScratch.applyMatrix4(bundle.contentRoot.matrixWorld);
       projectScratch.project(bundle.camera);
       if (
         projectScratch.z < -1 ||
         projectScratch.z > 1 ||
-        Math.abs(projectScratch.x) > 1.15 ||
-        Math.abs(projectScratch.y) > 1.15
+        Math.abs(projectScratch.x) > 1.2 ||
+        Math.abs(projectScratch.y) > 1.2
       ) {
         el.style.visibility = "hidden";
         return;
       }
       const px = bundle.boardPx;
+      const size = bundle.badgePx;
       const x = (projectScratch.x * 0.5 + 0.5) * px;
       const y = (-projectScratch.y * 0.5 + 0.5) * px;
-      const half = el.offsetWidth / 2 || Math.max(11, px * 0.035);
       el.style.visibility = "visible";
-      el.style.transform = `translate(${x - half}px, ${y - half}px)`;
+      el.style.transform = `translate(${x - size * 0.25}px, ${y - size * 0.75}px)`;
     };
 
     const tick = () => {
@@ -824,6 +830,8 @@ export function OtbChessboard3d({
     if (!bundle) return;
     const w = Math.max(1, boardWidth);
     bundle.boardPx = w;
+    bundle.badgePx = badgeSize;
+    bundle.boardOrientation = boardOrientation;
     bundle.renderer.setSize(w, w, false);
     bundle.camera.aspect = 1;
     bundle.camera.updateProjectionMatrix();
@@ -835,7 +843,7 @@ export function OtbChessboard3d({
       boardOrientation,
       bundle.contentRoot
     );
-  }, [boardWidth, boardOrientation]);
+  }, [boardWidth, boardOrientation, badgeSize]);
 
   useEffect(() => {
     const bundle = bundleRef.current;
