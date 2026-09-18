@@ -25,18 +25,18 @@ function mat(
   return new THREE.MeshPhysicalMaterial({
     color: accent
       ? light
-        ? 0xa89888 // muted taupe on bone
-        : 0xd4c4b0 // warmer bone accent on rosewood — dual-tone for top ID
+        ? 0xb5a898 // soft taupe collar on bone — gentle, not chalky
+        : 0x6a4e3c // lifted rosewood collar — same wood family
       : light
-        ? 0xd4cfc4 // dulled bone — soft off-white, still above sage-cream squares
+        ? 0xd4cfc4 // dulled bone
         : 0x4a3228, // deep rosewood
     map: diff,
     normalMap: nor,
     normalScale: new THREE.Vector2(accent ? 0.2 : 0.35, accent ? 0.2 : 0.35),
     roughnessMap: rough,
-    roughness: light ? (accent ? 0.62 : 0.55) : accent ? 0.55 : 0.42,
+    roughness: light ? (accent ? 0.62 : 0.55) : accent ? 0.52 : 0.42,
     metalness: 0.0,
-    clearcoat: light ? 0.02 : accent ? 0.04 : 0.1,
+    clearcoat: light ? 0.02 : accent ? 0.06 : 0.1,
     clearcoatRoughness: 0.65,
     reflectivity: 0.1,
     envMapIntensity: 0.1,
@@ -147,14 +147,25 @@ function pedestal(
 }
 
 /**
- * Top-ID glyphs: dark on bone whites, bright bone on rosewood blacks
- * so both sides get the same dual-tone contrast from above.
+ * Gentle dual-tone top marks — wood-on-wood, never chalk-on-ebony.
+ * Whites: soft taupe. Blacks: slightly lifted rosewood.
  */
-function glyphMat(color: PieceColor): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: color === "w" ? 0x5a5048 : 0xe8e2d6,
-    roughness: 0.65,
+function glyphMat(
+  color: PieceColor,
+  maps?: OtbPbrMaps | null
+): THREE.MeshPhysicalMaterial {
+  const light = color === "w";
+  return new THREE.MeshPhysicalMaterial({
+    color: light ? 0x8a7c6c : 0x7a5a48,
+    map: light ? null : maps?.darkDiff ?? null,
+    normalMap: light ? maps?.lightNor ?? null : maps?.darkNor ?? null,
+    normalScale: new THREE.Vector2(0.25, 0.25),
+    roughnessMap: light ? maps?.lightRough ?? null : maps?.darkRough ?? null,
+    roughness: 0.58,
     metalness: 0.0,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.6,
+    envMapIntensity: 0.12,
   });
 }
 
@@ -170,7 +181,7 @@ export function createPieceMesh(
   const g = new THREE.Group();
   const m = mat(color, false, maps);
   const accent = mat(color, true, maps);
-  const glyph = glyphMat(color);
+  const glyph = glyphMat(color, maps);
 
   pedestal(g, m, accent);
 
