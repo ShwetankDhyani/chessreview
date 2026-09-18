@@ -9,7 +9,6 @@ import {
   type PieceRole,
 } from "../utils/otbPieceMeshes";
 import type { MoveClassification } from "../types";
-import { CLASSIFICATION_META } from "../utils/classificationMeta";
 
 const LIGHT = 0xeeeed2;
 const DARK = 0x769656;
@@ -212,13 +211,13 @@ function setCameraForOrientation(
   boardOrientation: "white" | "black"
 ) {
   // Pulled-back floating OTB seat — full board visible, no corner clip.
-  camera.fov = 38;
+  camera.fov = 36;
   camera.updateProjectionMatrix();
-  const z = boardOrientation === "white" ? 9.6 : -9.6;
-  camera.position.set(0, 7.8, z);
+  const z = boardOrientation === "white" ? 10.8 : -10.8;
+  camera.position.set(0, 8.4, z);
   controls.target.set(0, 0, 0);
-  controls.minDistance = 8.5;
-  controls.maxDistance = 16;
+  controls.minDistance = 9;
+  controls.maxDistance = 18;
   controls.maxPolarAngle = Math.PI * 0.46;
   controls.minPolarAngle = Math.PI * 0.18;
   controls.update();
@@ -234,16 +233,12 @@ export function OtbChessboard3d({
   boardOrientation,
   dimmed = false,
   lastMoveHighlight,
-  moveClassification,
   continuationArrow,
   showBestMoveArrow,
   bestMove,
 }: OtbChessboard3dProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<SceneBundle | null>(null);
-  const badgeAnchorRef = useRef<HTMLDivElement>(null);
-  const lastMoveRef = useRef(lastMoveHighlight);
-  lastMoveRef.current = lastMoveHighlight;
 
   const arrow = useMemo(() => {
     if (continuationArrow) {
@@ -261,11 +256,6 @@ export function OtbChessboard3d({
     }
     return null;
   }, [continuationArrow, showBestMoveArrow, bestMove, lastMoveHighlight]);
-
-  const classMeta =
-    moveClassification && CLASSIFICATION_META[moveClassification]
-      ? CLASSIFICATION_META[moveClassification]
-      : null;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -330,24 +320,6 @@ export function OtbChessboard3d({
       bundle.raf = requestAnimationFrame(tick);
       controls.update();
       renderer.render(scene, camera);
-
-      const badge = badgeAnchorRef.current;
-      const to = lastMoveRef.current?.to;
-      if (badge && to) {
-        const world = squareToWorld(to);
-        if (world) {
-          const v = new THREE.Vector3(world.x, 1.15, world.z);
-          v.project(camera);
-          const w = host.clientWidth;
-          const h = host.clientHeight;
-          badge.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${
-            (-v.y * 0.5 + 0.5) * h
-          }px) translate(-50%, -120%)`;
-          badge.style.opacity = v.z > 1 ? "0" : "1";
-        }
-      } else if (badge) {
-        badge.style.opacity = "0";
-      }
     };
     tick();
 
@@ -406,26 +378,6 @@ export function OtbChessboard3d({
         style={{ maxWidth: boardWidth }}
         aria-label="3D over-the-board chessboard"
       />
-      {lastMoveHighlight && classMeta ? (
-        <div
-          ref={badgeAnchorRef}
-          className="pointer-events-none absolute left-0 top-0 z-20 drop-shadow-md"
-          style={{ opacity: 0 }}
-          title={classMeta.label}
-          aria-label={classMeta.label}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="11" fill={classMeta.color} />
-            <circle
-              cx="12"
-              cy="12"
-              r="10.25"
-              stroke="rgba(255,255,255,0.35)"
-              strokeWidth="1.5"
-            />
-          </svg>
-        </div>
-      ) : null}
     </div>
   );
 }
