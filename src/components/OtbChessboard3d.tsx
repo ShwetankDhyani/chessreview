@@ -9,6 +9,16 @@ import {
   type PieceColor,
   type PieceRole,
 } from "../utils/otbPieceMeshes";
+import {
+  canAnimateBoardStep,
+  normalizeFen,
+} from "../utils/boardPosition";
+import {
+  easeInOutCubic,
+  glideHop,
+  otbGlideDurationMs,
+  resolveOtbMoveAnim,
+} from "../utils/otbMoveAnimation";
 import type { MoveClassification } from "../types";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
@@ -19,11 +29,14 @@ const HI_FROM = 0xf7c948;
 const HI_TO = 0xe8b83a;
 const ARROW = 0xf7c948;
 const HINT = 0x9bc96a;
+const PIECE_Y = 0.02;
 
 export interface OtbChessboard3dProps {
   position: string;
   boardWidth: number;
   boardOrientation: "white" | "black";
+  /** Same signal as 2D react-chessboard — >0 enables a one-ply glide. */
+  animationDuration?: number;
   dimmed?: boolean;
   lastMoveHighlight: { from: string; to: string } | null;
   moveClassification?: MoveClassification;
@@ -31,6 +44,16 @@ export interface OtbChessboard3dProps {
   showBestMoveArrow: boolean;
   bestMove?: string;
 }
+
+type PieceAnim = {
+  mesh: THREE.Object3D;
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  t0: number;
+  duration: number;
+  hop: number;
+  mode: "glide" | "sink";
+};
 
 type SceneBundle = {
   renderer: THREE.WebGLRenderer;
@@ -47,6 +70,10 @@ type SceneBundle = {
   boardPx: number;
   raf: number;
   disposed: boolean;
+  anims: PieceAnim[];
+  animToken: number;
+  prevFen: string | null;
+  pendingFen: string | null;
 };
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
@@ -105,6 +132,17 @@ function clearGroup(group: THREE.Group) {
       }
     });
   }
+}
+
+function disposeObject(obj: THREE.Object3D) {
+  obj.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose();
+      const mat = child.material;
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else mat.dispose();
+    }
+  });
 }
 
 function makeArrowMesh(
@@ -184,6 +222,56 @@ function applyHighlights(
   }
 }
 
+function applyPieceEnv(mesh: THREE.Object3D, pieceEnv: THREE.Texture | null) {
+  if (!pieceEnv) return;
+  mesh.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (
+          m instanceof THREE.MeshStandardMaterial ||
+          m instanceof THREE.MeshPhysicalMaterial
+        ) {
+          m.envMap = pieceEnv;
+          m.envMapIntensity = 0.28;
+          m.needsUpdate = true;
+        }
+      }
+    }
+  });
+}
+
+function placePieceMesh(
+  mesh: THREE.Object3D,
+  square: string,
+  role: PieceRole,
+  color: PieceColor
+) {
+  const world = squareToWorld(square);
+  if (!world) return;
+  mesh.position.set(world.x, PIECE_Y, world.z);
+  mesh.scale.setScalar(1.02);
+  mesh.userData.square = square;
+  mesh.userData.pieceRole = role;
+  mesh.userData.pieceColor = color;
+  if (role === "n") {
+    // Snout is local +X; yaw so it faces the opponent (±Z).
+    mesh.rotation.y = color === "w" ? Math.PI / 2 : -Math.PI / 2;
+  } else {
+    mesh.rotation.y = 0;
+  }
+}
+
+function findPieceAt(
+  piecesRoot: THREE.Group,
+  square: string
+): THREE.Object3D | null {
+  for (const child of piecesRoot.children) {
+    if (child.userData.square === square) return child;
+  }
+  return null;
+}
+
 function syncPieces(
   piecesRoot: THREE.Group,
   fen: string,
@@ -192,7 +280,7 @@ function syncPieces(
   clearGroup(piecesRoot);
   let chess: Chess;
   try {
-    chess = new Chess(fen);
+    chess = new Chess(normalizeFen(fen));
   } catch {
     try {
       chess = new Chess(fen.split(" ")[0]);
@@ -207,39 +295,241 @@ function syncPieces(
       const cell = board[r]?.[f];
       if (!cell) continue;
       const square = `${String.fromCharCode(97 + f)}${8 - r}`;
-      const world = squareToWorld(square);
-      if (!world) continue;
       const mesh = createPieceMesh(
         cell.type as PieceRole,
         cell.color as PieceColor
       );
-      mesh.position.set(world.x, 0.02, world.z);
-      mesh.scale.setScalar(1.02);
-      if (cell.type === "n") {
-        // Snout is local +X; yaw so it faces the opponent (±Z).
-        mesh.rotation.y = cell.color === "w" ? Math.PI / 2 : -Math.PI / 2;
-      }
-      if (pieceEnv) {
-        mesh.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            const mats = Array.isArray(obj.material)
-              ? obj.material
-              : [obj.material];
-            for (const m of mats) {
-              if (
-                m instanceof THREE.MeshStandardMaterial ||
-                m instanceof THREE.MeshPhysicalMaterial
-              ) {
-                m.envMap = pieceEnv;
-                m.envMapIntensity = 0.28;
-                m.needsUpdate = true;
-              }
-            }
-          }
-        });
-      }
+      placePieceMesh(
+        mesh,
+        square,
+        cell.type as PieceRole,
+        cell.color as PieceColor
+      );
+      applyPieceEnv(mesh, pieceEnv);
       piecesRoot.add(mesh);
     }
+  }
+}
+
+function cancelAnims(bundle: SceneBundle) {
+  bundle.animToken += 1;
+  bundle.anims.length = 0;
+  bundle.pendingFen = null;
+}
+
+function worldAt(square: string): THREE.Vector3 | null {
+  const w = squareToWorld(square);
+  if (!w) return null;
+  return new THREE.Vector3(w.x, PIECE_Y, w.z);
+}
+
+function startGlide(
+  bundle: SceneBundle,
+  mesh: THREE.Object3D,
+  fromSq: string,
+  toSq: string,
+  duration: number,
+  hop: number,
+  now: number
+) {
+  const from = worldAt(fromSq);
+  const to = worldAt(toSq);
+  if (!from || !to) return;
+  mesh.position.copy(from);
+  mesh.userData.square = toSq;
+  // Lift render order so the gliding piece clears stationary ones.
+  mesh.renderOrder = 3;
+  mesh.traverse((o) => {
+    if (o instanceof THREE.Mesh) o.renderOrder = 3;
+  });
+  bundle.anims.push({
+    mesh,
+    from,
+    to,
+    t0: now,
+    duration,
+    hop,
+    mode: "glide",
+  });
+}
+
+function startSink(
+  bundle: SceneBundle,
+  mesh: THREE.Object3D,
+  duration: number,
+  now: number
+) {
+  const from = mesh.position.clone();
+  const to = from.clone();
+  to.y = -0.55;
+  mesh.renderOrder = 1;
+  bundle.anims.push({
+    mesh,
+    from,
+    to,
+    t0: now,
+    duration: duration * 0.85,
+    hop: 0,
+    mode: "sink",
+  });
+}
+
+function beginMoveAnimation(
+  bundle: SceneBundle,
+  prevFen: string,
+  targetFen: string,
+  highlight: { from: string; to: string },
+  durationMs: number
+) {
+  const resolved = resolveOtbMoveAnim(prevFen, targetFen, highlight);
+  if (!resolved) {
+    cancelAnims(bundle);
+    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv);
+    return;
+  }
+
+  // Ensure actors match the board we're animating from.
+  syncPieces(bundle.piecesRoot, prevFen, bundle.pieceEnv);
+  cancelAnims(bundle);
+  const token = bundle.animToken;
+  const now = performance.now();
+  const { move, direction, captureSquare, rook } = resolved;
+
+  if (direction === "forward") {
+    if (captureSquare) {
+      const victim = findPieceAt(bundle.piecesRoot, captureSquare);
+      if (victim) startSink(bundle, victim, durationMs, now);
+    }
+    const mover = findPieceAt(bundle.piecesRoot, move.from);
+    if (mover) {
+      startGlide(
+        bundle,
+        mover,
+        move.from,
+        move.to,
+        durationMs,
+        glideHop(move.piece),
+        now
+      );
+    }
+    if (rook) {
+      const rookMesh = findPieceAt(bundle.piecesRoot, rook.from);
+      if (rookMesh) {
+        startGlide(
+          bundle,
+          rookMesh,
+          rook.from,
+          rook.to,
+          durationMs,
+          glideHop("r"),
+          now
+        );
+      }
+    }
+  } else {
+    // Undo: piece retreats to `from`; castling rook reverses; capture restored at end.
+    const mover = findPieceAt(bundle.piecesRoot, move.to);
+    if (mover) {
+      startGlide(
+        bundle,
+        mover,
+        move.to,
+        move.from,
+        durationMs,
+        glideHop(move.piece),
+        now
+      );
+    }
+    if (rook) {
+      const rookMesh = findPieceAt(bundle.piecesRoot, rook.to);
+      if (rookMesh) {
+        startGlide(
+          bundle,
+          rookMesh,
+          rook.to,
+          rook.from,
+          durationMs,
+          glideHop("r"),
+          now
+        );
+      }
+    }
+  }
+
+  bundle.pendingFen = targetFen;
+
+  // If somehow no anims started, snap.
+  if (bundle.anims.length === 0) {
+    syncPieces(bundle.piecesRoot, targetFen, bundle.pieceEnv);
+    bundle.pendingFen = null;
+    return;
+  }
+
+  // Safety: if anims stall, still land on the target FEN.
+  window.setTimeout(() => {
+    if (bundle.disposed || bundle.animToken !== token) return;
+    if (bundle.pendingFen === targetFen) {
+      finishAnims(bundle, targetFen);
+    }
+  }, durationMs + 120);
+}
+
+function finishAnims(bundle: SceneBundle, fen: string) {
+  bundle.anims.length = 0;
+  bundle.pendingFen = null;
+  syncPieces(bundle.piecesRoot, fen, bundle.pieceEnv);
+}
+
+function tickAnims(bundle: SceneBundle, now: number) {
+  if (bundle.anims.length === 0) return;
+
+  const still: PieceAnim[] = [];
+
+  for (const anim of bundle.anims) {
+    const u = (now - anim.t0) / anim.duration;
+    const t = easeInOutCubic(u);
+    if (anim.mode === "glide") {
+      const x = anim.from.x + (anim.to.x - anim.from.x) * t;
+      const z = anim.from.z + (anim.to.z - anim.from.z) * t;
+      const y =
+        anim.from.y +
+        (anim.to.y - anim.from.y) * t +
+        anim.hop * Math.sin(Math.PI * Math.min(1, Math.max(0, t)));
+      anim.mesh.position.set(x, y, z);
+      // Tiny roll sway while airborne — reads as "alive" without spinning.
+      if (anim.hop > 0.3) {
+        anim.mesh.rotation.z = Math.sin(Math.PI * t) * 0.06;
+      }
+    } else {
+      const x = anim.from.x + (anim.to.x - anim.from.x) * t;
+      const y = anim.from.y + (anim.to.y - anim.from.y) * t;
+      const z = anim.from.z + (anim.to.z - anim.from.z) * t;
+      anim.mesh.position.set(x, y, z);
+      const s = 1.02 * (1 - 0.7 * t);
+      anim.mesh.scale.setScalar(Math.max(0.05, s));
+    }
+
+    if (u >= 1) {
+      if (anim.mode === "glide") {
+        anim.mesh.position.copy(anim.to);
+        anim.mesh.rotation.z = 0;
+        anim.mesh.renderOrder = 0;
+        anim.mesh.traverse((o) => {
+          if (o instanceof THREE.Mesh) o.renderOrder = 0;
+        });
+      } else {
+        anim.mesh.parent?.remove(anim.mesh);
+        disposeObject(anim.mesh);
+      }
+    } else {
+      still.push(anim);
+    }
+  }
+
+  bundle.anims = still;
+
+  if (still.length === 0 && bundle.pendingFen) {
+    finishAnims(bundle, bundle.pendingFen);
   }
 }
 
@@ -337,6 +627,7 @@ export function OtbChessboard3d({
   position,
   boardWidth,
   boardOrientation,
+  animationDuration = 0,
   dimmed = false,
   lastMoveHighlight,
   moveClassification,
@@ -347,6 +638,8 @@ export function OtbChessboard3d({
   const hostRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<SceneBundle | null>(null);
+  const animDurationRef = useRef(animationDuration);
+  animDurationRef.current = animationDuration;
 
   const classMeta =
     moveClassification && CLASSIFICATION_META[moveClassification]
@@ -387,6 +680,8 @@ export function OtbChessboard3d({
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
+      // Needed so screenshots / compositors can read the last frame.
+      preserveDrawingBuffer: true,
     });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -456,6 +751,10 @@ export function OtbChessboard3d({
       boardPx: boardWidth,
       raf: 0,
       disposed: false,
+      anims: [],
+      animToken: 0,
+      prevFen: null,
+      pendingFen: null,
     };
     bundleRef.current = bundle;
 
@@ -496,6 +795,7 @@ export function OtbChessboard3d({
     const tick = () => {
       if (bundle.disposed) return;
       bundle.raf = requestAnimationFrame(tick);
+      tickAnims(bundle, performance.now());
       controls.update();
       renderer.render(scene, camera);
       syncBadge();
@@ -505,6 +805,7 @@ export function OtbChessboard3d({
     return () => {
       bundle.disposed = true;
       cancelAnimationFrame(bundle.raf);
+      cancelAnims(bundle);
       controls.dispose();
       clearGroup(piecesRoot);
       clearGroup(arrowRoot);
@@ -539,7 +840,29 @@ export function OtbChessboard3d({
   useEffect(() => {
     const bundle = bundleRef.current;
     if (!bundle) return;
-    syncPieces(bundle.piecesRoot, position, bundle.pieceEnv);
+
+    const prev = bundle.prevFen;
+    const glideMs = otbGlideDurationMs(animDurationRef.current);
+    const canGlide =
+      glideMs > 0 &&
+      !!prev &&
+      !!lastMoveHighlight &&
+      canAnimateBoardStep(prev, position, lastMoveHighlight);
+
+    if (canGlide && lastMoveHighlight) {
+      beginMoveAnimation(
+        bundle,
+        prev!,
+        position,
+        lastMoveHighlight,
+        glideMs
+      );
+    } else {
+      cancelAnims(bundle);
+      syncPieces(bundle.piecesRoot, position, bundle.pieceEnv);
+    }
+    bundle.prevFen = position;
+
     applyHighlights(bundle.squareMeshes, lastMoveHighlight);
     clearGroup(bundle.arrowRoot);
     if (arrow) {

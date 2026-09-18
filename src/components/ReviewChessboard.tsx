@@ -95,6 +95,7 @@ export function ReviewChessboard({
             position={position}
             boardWidth={renderedWidth || boardWidth}
             boardOrientation={boardOrientation}
+            animationDuration={animationDuration}
             dimmed={dimmed}
             lastMoveHighlight={lastMoveHighlight}
             moveClassification={moveClassification}
