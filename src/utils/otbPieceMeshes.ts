@@ -28,18 +28,18 @@ function mat(
         ? 0xb0a090
         : 0x8a7870
       : light
-        ? 0xe6e2da // cool bone — lighter than sage-cream squares, not chalk bloom
+        ? 0xd4cfc4 // dulled bone — soft off-white, still above sage-cream squares
         : 0x4a3228, // deep rosewood
     map: diff,
     normalMap: nor,
     normalScale: new THREE.Vector2(accent ? 0.2 : 0.35, accent ? 0.2 : 0.35),
     roughnessMap: rough,
-    roughness: light ? (accent ? 0.58 : 0.5) : accent ? 0.5 : 0.42,
+    roughness: light ? (accent ? 0.62 : 0.55) : accent ? 0.5 : 0.42,
     metalness: 0.0,
-    clearcoat: light ? 0.04 : 0.1,
-    clearcoatRoughness: 0.6,
-    reflectivity: 0.12,
-    envMapIntensity: 0.14,
+    clearcoat: light ? 0.02 : 0.1,
+    clearcoatRoughness: 0.65,
+    reflectivity: 0.1,
+    envMapIntensity: 0.1,
   });
 }
 
