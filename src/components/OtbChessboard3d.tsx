@@ -646,7 +646,7 @@ function setCameraForOrientation(
   const euclidean = camera.position.distanceTo(target);
   controls.minDistance = euclidean * 0.8;
   controls.maxDistance = euclidean * 1.6;
-  controls.minPolarAngle = 0.55;
+  controls.minPolarAngle = 0.32; // allow near-overhead for piece ID during review
   controls.maxPolarAngle = Math.PI * 0.48;
   controls.update();
 }
@@ -735,10 +735,10 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    // Warm studio light tuned to chess-bg — avoids blown ivory pieces.
-    scene.add(new THREE.AmbientLight(0xfff0e4, 0.36));
-    scene.add(new THREE.HemisphereLight(0xfff4ea, 0x2a2620, 0.3));
-    const key = new THREE.DirectionalLight(0xffecda, 0.82);
+    // Warm studio light — kept soft so muted ivory stays readable, not chalky.
+    scene.add(new THREE.AmbientLight(0xffefe4, 0.32));
+    scene.add(new THREE.HemisphereLight(0xfff2e8, 0x2a2620, 0.28));
+    const key = new THREE.DirectionalLight(0xffe8d4, 0.72);
     key.position.set(5, 14, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
