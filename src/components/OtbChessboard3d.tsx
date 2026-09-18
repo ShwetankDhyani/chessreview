@@ -293,28 +293,45 @@ function setCameraForOrientation(
   controls.target.copy(target);
   camera.lookAt(target);
 
-  // Pan in camera-up / camera-right so the AABB center lands at NDC 0,0.
-  const m1 = measure();
-  const dist = camera.position.distanceTo(target);
-  const vFov = (camera.fov * Math.PI) / 180;
-  const worldH = 2 * Math.tan(vFov / 2) * dist;
-  const worldW = worldH; // aspect 1
-  const panX = -m1.midX * (worldW / 2);
-  const panY = -m1.midY * (worldH / 2);
-  // Camera right is world X for our seat (looking along -/+Z with Y up).
-  camera.position.x += panX;
-  target.x += panX;
-  camera.position.y += panY;
-  target.y += panY;
-  controls.target.copy(target);
-  camera.lookAt(target);
+  // Iteratively center the projected AABB, then pull back if still oversize.
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const viewDir = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const camUp = new THREE.Vector3();
+  for (let i = 0; i < 14; i++) {
+    const m = measure();
+    if (
+      Math.abs(m.midX) < 0.015 &&
+      Math.abs(m.midY) < 0.015 &&
+      m.maxAbs <= 0.9
+    ) {
+      break;
+    }
 
-  // If still oversize after pan, pull back uniformly.
-  const m2 = measure();
-  if (m2.maxAbs > 0.92) {
-    const pull = m2.maxAbs / 0.9;
-    const offset = camera.position.clone().sub(target).multiplyScalar(pull);
-    camera.position.copy(target).add(offset);
+    const dist = camera.position.distanceTo(target);
+    const vFov = (camera.fov * Math.PI) / 180;
+    const worldSpan = 2 * Math.tan(vFov / 2) * dist;
+
+    viewDir.subVectors(target, camera.position).normalize();
+    right.crossVectors(viewDir, worldUp).normalize();
+    // If looking nearly along Y, fall back to world X.
+    if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+    camUp.crossVectors(right, viewDir).normalize();
+
+    const panX = -m.midX * (worldSpan / 2);
+    const panY = -m.midY * (worldSpan / 2);
+    camera.position.addScaledVector(right, panX).addScaledVector(camUp, panY);
+    target.addScaledVector(right, panX).addScaledVector(camUp, panY);
+    controls.target.copy(target);
+    camera.lookAt(target);
+
+    const m2 = measure();
+    if (m2.maxAbs > 0.9) {
+      const pull = m2.maxAbs / 0.88;
+      const offset = camera.position.clone().sub(target).multiplyScalar(pull);
+      camera.position.copy(target).add(offset);
+      camera.lookAt(target);
+    }
   }
 
   const euclidean = camera.position.distanceTo(target);
