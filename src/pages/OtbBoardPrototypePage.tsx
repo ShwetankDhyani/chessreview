@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { BoardArrowOverlay } from "../components/BoardArrowOverlay";
 import { LastMoveSquareOverlay } from "../components/LastMoveSquareOverlay";
@@ -9,11 +9,16 @@ import type { BoardView } from "../utils/boardView";
 
 const OtbChessboard3d = lazy(() => import("../components/OtbChessboard3d"));
 
-const DEMO_FEN =
+/** Position before Bc4 develops. */
+const DEMO_BEFORE =
+  "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 3 4";
+/** After Bf1-c4. */
+const DEMO_AFTER =
   "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
 const DEMO_FROM = "f1";
 const DEMO_TO = "c4";
 const BOARD_SIZE = 360;
+const DEMO_ANIM_MS = 560;
 
 /**
  * Discardable comparison page for flat vs WebGL OTB.
@@ -29,8 +34,30 @@ export default function OtbBoardPrototypePage() {
 
   const [boardView, setBoardView] = useBoardView();
   const [orientation, setOrientation] = useState<"white" | "black">("white");
+  const [played, setPlayed] = useState(true);
+  const [animMs, setAnimMs] = useState(0);
+
+  const fen = played ? DEMO_AFTER : DEMO_BEFORE;
+  const highlight = played
+    ? { from: DEMO_FROM, to: DEMO_TO }
+    : null;
 
   const setMode = (next: BoardView) => setBoardView(next);
+
+  const replayMove = useCallback(() => {
+    setAnimMs(0);
+    setPlayed(false);
+    // Next frame: enable glide + advance FEN so the 3D board animates one ply.
+    requestAnimationFrame(() => {
+      setAnimMs(DEMO_ANIM_MS);
+      setPlayed(true);
+    });
+  }, []);
+
+  const stepBack = useCallback(() => {
+    setAnimMs(DEMO_ANIM_MS);
+    setPlayed(false);
+  }, []);
 
   return (
     <SiteChrome title="OTB prototype">
@@ -56,13 +83,14 @@ export default function OtbBoardPrototypePage() {
             >
               <div className="mx-auto" style={{ width: BOARD_SIZE }}>
                 <OtbChessboard3d
-                  position={DEMO_FEN}
+                  position={fen}
                   boardWidth={BOARD_SIZE}
                   boardOrientation={orientation}
-                  lastMoveHighlight={{ from: DEMO_FROM, to: DEMO_TO }}
+                  animationDuration={animMs}
+                  lastMoveHighlight={highlight}
                   continuationArrow={null}
                   showBestMoveArrow={false}
-                  moveClassification="good"
+                  moveClassification={played ? "good" : undefined}
                 />
               </div>
             </Suspense>
@@ -72,36 +100,44 @@ export default function OtbBoardPrototypePage() {
               style={{ width: BOARD_SIZE }}
             >
               <Chessboard
-                position={DEMO_FEN}
+                position={fen}
                 boardWidth={BOARD_SIZE}
                 boardOrientation={orientation}
                 arePiecesDraggable={false}
                 showBoardNotation
-                animationDuration={200}
+                animationDuration={animMs}
                 customDarkSquareStyle={{ backgroundColor: "#769656" }}
                 customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
-                customSquareStyles={{
-                  [DEMO_FROM]: {
-                    backgroundColor: "rgba(247, 201, 72, 0.72)",
-                  },
-                  [DEMO_TO]: {
-                    backgroundColor: "rgba(247, 201, 72, 0.52)",
-                  },
-                }}
+                customSquareStyles={
+                  highlight
+                    ? {
+                        [DEMO_FROM]: {
+                          backgroundColor: "rgba(247, 201, 72, 0.72)",
+                        },
+                        [DEMO_TO]: {
+                          backgroundColor: "rgba(247, 201, 72, 0.52)",
+                        },
+                      }
+                    : {}
+                }
               />
-              <LastMoveSquareOverlay
-                from={DEMO_FROM}
-                to={DEMO_TO}
-                boardWidth={BOARD_SIZE}
-                boardOrientation={orientation}
-              />
-              <BoardArrowOverlay
-                from={DEMO_FROM}
-                to={DEMO_TO}
-                boardWidth={BOARD_SIZE}
-                boardOrientation={orientation}
-                variant="played"
-              />
+              {highlight ? (
+                <>
+                  <LastMoveSquareOverlay
+                    from={DEMO_FROM}
+                    to={DEMO_TO}
+                    boardWidth={BOARD_SIZE}
+                    boardOrientation={orientation}
+                  />
+                  <BoardArrowOverlay
+                    from={DEMO_FROM}
+                    to={DEMO_TO}
+                    boardWidth={BOARD_SIZE}
+                    boardOrientation={orientation}
+                    variant="played"
+                  />
+                </>
+              ) : null}
             </div>
           )}
         </section>
@@ -135,10 +171,25 @@ export default function OtbBoardPrototypePage() {
             >
               Flip seat ({orientation})
             </button>
+            <button
+              type="button"
+              className="otb-proto__preset"
+              onClick={replayMove}
+            >
+              Replay Bc4 glide
+            </button>
+            <button
+              type="button"
+              className="otb-proto__preset"
+              onClick={stepBack}
+              disabled={!played}
+            >
+              Step back
+            </button>
           </div>
           <p className="otb-proto__note">
             {boardView === "otb3d"
-              ? "Drag to orbit. Flip walks you to the other side of the table."
+              ? "Drag to orbit. Replay Bc4 glide plays a Harry-Potter-style piece slide."
               : "Classic flat review board."}
           </p>
         </section>
