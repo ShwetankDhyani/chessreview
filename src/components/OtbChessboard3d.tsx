@@ -211,18 +211,55 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Slightly elevated OTB angle so the board fills the review square
-  // more evenly (less empty side/top padding, no clipped ranks).
-  camera.fov = 40;
-  camera.updateProjectionMatrix();
-
+  // OTB seat angle, then pull distance until the board rim + piece tops
+  // fit the square canvas with a small margin (no clip, minimal letterbox).
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const target = new THREE.Vector3(0, 0.05, nearSign * 0.15);
-  const dist = 7.8;
-  camera.position.set(0, dist * 0.82, nearSign * dist * 0.78);
+  const elev = 0.78;
+  const depth = 0.8;
+  const target = new THREE.Vector3(0, 0.04, 0);
+  const corners = [
+    new THREE.Vector3(-4.3, 0, -4.3),
+    new THREE.Vector3(4.3, 0, -4.3),
+    new THREE.Vector3(-4.3, 0, 4.3),
+    new THREE.Vector3(4.3, 0, 4.3),
+    new THREE.Vector3(-4.3, 1.2, -4.3),
+    new THREE.Vector3(4.3, 1.2, -4.3),
+    new THREE.Vector3(-4.3, 1.2, 4.3),
+    new THREE.Vector3(4.3, 1.2, 4.3),
+  ];
+
+  camera.fov = 38;
+  camera.aspect = 1;
+  camera.updateProjectionMatrix();
   controls.target.copy(target);
-  controls.minDistance = 6;
-  controls.maxDistance = 12;
+
+  let lo = 5.5;
+  let hi = 13;
+  let best = 8.2;
+  const ndc = new THREE.Vector3();
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    camera.position.set(0, mid * elev, nearSign * mid * depth);
+    camera.lookAt(target);
+    camera.updateMatrixWorld(true);
+
+    let maxAbs = 0;
+    for (const corner of corners) {
+      ndc.copy(corner).project(camera);
+      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
+    }
+    // Target ~0.93 NDC so the board nearly fills the square.
+    if (maxAbs > 0.93) {
+      lo = mid;
+    } else {
+      best = mid;
+      hi = mid;
+    }
+  }
+
+  camera.position.set(0, best * elev, nearSign * best * depth);
+  controls.minDistance = best * 0.78;
+  controls.maxDistance = best * 1.4;
   controls.maxPolarAngle = Math.PI * 0.46;
   controls.minPolarAngle = Math.PI * 0.2;
   controls.update();
