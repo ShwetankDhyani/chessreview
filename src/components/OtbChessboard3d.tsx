@@ -5,6 +5,8 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Chess } from "chess.js";
 import {
   createPieceMesh,
+  makeSquareTexture,
+  makeWalnutTexture,
   squareToWorld,
   type PieceColor,
   type PieceRole,
@@ -23,8 +25,8 @@ import type { MoveClassification } from "../types";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
 
-const LIGHT = 0xeeeed2;
-const DARK = 0x769656;
+const LIGHT = 0xf0ead2;
+const DARK = 0x6e9450;
 const HI_FROM = 0xf7c948;
 const HI_TO = 0xe8b83a;
 const ARROW = 0xf7c948;
@@ -79,37 +81,91 @@ type SceneBundle = {
 };
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
-  // Thin edge frame only (no solid slab — a thick near face reads as "clipped").
+  const walnutMap = makeWalnutTexture();
   const wood = new THREE.MeshStandardMaterial({
-    color: 0x5c4030,
-    roughness: 0.7,
+    color: 0x8a5a32,
+    map: walnutMap,
+    roughness: 0.58,
     metalness: 0.05,
   });
-  const frameH = 0.08;
-  const frameT = 0.22;
-  const outer = 8.44;
-  const strip = (w: number, d: number, x: number, z: number) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, frameH, d), wood);
-    m.position.set(x, -frameH / 2, z);
+  const woodDark = new THREE.MeshStandardMaterial({
+    color: 0x6a4024,
+    map: walnutMap,
+    roughness: 0.64,
+    metalness: 0.04,
+  });
+
+  // Beveled championship frame — outer rim + raised lip around the squares.
+  const frameH = 0.12;
+  const frameT = 0.34;
+  const outer = 8.72;
+  const lip = 0.14;
+  const strip = (
+    w: number,
+    d: number,
+    x: number,
+    z: number,
+    y: number,
+    mat: THREE.Material
+  ) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, frameH, d), mat);
+    m.position.set(x, y, z);
     m.receiveShadow = true;
+    m.castShadow = true;
     root.add(m);
   };
-  strip(outer, frameT, 0, 4.11); // near (rank 1)
-  strip(outer, frameT, 0, -4.11); // far
-  strip(frameT, outer - frameT * 2, -4.11, 0); // a-file
-  strip(frameT, outer - frameT * 2, 4.11, 0); // h-file
+  // Outer walnut apron
+  strip(outer, frameT, 0, 4.19, -frameH / 2, wood);
+  strip(outer, frameT, 0, -4.19, -frameH / 2, wood);
+  strip(frameT, outer - frameT * 2, -4.19, 0, -frameH / 2, wood);
+  strip(frameT, outer - frameT * 2, 4.19, 0, -frameH / 2, wood);
+  // Inner raised lip (darker walnut)
+  const inner = 8.08;
+  strip(inner, lip, 0, 4.0, 0.02, woodDark);
+  strip(inner, lip, 0, -4.0, 0.02, woodDark);
+  strip(lip, inner - lip * 2, -4.0, 0, 0.02, woodDark);
+  strip(lip, inner - lip * 2, 4.0, 0, 0.02, woodDark);
+
+  // Thin playing-surface slab under the squares (avoids see-through gaps)
+  const bed = new THREE.Mesh(
+    new THREE.BoxGeometry(8.02, 0.04, 8.02),
+    new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.85 })
+  );
+  bed.position.y = -0.04;
+  bed.receiveShadow = true;
+  root.add(bed);
+
+  // Soft table disc under the set — grounds the board in the scene
+  const table = new THREE.Mesh(
+    new THREE.CylinderGeometry(6.2, 6.4, 0.08, 64),
+    new THREE.MeshStandardMaterial({
+      color: 0x2c241c,
+      map: walnutMap,
+      roughness: 0.75,
+      metalness: 0.02,
+    })
+  );
+  table.position.y = -0.14;
+  table.receiveShadow = true;
+  root.add(table);
+
+  const lightMap = makeSquareTexture(true);
+  const darkMap = makeSquareTexture(false);
 
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const isLight = (file + rank) % 2 === 1;
-      // Lambert receives piece shadows without specular washout.
+      // Slight inset + soft sheen — tournament cloth / maple feel.
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.98, 0.06, 0.98),
-        new THREE.MeshLambertMaterial({
+        new THREE.BoxGeometry(0.975, 0.055, 0.975),
+        new THREE.MeshStandardMaterial({
           color: isLight ? LIGHT : DARK,
+          map: isLight ? lightMap : darkMap,
+          roughness: isLight ? 0.72 : 0.78,
+          metalness: 0.02,
         })
       );
-      mesh.position.set(file - 3.5, 0, 3.5 - rank);
+      mesh.position.set(file - 3.5, 0.01, 3.5 - rank);
       mesh.receiveShadow = true;
       mesh.castShadow = false;
       mesh.userData.baseColor = isLight ? LIGHT : DARK;
@@ -212,7 +268,7 @@ function applyHighlights(
     const file = mesh.userData.file as number;
     const rank = mesh.userData.rank as number;
     const square = `${String.fromCharCode(97 + file)}${rank + 1}`;
-    const mat = mesh.material as THREE.MeshLambertMaterial;
+    const mat = mesh.material as THREE.MeshStandardMaterial;
     const base = mesh.userData.baseColor as number;
     if (lastMove && square === lastMove.from) {
       mat.color.setHex(HI_FROM);
@@ -235,7 +291,8 @@ function applyPieceEnv(mesh: THREE.Object3D, pieceEnv: THREE.Texture | null) {
           m instanceof THREE.MeshPhysicalMaterial
         ) {
           m.envMap = pieceEnv;
-          m.envMapIntensity = 0.28;
+          m.envMapIntensity =
+            m instanceof THREE.MeshPhysicalMaterial ? 0.55 : 0.4;
           m.needsUpdate = true;
         }
       }
@@ -252,7 +309,7 @@ function placePieceMesh(
   const world = squareToWorld(square);
   if (!world) return;
   mesh.position.set(world.x, PIECE_Y, world.z);
-  mesh.scale.setScalar(1.02);
+  mesh.scale.setScalar(1.06);
   mesh.userData.square = square;
   mesh.userData.pieceRole = role;
   mesh.userData.pieceColor = color;
@@ -570,7 +627,7 @@ function setCameraForOrientation(
   contentRoot.position.set(0, 0, 0);
   contentRoot.scale.setScalar(1);
 
-  const edge = 4.26;
+  const edge = 4.4;
   const frameCorners = [
     new THREE.Vector3(-edge, -0.06, -edge),
     new THREE.Vector3(edge, -0.06, -edge),
@@ -690,12 +747,12 @@ export function OtbChessboard3d({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    // No ACES remap — it washed the classic green/cream board toward pastel.
+    // Linear output keeps tournament greens / wood tones honest (ACES washed them).
     host.appendChild(renderer.domElement);
 
     // Env map for pieces only — never assign scene.environment (washes board greens).
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const pieceEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const pieceEnv = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
     pmrem.dispose();
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -703,26 +760,27 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    // Soft lighting — whites blow out if key/ambient are too hot.
-    scene.add(new THREE.AmbientLight(0xffffff, 0.42));
-    const key = new THREE.DirectionalLight(0xfff2dc, 0.85);
-    key.position.set(4, 12, 6);
+    // Studio table lighting — warm key, cool fill, soft rim for lacquered wood.
+    scene.add(new THREE.AmbientLight(0xfff6ea, 0.38));
+    scene.add(new THREE.HemisphereLight(0xfff8f0, 0x4a4034, 0.35));
+    const key = new THREE.DirectionalLight(0xfff1dc, 0.95);
+    key.position.set(5, 14, 7);
     key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.mapSize.set(2048, 2048);
     key.shadow.camera.near = 1;
     key.shadow.camera.far = 40;
-    key.shadow.camera.left = -10;
-    key.shadow.camera.right = 10;
-    key.shadow.camera.top = 10;
-    key.shadow.camera.bottom = -10;
-    key.shadow.bias = -0.0008;
+    key.shadow.camera.left = -11;
+    key.shadow.camera.right = 11;
+    key.shadow.camera.top = 11;
+    key.shadow.camera.bottom = -11;
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.02;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc8d8ff, 0.4);
-    fill.position.set(-6, 6, -4);
+    const fill = new THREE.DirectionalLight(0xd0e0ff, 0.42);
+    fill.position.set(-7, 7, -5);
     scene.add(fill);
-    // Side skim for form on near pieces — keep dim
-    const rim = new THREE.DirectionalLight(0xffe8d0, 0.22);
-    rim.position.set(0, 3.5, 12);
+    const rim = new THREE.DirectionalLight(0xffe6c8, 0.32);
+    rim.position.set(0, 4, 14);
     scene.add(rim);
 
     const contentRoot = new THREE.Group();
