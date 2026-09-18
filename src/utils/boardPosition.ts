@@ -14,6 +14,73 @@ export function sameFen(a: string, b: string): boolean {
   return normalizeFen(a) === normalizeFen(b);
 }
 
+/**
+ * Board + side + castling + ep — ignores halfmove/fullmove clocks that often
+ * drift between analysis FENs and a live chess.js replay.
+ */
+export function fenPositionKey(fen: string): string {
+  const parts = normalizeFen(fen).split(/\s+/);
+  return parts.slice(0, 4).join(" ");
+}
+
+export function samePosition(a: string, b: string): boolean {
+  return fenPositionKey(a) === fenPositionKey(b);
+}
+
+const PROMOTIONS = ["q", "n", "r", "b"] as const;
+
+/**
+ * Play `from→to` on `fen`, trying each promotion piece. Returns the verbose
+ * move when the resulting position matches `targetFen` (clocks ignored).
+ */
+export function matchHighlightMove(
+  fen: string,
+  targetFen: string,
+  highlight: { from: string; to: string }
+): ReturnType<Chess["move"]> | null {
+  const { from, to } = highlight;
+  for (const promotion of PROMOTIONS) {
+    try {
+      const trial = new Chess(normalizeFen(fen));
+      const result = trial.move({ from, to, promotion });
+      if (result && samePosition(trial.fen(), targetFen)) return result;
+    } catch {
+      /* try next */
+    }
+  }
+  try {
+    const trial = new Chess(normalizeFen(fen));
+    const result = trial.move({ from, to });
+    if (result && samePosition(trial.fen(), targetFen)) return result;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Find any single legal move on `prevFen` that yields `targetFen`.
+ * Used when highlight is missing or underpromotion/UCI is stale.
+ */
+export function findOnePlyMove(
+  prevFen: string,
+  targetFen: string
+): ReturnType<Chess["move"]> | null {
+  if (samePosition(prevFen, targetFen)) return null;
+  try {
+    const base = new Chess(normalizeFen(prevFen));
+    const targetKey = fenPositionKey(targetFen);
+    for (const verbose of base.moves({ verbose: true })) {
+      const trial = new Chess(normalizeFen(prevFen));
+      const result = trial.move(verbose);
+      if (result && fenPositionKey(trial.fen()) === targetKey) return result;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /** FEN on the board immediately before playing move at `idx`. */
 export function positionBeforeMove(
   moves: AnalyzedMove[],
@@ -51,19 +118,8 @@ export function canAnimateOneStep(
   targetFen: string,
   highlight: { from: string; to: string }
 ): boolean {
-  if (sameFen(prevFen, targetFen)) return false;
-  try {
-    const c = new Chess(normalizeFen(prevFen));
-    const result = c.move({
-      from: highlight.from,
-      to: highlight.to,
-      promotion: "q",
-    });
-    if (!result) return false;
-    return sameFen(c.fen(), targetFen);
-  } catch {
-    return false;
-  }
+  if (samePosition(prevFen, targetFen)) return false;
+  return matchHighlightMove(prevFen, targetFen, highlight) != null;
 }
 
 /** True when `highlight` is the single ply between `targetFen` and `prevFen` (undo). */
@@ -80,10 +136,16 @@ export function canAnimateBoardStep(
   targetFen: string,
   highlight: { from: string; to: string } | null
 ): boolean {
-  if (!highlight) return false;
+  if (highlight) {
+    return (
+      canAnimateOneStep(renderedFen, targetFen, highlight) ||
+      canAnimateUndoStep(renderedFen, targetFen, highlight)
+    );
+  }
+  // No highlight — still animate if the FEN pair is exactly one legal ply apart.
   return (
-    canAnimateOneStep(renderedFen, targetFen, highlight) ||
-    canAnimateUndoStep(renderedFen, targetFen, highlight)
+    findOnePlyMove(renderedFen, targetFen) != null ||
+    findOnePlyMove(targetFen, renderedFen) != null
   );
 }
 

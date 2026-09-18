@@ -3,9 +3,11 @@ import { Chess } from "chess.js";
 import {
   easeInOutCubic,
   glideHop,
+  OTB_DEFAULT_GLIDE_MS,
   otbGlideDurationMs,
   resolveOtbMoveAnim,
 } from "./otbMoveAnimation";
+import { canAnimateOneStep, canAnimateBoardStep } from "./boardPosition";
 
 describe("otbMoveAnimation", () => {
   it("eases smoothly from 0→1", () => {
@@ -21,9 +23,9 @@ describe("otbMoveAnimation", () => {
     expect(glideHop("n")).toBeGreaterThan(glideHop("p"));
   });
 
-  it("floors 3D glide duration above the 2D board timing", () => {
-    expect(otbGlideDurationMs(0)).toBe(0);
-    expect(otbGlideDurationMs(380)).toBe(560);
+  it("always returns a positive 3D glide duration (even when 2D says 0)", () => {
+    expect(otbGlideDurationMs(0)).toBe(OTB_DEFAULT_GLIDE_MS);
+    expect(otbGlideDurationMs(380)).toBe(OTB_DEFAULT_GLIDE_MS);
     expect(otbGlideDurationMs(700)).toBe(700);
   });
 
@@ -57,7 +59,6 @@ describe("otbMoveAnimation", () => {
   });
 
   it("flags castling rook glide", () => {
-    // Clear path for white O-O
     const before =
       "rnbqk2r/ppppbppp/5n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
     const c = new Chess(before);
@@ -72,7 +73,6 @@ describe("otbMoveAnimation", () => {
   });
 
   it("flags capture square including en passant", () => {
-    // Classic EP setup: white pawn e5, black just played d5
     const before =
       "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3";
     const c = new Chess(before);
@@ -84,5 +84,62 @@ describe("otbMoveAnimation", () => {
       to: "d6",
     });
     expect(resolved?.captureSquare).toBe("d5");
+  });
+
+  it("resolves underpromotion (not just queen)", () => {
+    const before =
+      "8/P7/8/8/8/8/8/4K2k w - - 0 1";
+    const c = new Chess(before);
+    c.move({ from: "a7", to: "a8", promotion: "n" });
+    const after = c.fen();
+    // Old gate assumed promotion=q and would fail this.
+    expect(
+      canAnimateOneStep(before, after, { from: "a7", to: "a8" })
+    ).toBe(true);
+    const resolved = resolveOtbMoveAnim(before, after, {
+      from: "a7",
+      to: "a8",
+    });
+    expect(resolved?.move.promotion).toBe("n");
+  });
+
+  it("resolves when halfmove clocks disagree", () => {
+    const before = new Chess().fen();
+    const c = new Chess();
+    c.move("e4");
+    const afterReal = c.fen();
+    // Analysis FENs sometimes drift on the clock fields.
+    const afterDrift = afterReal.replace(/ \d+ \d+$/, " 99 99");
+    expect(afterDrift).not.toBe(afterReal);
+    expect(
+      canAnimateOneStep(before, afterDrift, { from: "e2", to: "e4" })
+    ).toBe(true);
+    expect(
+      resolveOtbMoveAnim(before, afterDrift, { from: "e2", to: "e4" })
+        ?.direction
+    ).toBe("forward");
+  });
+
+  it("scans legal moves when highlight is missing", () => {
+    const before = new Chess().fen();
+    const c = new Chess();
+    c.move("e4");
+    const after = c.fen();
+    expect(canAnimateBoardStep(before, after, null)).toBe(true);
+    const resolved = resolveOtbMoveAnim(before, after, null);
+    expect(resolved?.move.from).toBe("e2");
+    expect(resolved?.move.to).toBe("e4");
+  });
+
+  it("does not animate multi-ply jumps", () => {
+    const start = new Chess().fen();
+    const c = new Chess();
+    c.move("e4");
+    c.move("e5");
+    const twoPlies = c.fen();
+    expect(resolveOtbMoveAnim(start, twoPlies, null)).toBeNull();
+    expect(
+      resolveOtbMoveAnim(start, twoPlies, { from: "e2", to: "e4" })
+    ).toBeNull();
   });
 });

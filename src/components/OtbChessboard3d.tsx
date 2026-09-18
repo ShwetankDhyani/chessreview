@@ -10,8 +10,8 @@ import {
   type PieceRole,
 } from "../utils/otbPieceMeshes";
 import {
-  canAnimateBoardStep,
   normalizeFen,
+  samePosition,
 } from "../utils/boardPosition";
 import {
   easeInOutCubic,
@@ -378,7 +378,7 @@ function beginMoveAnimation(
   bundle: SceneBundle,
   prevFen: string,
   targetFen: string,
-  highlight: { from: string; to: string },
+  highlight: { from: string; to: string } | null,
   durationMs: number
 ) {
   const resolved = resolveOtbMoveAnim(prevFen, targetFen, highlight);
@@ -842,14 +842,20 @@ export function OtbChessboard3d({
     if (!bundle) return;
 
     const prev = bundle.prevFen;
-    const glideMs = otbGlideDurationMs(animDurationRef.current);
-    const canGlide =
-      glideMs > 0 &&
-      !!prev &&
-      !!lastMoveHighlight &&
-      canAnimateBoardStep(prev, position, lastMoveHighlight);
 
-    if (canGlide && lastMoveHighlight) {
+    // Highlight-only updates (same board) must not cancel an in-flight glide.
+    if (prev && samePosition(prev, position)) {
+      applyHighlights(bundle.squareMeshes, lastMoveHighlight);
+      bundle.prevFen = position;
+      return;
+    }
+
+    const resolved = prev
+      ? resolveOtbMoveAnim(prev, position, lastMoveHighlight)
+      : null;
+    const glideMs = otbGlideDurationMs(animDurationRef.current);
+
+    if (resolved) {
       beginMoveAnimation(
         bundle,
         prev!,
@@ -862,14 +868,18 @@ export function OtbChessboard3d({
       syncPieces(bundle.piecesRoot, position, bundle.pieceEnv);
     }
     bundle.prevFen = position;
-
     applyHighlights(bundle.squareMeshes, lastMoveHighlight);
+  }, [position, lastMoveHighlight]);
+
+  useEffect(() => {
+    const bundle = bundleRef.current;
+    if (!bundle) return;
     clearGroup(bundle.arrowRoot);
     if (arrow) {
       const mesh = makeArrowMesh(arrow.from, arrow.to, arrow.color);
       if (mesh) bundle.arrowRoot.add(mesh);
     }
-  }, [position, lastMoveHighlight, arrow]);
+  }, [arrow]);
 
   useEffect(() => {
     const bundle = bundleRef.current;
