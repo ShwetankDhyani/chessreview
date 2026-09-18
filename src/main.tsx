@@ -16,6 +16,7 @@ import FreeVsChesscomPage from "./pages/FreeVsChesscomPage";
 import ChessReviewVsChessdaPage from "./pages/ChessReviewVsChessdaPage";
 import LearnHubPage from "./pages/LearnHubPage";
 import LearnArticlePage from "./pages/LearnArticlePage";
+import OtbBoardPrototypePage from "./pages/OtbBoardPrototypePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppCrashScreen } from "./components/AppCrashScreen";
 import { installGlobalErrorHandlers } from "./utils/globalErrorHandlers";
@@ -69,6 +70,7 @@ function Root() {
               />
               <Route path="/learn" element={<LearnHubPage />} />
               <Route path="/learn/:slug" element={<LearnArticlePage />} />
+              <Route path="/otb-prototype" element={<OtbBoardPrototypePage />} />
               <Route path="/r/:id" element={<SharePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

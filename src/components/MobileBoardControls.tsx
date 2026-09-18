@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { formatChessMoveCounter } from "../utils/pgnPlies";
 import { hapticSoft } from "../utils/chessSounds";
+import { useBoardView } from "../hooks/useBoardView";
 
 export function FlipBoardIcon() {
   return (
@@ -20,6 +21,39 @@ export function FlipBoardIcon() {
       <path d="M17 20l3-3-3-3" />
       <path d="M20 17H8a4 4 0 0 1-4-4" />
     </svg>
+  );
+}
+
+export function BoardViewToggleButton({
+  className,
+}: {
+  className?: string;
+}) {
+  const [boardView, setBoardView] = useBoardView();
+  const otbActive = boardView === "otb3d";
+
+  const classes =
+    className ??
+    `flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 transition-all touch-manipulation active:scale-[0.94] ${
+      otbActive
+        ? "bg-chess-accent/25 text-chess-accent"
+        : "bg-chess-surface/60 text-chess-subtext hover:text-chess-text hover:bg-chess-hover"
+    }`;
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        hapticSoft();
+        setBoardView(otbActive ? "2d" : "otb3d");
+      }}
+      className={`${classes}${otbActive && className ? " is-otb-active" : ""}`}
+      aria-label={otbActive ? "Switch to flat board" : "Switch to 3D table board"}
+      aria-pressed={otbActive}
+      title={otbActive ? "Flat board" : "3D table board"}
+    >
+      <span className="text-[10px] font-bold tracking-wide leading-none">3D</span>
+    </button>
   );
 }
 
@@ -55,6 +89,7 @@ export function MobileBoardControls({
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
         {leading}
+        <BoardViewToggleButton />
         <button
           type="button"
           onClick={flip}

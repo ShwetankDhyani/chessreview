@@ -42,12 +42,13 @@ export function MoveClassificationBadge({
       aria-label={meta.label}
       data-classification={classification}
     >
-      <BoardClassSvg type={classification} color={meta.color} size={badge} />
+      <ClassificationBadgeSvg type={classification} color={meta.color} size={badge} />
     </div>
   );
 }
 
-function BoardClassSvg({
+/** Standalone badge glyph — used by 2D overlay and projected 3D OTB badge. */
+export function ClassificationBadgeSvg({
   type,
   color,
   size,
