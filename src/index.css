@@ -2140,10 +2140,12 @@ html[data-theme="liquid-glass"] button.ThemeToggle {
 /* WebGL OTB board */
 .otb3d-viewport {
   background: transparent;
+  overflow: visible;
 }
 
 .otb3d-canvas-host {
   background: transparent;
+  overflow: visible;
 }
 
 .otb3d-canvas-host canvas {

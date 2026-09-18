@@ -43,33 +43,6 @@ type SceneBundle = {
 };
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
-  // Large table plane so the canvas fills edge-to-edge (no void letterbox).
-  const table = new THREE.Mesh(
-    new THREE.PlaneGeometry(28, 28),
-    new THREE.MeshStandardMaterial({
-      color: 0x2a241c,
-      roughness: 0.92,
-      metalness: 0.02,
-    })
-  );
-  table.rotation.x = -Math.PI / 2;
-  table.position.y = -0.2;
-  table.receiveShadow = true;
-  root.add(table);
-
-  const felt = new THREE.Mesh(
-    new THREE.CircleGeometry(7.2, 48),
-    new THREE.MeshStandardMaterial({
-      color: 0x1e3a24,
-      roughness: 0.95,
-      metalness: 0,
-    })
-  );
-  felt.rotation.x = -Math.PI / 2;
-  felt.position.y = -0.16;
-  felt.receiveShadow = true;
-  root.add(felt);
-
   const rim = new THREE.Mesh(
     new THREE.BoxGeometry(8.5, 0.18, 8.5),
     new THREE.MeshStandardMaterial({
@@ -238,57 +211,16 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // OTB seat angle, then pull distance until the board rim + piece tops
-  // fit the square canvas with a small margin (no clip, minimal letterbox).
-  const nearSign = boardOrientation === "white" ? 1 : -1;
-  const elev = 0.78;
-  const depth = 0.8;
-  const target = new THREE.Vector3(0, 0.04, 0);
-  const corners = [
-    new THREE.Vector3(-4.3, 0, -4.3),
-    new THREE.Vector3(4.3, 0, -4.3),
-    new THREE.Vector3(-4.3, 0, 4.3),
-    new THREE.Vector3(4.3, 0, 4.3),
-    new THREE.Vector3(-4.3, 1.2, -4.3),
-    new THREE.Vector3(4.3, 1.2, -4.3),
-    new THREE.Vector3(-4.3, 1.2, 4.3),
-    new THREE.Vector3(4.3, 1.2, 4.3),
-  ];
-
+  // Pulled-back floating OTB seat — full board visible, no corner clip.
   camera.fov = 38;
-  camera.aspect = 1;
   camera.updateProjectionMatrix();
-  controls.target.copy(target);
-
-  let lo = 5.5;
-  let hi = 13;
-  let best = 8.2;
-  const ndc = new THREE.Vector3();
-  for (let i = 0; i < 18; i++) {
-    const mid = (lo + hi) / 2;
-    camera.position.set(0, mid * elev, nearSign * mid * depth);
-    camera.lookAt(target);
-    camera.updateMatrixWorld(true);
-
-    let maxAbs = 0;
-    for (const corner of corners) {
-      ndc.copy(corner).project(camera);
-      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
-    }
-    // Target ~0.93 NDC so the board nearly fills the square.
-    if (maxAbs > 0.93) {
-      lo = mid;
-    } else {
-      best = mid;
-      hi = mid;
-    }
-  }
-
-  camera.position.set(0, best * elev, nearSign * best * depth);
-  controls.minDistance = best * 0.78;
-  controls.maxDistance = best * 1.4;
+  const z = boardOrientation === "white" ? 9.6 : -9.6;
+  camera.position.set(0, 7.8, z);
+  controls.target.set(0, 0, 0);
+  controls.minDistance = 8.5;
+  controls.maxDistance = 16;
   controls.maxPolarAngle = Math.PI * 0.46;
-  controls.minPolarAngle = Math.PI * 0.2;
+  controls.minPolarAngle = Math.PI * 0.18;
   controls.update();
 }
 
@@ -340,15 +272,15 @@ export function OtbChessboard3d({
     if (!host) return;
 
     const scene = new THREE.Scene();
-    // Soft room tone — table plane fills the frame edge-to-edge.
-    scene.background = new THREE.Color(0x1a1814);
+    scene.background = null;
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: false,
+      alpha: true,
       powerPreference: "high-performance",
     });
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -470,7 +402,7 @@ export function OtbChessboard3d({
     >
       <div
         ref={hostRef}
-        className="relative w-full aspect-square overflow-hidden rounded-sm otb3d-canvas-host"
+        className="relative w-full aspect-square overflow-visible otb3d-canvas-host"
         style={{ maxWidth: boardWidth }}
         aria-label="3D over-the-board chessboard"
       />
