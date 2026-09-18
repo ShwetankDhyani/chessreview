@@ -43,6 +43,33 @@ type SceneBundle = {
 };
 
 function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
+  // Large table plane so the canvas fills edge-to-edge (no void letterbox).
+  const table = new THREE.Mesh(
+    new THREE.PlaneGeometry(28, 28),
+    new THREE.MeshStandardMaterial({
+      color: 0x2a241c,
+      roughness: 0.92,
+      metalness: 0.02,
+    })
+  );
+  table.rotation.x = -Math.PI / 2;
+  table.position.y = -0.2;
+  table.receiveShadow = true;
+  root.add(table);
+
+  const felt = new THREE.Mesh(
+    new THREE.CircleGeometry(7.2, 48),
+    new THREE.MeshStandardMaterial({
+      color: 0x1e3a24,
+      roughness: 0.95,
+      metalness: 0,
+    })
+  );
+  felt.rotation.x = -Math.PI / 2;
+  felt.position.y = -0.16;
+  felt.receiveShadow = true;
+  root.add(felt);
+
   const rim = new THREE.Mesh(
     new THREE.BoxGeometry(8.5, 0.18, 8.5),
     new THREE.MeshStandardMaterial({
@@ -313,16 +340,15 @@ export function OtbChessboard3d({
     if (!host) return;
 
     const scene = new THREE.Scene();
-    // Transparent so leftover perspective margins match the review panel.
-    scene.background = null;
+    // Soft room tone — table plane fills the frame edge-to-edge.
+    scene.background = new THREE.Color(0x1a1814);
 
-    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true,
+      alpha: false,
       powerPreference: "high-performance",
     });
-    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
