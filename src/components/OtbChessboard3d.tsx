@@ -219,45 +219,74 @@ function setCameraForOrientation(
   controls: OrbitControls,
   boardOrientation: "white" | "black"
 ) {
-  // Mild OTB tilt (more overhead than dramatic) so the board can fill the
-  // square without the near edge blowing past the FOV.
+function setCameraForOrientation(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  boardOrientation: "white" | "black"
+) {
+  // Mild OTB seat. Fit so the projected board AABB fills the square,
+  // then pan so that AABB is centered (uses empty top instead of clipping bottom).
   const nearSign = boardOrientation === "white" ? 1 : -1;
-  const elev = 1.25;
-  const depth = 0.62;
-  const target = new THREE.Vector3(0, 0.2, nearSign * 0.35);
+  const elev = 1.15;
+  const depth = 0.72;
+  const target = new THREE.Vector3(0, 0.25, 0);
   const corners = [
-    new THREE.Vector3(-4.25, -0.08, -4.25),
-    new THREE.Vector3(4.25, -0.08, -4.25),
-    new THREE.Vector3(-4.25, -0.08, 4.25),
-    new THREE.Vector3(4.25, -0.08, 4.25),
-    new THREE.Vector3(-4.25, 1.15, -4.25),
-    new THREE.Vector3(4.25, 1.15, -4.25),
-    new THREE.Vector3(-4.25, 1.15, 4.25),
-    new THREE.Vector3(4.25, 1.15, 4.25),
+    new THREE.Vector3(-4.3, -0.1, -4.3),
+    new THREE.Vector3(4.3, -0.1, -4.3),
+    new THREE.Vector3(-4.3, -0.1, 4.3),
+    new THREE.Vector3(4.3, -0.1, 4.3),
+    new THREE.Vector3(-4.3, 1.2, -4.3),
+    new THREE.Vector3(4.3, 1.2, -4.3),
+    new THREE.Vector3(-4.3, 1.2, 4.3),
+    new THREE.Vector3(4.3, 1.2, 4.3),
   ];
 
-  camera.fov = 46;
+  camera.fov = 42;
   camera.aspect = 1;
   camera.updateProjectionMatrix();
-  controls.target.copy(target);
+
+  const measure = () => {
+    camera.updateMatrixWorld(true);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    const ndc = new THREE.Vector3();
+    for (const corner of corners) {
+      ndc.copy(corner).project(camera);
+      minX = Math.min(minX, ndc.x);
+      maxX = Math.max(maxX, ndc.x);
+      minY = Math.min(minY, ndc.y);
+      maxY = Math.max(maxY, ndc.y);
+    }
+    return {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      maxAbs: Math.max(
+        Math.abs(minX),
+        Math.abs(maxX),
+        Math.abs(minY),
+        Math.abs(maxY)
+      ),
+      midX: (minX + maxX) / 2,
+      midY: (minY + maxY) / 2,
+      spanX: maxX - minX,
+      spanY: maxY - minY,
+    };
+  };
 
   let lo = 5;
-  let hi = 24;
-  let best = 11;
-  const ndc = new THREE.Vector3();
+  let hi = 26;
+  let best = 12;
   for (let i = 0; i < 24; i++) {
     const mid = (lo + hi) / 2;
     camera.position.set(0, mid * elev, nearSign * mid * depth);
+    controls.target.copy(target);
     camera.lookAt(target);
-    camera.updateMatrixWorld(true);
-
-    let maxAbs = 0;
-    for (const corner of corners) {
-      ndc.copy(corner).project(camera);
-      maxAbs = Math.max(maxAbs, Math.abs(ndc.x), Math.abs(ndc.y));
-    }
-    // Fill most of the square; tiny margin so wood never kisses the edge.
-    if (maxAbs > 0.93) {
+    const m = measure();
+    if (m.maxAbs > 0.9) {
       lo = mid;
     } else {
       best = mid;
@@ -266,11 +295,36 @@ function setCameraForOrientation(
   }
 
   camera.position.set(0, best * elev, nearSign * best * depth);
+  controls.target.copy(target);
   camera.lookAt(target);
+
+  // Pan in camera-up / camera-right so the AABB center lands at NDC 0,0.
+  const m1 = measure();
+  const dist = camera.position.distanceTo(target);
+  const vFov = (camera.fov * Math.PI) / 180;
+  const worldH = 2 * Math.tan(vFov / 2) * dist;
+  const worldW = worldH; // aspect 1
+  const panX = -m1.midX * (worldW / 2);
+  const panY = -m1.midY * (worldH / 2);
+  // Camera right is world X for our seat (looking along -/+Z with Y up).
+  camera.position.x += panX;
+  target.x += panX;
+  camera.position.y += panY;
+  target.y += panY;
+  controls.target.copy(target);
+  camera.lookAt(target);
+
+  // If still oversize after pan, pull back uniformly.
+  const m2 = measure();
+  if (m2.maxAbs > 0.92) {
+    const pull = m2.maxAbs / 0.9;
+    const offset = camera.position.clone().sub(target).multiplyScalar(pull);
+    camera.position.copy(target).add(offset);
+  }
+
   const euclidean = camera.position.distanceTo(target);
   controls.minDistance = euclidean;
   controls.maxDistance = euclidean * 1.55;
-  // Keep polar range wide enough that OrbitControls won't clamp our seat angle.
   controls.minPolarAngle = 0.05;
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.update();
