@@ -50,7 +50,6 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
     color: 0x5c4030,
     roughness: 0.7,
     metalness: 0.05,
-    envMapIntensity: 0, // keep classic board colors — env is for pieces only
   });
   const frameH = 0.08;
   const frameT = 0.22;
@@ -69,13 +68,12 @@ function buildBoard(root: THREE.Group, squareMeshes: THREE.Mesh[]) {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const isLight = (file + rank) % 2 === 1;
+      // Unlit = exact classic hexes (#eeeed2 / #769656), same as flat 2D board.
+      // Lit StandardMaterial + ambient was bleaching the green.
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.98, 0.06, 0.98),
-        new THREE.MeshStandardMaterial({
+        new THREE.MeshBasicMaterial({
           color: isLight ? LIGHT : DARK,
-          roughness: 0.92,
-          metalness: 0,
-          envMapIntensity: 0, // exact #eeeed2 / #769656 — no washed-out env sheen
         })
       );
       mesh.position.set(file - 3.5, 0, 3.5 - rank);
@@ -170,20 +168,14 @@ function applyHighlights(
     const file = mesh.userData.file as number;
     const rank = mesh.userData.rank as number;
     const square = `${String.fromCharCode(97 + file)}${rank + 1}`;
-    const mat = mesh.material as THREE.MeshStandardMaterial;
+    const mat = mesh.material as THREE.MeshBasicMaterial;
     const base = mesh.userData.baseColor as number;
     if (lastMove && square === lastMove.from) {
       mat.color.setHex(HI_FROM);
-      mat.emissive.setHex(0x665010);
-      mat.emissiveIntensity = 0.35;
     } else if (lastMove && square === lastMove.to) {
       mat.color.setHex(HI_TO);
-      mat.emissive.setHex(0x554008);
-      mat.emissiveIntensity = 0.28;
     } else {
       mat.color.setHex(base);
-      mat.emissive.setHex(0x000000);
-      mat.emissiveIntensity = 0;
     }
   }
 }
