@@ -41,8 +41,9 @@ export default function AboutPage() {
             <p>
               Paste a Chess.com or Lichess link, or a PGN, and ChessReview
               reviews the game with readable move classifications, accuracy
-              scores, an evaluation graph, and Stockfish engine lines. There is
-              no account wall and no paid tier.
+              scores, an evaluation graph, and Stockfish engine lines. Review games
+              in classic 2D or experience our realistic 3D over-the-board view
+              with luxury sculpted Staunton pieces. There is no account wall and no paid tier.
             </p>
             <p>
               Built for amateur and club players who want a plain-language look
@@ -54,6 +55,10 @@ export default function AboutPage() {
                 className="text-chess-accent font-semibold hover:underline"
               >
                 Start a free game review
+              </Link>
+              {" · "}
+              <Link to="/otb" className="text-chess-accent hover:underline">
+                Explore 3D Board
               </Link>
               {" · "}
               <Link to="/blog" className="text-chess-accent hover:underline">

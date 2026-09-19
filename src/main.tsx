@@ -70,7 +70,9 @@ function Root() {
               />
               <Route path="/learn" element={<LearnHubPage />} />
               <Route path="/learn/:slug" element={<LearnArticlePage />} />
-              <Route path="/otb-prototype" element={<OtbBoardPrototypePage />} />
+              <Route path="/otb" element={<OtbBoardPrototypePage />} />
+              <Route path="/3d" element={<Navigate to="/otb" replace />} />
+              <Route path="/otb-prototype" element={<Navigate to="/otb" replace />} />
               <Route path="/r/:id" element={<SharePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

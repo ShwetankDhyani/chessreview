@@ -14,7 +14,13 @@ const STATIC_URLS = [
     priority: "0.85",
   },
   { path: "/chessreview-vs-chessda", changefreq: "monthly", priority: "0.85" },
+  { path: "/otb", changefreq: "weekly", priority: "0.9" },
   { path: "/learn", changefreq: "weekly", priority: "0.8" },
+  {
+    path: "/learn/3d-otb-board",
+    changefreq: "monthly",
+    priority: "0.8",
+  },
   {
     path: "/learn/how-to-read-a-game-review",
     changefreq: "monthly",

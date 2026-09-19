@@ -9,11 +9,12 @@ export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 export const DEFAULT_SEO = {
   title: "ChessReview — Free Chess Game Analysis Online (No Sign-up)",
   description:
-    "Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription.",
+    "Free online chess game review with realistic 3D over-the-board view, Stockfish analysis, clear move ratings, accuracy scores, and no subscription.",
 } as const;
 
 export const HOME_OG_DESCRIPTION =
-  "Paste a Chess.com or Lichess link. Get readable move ratings, accuracy, an eval graph, and engine lines — free for amateur and club players.";
+  "Paste a Chess.com or Lichess link. Get realistic 3D over-the-board review, move ratings, accuracy, eval graphs, and engine lines — free for club players.";
+
 
 export interface PageSeoOptions {
   title?: string;
@@ -101,6 +102,11 @@ export const HOME_FAQ = [
       "ChessReview is a free hobby project focused on readable move classifications, accuracy, and Stockfish lines without a subscription wall. Import the same Chess.com or Lichess games you already play.",
   },
   {
+    question: "Does ChessReview have a 3D board view?",
+    answer:
+      "Yes. ChessReview features an over-the-board (OTB) 3D view with luxury carved Staunton pieces, authentic wood textures, and perspective controls on desktop and mobile.",
+  },
+  {
     question: "What is H2H on ChessReview?",
     answer:
       "H2H (head-to-head) is free form prep: paste a Chess.com or Lichess username to see trends across their last 100 games — score, tilt, colors, and matchups — before a rematch. It is separate from Stockfish game review.",
@@ -140,12 +146,14 @@ export function homeJsonLdGraph(): Record<string, unknown> {
         description: DEFAULT_SEO.description,
         featureList: [
           "Free chess game review online",
+          "Realistic 3D over-the-board (OTB) view with luxury Staunton pieces",
           "Chess.com and Lichess game import",
           "PGN paste support",
           "Move classification and accuracy scores",
           "Stockfish engine analysis",
           "Eval graph and critical moments",
           "H2H form prep from recent Chess.com and Lichess games",
+          "Player profile pictures from Chess.com and Lichess",
           "No account required",
         ],
         areaServed: [

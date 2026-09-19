@@ -25,7 +25,7 @@ function BrandMark() {
 }
 
 /**
- * Shared brand bar — product links (H2H / Learn) live in the site footer
+ * Shared brand bar — product links (H2H / 3D Board) live in the site footer
  * and profile menu, not here, so the header stays clean on every width.
  */
 export function SiteBrandBar({

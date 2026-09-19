@@ -87,8 +87,8 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
             >
               H2H
             </Link>
-            <Link to="/learn" className={linkClass}>
-              Learn
+            <Link to="/otb" className={linkClass}>
+              3D Board
             </Link>
             <Link to="/blog" className={`${linkClass} hidden sm:inline`}>
               Blog
