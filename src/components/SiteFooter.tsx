@@ -55,7 +55,7 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
   return (
     <>
       <footer
-        className={`${hideOnMobile ? "hidden lg:block " : ""}site-footer flex-shrink-0 z-40 overflow-hidden border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md fixed left-0 right-0 bottom-0 lg:static pb-[env(safe-area-inset-bottom,0px)]`}
+        className={`${hideOnMobile ? "hidden lg:block " : ""}site-footer flex-shrink-0 z-40 overflow-visible border-t border-chess-hairline bg-chess-panel/95 backdrop-blur-md fixed left-0 right-0 bottom-0 lg:static pb-[env(safe-area-inset-bottom,0px)]`}
       >
         {/*
           Content row height must stay exactly --site-footer so SiteChrome
