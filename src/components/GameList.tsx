@@ -12,6 +12,7 @@ import { AccountLinkPromo } from "./AccountLinkPromo";
 import { PgnPastePanel } from "./PgnPastePanel";
 import { GameUrlImport } from "./GameUrlImport";
 import { InlineErrorNotice } from "./InlineErrorNotice";
+import { PlayerAvatar } from "./PlayerAvatar";
 import { hapticSelection, hapticSoft, hapticTap } from "../utils/chessSounds";
 import { setChesscomBackoffListener } from "../utils/chesscomClient";
 import {
@@ -543,7 +544,13 @@ export const GameList: React.FC<GameListProps> = ({
             </div>
 
             <div className="mobile-surface-section flex-shrink-0 py-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PlayerAvatar
+                  username={inputVal}
+                  platformHint={platform}
+                  size={34}
+                  className="ring-1 ring-white/10 shadow-sm"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 truncate text-sm font-semibold tracking-tight text-chess-text">
                     <span className="text-chess-muted leading-none">
@@ -771,13 +778,13 @@ export const GameList: React.FC<GameListProps> = ({
                       <TimeClassIcon timeClass={game.timeClass} size={13} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <div
-                          className="h-2 w-2 flex-shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: color === "white" ? "#e8e6e3" : "#3a3a3a",
-                            border: color === "black" ? "1px solid #888" : "1px solid #ccc",
-                          }}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <PlayerAvatar
+                          username={opponent}
+                          platformHint={platform}
+                          color={isWhite ? "black" : "white"}
+                          size={18}
+                          showColorBadge
                         />
                         <span className="truncate text-[13px] font-semibold tracking-tight text-chess-text">
                           {opponent}

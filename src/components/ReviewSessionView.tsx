@@ -16,6 +16,7 @@ import { coachShowsBestWas } from "../utils/moveFactSheet";
 import { boardMoveClassification } from "../utils/boardMoveClassification";
 import type { ReviewBoardSession } from "../hooks/useReviewBoardSession";
 import { hapticSoft, hapticToggle } from "../utils/chessSounds";
+import { detectPlatformFromPgn } from "../utils/playerAvatar";
 
 function useViewport() {
   const [viewport, setViewport] = useState(() => ({
@@ -82,6 +83,11 @@ export function ReviewSessionView({
     bottomClock,
   } = session;
 
+  const platformHint = useMemo(
+    () => detectPlatformFromPgn(session.pgn),
+    [session.pgn]
+  );
+
   const desktopBoardSize = computeDesktopBoardSize(viewport.w, viewport.h, {
     evalGraphOpen: desktopEvalGraphOpen,
     hasAnalyzedMoves: moves.length > 0,
@@ -133,6 +139,7 @@ export function ReviewSessionView({
                   isLastMove={currentMoveIdx === moves.length - 1}
                   clock={topClock}
                   side={boardFlipped ? "w" : "b"}
+                  platformHint={platformHint}
                 />
               </div>
               <div className="flex items-stretch gap-1.5">
@@ -177,6 +184,7 @@ export function ReviewSessionView({
                   isLastMove={currentMoveIdx === moves.length - 1}
                   clock={bottomClock}
                   side={boardFlipped ? "b" : "w"}
+                  platformHint={platformHint}
                 />
               </div>
             </div>
@@ -331,6 +339,7 @@ export function ReviewSessionView({
             result={gameMeta?.result ?? null}
             isLastMove={currentMoveIdx === moves.length - 1}
             side={boardFlipped ? "w" : "b"}
+            platformHint={platformHint}
           />
           <MobileBoardShell
             evalResult={displayEval}
@@ -368,6 +377,7 @@ export function ReviewSessionView({
             result={gameMeta?.result ?? null}
             isLastMove={currentMoveIdx === moves.length - 1}
             side={boardFlipped ? "b" : "w"}
+            platformHint={platformHint}
           />
           <MobileBoardControls
             moveIndex={currentMoveIdx}
