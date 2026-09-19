@@ -7,7 +7,7 @@ import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
 import { PlayerTag } from "./components/PlayerTag";
-import { detectPlatformFromPgn } from "./utils/playerAvatar";
+import { detectPlatformFromPgn, fetchPlayerAvatar } from "./utils/playerAvatar";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
 import type {
@@ -893,6 +893,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
         setPlayerNames({ white: meta.white, black: meta.black });
         setGameMeta(meta);
         setClocks(extractClocks(pgnStr));
+        const plat = detectPlatformFromPgn(pgnStr) ?? (activeUser?.platform ?? null);
+        if (meta.white) void fetchPlayerAvatar(meta.white, plat);
+        if (meta.black) void fetchPlayerAvatar(meta.black, plat);
       } else {
         setAnalysisState("analyzing");
         setProgress((p) => (p.total > 0 ? p : { done: 2, total: 100 }));
@@ -1105,6 +1108,9 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     setPlayerNames({ white: meta.white, black: meta.black });
     setGameMeta(meta);
     setClocks(extractClocks(parsed.pgn));
+    const plat = detectPlatformFromPgn(parsed.pgn) ?? (activeUser?.platform ?? null);
+    if (meta.white) void fetchPlayerAvatar(meta.white, plat);
+    if (meta.black) void fetchPlayerAvatar(meta.black, plat);
     return true;
   }, [analysisRunning, abortRunningAnalysis]);
 
@@ -2646,6 +2652,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   whiteRating={gameMeta?.whiteRating}
                   blackRating={gameMeta?.blackRating}
                   hasGame={false}
+                  platformHint={gamePlatform}
                 />
               )}
             </div>

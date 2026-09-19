@@ -5,7 +5,7 @@ import {
   fetchPlayerAvatar,
   resetPlayerAvatarCacheForTests,
 } from "./playerAvatar";
-import { resetSafeStorageForTests } from "./safeStorage";
+import { resetSafeStorageForTests, safeGetJson } from "./safeStorage";
 
 describe("playerAvatar", () => {
   beforeEach(() => {
@@ -125,5 +125,45 @@ describe("playerAvatar", () => {
       expect(r2).toBe(mockAvatar);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
+
+    it("does not persist null to safeStorage when avatar is not found", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({}), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+
+      const res = await fetchPlayerAvatar("unknownplayer", "chesscom");
+      expect(res).toBeNull();
+
+      // Check safeStorage was not polluted with a long TTL null entry
+      const rawStored = safeGetJson("chess_avatar_v1:chesscom:unknownplayer", null);
+      expect(rawStored).toBeNull();
+    });
+
+    it("falls back to Lichess if Chess.com player has no avatar", async () => {
+      const mockLichessFlair = "nature.seedling";
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (info) => {
+        const url = String(info);
+        if (url.includes("api.chess.com")) {
+          return new Response(JSON.stringify({ username: "playerx" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (url.includes("lichess.org")) {
+          return new Response(JSON.stringify({ flair: mockLichessFlair, id: "playerx" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(null, { status: 404 });
+      });
+
+      const res = await fetchPlayerAvatar("playerx", "chesscom");
+      expect(res).toBe("https://lichess1.org/assets/______4/flair/img/nature.seedling.webp");
+    });
   });
 });
+
