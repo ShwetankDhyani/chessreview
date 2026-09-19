@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -25,7 +25,6 @@ import {
 import type { MoveClassification } from "../types";
 import { CLASSIFICATION_META } from "../utils/classificationMeta";
 import { ClassificationBadgeSvg } from "./MoveClassificationBadge";
-import { DirectionOrb, type CameraPreset } from "./DirectionOrb";
 
 const LIGHT = 0xd4d8c6;
 const DARK = 0x6a8a4e;
@@ -59,15 +58,6 @@ type PieceAnim = {
   mode: "glide" | "sink";
 };
 
-type CameraAnim = {
-  t0: number;
-  dur: number;
-  fromPos: THREE.Vector3;
-  toPos: THREE.Vector3;
-  fromTarget: THREE.Vector3;
-  toTarget: THREE.Vector3;
-};
-
 type SceneBundle = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -90,7 +80,6 @@ type SceneBundle = {
   animToken: number;
   prevFen: string | null;
   pendingFen: string | null;
-  cameraAnim: CameraAnim | null;
 };
 
 function buildBoard(
@@ -586,7 +575,6 @@ export type CameraPose = {
 
 export function computeCameraPose(
   camera: THREE.PerspectiveCamera,
-  preset: CameraPreset,
   boardOrientation: "white" | "black",
   isMobile: boolean
 ): CameraPose {
@@ -597,33 +585,11 @@ export function computeCameraPose(
   camera.aspect = 1;
   camera.updateProjectionMatrix();
 
-  let polar = 0.92;
-  let azimuth = nearSign > 0 ? 0 : Math.PI;
-  let target = new THREE.Vector3(0, 0.45, nearSign * 0.35);
-  let ndcTarget = 0.93;
-
-  if (preset === "review") {
-    // Steeper polar angle so board squares fill screen with ~35% larger size on mobile
-    polar = isMobile ? 0.58 : 0.68;
-    ndcTarget = isMobile ? 0.98 : 0.95;
-    target = new THREE.Vector3(0, 0.25, nearSign * 0.15);
-    azimuth = nearSign > 0 ? 0 : Math.PI;
-  } else if (preset === "seat") {
-    polar = 0.92;
-    azimuth = 0;
-    target = new THREE.Vector3(0, 0.45, 0.35);
-    ndcTarget = 0.93;
-  } else if (preset === "flip") {
-    polar = 0.92;
-    azimuth = Math.PI;
-    target = new THREE.Vector3(0, 0.45, -0.35);
-    ndcTarget = 0.93;
-  } else if (preset === "side") {
-    polar = 0.78;
-    azimuth = Math.PI * 0.35;
-    target = new THREE.Vector3(0, 0.35, 0);
-    ndcTarget = 0.94;
-  }
+  // Fixed review perspective: steeper polar angle on mobile so squares fill edge-to-edge (+35% larger)
+  const polar = isMobile ? 0.58 : 0.68;
+  const ndcTarget = isMobile ? 0.98 : 0.95;
+  const target = new THREE.Vector3(0, 0.25, nearSign * 0.15);
+  const azimuth = nearSign > 0 ? 0 : Math.PI;
 
   const sinP = Math.sin(polar);
   const cosP = Math.cos(polar);
@@ -711,24 +677,6 @@ function applyCameraPose(
   controls.update();
 }
 
-function transitionCameraToPose(
-  bundle: SceneBundle,
-  targetPose: CameraPose,
-  durationMs = 420
-) {
-  bundle.cameraAnim = {
-    t0: performance.now(),
-    dur: durationMs,
-    fromPos: bundle.camera.position.clone(),
-    toPos: targetPose.position.clone(),
-    fromTarget: bundle.controls.target.clone(),
-    toTarget: targetPose.target.clone(),
-  };
-  const euclidean = targetPose.radius;
-  bundle.controls.minDistance = euclidean * 0.75;
-  bundle.controls.maxDistance = euclidean * 1.6;
-}
-
 /**
  * WebGL over-the-board board with standing procedural pieces.
  * Lazy-loaded from ReviewChessboard when view === otb3d.
@@ -752,63 +700,6 @@ export function OtbChessboard3d({
   animDurationRef.current = animationDuration;
   const lastMoveHighlightRef = useRef(lastMoveHighlight);
   lastMoveHighlightRef.current = lastMoveHighlight;
-
-  const [activePreset, setActivePreset] = useState<CameraPreset | "custom">("review");
-  const activePresetRef = useRef(activePreset);
-  activePresetRef.current = activePreset;
-
-  const [azimuth, setAzimuth] = useState<number>(() =>
-    boardOrientation === "white" ? 0 : Math.PI
-  );
-
-  const PRESET_CYCLE: CameraPreset[] = ["review", "seat", "flip", "side"];
-
-  const handleCyclePreset = useCallback(() => {
-    const currentIndex =
-      activePresetRef.current === "custom"
-        ? -1
-        : PRESET_CYCLE.indexOf(activePresetRef.current);
-    const nextPreset = PRESET_CYCLE[(currentIndex + 1) % PRESET_CYCLE.length];
-    setActivePreset(nextPreset);
-
-    const bundle = bundleRef.current;
-    if (!bundle) return;
-    const isMobile = bundle.boardPx < 500;
-    const pose = computeCameraPose(
-      bundle.camera,
-      nextPreset,
-      bundle.boardOrientation,
-      isMobile
-    );
-    transitionCameraToPose(bundle, pose, 420);
-    setAzimuth(pose.azimuth);
-  }, []);
-
-  const handleOrbitDelta = useCallback((dx: number, dy: number) => {
-    const bundle = bundleRef.current;
-    if (!bundle) return;
-    bundle.cameraAnim = null;
-
-    const { camera, controls } = bundle;
-    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
-    const spherical = new THREE.Spherical().setFromVector3(offset);
-
-    spherical.theta -= (dx / 120) * Math.PI;
-    spherical.phi += (dy / 120) * Math.PI * 0.5;
-    spherical.phi = Math.max(
-      controls.minPolarAngle,
-      Math.min(controls.maxPolarAngle, spherical.phi)
-    );
-    spherical.makeSafe();
-
-    offset.setFromSpherical(spherical);
-    camera.position.addVectors(controls.target, offset);
-    camera.lookAt(controls.target);
-    controls.update();
-
-    setActivePreset("custom");
-    setAzimuth(spherical.theta);
-  }, []);
 
   const classMeta =
     moveClassification && CLASSIFICATION_META[moveClassification]
@@ -870,30 +761,10 @@ export function OtbChessboard3d({
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
 
-    const isTouch =
-      typeof window !== "undefined" &&
-      ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-    if (isTouch || boardWidth < 500) {
-      // Direct single-touch canvas rotation is disabled on mobile so page scrolling
-      // is never trapped, while Orbiting is handled seamlessly by the Direction Orb.
-      (controls.touches as any).ONE = null;
-      controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-      renderer.domElement.style.touchAction = "pan-y";
-    }
-
-    controls.addEventListener("start", () => {
-      const b = bundleRef.current;
-      if (b) b.cameraAnim = null;
-      setActivePreset("custom");
-    });
-    controls.addEventListener("change", () => {
-      const b = bundleRef.current;
-      if (!b || b.disposed || b.cameraAnim) return;
-      const dx = camera.position.x - controls.target.x;
-      const dz = camera.position.z - controls.target.z;
-      const az = Math.atan2(dx, dz);
-      setAzimuth(az);
-    });
+    const isMobile = boardWidth < 500;
+    // On mobile, lock perspective to fixed default and let page scroll pass through cleanly
+    controls.enableRotate = !isMobile;
+    renderer.domElement.style.touchAction = isMobile ? "pan-y" : "none";
 
     // High-end tournament studio lighting: warm key, soft ambient fill, and dual rim contour lights
     scene.add(new THREE.AmbientLight(0xffefe4, 0.34));
@@ -935,10 +806,8 @@ export function OtbChessboard3d({
     contentRoot.add(arrowRoot);
     scene.add(contentRoot);
 
-    const isMobile = boardWidth < 500;
     const initialPose = computeCameraPose(
       camera,
-      "review",
       boardOrientation,
       isMobile
     );
@@ -966,7 +835,6 @@ export function OtbChessboard3d({
       animToken: 0,
       prevFen: null,
       pendingFen: null,
-      cameraAnim: null,
     };
     bundleRef.current = bundle;
 
@@ -1028,31 +896,7 @@ export function OtbChessboard3d({
       if (bundle.disposed) return;
       bundle.raf = requestAnimationFrame(tick);
       tickAnims(bundle, performance.now());
-      if (bundle.cameraAnim) {
-        const u =
-          (performance.now() - bundle.cameraAnim.t0) / bundle.cameraAnim.dur;
-        const t = easeInOutCubic(Math.min(1, Math.max(0, u)));
-        bundle.camera.position.lerpVectors(
-          bundle.cameraAnim.fromPos,
-          bundle.cameraAnim.toPos,
-          t
-        );
-        bundle.controls.target.lerpVectors(
-          bundle.cameraAnim.fromTarget,
-          bundle.cameraAnim.toTarget,
-          t
-        );
-        bundle.camera.lookAt(bundle.controls.target);
-        bundle.controls.update();
-        const dx = bundle.camera.position.x - bundle.controls.target.x;
-        const dz = bundle.camera.position.z - bundle.controls.target.z;
-        setAzimuth(Math.atan2(dx, dz));
-        if (u >= 1) {
-          bundle.cameraAnim = null;
-        }
-      } else {
-        controls.update();
-      }
+      controls.update();
       renderer.render(scene, camera);
       syncBadge();
     };
@@ -1089,28 +933,15 @@ export function OtbChessboard3d({
     bundle.renderer.domElement.style.height = "100%";
 
     const isMobile = w < 500;
-    const isTouch =
-      typeof window !== "undefined" &&
-      ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-    if (isTouch || isMobile) {
-      (bundle.controls.touches as any).ONE = null;
-      bundle.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-      bundle.renderer.domElement.style.touchAction = "pan-y";
-    } else {
-      bundle.controls.touches.ONE = THREE.TOUCH.ROTATE;
-      bundle.renderer.domElement.style.touchAction = "none";
-    }
+    bundle.controls.enableRotate = !isMobile;
+    bundle.renderer.domElement.style.touchAction = isMobile ? "pan-y" : "none";
 
-    const presetToApply =
-      activePresetRef.current === "custom" ? "review" : activePresetRef.current;
     const pose = computeCameraPose(
       bundle.camera,
-      presetToApply,
       boardOrientation,
       isMobile
     );
     applyCameraPose(bundle.camera, bundle.controls, pose);
-    setAzimuth(pose.azimuth);
   }, [boardWidth, boardOrientation, badgeSize]);
 
   useEffect(() => {
@@ -1173,12 +1004,6 @@ export function OtbChessboard3d({
         className="relative w-full aspect-square overflow-visible otb3d-canvas-host"
         style={{ maxWidth: boardWidth }}
         aria-label="3D over-the-board chessboard"
-      />
-      <DirectionOrb
-        azimuth={azimuth}
-        activePreset={activePreset}
-        onCyclePreset={handleCyclePreset}
-        onOrbitDelta={handleOrbitDelta}
       />
       {classMeta && moveClassification ? (
         <div
