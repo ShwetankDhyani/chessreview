@@ -432,16 +432,6 @@ export function ProfileMenu({
               >
                 H2H
               </Link>
-              <Link
-                to="/otb"
-                onClick={() => {
-                  hapticTap();
-                  onClose();
-                }}
-                className="flex items-center rounded-lg px-2.5 py-2 text-[13px] font-semibold text-chess-subtext transition-colors hover:bg-chess-hover hover:text-chess-text"
-              >
-                3D Board
-              </Link>
             </section>
 
             <section className="px-1 pb-1 pt-1">

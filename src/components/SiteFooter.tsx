@@ -78,7 +78,7 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
           )}
 
           <nav
-            className="flex items-center justify-center gap-3 sm:gap-5"
+            className="flex items-center justify-center gap-4 sm:gap-6"
             aria-label="Site"
           >
             <Link
@@ -87,14 +87,8 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
             >
               H2H
             </Link>
-            <Link to="/otb" className={linkClass}>
-              3D Board
-            </Link>
-            <Link to="/blog" className={`${linkClass} hidden sm:inline`}>
+            <Link to="/blog" className={linkClass}>
               Blog
-            </Link>
-            <Link to="/about" className={`${linkClass} hidden sm:inline`}>
-              About
             </Link>
             <button
               type="button"
