@@ -6,6 +6,8 @@ import { ReviewEmptyState } from "./components/ReviewEmptyState";
 import { EvalBar } from "./components/EvalBar";
 import { EvalChartPanel } from "./components/EvalChartPanel";
 import { GameList } from "./components/GameList";
+import { PlayerTag } from "./components/PlayerTag";
+import { detectPlatformFromPgn } from "./utils/playerAvatar";
 import { analyzePgn } from "./utils/analyzer";
 import { SiteFooter } from "./components/SiteFooter";
 import type {
@@ -424,6 +426,10 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   const [saveReviewMessage, setSaveReviewMessage] = useState<string | null>(null);
 
   const activeUser = profiles[activeProfileIdx] ?? null;
+
+  const gamePlatform = useMemo(() => {
+    return detectPlatformFromPgn(pgn) ?? (activeUser?.platform ?? null);
+  }, [pgn, activeUser?.platform]);
 
   /**
    * Always-current profile list.
@@ -2174,6 +2180,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       sharing={sharing}
                       shareUrl={shareUrl}
                       shareError={shareError}
+                      platformHint={gamePlatform}
                       h2hHref={(() => {
                         const opp = pickH2hOpponent({
                           whiteName: playerNames.white,
@@ -2231,6 +2238,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       })()}
                       clockColor={boardFlipped ? "w" : "b"}
                       side={boardFlipped ? "w" : "b"}
+                      platformHint={gamePlatform}
                     />
                   </div>
                 )}
@@ -2295,6 +2303,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                     })()}
                     clockColor={boardFlipped ? "b" : "w"}
                     side={boardFlipped ? "b" : "w"}
+                    platformHint={gamePlatform}
                   />
                 </div>
                 <BoardReviewActions
@@ -2492,6 +2501,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                       sharing={sharing}
                       shareUrl={shareUrl}
                       shareError={shareError}
+                      platformHint={gamePlatform}
                       h2hHref={(() => {
                         const opp = pickH2hOpponent({
                           whiteName: playerNames.white,
@@ -2526,6 +2536,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "w" : "b"}
+                platformHint={gamePlatform}
               />
                 <MobileBoardShell
                   evalResult={continuationEval ?? currentEval}
@@ -2578,6 +2589,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                 result={gameMeta?.result ?? null}
                 isLastMove={currentMoveIdx === moves.length - 1}
                 side={boardFlipped ? "b" : "w"}
+                platformHint={gamePlatform}
               />
               <div className="flex items-center justify-between w-full px-1 py-1">
                 <span className="text-xs font-mono text-chess-muted tabular-nums">
@@ -2694,101 +2706,4 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
   );
 }
 
-function PlayerTag({
-  name,
-  color,
-  rating,
-  result,
-  isLastMove,
-  clock,
-  clockColor,
-  side,
-  compact = false,
-  trailing,
-}: {
-  name: string;
-  color: "white" | "black";
-  rating?: number | null;
-  result?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
-  isLastMove?: boolean;
-  clock?: number | null;
-  clockColor?: "w" | "b";
-  side?: "w" | "b";
-  compact?: boolean;
-  trailing?: React.ReactNode;
-}) {
-  const mySide = side ?? (color === "white" ? "w" : "b");
-  const won  = result === "1-0" ? "w" : result === "0-1" ? "b" : result === "1/2-1/2" ? "draw" : null;
-  const didWin  = won === mySide;
-  const didLose = won !== null && won !== "draw" && won !== mySide;
-  const isDraw  = won === "draw";
-
-  const hasClock = !compact && clock !== null && clock !== undefined;
-  const clockSecs = hasClock ? clock! : null;
-  const clockColor_ = clockSecs !== null
-    ? clockSecs < 30
-      ? "#ca3c3c"
-      : clockSecs < 60
-        ? "#e6c84a"
-        : clockSecs < 120
-          ? "#e07b39"
-          : "#888"
-    : "#888";
-
-  return (
-    <div
-      className={`flex items-center w-full py-1 transition-all ${
-        compact ? "px-1 gap-2" : "px-1.5 gap-2.5"
-      } ${isLastMove && didLose ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
-      style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-        <div
-          className={`rounded-sm flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
-          style={{
-            backgroundColor: color === "white" ? "#f5f3ec" : "#22201d",
-            border: color === "white" ? "1px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.2)",
-          }}
-          aria-hidden
-        />
-        <span
-          className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-[13px]" : "text-sm"}`}
-        >
-          {name}
-        </span>
-        {rating && (
-          <span
-            className={`text-chess-muted flex-shrink-0 tabular-nums font-mono ${compact ? "text-[11px]" : "text-xs"}`}
-          >
-            {rating}
-          </span>
-        )}
-        {didWin && (
-          <span
-            title="Winner"
-            className="text-xs leading-none ml-0.5 text-emerald-400 font-bold flex-shrink-0"
-          >
-            👑
-          </span>
-        )}
-        {isDraw && (
-          <span className="text-[10px] font-bold text-chess-muted ml-0.5 flex-shrink-0">
-            ½-½
-          </span>
-        )}
-      </div>
-      {trailing}
-      {hasClock && (
-        <span
-          className={`text-xs font-mono ml-auto flex-shrink-0 tabular-nums ${
-            clockSecs !== null && clockSecs < 30 ? "animate-pulse" : ""
-          }`}
-          style={{ color: clockColor_ }}
-        >
-          {clockSecs !== null ? formatClock(clockSecs) : "--:--"}
-        </span>
-      )}
-    </div>
-  );
-}
 

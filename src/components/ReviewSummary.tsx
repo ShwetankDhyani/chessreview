@@ -20,6 +20,8 @@ import {
 import { getMeta } from "../utils/classificationMeta";
 import { hapticTap, hapticToggle } from "../utils/chessSounds";
 import { safeGetItem, safeSetItem } from "../utils/safeStorage";
+import { PlayerAvatar } from "./PlayerAvatar";
+import type { PlatformHint } from "../utils/playerAvatar";
 
 const ACCURACY_EXCLUDE_KEY = "cr_accuracy_exclude_book_forced";
 
@@ -43,6 +45,7 @@ interface ReviewSummaryProps {
   shareUrl?: string | null;
   shareError?: string | null;
   h2hHref?: string | null;
+  platformHint?: PlatformHint;
 }
 
 const ROWS: Array<keyof typeof CLASSIFICATION_META> = [
@@ -213,9 +216,11 @@ function ReviewSection({
 function ReviewPlayersHeader({
   whiteName,
   blackName,
+  platformHint,
 }: {
   whiteName: string;
   blackName: string;
+  platformHint?: PlatformHint;
 }) {
   return (
     <div className="pb-3">
@@ -224,12 +229,13 @@ function ReviewPlayersHeader({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-chess-hairline bg-chess-card/85 shadow-elev-1 min-w-0">
-          <span
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-900 font-bold text-sm shadow-sm"
-            aria-hidden
-          >
-            ♔
-          </span>
+          <PlayerAvatar
+            username={whiteName}
+            platformHint={platformHint}
+            color="white"
+            size={30}
+            showColorBadge
+          />
           <div className="min-w-0 flex-1">
             <span className="block text-xs font-bold text-chess-text truncate">
               {whiteName}
@@ -240,12 +246,13 @@ function ReviewPlayersHeader({
           </div>
         </div>
         <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-chess-hairline bg-chess-card/85 shadow-elev-1 min-w-0">
-          <span
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-stone-900 text-stone-200 border border-stone-700 font-bold text-sm shadow-sm"
-            aria-hidden
-          >
-            ♚
-          </span>
+          <PlayerAvatar
+            username={blackName}
+            platformHint={platformHint}
+            color="black"
+            size={30}
+            showColorBadge
+          />
           <div className="min-w-0 flex-1">
             <span className="block text-xs font-bold text-chess-text truncate">
               {blackName}
@@ -272,6 +279,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
   shareUrl = null,
   shareError = null,
   h2hHref = null,
+  platformHint,
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [excludeBookAndForced, setExcludeBookAndForced] = useState(readExcludePref);
@@ -336,7 +344,11 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
 
   return (
     <div className="flex flex-col min-h-full p-3 sm:p-4 animate-fade-in">
-      <ReviewPlayersHeader whiteName={wLabel} blackName={bLabel} />
+      <ReviewPlayersHeader
+        whiteName={wLabel}
+        blackName={bLabel}
+        platformHint={platformHint}
+      />
 
       <ReviewSection title="Overall accuracy" first>
         <div className="flex items-stretch gap-1">

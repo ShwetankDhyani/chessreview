@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { PlayerAvatar } from "./PlayerAvatar";
+import type { PlatformHint } from "../utils/playerAvatar";
 
 export function formatClock(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -17,9 +19,12 @@ export function PlayerTag({
   result,
   isLastMove,
   clock,
+  clockColor: _clockColor,
   side,
   compact = false,
   trailing,
+  platformHint,
+  avatarUrl,
 }: {
   name: string;
   color: "white" | "black";
@@ -27,9 +32,12 @@ export function PlayerTag({
   result?: "1-0" | "0-1" | "1/2-1/2" | "*" | null;
   isLastMove?: boolean;
   clock?: number | null;
+  clockColor?: "w" | "b";
   side?: "w" | "b";
   compact?: boolean;
   trailing?: ReactNode;
+  platformHint?: PlatformHint;
+  avatarUrl?: string | null;
 }) {
   const mySide = side ?? (color === "white" ? "w" : "b");
   const won = result === "1-0" ? "w" : result === "0-1" ? "b" : result === "1/2-1/2" ? "draw" : null;
@@ -58,13 +66,14 @@ export function PlayerTag({
       style={isLastMove && didLose ? { opacity: 0.75 } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-        <div
-          className={`rounded-sm flex-shrink-0 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`}
-          style={{
-            backgroundColor: color === "white" ? "#f5f3ec" : "#22201d",
-            border: color === "white" ? "1px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.2)",
-          }}
-          aria-hidden
+        <PlayerAvatar
+          username={name}
+          platformHint={platformHint}
+          avatarUrl={avatarUrl}
+          color={color}
+          compact={compact}
+          size={compact ? 18 : 22}
+          showColorBadge
         />
         <span
           className={`font-bold text-chess-text truncate tracking-tight ${compact ? "text-[13px]" : "text-sm"}`}

@@ -12,6 +12,7 @@ import { InlineErrorNotice } from "../components/InlineErrorNotice";
 import { normalizeShareError, trackAppError, withTimeout } from "../utils/appError";
 import { normalizeReviewPayload } from "../utils/reviewPayload";
 import { hapticSelection } from "../utils/chessSounds";
+import { detectPlatformFromPgn } from "../utils/playerAvatar";
 
 type ShareTab = "game" | "stats";
 
@@ -121,6 +122,8 @@ export default function SharePage() {
     blackName,
     startAtLastMove: false,
   });
+
+  const platformHint = useMemo(() => detectPlatformFromPgn(pgn), [pgn]);
 
   const seoOptions = useMemo(() => {
     const path = shareId ? `/r/${shareId}` : "/r";
@@ -305,6 +308,7 @@ export default function SharePage() {
                     moves={moves}
                     run={reviewRun}
                     onMoveClick={handleMoveSelect}
+                    platformHint={platformHint}
                   />
                   <p className="text-[11px] text-chess-muted text-center py-4 px-3">
                     <Link
@@ -348,6 +352,7 @@ export default function SharePage() {
                     moves={moves}
                     run={reviewRun}
                     onMoveClick={handleMoveSelect}
+                    platformHint={platformHint}
                   />
                   <p className="text-[11px] text-chess-muted text-center py-4">
                     <Link

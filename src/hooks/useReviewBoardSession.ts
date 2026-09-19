@@ -320,6 +320,7 @@ export function useReviewBoardSession({
   );
 
   return {
+    pgn,
     moves,
     playerNames,
     gameMeta,
