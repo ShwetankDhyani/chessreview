@@ -64,8 +64,13 @@ function getStorageKey(cacheKey: string): string {
 
 async function fetchFromChesscom(cleanName: string): Promise<string | null> {
   try {
-    const url = chesscomPlayerUrl(cleanName);
-    const res = await chesscomFetch(url, { timeoutMs: 5000 });
+    const url = `https://api.chess.com/pub/player/${encodeURIComponent(cleanName.toLowerCase())}`;
+    const res = await retryingFetch(url, {
+      headers: { Accept: "application/json" },
+      timeoutMs: 6000,
+      attempts: 2,
+      notFoundStatuses: [404],
+    });
     if (res.ok) {
       const data = await res.json();
       if (typeof data?.avatar === "string" && data.avatar.trim()) {
@@ -83,7 +88,7 @@ async function fetchFromLichess(cleanName: string): Promise<string | null> {
     const url = `https://lichess.org/api/user/${encodeURIComponent(cleanName.toLowerCase())}`;
     const res = await retryingFetch(url, {
       headers: { Accept: "application/json" },
-      timeoutMs: 5000,
+      timeoutMs: 6000,
       attempts: 2,
       notFoundStatuses: [404],
     });
@@ -113,13 +118,14 @@ export async function fetchPlayerAvatar(
 
   // 1. Check in-memory cache
   if (memCache.has(cKey)) {
-    return memCache.get(cKey) ?? null;
+    const cached = memCache.get(cKey);
+    if (cached !== undefined && cached !== null) return cached;
   }
 
-  // 2. Check persistent safeStorage
+  // 2. Check persistent safeStorage - only accept valid non-null URLs
   const sKey = getStorageKey(cKey);
   const stored = safeGetJson<CachedAvatarEntry | null>(sKey, null);
-  if (stored && stored.exp > Date.now()) {
+  if (stored && stored.exp > Date.now() && typeof stored.url === "string" && stored.url) {
     memCache.set(cKey, stored.url);
     return stored.url;
   }
@@ -134,9 +140,11 @@ export async function fetchPlayerAvatar(
 
     if (platformHint === "chesscom") {
       result = await fetchFromChesscom(cleanName);
+      if (!result) {
+        result = await fetchFromLichess(cleanName);
+      }
     } else if (platformHint === "lichess") {
       result = await fetchFromLichess(cleanName);
-      // Secondary fallback: many Lichess players share their handle on Chess.com
       if (!result) {
         result = await fetchFromChesscom(cleanName);
       }
@@ -148,12 +156,14 @@ export async function fetchPlayerAvatar(
       }
     }
 
-    // Save in memory & persistent cache
+    // Save positive hits in memory & persistent cache
     memCache.set(cKey, result);
-    safeSetJson(sKey, {
-      url: result,
-      exp: Date.now() + CACHE_TTL_MS,
-    });
+    if (result) {
+      safeSetJson(sKey, {
+        url: result,
+        exp: Date.now() + CACHE_TTL_MS,
+      });
+    }
 
     return result;
   })().finally(() => {
@@ -178,9 +188,12 @@ export function usePlayerAvatar(
   // Check synchronous caches
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
     if (!cKey) return null;
-    if (memCache.has(cKey)) return memCache.get(cKey) ?? null;
+    if (memCache.has(cKey)) {
+      const cached = memCache.get(cKey);
+      if (cached) return cached;
+    }
     const stored = safeGetJson<CachedAvatarEntry | null>(getStorageKey(cKey), null);
-    if (stored && stored.exp > Date.now()) {
+    if (stored && stored.exp > Date.now() && typeof stored.url === "string" && stored.url) {
       memCache.set(cKey, stored.url);
       return stored.url;
     }
@@ -189,9 +202,9 @@ export function usePlayerAvatar(
 
   const [loading, setLoading] = useState<boolean>(() => {
     if (!isFetchable) return false;
-    if (memCache.has(cKey)) return false;
+    if (memCache.has(cKey) && memCache.get(cKey)) return false;
     const stored = safeGetJson<CachedAvatarEntry | null>(getStorageKey(cKey), null);
-    return !(stored && stored.exp > Date.now());
+    return !(stored && stored.exp > Date.now() && typeof stored.url === "string" && stored.url);
   });
 
   useEffect(() => {

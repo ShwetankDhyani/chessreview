@@ -1,4 +1,5 @@
 import type { GameEndInfo } from "../utils/gameEnd";
+import { PlayerAvatar } from "./PlayerAvatar";
 
 interface BoardGameEndOverlayProps {
   end: GameEndInfo;
@@ -77,9 +78,17 @@ export function BoardGameEndOverlay({
             {headline}
           </p>
           {winnerName ? (
-            <p className="text-xs text-white/85 leading-tight">
-              <span className="font-semibold">{winnerName}</span> wins
-            </p>
+            <div className="flex items-center justify-center gap-1.5 mt-0.5">
+              <PlayerAvatar
+                username={winnerName}
+                color={winnerColor === "w" ? "white" : "black"}
+                size={22}
+                showColorBadge
+              />
+              <p className="text-xs text-white/85 leading-tight">
+                <span className="font-semibold">{winnerName}</span> wins
+              </p>
+            </div>
           ) : (
             <p className="text-xs text-white/70 leading-tight">{end.detail}</p>
           )}

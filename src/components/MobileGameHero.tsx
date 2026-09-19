@@ -1,5 +1,7 @@
 import { EvalBar } from "./EvalBar";
 import { ReviewChessboard } from "./ReviewChessboard";
+import { PlayerAvatar } from "./PlayerAvatar";
+import type { PlatformHint } from "../utils/playerAvatar";
 
 interface MobileGameHeroProps {
   boardWidth: number;
@@ -12,6 +14,7 @@ interface MobileGameHeroProps {
   analyzing?: boolean;
   onAnalyze?: () => void;
   timeClass?: string;
+  platformHint?: PlatformHint;
 }
 
 export function MobileGameHero({
@@ -25,6 +28,7 @@ export function MobileGameHero({
   analyzing = false,
   onAnalyze,
   timeClass,
+  platformHint,
 }: MobileGameHeroProps) {
   const topName = boardOrientation === "black" ? whiteName : blackName;
   const bottomName = boardOrientation === "black" ? blackName : whiteName;
@@ -37,7 +41,13 @@ export function MobileGameHero({
 
   return (
     <div className="w-full flex flex-col items-center gap-2">
-      <PlayerStrip name={topName} rating={topRating} color={topColor} align="top" />
+      <PlayerStrip
+        name={topName}
+        rating={topRating}
+        color={topColor}
+        align="top"
+        platformHint={platformHint}
+      />
 
       <div
         className="relative rounded-xl overflow-hidden border border-chess-hairline shadow-elev-3"
@@ -84,7 +94,13 @@ export function MobileGameHero({
         </div>
       </div>
 
-      <PlayerStrip name={bottomName} rating={bottomRating} color={bottomColor} align="bottom" />
+      <PlayerStrip
+        name={bottomName}
+        rating={bottomRating}
+        color={bottomColor}
+        align="bottom"
+        platformHint={platformHint}
+      />
 
       {hasGame && onAnalyze ? (
         <button
@@ -120,28 +136,27 @@ function PlayerStrip({
   rating,
   color,
   align,
+  platformHint,
 }: {
   name: string;
   rating?: number | null;
   color: "white" | "black";
   align: "top" | "bottom";
+  platformHint?: PlatformHint;
 }) {
   return (
     <div
-      className={`w-full max-w-sm flex items-center gap-2 px-2 py-1 rounded-md border border-chess-border/80 bg-chess-panel/90 ${
+      className={`w-full max-w-sm flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg border border-chess-border/80 bg-chess-panel/90 shadow-sm ${
         align === "top" ? "mb-0.5" : "mt-0.5"
       }`}
     >
-      <div
-        className="w-8 h-8 rounded-md border flex-shrink-0 flex items-center justify-center text-lg font-bold"
-        style={{
-          backgroundColor: color === "white" ? "#e8e6e3" : "#1a1a1a",
-          borderColor: color === "white" ? "#ccc" : "#555",
-          color: color === "white" ? "#333" : "#aaa",
-        }}
-      >
-        {name.charAt(0).toUpperCase()}
-      </div>
+      <PlayerAvatar
+        username={name}
+        platformHint={platformHint}
+        color={color}
+        size={34}
+        showColorBadge
+      />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-bold text-chess-text truncate">{name}</div>
         {rating != null && (
