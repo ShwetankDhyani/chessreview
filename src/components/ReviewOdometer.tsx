@@ -37,7 +37,30 @@ export function ReviewOdometer() {
   const [tick, setTick] = useState(false);
   const [hover, setHover] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
+  const [coords, setCoords] = useState<{ bottom: number; right: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!hover || popupOpen || !buttonRef.current) {
+      setCoords(null);
+      return;
+    }
+    const update = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        bottom: window.innerHeight - rect.top + 8,
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [hover, popupOpen]);
 
   const refresh = useCallback(async () => {
     const stats = await fetchPublicReviewStats();
@@ -104,37 +127,43 @@ export function ReviewOdometer() {
           ))}
         </button>
 
-        {hover && !popupOpen && (
-          <div
-            id={tipId}
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full right-0 mb-2 z-50
-              w-max max-w-[min(16rem,calc(100vw-2rem))]
-              rounded-lg border border-chess-border/80 bg-chess-panel/95 backdrop-blur-sm
-              px-2.5 py-1.5 shadow-elev-3"
-          >
-            <p className="text-[11px] leading-snug text-chess-subtext">
-              <span className="font-semibold tabular-nums text-chess-accent">
-                {count.toLocaleString()}
-              </span>
-              {" games studied"}
-              {countryCount > 0 ? (
-                <>
-                  {" across "}
-                  <span className="font-semibold tabular-nums text-chess-text">
-                    {countryCount.toLocaleString()}
-                  </span>
-                  {countryCount === 1 ? " country" : " countries"}
-                </>
-              ) : null}
-            </p>
-            <span
-              className="absolute top-full right-3 -mt-px h-2 w-2 rotate-45
-                border-r border-b border-chess-border/80 bg-chess-panel/95"
-              aria-hidden
-            />
-          </div>
-        )}
+        {hover && !popupOpen && coords &&
+          createPortal(
+            <div
+              id={tipId}
+              role="tooltip"
+              style={{
+                position: "fixed",
+                bottom: `${coords.bottom}px`,
+                right: `${coords.right}px`,
+              }}
+              className="pointer-events-none z-[9999] w-max max-w-[min(18rem,calc(100vw-2rem))]
+                rounded-lg border border-chess-border/80 bg-chess-panel/95 backdrop-blur-md
+                px-2.5 py-1.5 shadow-elev-3 animate-[fadeIn_100ms_ease-out]"
+            >
+              <p className="text-[11px] leading-snug text-chess-subtext">
+                <span className="font-semibold tabular-nums text-chess-accent">
+                  {count.toLocaleString()}
+                </span>
+                {" games studied"}
+                {countryCount > 0 ? (
+                  <>
+                    {" across "}
+                    <span className="font-semibold tabular-nums text-chess-text">
+                      {countryCount.toLocaleString()}
+                    </span>
+                    {countryCount === 1 ? " country" : " countries"}
+                  </>
+                ) : null}
+              </p>
+              <span
+                className="absolute top-full right-3 -mt-px h-2 w-2 rotate-45
+                  border-r border-b border-chess-border/80 bg-chess-panel/95"
+                aria-hidden
+              />
+            </div>,
+            document.body
+          )}
       </div>
 
       {popupOpen &&
