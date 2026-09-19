@@ -8,15 +8,15 @@ import { webPageJsonLd } from "../utils/marketingSeo";
 
 export default function LearnHubPage() {
   usePageSeo({
-    title: "Learn Chess Game Review — ChessReview Guides",
+    title: "Learn Chess Game Review & 3D Board — ChessReview Guides",
     description:
-      "Short guides on reading a chess game review: move classifications, accuracy, estimated rating, and how free review tools compare.",
+      "Guides on reading chess game reviews, realistic 3D over-the-board review, move classifications, and accuracy scores.",
     path: "/learn",
     jsonLd: webPageJsonLd({
       path: "/learn",
-      name: "Learn Chess Game Review",
+      name: "Learn Chess Game Review & 3D Board",
       description:
-        "Guides for reading chess game reviews — classifications, accuracy, and free vs Chess.com.",
+        "Guides for reading chess game reviews — realistic 3D board, classifications, and accuracy.",
     }),
   });
 
@@ -25,11 +25,16 @@ export default function LearnHubPage() {
       chromeTitle="Learn"
       eyebrow="Learn"
       title="Learn how to read a game review"
-      lead="Short guides for club players — what the labels mean, how accuracy works, and how free reviewers compare to Chess.com."
+      lead="Guides for club players — how to read evaluations, what move classifications mean, and how to use the realistic 3D over-the-board review."
     >
       <MarketingSection title="Guides">
         <MarketingLinkList
           items={[
+            {
+              to: "/learn/3d-otb-board",
+              label: "3D & over-the-board review",
+              blurb: "Luxury Staunton pieces, woodcraft, and 3D perspectives explained.",
+            },
             {
               to: "/learn/how-to-read-a-game-review",
               label: "How to read a game review",
@@ -53,31 +58,14 @@ export default function LearnHubPage() {
         <MarketingLinkList
           items={[
             {
+              to: "/otb",
+              label: "3D Over-the-board view",
+              blurb: "Experience realistic luxury Staunton wood pieces and 3D review.",
+            },
+            {
               to: "/h2h",
               label: "H2H — head-to-head form prep",
               blurb: "Scout an opponent’s last 100 games before a rematch.",
-            },
-          ]}
-        />
-      </MarketingSection>
-
-      <MarketingSection title="Compare">
-        <MarketingLinkList
-          items={[
-            {
-              to: "/free-chess-game-review",
-              label: "Free unlimited chess game review",
-              blurb: "What ChessReview offers with no account wall.",
-            },
-            {
-              to: "/free-vs-chesscom-game-review",
-              label: "Free vs Chess.com Game Review",
-              blurb: "Limits, membership, and when to use each.",
-            },
-            {
-              to: "/chessreview-vs-chessda",
-              label: "ChessReview vs Chessda",
-              blurb: "Two free browser reviewers compared.",
             },
           ]}
         />

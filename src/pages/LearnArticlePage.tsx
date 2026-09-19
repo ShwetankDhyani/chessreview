@@ -17,6 +17,42 @@ type Article = {
 };
 
 const ARTICLES: Record<string, Article> = {
+  "3d-otb-board": {
+    path: "/learn/3d-otb-board",
+    chromeTitle: "3D Board",
+    eyebrow: "Learn",
+    title: "Realistic 3D & Over-The-Board Game Review",
+    description:
+      "How to use ChessReview's realistic 3D over-the-board review: luxury Staunton pieces, authentic woodcraft, orbital controls, and mobile perspective.",
+    lead: "Reviewing games in 3D bridges the gap between digital chess and physical club play. Here is how ChessReview's over-the-board 3D review works.",
+    sections: [
+      {
+        title: "1. Luxury Staunton sculpting & recognition",
+        body: [
+          "Every piece is sculpted with classical Staunton proportions, weighted bases, and distinct crowns. Knights have sculpted manes and snouts, rooks feature crenellated ramparts, and pawns have balanced proportions so pieces are unmistakable from any camera perspective.",
+          "Natural wood grain textures and warm studio lighting ensure pieces feel tactile and authentic, avoiding the sterile plastic look of generic 3D boards.",
+        ],
+      },
+      {
+        title: "2. Full 3D orbital perspective",
+        body: [
+          "Click and drag to rotate the board in real time. Inspect diagonals, pawn breaks, and king shelters from custom camera angles, or flip seats to see the board exactly as your opponent saw it during the match.",
+        ],
+      },
+      {
+        title: "3. Calibrated mobile review mode",
+        body: [
+          "On smartphones and smaller viewports, the camera angle is framed specifically to keep the board large and legible while keeping move classifications and evaluation bars within easy thumb reach.",
+        ],
+      },
+      {
+        title: "4. Seamless 2D / 3D toggle",
+        body: [
+          "Switch between rapid 2D review and tactile 3D immersion with a single tap. Your preference is preserved across sessions automatically.",
+        ],
+      },
+    ],
+  },
   "how-to-read-a-game-review": {
     path: "/learn/how-to-read-a-game-review",
     chromeTitle: "Read a review",

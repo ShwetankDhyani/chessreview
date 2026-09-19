@@ -26,10 +26,10 @@ const DEMO_ANIM_MS = 560;
  */
 export default function OtbBoardPrototypePage() {
   usePageSeo({
-    title: "OTB board prototype — ChessReview",
-    description: "Prototype of an over-the-board 3D review board view.",
-    path: "/otb-prototype",
-    noindex: true,
+    title: "3D Over-The-Board View — Realistic Chessboard | ChessReview",
+    description:
+      "Experience realistic 3D over-the-board chess reviews with luxury Staunton pieces, natural woodcraft, and orbital perspective controls on desktop and mobile.",
+    path: "/otb",
   });
 
   const [boardView, setBoardView] = useBoardView();
@@ -60,14 +60,15 @@ export default function OtbBoardPrototypePage() {
   }, []);
 
   return (
-    <SiteChrome title="OTB prototype">
+    <SiteChrome title="3D Board">
       <main className="otb-proto">
         <header className="otb-proto__header">
-          <p className="otb-proto__badge">WebGL OTB — wired into review toggle</p>
-          <h1 className="otb-proto__title">Over-the-board 3D board</h1>
+          <p className="otb-proto__badge">Realistic 3D Chessboard</p>
+          <h1 className="otb-proto__title">Over-the-board 3D review</h1>
           <p className="otb-proto__lede">
-            Real Three.js board with standing pieces. Same preference as the
-            review 2D / 3D toggle (saved locally).
+            Experience matches with luxury carved Staunton pieces, natural wood textures,
+            directional lighting, and 3D orbit controls. Switch seamlessly between
+            classic 2D and 3D anytime during game review.
           </p>
         </header>
 
@@ -189,11 +190,48 @@ export default function OtbBoardPrototypePage() {
           </div>
           <p className="otb-proto__note">
             {boardView === "otb3d"
-              ? "Drag to orbit. Replay Bc4 glide plays a Harry-Potter-style piece slide."
+              ? "Drag to orbit. Replay Bc4 glide plays an authentic Harry-Potter-style piece slide."
               : "Classic flat review board."}
           </p>
+        </section>
+
+        <section className="mt-8 pt-6 border-t border-chess-border/60 max-w-xl mx-auto space-y-4 text-left">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-chess-accent">
+            Crafted for Game Review
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-chess-subtext leading-relaxed">
+            <div className="rounded-xl border border-chess-border/60 bg-chess-panel/50 p-3.5 space-y-1">
+              <div className="font-semibold text-chess-text">Luxury Staunton Sculpting</div>
+              <p>
+                Classical, weighted Staunton silhouettes with flared knight manes and tiered
+                crowns for crystal-clear identification from top-down or angled perspectives.
+              </p>
+            </div>
+            <div className="rounded-xl border border-chess-border/60 bg-chess-panel/50 p-3.5 space-y-1">
+              <div className="font-semibold text-chess-text">Natural Woodcraft & Textures</div>
+              <p>
+                Warm maple and rich dark walnut wood grains with directional studio lighting,
+                natural reflections, and soft contact shadows.
+              </p>
+            </div>
+            <div className="rounded-xl border border-chess-border/60 bg-chess-panel/50 p-3.5 space-y-1">
+              <div className="font-semibold text-chess-text">Mobile-Optimized Perspective</div>
+              <p>
+                Calibrated camera framing tailored specifically for mobile viewports, keeping the
+                3D board prominent without occluding move analysis or evaluation charts.
+              </p>
+            </div>
+            <div className="rounded-xl border border-chess-border/60 bg-chess-panel/50 p-3.5 space-y-1">
+              <div className="font-semibold text-chess-text">Instant 2D / 3D Toggle</div>
+              <p>
+                Switch between high-speed 2D review and tactile 3D immersion with a single tap.
+                Your view preference is remembered automatically.
+              </p>
+            </div>
+          </div>
         </section>
       </main>
     </SiteChrome>
   );
 }
+
