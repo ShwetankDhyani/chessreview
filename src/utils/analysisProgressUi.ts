@@ -85,37 +85,3 @@ export function analysisStageLabel(percent: number, depth: number): string {
   if (p < 100) return "Grading every move…";
   return "Finishing up…";
 }
-
-/** Coarse buckets so we don't imply false precision. */
-function bucketEtaSeconds(seconds: number): number {
-  if (seconds < 15) return 10;
-  if (seconds < 28) return 20;
-  if (seconds < 45) return 30;
-  if (seconds < 75) return 60;
-  if (seconds < 105) return 90;
-  if (seconds < 150) return 120;
-  return Math.round(seconds / 60) * 60;
-}
-
-/** Rough remaining time — always framed as an estimate. */
-export function formatEtaGuess(seconds: number | null): string | null {
-  if (seconds === null) return null;
-  if (seconds < 8) return "Almost done · estimate";
-  const bucket = bucketEtaSeconds(seconds);
-  if (bucket < 60) {
-    return `Roughly ${bucket}s left · estimate`;
-  }
-  const mins = Math.round(bucket / 60);
-  if (mins === 1) return "About 1 min left · estimate";
-  return `About ${mins} min left · estimate`;
-}
-
-/** @deprecated use formatEtaGuess */
-export function formatEtaSeconds(seconds: number | null): string | null {
-  return formatEtaGuess(seconds);
-}
-
-export function remainingEtaSeconds(remainingMs: number): number | null {
-  if (remainingMs < 2000) return null;
-  return Math.max(1, Math.round(remainingMs / 1000));
-}

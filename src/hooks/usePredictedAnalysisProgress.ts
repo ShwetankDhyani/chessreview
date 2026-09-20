@@ -8,11 +8,11 @@ import {
 
 export interface PredictedAnalysisProgress {
   percent: number;
-  remainingMs: number;
 }
 
 /**
  * Progress driven by adaptive predicted review duration, recalibrated against engine milestones.
+ * Duration prediction is internal only — no ETA is shown in the UI.
  */
 export function usePredictedAnalysisProgress(
   state: AnalysisState,
@@ -24,7 +24,6 @@ export function usePredictedAnalysisProgress(
 ): PredictedAnalysisProgress {
   const [result, setResult] = useState<PredictedAnalysisProgress>({
     percent: 0,
-    remainingMs: 0,
   });
   const displayRef = useRef(0);
   const predictedMsRef = useRef(
@@ -48,22 +47,19 @@ export function usePredictedAnalysisProgress(
         timingModel
       );
       displayRef.current = 2;
-      setResult({
-        percent: 2,
-        remainingMs: predictedMsRef.current,
-      });
+      setResult({ percent: 2 });
     }
     prevStateRef.current = state;
 
     if (state === "idle" || state === "loading") {
       displayRef.current = 0;
-      setResult({ percent: 0, remainingMs: 0 });
+      setResult({ percent: 0 });
       return;
     }
 
     if (state === "done") {
       displayRef.current = 100;
-      setResult({ percent: 100, remainingMs: 0 });
+      setResult({ percent: 100 });
       return;
     }
 
@@ -81,10 +77,7 @@ export function usePredictedAnalysisProgress(
       });
       predictedMsRef.current = step.predictedMs;
       displayRef.current = step.display;
-      setResult({
-        percent: step.display,
-        remainingMs: Math.max(0, step.predictedMs - elapsedMs),
-      });
+      setResult({ percent: step.display });
     };
 
     tick();
@@ -93,7 +86,7 @@ export function usePredictedAnalysisProgress(
   }, [state, rawPercent, startedAt, plies, depth, timingModel]);
 
   if (state === "done" || rawPercent >= 100) {
-    return { percent: 100, remainingMs: 0 };
+    return { percent: 100 };
   }
 
   return result;
