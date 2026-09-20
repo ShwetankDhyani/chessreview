@@ -1,8 +1,14 @@
 /** Latest N completed reviews used to learn review duration trends. */
 export const TIMING_SAMPLE_WINDOW = 120;
 
-export const MIN_DEPTH_SAMPLES = 4;
-export const MIN_BUCKET_SAMPLES = 3;
+export const MIN_DEPTH_SAMPLES = 3;
+export const MIN_BUCKET_SAMPLES = 2;
+
+/**
+ * Parallel full-depth era — ignore older slow serial/consensus samples for ETAs.
+ * Keep in sync with src/utils/reviewTiming.ts TIMING_ERA_START_MS.
+ */
+export const TIMING_ERA_START_MS = Date.parse("2026-07-16T10:00:00.000Z");
 
 const PLY_BUCKETS = [
   { min: 1, max: 15 },
@@ -21,13 +27,24 @@ function median(values) {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function eventTimeMs(e) {
+  const raw = e?.reviewed_at ?? e?.created_at ?? e?.recordedAt ?? e?.ts;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string") {
+    const t = Date.parse(raw);
+    return Number.isNaN(t) ? 0 : t;
+  }
+  return 0;
+}
+
 function validEvent(e) {
   return (
     e &&
     Number(e.duration_ms) > 500 &&
     Number(e.plies) > 0 &&
     Number(e.depth) >= 1 &&
-    Number(e.depth) <= 30
+    Number(e.depth) <= 30 &&
+    eventTimeMs(e) >= TIMING_ERA_START_MS
   );
 }
 
@@ -45,6 +62,7 @@ function depthMetrics(list) {
 
 /**
  * Build a timing model from recent review events (newest first).
+ * Pre-era (slow pipeline) samples are excluded.
  */
 export function computeTimingModel(events = []) {
   const recent = events.filter(validEvent).slice(0, TIMING_SAMPLE_WINDOW);
@@ -54,6 +72,7 @@ export function computeTimingModel(events = []) {
       windowSize: TIMING_SAMPLE_WINDOW,
       sampleCount: 0,
       updatedAt: new Date().toISOString(),
+      eraStart: new Date(TIMING_ERA_START_MS).toISOString(),
       global: null,
       byDepth: [],
       byDepthPly: [],
@@ -97,6 +116,7 @@ export function computeTimingModel(events = []) {
     windowSize: TIMING_SAMPLE_WINDOW,
     sampleCount: recent.length,
     updatedAt: new Date().toISOString(),
+    eraStart: new Date(TIMING_ERA_START_MS).toISOString(),
     global,
     byDepth,
     byDepthPly,
