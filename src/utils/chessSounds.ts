@@ -1,10 +1,11 @@
 import { safeGetItem, safeSetItem } from "./safeStorage";
+import { CHESS_AUDIO_BASE64 } from "./chessAudioData";
 /**
  * Sensory hierarchy:
  * - Navigation: lighter haptic
  * - Buttons / toggles / board plies: stronger haptic
- * - Chess board: quiet Lichess-like wood sounds + matching haptics
- * - Rare soft review announcement tones
+ * - Chess board: authentic Chess.com sounds (move, capture, castle, check, promote) + matching haptics
+ * - Rare review announcement cues: authentic Chess.com tones (game-start, game-end, notify, illegal)
  */
 
 export type MoveSoundKind = "move" | "capture" | "castle" | "check" | "promote";
@@ -68,10 +69,10 @@ export function subscribeSensoryPrefs(listener: ChangeListener): () => void {
 }
 
 export function soundKindFromSan(san: string): MoveSoundKind {
-  if (/^O-O(-O)?[+#]?$/.test(san)) return "castle";
-  if (san.includes("=")) return "promote";
-  if (san.includes("x")) return "capture";
   if (san.includes("+") || san.includes("#")) return "check";
+  if (san.includes("=")) return "promote";
+  if (/^O-O(-O)?[+#]?$/.test(san)) return "castle";
+  if (san.includes("x")) return "capture";
   return "move";
 }
 
@@ -117,6 +118,62 @@ export function unlockChessAudio(): void {
   void prepareChessAudio();
 }
 
+const chessBufferCache = new Map<string, AudioBuffer>();
+const pendingDecodes = new Map<string, Promise<AudioBuffer | null>>();
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  if (typeof atob === "undefined") {
+    return new ArrayBuffer(0);
+  }
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+export async function preloadChessSound(
+  ctx: AudioContext,
+  name: string
+): Promise<AudioBuffer | null> {
+  const cached = chessBufferCache.get(name);
+  if (cached) return cached;
+
+  const pending = pendingDecodes.get(name);
+  if (pending) return pending;
+
+  const b64 = CHESS_AUDIO_BASE64[name];
+  if (!b64) return null;
+
+  const promise = (async () => {
+    try {
+      if (typeof ctx.decodeAudioData !== "function") return null;
+      const arrayBuffer = base64ToArrayBuffer(b64);
+      const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      chessBufferCache.set(name, decoded);
+      return decoded;
+    } catch {
+      return null;
+    } finally {
+      pendingDecodes.delete(name);
+    }
+  })();
+
+  pendingDecodes.set(name, promise);
+  return promise;
+}
+
+export async function preloadAllChessSounds(
+  ctx?: AudioContext | null
+): Promise<void> {
+  const targetCtx = ctx ?? getCtx();
+  if (!targetCtx) return;
+  const keys = Object.keys(CHESS_AUDIO_BASE64);
+  await Promise.all(keys.map((k) => preloadChessSound(targetCtx, k)));
+}
+
 export async function prepareChessAudio(): Promise<void> {
   const ctx = getCtx();
   if (!ctx) return;
@@ -129,6 +186,7 @@ export async function prepareChessAudio(): Promise<void> {
     src.connect(ctx.destination);
     src.start(0);
     src.stop(0);
+    void preloadAllChessSounds(ctx);
   } catch {
     /* ignore */
   }
@@ -139,7 +197,11 @@ async function ensureAudioReady(): Promise<AudioContext | null> {
   if (!ctx) return null;
   try {
     if (ctx.state === "suspended") await ctx.resume();
-    return ctx.state === "running" ? ctx : null;
+    if (ctx.state === "running") {
+      void preloadAllChessSounds(ctx);
+      return ctx;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -149,6 +211,44 @@ function shouldPlayHapticProxy(): boolean {
   const vibrateOk =
     typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
   return isTouchFeelDevice() || !vibrateOk;
+}
+
+function playDecodedBuffer(
+  ctx: AudioContext,
+  buffer: AudioBuffer,
+  gainLevel = 0.95
+): void {
+  try {
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    gain.gain.value = gainLevel;
+    src.buffer = buffer;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(ctx.currentTime);
+  } catch {
+    /* ignore */
+  }
+}
+
+function playChessSound(
+  ctx: AudioContext,
+  name: string,
+  fallbackKind?: MoveSoundKind
+): void {
+  const cached = chessBufferCache.get(name);
+  if (cached) {
+    playDecodedBuffer(ctx, cached);
+    return;
+  }
+
+  void preloadChessSound(ctx, name).then((buffer) => {
+    if (buffer) {
+      playDecodedBuffer(ctx, buffer);
+    } else if (fallbackKind) {
+      playWoodSound(ctx, fallbackKind);
+    }
+  });
 }
 
 /* ── Lichess-inspired board sounds — quiet, dry, classy ───────────────── */
@@ -350,13 +450,13 @@ export function playMoveSound(kind: MoveSoundKind): void {
   if (!soundsEnabled()) return;
   const ctx = getRunningCtx();
   if (ctx) {
-    playWoodSound(ctx, kind);
+    playChessSound(ctx, kind, kind);
     return;
   }
   unlockChessAudio();
   void ensureAudioReady().then((readyCtx) => {
     if (!readyCtx) return;
-    playWoodSound(readyCtx, kind);
+    playChessSound(readyCtx, kind, kind);
   });
 }
 
@@ -406,14 +506,33 @@ function playAnnounceTone(ctx: AudioContext, kind: AnnounceKind): void {
   }
 }
 
-/** Soft site announcement — review start/done and rare warnings. */
+/** Site announcement — review start/done and rare warnings with authentic Chess.com cues. */
 export function announce(kind: AnnounceKind): void {
   if (!soundsEnabled()) return;
   if (!canFire(`announce:${kind}`, 400)) return;
+  const ctx = getRunningCtx();
+  if (ctx) {
+    const cached = chessBufferCache.get(kind);
+    if (cached) {
+      playDecodedBuffer(ctx, cached);
+      return;
+    }
+  }
   unlockChessAudio();
-  void ensureAudioReady().then((ctx) => {
-    if (!ctx) return;
-    playAnnounceTone(ctx, kind);
+  void ensureAudioReady().then((readyCtx) => {
+    if (!readyCtx) return;
+    const cached = chessBufferCache.get(kind);
+    if (cached) {
+      playDecodedBuffer(readyCtx, cached);
+    } else {
+      void preloadChessSound(readyCtx, kind).then((buf) => {
+        if (buf) {
+          playDecodedBuffer(readyCtx, buf);
+        } else {
+          playAnnounceTone(readyCtx, kind);
+        }
+      });
+    }
   });
 }
 
@@ -610,7 +729,7 @@ const MOVE_VIBRATE: Record<MoveSoundKind, number | number[]> = {
 };
 
 /**
- * Board step: immediate crisp impulse + quiet Lichess-like wood sound for every ply.
+ * Board step: immediate crisp impulse + authentic Chess.com sound for every ply.
  */
 export function playMoveFeedback(san: string): void {
   if (!san) return;
@@ -621,13 +740,12 @@ export function playMoveFeedback(san: string): void {
     vibrate(MOVE_VIBRATE[kind]);
   }
 
-  // 2. Play wood sound and haptic proxy synchronously without awaiting promises
+  // 2. Play authentic Chess.com sound (or haptic audio proxy if muted)
   const ctx = getRunningCtx();
   if (ctx) {
     if (soundsEnabled()) {
-      playWoodSound(ctx, kind);
-    }
-    if (hapticsEnabled() && shouldPlayHapticProxy()) {
+      playChessSound(ctx, kind, kind);
+    } else if (hapticsEnabled() && shouldPlayHapticProxy()) {
       const proxy: SensoryKind =
         kind === "capture" || kind === "check" || kind === "promote"
           ? "rigid"
@@ -638,8 +756,9 @@ export function playMoveFeedback(san: string): void {
     unlockChessAudio();
     void ensureAudioReady().then((readyCtx) => {
       if (!readyCtx) return;
-      if (soundsEnabled()) playWoodSound(readyCtx, kind);
-      if (hapticsEnabled() && shouldPlayHapticProxy()) {
+      if (soundsEnabled()) {
+        playChessSound(readyCtx, kind, kind);
+      } else if (hapticsEnabled() && shouldPlayHapticProxy()) {
         const proxy: SensoryKind =
           kind === "capture" || kind === "check" || kind === "promote"
             ? "rigid"
