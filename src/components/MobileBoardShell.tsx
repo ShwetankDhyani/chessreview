@@ -26,7 +26,6 @@ interface MobileBoardShellProps extends ReviewChessboardProps {
   progressPercent?: number;
   analysisStageLabel?: string;
   analyzingMoveSan?: string;
-  analysisEtaLabel?: string | null;
   analyzingPly?: number;
   analyzingTotalPlies?: number;
   reviewConflict?: BoardReviewConflict | null;
@@ -127,7 +126,6 @@ export function MobileBoardShell({
   progressPercent = 0,
   analysisStageLabel,
   analyzingMoveSan,
-  analysisEtaLabel,
   analyzingPly,
   analyzingTotalPlies,
   reviewConflict = null,
@@ -204,7 +202,6 @@ export function MobileBoardShell({
               progressPercent={progressPercent}
               analysisStageLabel={analysisStageLabel}
               analyzingMoveSan={analyzingMoveSan}
-              analysisEtaLabel={analysisEtaLabel}
               analyzingPly={analyzingPly}
               analyzingTotalPlies={analyzingTotalPlies}
               reviewConflict={reviewConflict}

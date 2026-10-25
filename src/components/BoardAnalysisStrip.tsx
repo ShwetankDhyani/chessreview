@@ -4,7 +4,6 @@ interface BoardAnalysisStripProps {
   totalPlies: number;
   currentSan?: string;
   stageLabel?: string;
-  etaLabel?: string | null;
   className?: string;
 }
 
@@ -18,7 +17,6 @@ export function BoardAnalysisStrip({
   totalPlies,
   currentSan,
   stageLabel,
-  etaLabel,
   className = "",
 }: BoardAnalysisStripProps) {
   const pct = Math.min(100, Math.max(0, progressPercent));
@@ -49,11 +47,6 @@ export function BoardAnalysisStrip({
         <span className="ml-auto text-xs font-bold text-chess-accent tabular-nums flex-shrink-0">
           {pctLabel}%
         </span>
-        {etaLabel ? (
-          <span className="text-[10px] text-chess-muted tabular-nums flex-shrink-0 hidden sm:inline">
-            {etaLabel}
-          </span>
-        ) : null}
       </div>
       <div className="absolute inset-x-0 bottom-0 h-0.5 bg-chess-border/60 overflow-hidden">
         <div
