@@ -4,10 +4,9 @@ import {
   CHESS_QUOTES,
   getQuoteForTags,
   getQuoteByIndex,
-  type ChessQuoteRecommendation,
 } from "../../config/chessQuotes";
 import { affiliateGoHref, trackAffiliateClick } from "../../utils/affiliateTracking";
-import { isPlacementEnabled, type AffiliateProduct } from "../../config/affiliateProducts";
+import { isPlacementEnabled } from "../../config/affiliateProducts";
 import { tagsFromReview } from "../../utils/reviewAffiliateTags";
 import { hapticSoft, hapticTap } from "../../utils/chessSounds";
 
@@ -27,16 +26,13 @@ export function DesktopStudyCompanion({
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
-  // Check if placement is enabled
   const isEnabled = isPlacementEnabled("resultsSidebar");
 
-  // Determine game weakness tags if a review exists
   const reviewTags = useMemo(() => {
     if (!summary || !moves || moves.length === 0) return null;
     return tagsFromReview(summary, moves);
   }, [summary, moves]);
 
-  // Derive initial quote based on review results or default rotation
   const matched = useMemo(() => {
     if (reviewTags && reviewTags.tags.length > 0) {
       return getQuoteForTags(reviewTags.tags, quoteIndex);
@@ -44,7 +40,6 @@ export function DesktopStudyCompanion({
     return getQuoteByIndex(quoteIndex);
   }, [reviewTags, quoteIndex]);
 
-  // Check dismissal state on mount
   useEffect(() => {
     try {
       const val = sessionStorage.getItem(STORAGE_KEY);
@@ -84,12 +79,12 @@ export function DesktopStudyCompanion({
   };
 
   return (
-    <div
-      className={`w-72 xl:w-80 flex-shrink-0 flex flex-col bg-chess-panel/80 backdrop-blur-md border border-chess-hairline rounded-2xl p-4 shadow-elev-3 self-center transition-all duration-300 ease-soft ${className}`}
-      aria-label="Grandmaster's Study"
+    <aside
+      className={`w-72 xl:w-80 flex-shrink-0 flex flex-col bg-chess-panel/90 backdrop-blur-md border border-chess-hairline rounded-2xl p-4 shadow-elev-3 self-center transition-all duration-300 ease-soft ${className}`}
+      aria-label="The Master's Study"
     >
-      {/* Top Header Bar */}
-      <div className="flex items-center justify-between pb-3 border-b border-chess-hairline/80">
+      {/* Header bar */}
+      <div className="flex items-center justify-between pb-2.5 border-b border-chess-hairline">
         <div className="flex items-center gap-1.5">
           <span className="text-chess-accent text-sm select-none" aria-hidden>
             ♛
@@ -102,8 +97,8 @@ export function DesktopStudyCompanion({
           <button
             type="button"
             onClick={handleNextQuote}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-chess-muted hover:text-chess-text hover:bg-white/5 transition-colors"
-            title="Next chess quote"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-chess-accent hover:bg-chess-accent/10 transition-colors"
+            title="Next chess quote and product"
           >
             <span>↻</span>
             <span>Next</span>
@@ -120,79 +115,84 @@ export function DesktopStudyCompanion({
         </div>
       </div>
 
-      {/* Quote Block */}
-      <div className="py-3.5 space-y-2 border-b border-chess-hairline/60">
-        <blockquote className="relative">
-          <span
-            className="text-2xl font-serif text-chess-accent/40 leading-none select-none -ml-1 mr-0.5 inline-block"
-            aria-hidden
-          >
-            “
-          </span>
-          <p className="text-[13px] font-serif italic text-chess-text leading-snug inline">
-            {quote.quote}
-          </p>
+      {/* Quote Banner (High-impact typography, no dense paragraphs) */}
+      <div className="py-3 border-b border-chess-hairline/80 space-y-1">
+        <blockquote className="text-[14px] font-serif italic text-white/95 leading-snug">
+          “{quote.quote}”
         </blockquote>
-        <div className="pt-0.5">
-          <p className="text-[11px] font-bold text-chess-accent tracking-wide">
-            {quote.author}
-          </p>
-          <p className="text-[10px] text-chess-muted font-medium">
-            {quote.authorRole}
-          </p>
-        </div>
-        <p className="text-[11px] text-chess-subtext/90 leading-relaxed pt-1">
-          {quote.reflection}
+        <p className="text-[10px] font-semibold text-chess-accent uppercase tracking-wider">
+          — {quote.author} <span className="font-normal text-chess-muted capitalize">({quote.authorRole.split("(")[0].trim()})</span>
         </p>
       </div>
 
-      {/* Curated Product Recommendation */}
-      <div className="pt-3 flex flex-col space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-chess-accent/90">
-            {reviewTags ? "Recommended For Your Game" : "Study Companion"}
-          </span>
-          <span className="text-[9px] text-chess-muted font-medium">
-            {product.merchant}
-          </span>
-        </div>
+      {/* Visual Product Showcase (Large product image + bold title + ratings) */}
+      <a
+        href={href}
+        target="_blank"
+        rel="sponsored nofollow noopener noreferrer"
+        onClick={onProductClick}
+        className="group mt-3 block rounded-xl border border-chess-hairline bg-chess-surface/80 p-3 hover:border-chess-accent/50 hover:bg-chess-accent/[0.04] transition-all duration-200"
+      >
+        <div className="flex gap-3">
+          {/* Real Product Artwork / Cover */}
+          {product.image ? (
+            <div className="w-20 flex-shrink-0 rounded-lg overflow-hidden shadow-[0_8px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/10 bg-chess-bg group-hover:scale-[1.03] transition-transform duration-200">
+              <img
+                src={product.image}
+                alt={product.title}
+                width={80}
+                height={116}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-auto object-cover"
+              />
+            </div>
+          ) : null}
 
-        <a
-          href={href}
-          target="_blank"
-          rel="sponsored nofollow noopener noreferrer"
-          onClick={onProductClick}
-          className="group block rounded-xl border border-chess-hairline/90 bg-chess-surface/60 p-3 hover:border-chess-accent/40 hover:bg-chess-accent/[0.04] transition-all duration-200"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-chess-text group-hover:text-chess-accent transition-colors leading-snug">
+          {/* Product Details */}
+          <div className="min-w-0 flex-1 flex flex-col justify-between">
+            <div>
+              {/* Star Rating Badge */}
+              {product.rating ? (
+                <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 mb-1">
+                  <span>★</span>
+                  <span>{product.rating}</span>
+                </div>
+              ) : null}
+
+              <h4 className="text-[12px] font-bold text-white group-hover:text-chess-accent transition-colors leading-tight">
                 {product.title}
               </h4>
-              <p className="mt-1 text-[11px] text-chess-muted leading-relaxed line-clamp-2">
+
+              {product.author ? (
+                <p className="text-[10px] text-chess-muted font-medium mt-0.5">
+                  by {product.author}
+                </p>
+              ) : null}
+
+              <p className="mt-1 text-[10px] text-chess-subtext leading-snug line-clamp-2">
                 {product.description}
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-chess-hairline/40">
-            <span className="text-[11px] font-bold text-chess-accent group-hover:underline flex items-center gap-1">
-              {product.ctaLabel || "View on Amazon"}
-              <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>
-                ↗
-              </span>
-            </span>
-            <span className="text-[9px] text-chess-muted/80 font-medium">
-              Verified pick
-            </span>
-          </div>
-        </a>
+        {/* CTA Button Bar */}
+        <div className="mt-3 pt-2.5 border-t border-chess-hairline/60 flex items-center justify-between">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chess-accent text-[11px] font-bold text-chess-bg shadow-elev-1 group-hover:bg-chess-accent-hover transition-colors">
+            <span>View on Amazon</span>
+            <span aria-hidden>↗</span>
+          </span>
+          <span className="text-[9px] text-chess-muted/80 font-medium">
+            Prime available
+          </span>
+        </div>
+      </a>
 
-        {/* Minimal legal disclosure compliance line */}
-        <p className="text-[9px] text-chess-muted/60 text-center leading-normal pt-1">
-          Supports ChessReview's free engine · As an Amazon Associate I earn from qualifying purchases.
-        </p>
-      </div>
-    </div>
+      {/* Discrete compliance note */}
+      <p className="mt-2 text-[8px] text-chess-muted/60 text-center leading-tight">
+        Curated pick · As an Amazon Associate, ChessReview earns from qualifying purchases.
+      </p>
+    </aside>
   );
 }
