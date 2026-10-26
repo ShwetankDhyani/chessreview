@@ -149,6 +149,10 @@ export function HelpModal({
               </span>
             </a>
 
+            <p className="text-[11px] text-chess-muted text-center leading-snug">
+              We also recommend chess resources that can help you improve. When you purchase through those links, we may earn a small commission.
+            </p>
+
             <a
               href={SUPPORT_MAILTO}
               className="block text-center text-[11px] text-chess-muted hover:text-chess-subtext transition-colors"
