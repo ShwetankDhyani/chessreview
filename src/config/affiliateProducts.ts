@@ -5,10 +5,17 @@
  * updated by the site owner.
  * 
  * CURRENT STATUS:
- * - ✅ Amazon India: Active (tracking ID: chessreview-21)
+ * - ✅ Amazon US & India: Active (US: chessreview-20, India: chessreview-21)
+ *   Store selection is automatic based on visitor location
  * - ⏳ Chessable: Pending approval (account created, awaiting affiliate access)
  * - ⏳ ChessMood: Application submitted, pending response
  * - ⏳ Chess.com: Not yet applied
+ * 
+ * AMAZON NOTES:
+ * - Default store: amazon.com (US) - best for American/European visitors
+ * - India visitors: amazon.in automatically
+ * - UK/EU stores (.co.uk, .de, .fr, .es, .it) need separate Associates accounts
+ * - Amazon OneLink could be added later for automatic multi-store routing
  * 
  * TO UPDATE REMAINING LINKS:
  * 1. Wait for affiliate program approvals
@@ -16,11 +23,13 @@
  * 3. Remove needsReferralId flags for approved products
  */
 
+import { getAmazonUrl } from '../utils/amazonGeo';
+
 export interface AffiliateProduct {
   id: string;
   title: string;
   description: string;
-  url: string;
+  url: string | ((store?: string) => string);
   category: 'opening' | 'tactics' | 'endgame' | 'strategy' | 'general' | 'equipment';
   level: 'beginner' | 'intermediate' | 'advanced' | 'all';
   partner: string;
@@ -126,47 +135,47 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     needsReferralId: true,
   },
 
-  // Books (Amazon Associates India)
+  // Books (Amazon Associates - geo-aware US/India)
   {
     id: 'book-logical-chess',
     title: 'Logical Chess: Move by Move',
     description: 'Classic instructional book explaining every move of 33 master games',
-    url: 'https://www.amazon.in/s?k=logical+chess+move+by+move&tag=chessreview-21',
+    url: () => getAmazonUrl('logical chess move by move'),
     category: 'general',
     level: 'beginner',
-    partner: 'Amazon India',
+    partner: 'Amazon',
     tags: ['book', 'beginner', 'games', 'annotated'],
   },
   {
     id: 'book-reassess-your-chess',
     title: 'How to Reassess Your Chess',
     description: 'Modern classic on understanding imbalances and creating plans',
-    url: 'https://www.amazon.in/s?k=how+to+reassess+your+chess&tag=chessreview-21',
+    url: () => getAmazonUrl('how to reassess your chess'),
     category: 'strategy',
     level: 'intermediate',
-    partner: 'Amazon India',
+    partner: 'Amazon',
     tags: ['book', 'strategy', 'imbalances', 'planning'],
   },
 
-  // Equipment (Amazon Associates India)
+  // Equipment (Amazon Associates - geo-aware US/India)
   {
     id: 'dgt-clock',
     title: 'DGT Digital Chess Clock',
     description: 'Professional tournament clock with multiple time controls',
-    url: 'https://www.amazon.in/s?k=dgt+chess+clock&tag=chessreview-21',
+    url: () => getAmazonUrl('dgt chess clock'),
     category: 'equipment',
     level: 'all',
-    partner: 'Amazon India',
+    partner: 'Amazon',
     tags: ['equipment', 'clock', 'tournament'],
   },
   {
     id: 'tournament-board',
     title: 'Tournament Chess Set',
     description: 'Standard Staunton pieces and vinyl board for serious practice',
-    url: 'https://www.amazon.in/s?k=tournament+chess+set&tag=chessreview-21',
+    url: () => getAmazonUrl('tournament chess set'),
     category: 'equipment',
     level: 'all',
-    partner: 'Amazon India',
+    partner: 'Amazon',
     tags: ['equipment', 'board', 'pieces', 'tournament'],
   },
 ];

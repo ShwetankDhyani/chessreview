@@ -164,9 +164,11 @@ interface ResourceCardProps {
 }
 
 function ResourceCard({ product, onTrack }: ResourceCardProps) {
+  const productUrl = typeof product.url === 'function' ? product.url() : product.url;
+  
   return (
     <a
-      href={product.url}
+      href={productUrl}
       target="_blank"
       rel="sponsored noopener noreferrer"
       onClick={() => {

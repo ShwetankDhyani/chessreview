@@ -1,7 +1,7 @@
 /**
  * Affiliate disclosure component
  * 
- * Shows required FTC disclosure for affiliate links
+ * Shows required FTC disclosure for affiliate links and Amazon Associates statement
  */
 
 interface AffiliateDisclosureProps {
@@ -13,7 +13,7 @@ export function AffiliateDisclosure({ inline = false, className = "" }: Affiliat
   if (inline) {
     return (
       <p className={`text-[10px] text-chess-muted leading-relaxed ${className}`}>
-        Some links on this page are affiliate links. We may earn a small commission if you purchase through them, at no extra cost to you. This helps keep ChessReview free.
+        Some links on this page are affiliate links. We may earn a small commission if you purchase through them, at no extra cost to you. As an Amazon Associate I earn from qualifying purchases. This helps keep ChessReview free.
       </p>
     );
   }
@@ -24,7 +24,7 @@ export function AffiliateDisclosure({ inline = false, className = "" }: Affiliat
         Affiliate Disclosure
       </p>
       <p className="text-[11px] text-chess-subtext leading-relaxed">
-        ChessReview participates in affiliate programs. When you purchase through our links, we may earn a small commission at no extra cost to you. This helps cover server costs and keeps the site free. We only recommend products we believe are genuinely helpful for chess improvement.
+        ChessReview participates in affiliate programs. When you purchase through our links, we may earn a small commission at no extra cost to you. As an Amazon Associate I earn from qualifying purchases. This helps cover server costs and keeps the site free. We only recommend products we believe are genuinely helpful for chess improvement.
       </p>
     </div>
   );
@@ -54,11 +54,15 @@ export function AffiliateDisclosureContent() {
         <strong className="text-chess-text">Programs we participate in:</strong>
       </p>
       <ul className="list-disc pl-5 space-y-1">
+        <li>Amazon Associates (US & India) — As an Amazon Associate I earn from qualifying purchases</li>
         <li>Chessable affiliate program</li>
         <li>Chess.com affiliate program</li>
         <li>ChessMood affiliate program</li>
-        <li>Amazon Associates (for chess books and equipment)</li>
       </ul>
+      
+      <p>
+        <strong className="text-chess-text">Amazon store selection:</strong> Our Amazon links automatically direct you to the appropriate store (amazon.com for US/global visitors, amazon.in for Indian visitors) with the correct affiliate tag. We currently participate in the US and India programs only. UK, EU, and other regional Amazon stores require separate Associates accounts.
+      </p>
       
       <p>
         All affiliate links use <code className="text-xs bg-chess-surface px-1 py-0.5 rounded">rel="sponsored noopener noreferrer"</code> attributes as recommended by search engines.

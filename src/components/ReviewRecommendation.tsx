@@ -156,9 +156,11 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, onTrack }: ProductCardProps) {
+  const productUrl = typeof product.url === 'function' ? product.url() : product.url;
+  
   return (
     <a
-      href={product.url}
+      href={productUrl}
       target="_blank"
       rel="sponsored noopener noreferrer"
       onClick={() => {
