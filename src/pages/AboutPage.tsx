@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { SiteChrome } from "../components/SiteChrome";
 import { usePageSeo } from "../hooks/usePageSeo";
 import { HOME_FAQ, aboutJsonLd } from "../utils/seo";
+import { FeaturedResource } from "../components/FeaturedResource";
+import { isAffiliateEnabled } from "../config/affiliateProducts";
 
 export default function AboutPage() {
   usePageSeo({
@@ -66,6 +68,26 @@ export default function AboutPage() {
               </Link>
             </p>
           </section>
+
+          {isAffiliateEnabled() && (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-chess-text">
+                How we keep this free
+              </h2>
+              <p className="text-sm text-chess-subtext leading-relaxed">
+                ChessReview has no ads, no paywall, and no subscription — and we'd like to keep it that way. 
+                The site runs out of pocket, with help from{" "}
+                <Link to="/privacy" className="text-chess-accent hover:underline">
+                  transparent affiliate partnerships
+                </Link>
+                {" "}and generous donations. When you purchase chess learning resources through our recommendations, 
+                we may earn a small commission at no extra cost to you. We only suggest tools we believe genuinely 
+                help players improve.
+              </p>
+              
+              <FeaturedResource context="inline" className="mt-4" />
+            </section>
+          )}
 
           <section className="space-y-4 pb-4" aria-labelledby="faq-heading">
             <h2

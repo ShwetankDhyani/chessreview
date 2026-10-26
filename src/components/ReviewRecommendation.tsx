@@ -126,14 +126,14 @@ export function ReviewRecommendation({ summary, moves, className = "" }: ReviewR
             className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-chess-accent/20 bg-chess-accent/10 text-chess-accent text-xs"
             aria-hidden
           >
-            ✨
+            💡
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-chess-accent/90">
-              Improve your {primaryWeakness}
+              Improve {primaryWeakness}
             </p>
             <p className="mt-0.5 text-[11px] text-chess-muted leading-snug">
-              Based on this review, these resources might help
+              Based on this game's patterns
             </p>
           </div>
         </div>
