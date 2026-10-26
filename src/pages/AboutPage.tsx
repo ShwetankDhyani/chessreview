@@ -69,6 +69,36 @@ export default function AboutPage() {
             </p>
           </section>
 
+          <section className="space-y-3 text-sm sm:text-[15px] text-chess-subtext leading-relaxed">
+            <h2 className="text-base font-semibold text-chess-text">Our Core Guarantees</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="rounded-xl border border-chess-border/80 bg-chess-panel/40 p-3.5 space-y-1">
+                <p className="font-semibold text-chess-text text-sm">Unlimited Free Reviews</p>
+                <p className="text-xs text-chess-muted leading-relaxed">
+                  Zero daily review caps or lockouts. Analyze as many games as you want every day without a subscription, credit card, or paywall.
+                </p>
+              </div>
+              <div className="rounded-xl border border-chess-border/80 bg-chess-panel/40 p-3.5 space-y-1">
+                <p className="font-semibold text-chess-text text-sm">No Display Advertisements</p>
+                <p className="text-xs text-chess-muted leading-relaxed">
+                  Zero banner ads, zero popups, and zero video commercials. Your board and analysis remain clean, focused, and distraction-free.
+                </p>
+              </div>
+              <div className="rounded-xl border border-chess-border/80 bg-chess-panel/40 p-3.5 space-y-1">
+                <p className="font-semibold text-chess-text text-sm">No Sign-Up or Registration</p>
+                <p className="text-xs text-chess-muted leading-relaxed">
+                  Instant analysis. Paste your game link or PGN and start reviewing immediately — no account creation, passwords, or emails required.
+                </p>
+              </div>
+              <div className="rounded-xl border border-chess-border/80 bg-chess-panel/40 p-3.5 space-y-1">
+                <p className="font-semibold text-chess-text text-sm">Private In-Browser Engine</p>
+                <p className="text-xs text-chess-muted leading-relaxed">
+                  Powered by Stockfish WebAssembly running directly on your CPU at selectable depths (14, 16, 18). Your moves stay private on your device.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {isAffiliateEnabled() && (
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-chess-text">

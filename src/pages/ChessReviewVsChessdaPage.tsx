@@ -57,11 +57,14 @@ export default function ChessReviewVsChessdaPage() {
             <tbody className="text-chess-subtext">
               {[
                 ["Price", "Free", "Free"],
-                ["Account", "Optional", "Not required"],
+                ["Review limits", "Unlimited", "Unlimited"],
+                ["Advertisements", "None (100% ad-free)", "None"],
+                ["Account", "Not required", "Not required"],
                 ["Import", "Chess.com, Lichess, PGN / URL", "Chess.com, Lichess, PGN"],
                 ["Review core", "Classifications, accuracy, eval graph, lines", "Classifications, accuracy, eval graph, coach notes"],
                 ["Engine story", "Stockfish in the browser", "Stockfish in the browser (they advertise SF18)"],
-                ["Unique angle", "H2H form prep + club-player coaching UI", "Username-first SaaS-style shell"],
+                ["3D Board view", "Yes (Realistic OTB Staunton)", "No (2D only)"],
+                ["Unique angle", "H2H form prep + club coaching UI", "Username-first SaaS-style shell"],
                 ["Privacy pitch", "Review in-browser; share links optional", "Local analysis emphasized"],
               ].map(([topic, left, right]) => (
                 <tr key={topic} className="border-t border-chess-border/60">

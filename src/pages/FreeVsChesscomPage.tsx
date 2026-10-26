@@ -62,11 +62,12 @@ export default function FreeVsChesscomPage() {
             <tbody className="text-chess-subtext">
               {[
                 ["Cost", "Membership for full review habits", "Free"],
-                ["Daily limit", "Free tier is capped", "Unlimited"],
+                ["Daily limit", "Free tier is capped (1 review/day)", "Unlimited (no daily limits)"],
+                ["Advertisements", "Ads on free tier", "None (100% ad-free)"],
                 ["Account", "Required on Chess.com", "Not required"],
                 ["Import", "Your Chess.com games", "Chess.com, Lichess, or PGN"],
                 ["Engine feel", "Polished coach report", "Stockfish lines + classifications"],
-                ["Extra", "Platform ecosystem", "H2H form prep"], 
+                ["Extra", "Platform ecosystem", "H2H opponent prep + 3D OTB board"], 
               ].map(([topic, left, right]) => (
                 <tr key={topic} className="border-t border-chess-border/60">
                   <td className="px-3 py-2 font-medium text-chess-text">{topic}</td>

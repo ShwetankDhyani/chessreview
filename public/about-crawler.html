@@ -61,6 +61,22 @@
               },
               {
                 "@type": "Question",
+                "name": "Are game reviews unlimited, or is there a daily limit?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Game reviews on ChessReview are 100% unlimited. Unlike platforms that limit free users to one review per day, you can review 10, 20, or 100+ games a day with zero limits, throttling, or paywalls."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Are there advertisements on ChessReview?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. ChessReview is completely free of display ads, banner advertisements, popups, and video commercials. The review board and analysis workflow are 100% ad-free."
+                }
+              },
+              {
+                "@type": "Question",
                 "name": "Do I need an account to analyze a chess game?",
                 "acceptedAnswer": {
                   "@type": "Answer",
@@ -72,7 +88,7 @@
                 "name": "Who is ChessReview for?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall."
+                  "text": "Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall or ad clutter."
                 }
               },
               {
@@ -80,7 +96,15 @@
                 "name": "How is this different from Chess.com Game Review?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "ChessReview is a free hobby project focused on readable move classifications, accuracy, and Stockfish lines without a subscription wall. Import the same Chess.com or Lichess games you already play."
+                  "text": "ChessReview is a free tool focused on unlimited readable move classifications, accuracy scores, evaluation graphs, and Stockfish lines without a subscription or 1-review/day limit. Import the same Chess.com or Lichess games you already play."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which chess engine and depth does ChessReview use?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ChessReview runs official Stockfish directly in your web browser via multithreaded WebAssembly (Wasm) at selectable depths (14, 16, and 18). Your analysis is computed locally on your device for complete privacy."
                 }
               }
             ]
@@ -111,15 +135,29 @@
         <a href="https://www.chessreview.org/">Start a free game review</a> ·
         <a href="https://www.chessreview.org/blog">Read the blog</a>
       </p>
+      <h2>Our Core Guarantees</h2>
+      <ul>
+        <li><strong>Unlimited Free Reviews:</strong> Zero daily review limits or quotas. Analyze as many games as you want without a subscription, paywall, or credit card (unlike Chess.com Diamond which caps free users at 1 review per day).</li>
+        <li><strong>No Display Advertisements:</strong> 100% ad-free analysis. No banner ads, no popups, no video ads, and no third-party ad network scripts (e.g. Google AdSense).</li>
+        <li><strong>No Sign-Up or Registration:</strong> Paste your game link or PGN and start your review immediately — no email, username, or account creation needed.</li>
+        <li><strong>Private In-Browser Engine:</strong> Analysis runs locally via multithreaded Stockfish WebAssembly (Wasm) at selectable depths (14, 16, 18). Your moves never leave your device for server processing.</li>
+      </ul>
+
       <h2>Common questions</h2>
       <h3>Is ChessReview really free?</h3>
       <p>Yes. You can review Chess.com and Lichess games online at no charge. There is no paid tier and no credit card required.</p>
+      <h3>Are game reviews unlimited, or is there a daily limit?</h3>
+      <p>Game reviews on ChessReview are 100% unlimited. Unlike platforms that limit free users to one review per day, you can review 10, 20, or 100+ games a day with zero limits, throttling, or paywalls.</p>
+      <h3>Are there advertisements on ChessReview?</h3>
+      <p>No. ChessReview is completely free of display ads, banner advertisements, popups, and video commercials. The review board and analysis workflow are 100% ad-free.</p>
       <h3>Do I need an account to analyze a chess game?</h3>
       <p>No. Paste a game link or PGN and start your review. Linking a Chess.com or Lichess username is optional and only helps load your recent games.</p>
       <h3>Who is ChessReview for?</h3>
-      <p>Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall.</p>
+      <p>Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall or ad clutter.</p>
       <h3>How is this different from Chess.com Game Review?</h3>
-      <p>ChessReview is a free hobby project focused on readable move classifications, accuracy, and Stockfish lines without a subscription wall. Import the same Chess.com or Lichess games you already play.</p>
+      <p>ChessReview is a free tool focused on unlimited readable move classifications, accuracy scores, evaluation graphs, and Stockfish lines without a subscription or 1-review/day limit. Import the same Chess.com or Lichess games you already play.</p>
+      <h3>Which chess engine and depth does ChessReview use?</h3>
+      <p>ChessReview runs official Stockfish directly in your web browser via multithreaded WebAssembly (Wasm) at selectable depths (14, 16, and 18). Your analysis is computed locally on your device for complete privacy.</p>
     </main>
   </body>
 </html>

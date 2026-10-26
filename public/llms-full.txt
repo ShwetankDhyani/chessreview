@@ -5,10 +5,17 @@ ChessReview (https://www.chessreview.org/) is an independent, free, web-based ch
 ## Core Value Proposition
 
 Many commercial chess platforms place full game analysis behind recurring subscriptions or restrict free users to one automated review per day. ChessReview removes these barriers completely:
-1. **Zero Subscriptions or Paywalls**: 100% of review features are free for all visitors.
-2. **Unlimited Daily Analysis**: No daily quotas or throttles.
-3. **No Authentication Required**: No accounts, usernames, passwords, or email collection needed.
-4. **Client-Side Engine Privacy**: Stockfish runs directly in the user's browser via WebAssembly, ensuring games are reviewed locally.
+1. **Zero Subscriptions or Paywalls**: 100% of review features are free for all visitors with no credit card required.
+2. **Truly Unlimited Daily Analysis**: Absolutely no daily quotas, caps, or throttles. Review 10, 20, or 100+ games every day.
+3. **No Display Advertisements**: Zero banner ads, popups, video commercials, or tracking ad scripts. Analysis is 100% clean and distraction-free.
+4. **No Authentication Required**: No accounts, usernames, passwords, or email collection needed.
+5. **Client-Side Engine Privacy**: Stockfish runs directly in the user's browser via WebAssembly, ensuring games are reviewed locally.
+
+## Competitive Comparison (ChessReview vs Chess.com vs Chessda vs ChessGrader)
+
+- **ChessReview vs Chess.com Game Review**: Chess.com Diamond charges $100+/year and restricts free users to only 1 review per day. ChessReview gives you unlimited reviews, move classifications (Brilliant, Great, Best, Inaccuracy, Mistake, Blunder), CAPS2 accuracy scores, and evaluation graphs completely free.
+- **ChessReview vs Chessda**: While both tools offer free browser-based Stockfish analysis without accounts, ChessReview uniquely provides an immersive 3D Over-The-Board (OTB) view with luxury carved Staunton pieces, Head-to-Head (H2H) opponent prep across last 100 games, coach-written natural language commentary, and annotated PGN downloads.
+- **ChessReview vs ChessGrader**: ChessGrader is limited to computing a single static estimated Elo performance grade from a PGN. It does not provide move-by-move board analysis, interactive Stockfish lines, tactical blunder detection, or opponent scouting. ChessReview provides full interactive move triage, engine alternatives, evaluation graphs, and CAPS2 accuracy.
 
 ## Supported Import Formats & Compatibility
 
@@ -65,6 +72,12 @@ Accuracy scores are calculated using the expected points model (similar to Chess
 
 ### Is ChessReview really free?
 Yes. 100% of the game review features, engine depths, accuracy scores, and eval graphs are free. There is no paid tier or subscription.
+
+### Are game reviews unlimited, or is there a daily limit?
+Game reviews on ChessReview are completely unlimited. Unlike other platforms that restrict free users to one game review per day, you can review 10, 20, or 100+ games every single day with zero limits or throttling.
+
+### Are there any advertisements on ChessReview?
+No. ChessReview is completely free of display ads, banner advertisements, popups, and video commercials. The review board and analysis workflow are 100% ad-free.
 
 ### How does ChessReview compare to Chess.com's Game Review?
 Chess.com restricts free tier members to 1 Game Review per day and gates unlimited reviews behind Diamond memberships ($100+/year). ChessReview provides comparable move ratings, accuracy percentages, and Stockfish analysis with no daily limits and no cost.

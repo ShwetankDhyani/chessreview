@@ -15,6 +15,11 @@ const FAQ = [
       "Yes. Review as many Chess.com, Lichess, or PGN games as you want. There is no daily cap and no paid tier.",
   },
   {
+    question: "Does ChessReview have advertisements?",
+    answer:
+      "No. ChessReview has no display banner ads, popups, or video commercials. The game review and board analysis experience is 100% ad-free.",
+  },
+  {
     question: "Do I need an account?",
     answer:
       "No. Paste a game link or PGN and start immediately. Linking a username is optional and only helps load recent games.",
@@ -52,6 +57,7 @@ export default function FreeChessGameReviewPage() {
     >
       <MarketingSection title="What you get">
         <ul className="list-disc space-y-1.5 pl-5">
+          <li>100% ad-free chessboard and analysis experience</li>
           <li>Readable move classifications from best play to blunders</li>
           <li>Accuracy scores and an evaluation graph you can scrub</li>
           <li>Stockfish engine lines in your browser</li>

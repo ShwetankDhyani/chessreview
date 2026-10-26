@@ -87,19 +87,29 @@ export const HOME_FAQ = [
       "Yes. You can review Chess.com and Lichess games online at no charge. There is no paid tier and no credit card required.",
   },
   {
+    question: "Are game reviews unlimited, or is there a daily limit?",
+    answer:
+      "Game reviews on ChessReview are 100% unlimited. Unlike platforms that limit free users to one review per day, you can review 10, 20, or 100+ games a day with zero limits, throttling, or paywalls.",
+  },
+  {
+    question: "Are there advertisements on ChessReview?",
+    answer:
+      "No. ChessReview is completely free of display ads, banner advertisements, popups, and video commercials. The review board and analysis workflow are 100% ad-free.",
+  },
+  {
     question: "Do I need an account to analyze a chess game?",
     answer:
       "No. Paste a game link or PGN and start your review. Linking a Chess.com or Lichess username is optional and only helps load your recent games.",
   },
   {
-    question: "Who is ChessReview for?",
-    answer:
-      "Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall.",
-  },
-  {
     question: "How is this different from Chess.com Game Review?",
     answer:
-      "ChessReview is a free hobby project focused on readable move classifications, accuracy, and Stockfish lines without a subscription wall. Import the same Chess.com or Lichess games you already play.",
+      "ChessReview is a free tool focused on unlimited readable move classifications, accuracy scores, evaluation graphs, and Stockfish lines without a subscription or 1-review/day limit. Import the same Chess.com or Lichess games you already play.",
+  },
+  {
+    question: "Which chess engine and depth does ChessReview use?",
+    answer:
+      "ChessReview runs official Stockfish directly in your web browser via multithreaded WebAssembly (Wasm) at selectable depths (14, 16, and 18). Your analysis is computed locally on your device for complete privacy.",
   },
   {
     question: "Does ChessReview have a 3D board view?",
@@ -110,6 +120,11 @@ export const HOME_FAQ = [
     question: "What is H2H on ChessReview?",
     answer:
       "H2H (head-to-head) is free form prep: paste a Chess.com or Lichess username to see trends across their last 100 games — score, tilt, colors, and matchups — before a rematch. It is separate from Stockfish game review.",
+  },
+  {
+    question: "Who is ChessReview for?",
+    answer:
+      "Anyone who plays chess for fun or at club level and wants clear feedback after a game — without a subscription wall or ad clutter.",
   },
 ] as const;
 
