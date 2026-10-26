@@ -30,6 +30,14 @@ export const AMAZON_ASINS = {
   "dgt-clock": "B00J48M9TC",
   "tournament-board": "B0009A4E7O",
   "wooden-chess-set": "B01N5UOYC6",
+  "book-100-endgames": "9056912445",
+  "book-fco": "1906454132",
+  "book-fischer-60-games": "190638830X",
+  "book-tal-games": "1857442024",
+  "book-polgar-5334": "1579125549",
+  "book-seven-deadly-sins": "1901983366",
+  "magnetic-travel-set": "B06XXGPNML",
+  "silicone-tournament-set": "B0BLT76G3S",
 };
 
 /** Search fallback when ASIN missing */
@@ -42,6 +50,14 @@ export const AMAZON_QUERIES = {
   "wooden-chess-set": "staunton wooden chess set weighted",
   "book-woodpecker": "the woodpecker method chess",
   "book-bobby-fischer": "bobby fischer teaches chess",
+  "book-100-endgames": "100 endgames you must know jesus de la villa",
+  "book-fco": "fundamental chess openings paul van der sterren",
+  "book-fischer-60-games": "my 60 memorable games bobby fischer",
+  "book-tal-games": "the life and games of mikhail tal",
+  "book-polgar-5334": "chess 5334 problems laszlo polgar",
+  "book-seven-deadly-sins": "the seven deadly chess sins jonathan rowson",
+  "magnetic-travel-set": "quadpro magnetic travel chess set",
+  "silicone-tournament-set": "triple weighted silicone chess set tournament",
 };
 
 /** Direct affiliate or partner destination URLs */
