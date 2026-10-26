@@ -85,7 +85,12 @@ export default function AboutPage() {
                 help players improve.
               </p>
               
-              <FeaturedResource context="inline" className="mt-4" />
+              <FeaturedResource
+                context="inline"
+                className="mt-4"
+                placementFlag="aboutFeatured"
+                placement="about-featured"
+              />
             </section>
           )}
 

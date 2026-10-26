@@ -46,7 +46,11 @@ export function WelcomeBanner({ onDismiss }: WelcomeBannerProps) {
       </div>
       
       {isAffiliateEnabled() && (
-        <FeaturedResource context="sidebar" />
+        <FeaturedResource
+          context="sidebar"
+          placementFlag="welcomeBanner"
+          placement="welcome-banner"
+        />
       )}
     </div>
   );

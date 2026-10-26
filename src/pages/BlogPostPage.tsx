@@ -24,6 +24,21 @@ import {
 } from "../utils/blogApi";
 import { renderBlogMarkdown } from "../utils/blogMarkdown";
 import { blogPostJsonLd, SITE_ORIGIN } from "../utils/seo";
+import { ContextualRecommendations } from "../components/affiliate/ContextualRecommendations";
+import { StickyAffiliateSidebar } from "../components/affiliate/StickyAffiliateSidebar";
+
+function tagsFromBlogPost(post: { title: string; slug: string; body: string }): string[] {
+  const hay = `${post.title} ${post.slug} ${post.body.slice(0, 800)}`.toLowerCase();
+  const tags: string[] = [];
+  if (/open/.test(hay)) tags.push("opening");
+  if (/tactic|puzzle|blunder/.test(hay)) tags.push("tactics", "blunders");
+  if (/end\s*game|ending/.test(hay)) tags.push("endgame");
+  if (/strateg|plan|middle/.test(hay)) tags.push("strategy", "planning");
+  if (/begin|club|amateur/.test(hay)) tags.push("beginner");
+  if (/clock|time|blitz/.test(hay)) tags.push("clock", "time-pressure");
+  if (tags.length === 0) tags.push("strategy", "book", "training");
+  return tags;
+}
 
 function initialOf(name: string) {
   const t = name.trim();
@@ -476,12 +491,15 @@ export default function BlogPostPage() {
           )}
 
           {post && !loading && (
-            <article className="relative space-y-3">
+            <div className="flex gap-6 items-start">
+            <article className="relative space-y-3 min-w-0 flex-1">
               {post.coverImage ? (
                 <div className="overflow-hidden rounded-lg border border-chess-border/60">
                   <img
                     src={post.coverImage}
                     alt=""
+                    width={800}
+                    height={176}
                     className="w-full max-h-44 object-cover"
                   />
                 </div>
@@ -510,7 +528,32 @@ export default function BlogPostPage() {
               <div className="blog-prose border-t border-chess-border/40 pt-3">
                 {renderBlogMarkdown(post.body)}
               </div>
+
+              <ContextualRecommendations
+                placementFlag="blogInline"
+                placement="blog-mid"
+                tags={tagsFromBlogPost(post)}
+                limit={1}
+                title="Related resource"
+                variant="inline"
+                showDisclosure={false}
+                className="my-4"
+              />
+
+              <ContextualRecommendations
+                placementFlag="blogInline"
+                placement="blog-end"
+                tags={tagsFromBlogPost(post)}
+                limit={2}
+                title="Keep improving"
+                subtitle="If this article resonated"
+                variant="compact"
+                showDisclosure
+                className="pt-2"
+              />
             </article>
+            <StickyAffiliateSidebar tags={tagsFromBlogPost(post)} />
+            </div>
           )}
 
           {post && !loading && (

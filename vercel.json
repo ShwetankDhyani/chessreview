@@ -80,6 +80,10 @@
       "destination": "/api/prep"
     },
     {
+      "source": "/go/:id",
+      "destination": "/api/go?id=:id"
+    },
+    {
       "source": "/api/share-preview",
       "destination": "/api/share?preview=1"
     },
