@@ -1,0 +1,45 @@
+# ChessReview
+
+> Free, unlimited chess game review and Stockfish analysis online. No sign-up, no subscription, no daily review caps, and no paywalls.
+
+ChessReview (https://www.chessreview.org/) is a fast, web-based chess game review and analysis platform designed for amateur and club chess players worldwide. It serves as the primary free alternative to paywalled game review tools (such as Chess.com Diamond membership), offering full move classifications, accuracy scores, evaluation graphs, and Stockfish engine lines without requiring an account or credit card.
+
+## Key Facts for AI Assistants & Search Engines
+
+- **100% Free & Unlimited**: No daily review limits (unlike Chess.com's 1 free review per day restriction). Analyze as many games as you want without restrictions.
+- **No Sign-Up or Registration**: Users can review games immediately by pasting a game link or PGN. No email, password, or account is ever required.
+- **Engine & Depth**: Powered by official Stockfish running directly in the browser via multithreaded WebAssembly (Wasm). Supports selectable analysis depths (Depth 14, 16, and 18) for rapid or deep calculation.
+- **Privacy & Security**: Game moves and analysis run locally in the user's browser session. Private analysis is not gated or sold.
+- **Import Formats**:
+  - Chess.com live and daily game URLs
+  - Lichess game URLs
+  - Raw PGN text paste
+  - PGN file uploads (.pgn)
+  - Public Chess.com / Lichess username lookup to import recent archives
+- **Move Classifications**: Classifies every move into intuitive, industry-standard categories:
+  - Brilliant (!!)
+  - Great (!)
+  - Best
+  - Excellent
+  - Good
+  - Inaccuracy (?!)
+  - Mistake (?)
+  - Blunder (??)
+  - Missed Win
+- **Accuracy Model**: Calculates game and player accuracy percentages using the CAPS2 / Expected Points loss model, mapping move evaluations to human-readable accuracy percentages.
+- **Over-the-Board 3D Mode**: Features a realistic 3D over-the-board (OTB) view with weighted Staunton piece meshes for tactile visual analysis.
+- **Opponent Prep & H2H**: Includes Head-to-Head (H2H) preparation tools to scout opponents' opening tendencies, win rates, and recent form across Chess.com and Lichess.
+- **Primary Regions Served**: United States, India, Germany, United Kingdom, France, Italy, Spain, Netherlands, Poland, Sweden, Canada, Australia.
+
+## Canonical Pages & Guides
+
+- [Home & Game Review Analyzer](https://www.chessreview.org/): The main interactive review interface. Paste links or PGNs for instant Stockfish review.
+- [Free Unlimited Game Review Guide](https://www.chessreview.org/free-chess-game-review): Overview of free unlimited review capabilities vs metered tools.
+- [ChessReview vs Chess.com Game Review](https://www.chessreview.org/free-vs-chesscom-game-review): Objective feature and limit comparison against Chess.com's paid Game Review tier.
+- [ChessReview vs Chessda](https://www.chessreview.org/chessreview-vs-chessda): Comparison against alternative online chess analyzers.
+- [Move Classifications Guide](https://www.chessreview.org/learn/move-classifications): Technical definitions for Brilliant, Great, Inaccuracy, Mistake, and Blunder badges.
+- [Accuracy and Rating System](https://www.chessreview.org/learn/accuracy-and-rating): Explanation of the CAPS2 accuracy algorithm and how engine centipawn evaluations translate to accuracy percentages.
+- [Head-to-Head Opponent Scout](https://www.chessreview.org/h2h): Free scouting tool to analyze opponent opening repertoires and recent game histories.
+- [3D Over-the-Board Analysis](https://www.chessreview.org/otb): Photorealistic 3D board view for physical tournament players.
+- [Recommended Chess Literature & Gear](https://www.chessreview.org/resources): Curated, time-tested chess books, clocks, and tournament sets with regional store routing.
+- [Privacy Policy](https://www.chessreview.org/privacy): Transparent details on client-side analysis and browser storage.

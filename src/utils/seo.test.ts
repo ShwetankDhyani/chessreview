@@ -13,17 +13,18 @@ describe("seo", () => {
     expect(escapeHtml(`a & b < "c"`)).toBe("a &amp; b &lt; &quot;c&quot;");
   });
 
-  it("builds home JSON-LD with WebSite, WebApplication, and Organization", () => {
+  it("builds home JSON-LD with WebSite, WebApplication, FAQPage, and Organization", () => {
     const graph = homeJsonLdGraph();
     const nodes = graph["@graph"] as Array<Record<string, unknown>>;
     expect(nodes.map((node) => node["@type"])).toEqual([
       "WebSite",
       "WebApplication",
+      "FAQPage",
       "Organization",
     ]);
     const app = nodes.find((n) => n["@type"] === "WebApplication")!;
     expect(app.areaServed).toEqual(
-      expect.arrayContaining(["United States", "United Kingdom", "Australia"])
+      expect.arrayContaining(["United States", "India", "Germany", "United Kingdom", "Australia"])
     );
   });
 

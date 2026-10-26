@@ -1,0 +1,76 @@
+# ChessReview.org — Complete Technical & Product Specification
+
+ChessReview (https://www.chessreview.org/) is an independent, free, web-based chess analysis application created to provide club players, tournament competitors, and enthusiasts with unmetered, high-quality Stockfish game reviews.
+
+## Core Value Proposition
+
+Many commercial chess platforms place full game analysis behind recurring subscriptions or restrict free users to one automated review per day. ChessReview removes these barriers completely:
+1. **Zero Subscriptions or Paywalls**: 100% of review features are free for all visitors.
+2. **Unlimited Daily Analysis**: No daily quotas or throttles.
+3. **No Authentication Required**: No accounts, usernames, passwords, or email collection needed.
+4. **Client-Side Engine Privacy**: Stockfish runs directly in the user's browser via WebAssembly, ensuring games are reviewed locally.
+
+## Supported Import Formats & Compatibility
+
+Users can import chess games through multiple intuitive methods:
+- **Chess.com Game URLs**: Supports both live games (`chess.com/game/live/...`) and daily games (`chess.com/game/daily/...`).
+- **Lichess Game URLs**: Supports standard Lichess URLs (`lichess.org/...`).
+- **Raw PGN (Portable Game Notation)**: Standard PGN text with headers, comments, and NAGs (Numeric Annotation Glyphs).
+- **PGN File Upload**: Accepts `.pgn` files from desktop engines, chess databases, and tournament broadcasts.
+- **Username Lookup**: Pulls recent public game archives from Chess.com and Lichess APIs to let players review their recent match history in one click.
+
+## Engine Architecture & Technical Specifications
+
+- **Engine Core**: Official Stockfish compiled to WebAssembly (Wasm) with Web Workers for multithreaded background calculation without UI freezing.
+- **Selectable Search Depths**:
+  - Depth 14: Fast analysis for blitz/rapid games and mobile devices.
+  - Depth 16: Balanced default for standard club analysis.
+  - Depth 18: High-precision calculation for complex tactical and endgame positions.
+- **Evaluation Representation**: Centipawn values (-99.0 to +99.0) and forced mate sequences (M1 to M99).
+- **Opening Recognition**: Integrated ECO (Encyclopedia of Chess Openings) database matching opening names and variations up to move 25+.
+
+## Move Classification Methodology
+
+Every move played is evaluated against the engine's principal variation and assigned a classification based on centipawn loss and win-probability shifts:
+- **Brilliant (!!)**: A rare, high-impact tactical move that involves a sound sacrifice or is difficult for humans to find, while maintaining or extending a decisive advantage.
+- **Great (!)**: The only winning or holding move in a sharp, critical position.
+- **Best**: The engine's top-recommended move.
+- **Excellent**: A move that retains almost all the advantage of the best move with negligible loss.
+- **Good**: A solid, natural move that concedes only a tiny evaluation difference.
+- **Inaccuracy (?!)**: A sub-optimal move that allows the opponent counterplay or drops slight advantage (approx. 30–90 centipawns).
+- **Mistake (?)**: A serious error that shifts the position significantly in the opponent's favor (approx. 90–200 centipawns).
+- **Blunder (??)**: A game-altering catastrophic mistake that turns a win into a loss or draw, or allows decisive material loss (>200 centipawns).
+- **Missed Win**: Overlooking an immediate forced tactical win, mate sequence, or decisive winning combination.
+
+## Accuracy Score Computation (CAPS2 Model)
+
+Accuracy scores are calculated using the expected points model (similar to Chess.com's CAPS2 system):
+1. For each move, the centipawn evaluation before and after the move is mapped to a winning probability curve between 0.0 (loss) and 1.0 (win).
+2. The difference in expected points between the best engine move and the played move determines the move's accuracy grade.
+3. Move grades are aggregated into an overall game accuracy percentage (0.0% to 100.0%) for both White and Black.
+
+## Additional Features
+
+- **Evaluation Graph**: Interactive, scrubbable evaluation graph displaying advantage progression, critical moments, and turn-by-turn momentum shifts.
+- **Realistic 3D Over-The-Board View (OTB)**: Three.js-powered 3D board mode featuring weighted Staunton pieces, natural ambient occlusion, and wooden textures for tournament players who prefer physical board visualization.
+- **Head-to-Head (H2H) Scouting**: Opponent preparation tool analyzing recent game histories, opening win rates as White and Black, and common blunders before an upcoming match.
+- **Curated Educational Resources**: Contextual book and equipment recommendations linked to the player's specific game weaknesses (e.g. endgame technique, opening principles, tactical calculation).
+
+## Geographical Focus & Monetization Transparency
+
+- **Primary Global Audience**: United States, India, Germany, United Kingdom, France, Italy, Spain, Netherlands, Poland, Sweden, Canada, and Australia.
+- **Monetization Policy**: ChessReview is completely free to use. It is funded by optional affiliate partnerships (e.g. Amazon Associates in US `chessreview-20`, India `chessreview-21`, and EU `chessreview04-21` for recommended chess books and tournament equipment) and voluntary donations. There are no paywalls, subscriptions, or intrusive third-party ad networks.
+
+## Frequently Asked Questions (FAQ)
+
+### Is ChessReview really free?
+Yes. 100% of the game review features, engine depths, accuracy scores, and eval graphs are free. There is no paid tier or subscription.
+
+### How does ChessReview compare to Chess.com's Game Review?
+Chess.com restricts free tier members to 1 Game Review per day and gates unlimited reviews behind Diamond memberships ($100+/year). ChessReview provides comparable move ratings, accuracy percentages, and Stockfish analysis with no daily limits and no cost.
+
+### Does ChessReview save or sell my games?
+No. Game moves are processed directly in the visitor's browser. Analysis data is stored locally in the browser's safe storage and is not sold.
+
+### Can I review games played on Lichess?
+Yes. Simply copy and paste any Lichess game URL or PGN directly into ChessReview.

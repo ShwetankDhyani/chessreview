@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChessReview — Free Chess Game Analysis Online (No Sign-up)</title>
+    <title>Free Chess Game Review & Analysis | ChessReview (Unlimited, No Signup)</title>
     <meta
       name="description"
-      content="Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription."
+      content="Analyze Chess.com and Lichess games for free with Stockfish. Get accuracy scores, move ratings, blunder detection, and evaluation graphs. Unlimited, no signup required."
     />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="author" content="ChessReview" />
     <meta name="theme-color" content="#312e2b" />
     <script>
@@ -29,29 +29,37 @@
     <meta property="og:url" content="https://www.chessreview.org/" />
     <meta property="og:site_name" content="ChessReview" />
     <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="en_IN" />
     <meta property="og:locale:alternate" content="en_GB" />
+    <meta property="og:locale:alternate" content="de_DE" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:locale:alternate" content="it_IT" />
+    <meta property="og:locale:alternate" content="nl_NL" />
+    <meta property="og:locale:alternate" content="pl_PL" />
+    <meta property="og:locale:alternate" content="sv_SE" />
     <meta property="og:locale:alternate" content="en_CA" />
     <meta property="og:locale:alternate" content="en_AU" />
     <meta
       property="og:title"
-      content="ChessReview — Free Chess Game Analysis Online (No Sign-up)"
+      content="Free Chess Game Review & Analysis | ChessReview (Unlimited, No Signup)"
     />
     <meta
       property="og:description"
-      content="Paste a Chess.com or Lichess link. Get readable move ratings, accuracy, an eval graph, and engine lines — free for amateur and club players."
+      content="Analyze Chess.com and Lichess games for free with Stockfish. Get accuracy scores, move ratings, blunder detection, and evaluation graphs. Unlimited, no signup required."
     />
     <meta property="og:image" content="https://www.chessreview.org/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="ChessReview — free chess game review and analysis" />
+    <meta property="og:image:alt" content="ChessReview — free chess game review and Stockfish analysis online" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="ChessReview — Free Chess Game Analysis Online (No Sign-up)"
+      content="Free Chess Game Review & Analysis | ChessReview (Unlimited, No Signup)"
     />
     <meta
       name="twitter:description"
-      content="Free online chess game review for club players — Chess.com and Lichess import, move ratings, accuracy, Stockfish. No sign-up."
+      content="Analyze Chess.com and Lichess games for free with Stockfish. Move ratings, accuracy scores, and blunder detection. 100% free with no signup."
     />
     <meta name="twitter:image" content="https://www.chessreview.org/og-image.png" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -66,8 +74,13 @@
             "@type": "WebSite",
             "@id": "https://www.chessreview.org/#website",
             "name": "ChessReview",
+            "alternateName": [
+              "ChessReview.org",
+              "Free Chess Game Review",
+              "Chess.com Game Review Alternative"
+            ],
             "url": "https://www.chessreview.org/",
-            "description": "Free online chess game review for club players and enthusiasts. Import a Chess.com or Lichess game, or paste a PGN, and get clear move ratings, accuracy scores, and Stockfish analysis — no subscription.",
+            "description": "Free online chess game review for club players and enthusiasts. Import Chess.com and Lichess games or paste PGN notation for move ratings, accuracy scores, and Stockfish analysis without subscriptions.",
             "inLanguage": "en",
             "audience": {
               "@type": "Audience",
@@ -82,27 +95,93 @@
             "applicationCategory": "GameApplication",
             "operatingSystem": "Web Browser",
             "browserRequirements": "Requires JavaScript",
-            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-            "description": "Free online chess game review with realistic 3D over-the-board view, Stockfish analysis, clear move ratings, accuracy scores, and no subscription.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "description": "Free, unlimited online chess game review with Stockfish engine analysis, move classifications, accuracy scores, evaluation graphs, 3D over-the-board view, and head-to-head preparation. No account or subscription required.",
             "featureList": [
-              "Free chess game review online",
-              "Realistic 3D over-the-board (OTB) view with luxury Staunton pieces",
-              "Chess.com and Lichess game import",
-              "PGN paste support",
-              "Move classification and accuracy scores",
-              "Stockfish engine analysis",
-              "Eval graph and critical moments",
-              "H2H form prep from recent Chess.com and Lichess games",
-              "Player profile pictures from Chess.com and Lichess",
-              "No account required"
+              "Unlimited free chess game reviews",
+              "No account or registration required",
+              "Chess.com live and daily game URL import",
+              "Lichess game URL import",
+              "PGN text paste and .pgn file upload",
+              "Stockfish engine analysis up to depth 18",
+              "Move classifications: Brilliant, Great, Best, Excellent, Good, Inaccuracy, Mistake, Blunder, Missed Win",
+              "CAPS2 accuracy score calculation (0-100%)",
+              "Interactive evaluation graph with critical moments",
+              "Realistic 3D Over-The-Board (OTB) view with Staunton pieces",
+              "Head-to-head (H2H) opponent opening prep and form analysis",
+              "Private client-side WebAssembly execution"
             ],
             "areaServed": [
               "United States",
-              "Canada",
+              "India",
+              "Germany",
               "United Kingdom",
-              "European Union",
-              "Australia",
-              "New Zealand"
+              "France",
+              "Italy",
+              "Spain",
+              "Netherlands",
+              "Poland",
+              "Sweden",
+              "Canada",
+              "Australia"
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://www.chessreview.org/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is ChessReview completely free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, ChessReview is 100% free with unlimited game reviews. There are no subscriptions, paywalls, or credit card requirements."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How many games can I review per day on ChessReview?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You can review an unlimited number of games. Unlike other platforms that limit free users to one game review per day, ChessReview has no daily caps."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I need to sign up or create an account?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. You can immediately paste any Chess.com URL, Lichess URL, or PGN without signing up, entering an email, or creating an account."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does ChessReview compare to Chess.com's Game Review?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ChessReview provides move-by-move Stockfish analysis, move badges (Brilliant, Great, Best, Inaccuracy, Mistake, Blunder), CAPS2 accuracy percentages, and evaluation graphs completely free and unmetered, offering a free alternative to paid Diamond subscriptions."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What chess engine and depth does ChessReview use?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ChessReview runs official Stockfish directly in your browser via multithreaded WebAssembly, with selectable analysis depths of 14, 16, and 18 for fast and deep calculation."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I import games from both Chess.com and Lichess?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Simply paste any game link from Chess.com or Lichess, or paste raw PGN notation from any chess platform."
+                }
+              }
             ]
           },
           {
@@ -125,16 +204,49 @@
   </head>
   <body>
     <noscript>
-      <main style="max-width:40rem;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;line-height:1.5">
-        <h1>ChessReview — Free Chess Game Analysis Online</h1>
+      <main style="max-width:52rem;margin:2rem auto;padding:0 1.5rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;color:#222">
+        <h1>Free Chess Game Review &amp; Stockfish Analysis Online</h1>
         <p>
-          Review Chess.com and Lichess games for free. Paste a game link or PGN to see
-          clear move ratings, accuracy scores, an evaluation graph, and Stockfish engine
-          lines — no account and no subscription.
+          <strong>ChessReview</strong> is an independent, 100% free chess game review platform built for club players and enthusiasts.
+          Analyze unlimited games from <strong>Chess.com</strong>, <strong>Lichess</strong>, or any <strong>PGN file</strong> with Stockfish engine evaluations,
+          move classifications, accuracy scores, and evaluation graphs — with <em>no sign-up, no subscriptions, and no daily limits</em>.
         </p>
-        <p><a href="https://www.chessreview.org/about">About ChessReview</a> ·
+
+        <h2>Key Capabilities</h2>
+        <ul>
+          <li><strong>Unlimited Free Reviews</strong>: No 1-game-per-day lockouts or paywalls. Review every game in your tournament or blitz session.</li>
+          <li><strong>No Registration Required</strong>: Start analyzing instantly without creating an account or providing an email.</li>
+          <li><strong>Stockfish Engine in Browser</strong>: Fast, private multithreaded WebAssembly analysis at depths 14, 16, or 18.</li>
+          <li><strong>Move Classifications</strong>: Every move tagged as Brilliant (!!), Great (!), Best, Excellent, Good, Inaccuracy (?!), Mistake (?), Blunder (??), or Missed Win.</li>
+          <li><strong>CAPS2 Accuracy Calculation</strong>: Standardized expected-points accuracy scores for both White and Black.</li>
+          <li><strong>Interactive Eval Graph</strong>: Visual momentum curve tracking game advantages and turning points.</li>
+          <li><strong>3D Over-The-Board View</strong>: Realistic wooden Staunton pieces on a 3D board for tactile tournament preparation.</li>
+          <li><strong>Head-to-Head (H2H) Scouting</strong>: Free opponent preparation to inspect recent openings, win rates, and tactical tendencies.</li>
+        </ul>
+
+        <h2>Frequently Asked Questions</h2>
+        <dl>
+          <dt><strong>Is ChessReview really free?</strong></dt>
+          <dd>Yes, all features on ChessReview are completely free with no paid tiers, no credit card, and no hidden subscriptions.</dd>
+          <dt><strong>How do I review a Chess.com or Lichess game?</strong></dt>
+          <dd>Simply paste the game URL (or raw PGN text) into the input box on the homepage and click Review. Stockfish analyzes every move in seconds.</dd>
+          <dt><strong>How does this compare to Chess.com Game Review?</strong></dt>
+          <dd>Chess.com limits free accounts to 1 review per day and charges $100+/year for Diamond memberships. ChessReview offers the same core review experience for free with no daily limits.</dd>
+        </dl>
+
+        <h2>Helpful Guides &amp; Resources</h2>
+        <p>
+          <a href="https://www.chessreview.org/free-vs-chesscom-game-review">ChessReview vs Chess.com Game Review</a> ·
+          <a href="https://www.chessreview.org/free-chess-game-review">Free Unlimited Chess Review</a> ·
+          <a href="https://www.chessreview.org/chessreview-vs-chessda">ChessReview vs Chessda</a> ·
+          <a href="https://www.chessreview.org/learn/move-classifications">Move Classifications Guide</a> ·
+          <a href="https://www.chessreview.org/learn/accuracy-and-rating">Accuracy &amp; Rating System</a> ·
+          <a href="https://www.chessreview.org/h2h">H2H Opponent Scout</a> ·
+          <a href="https://www.chessreview.org/resources">Recommended Chess Books &amp; Gear</a> ·
+          <a href="https://www.chessreview.org/about">About</a> ·
           <a href="https://www.chessreview.org/blog">Blog</a> ·
-          <a href="https://www.chessreview.org/privacy">Privacy</a></p>
+          <a href="https://www.chessreview.org/privacy">Privacy Policy</a>
+        </p>
       </main>
     </noscript>
     <div id="root"></div>

@@ -7,13 +7,13 @@ export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
  * Primary English SEO copy for free chess game review / analysis queries.
  */
 export const DEFAULT_SEO = {
-  title: "ChessReview — Free Chess Game Analysis Online (No Sign-up)",
+  title: "Free Chess Game Review & Analysis | ChessReview (Unlimited, No Signup)",
   description:
-    "Free online chess game review with realistic 3D over-the-board view, Stockfish analysis, clear move ratings, accuracy scores, and no subscription.",
+    "Analyze Chess.com and Lichess games for free with Stockfish. Get accuracy scores, move ratings, blunder detection, and evaluation graphs. Unlimited, no signup required.",
 } as const;
 
 export const HOME_OG_DESCRIPTION =
-  "Paste a Chess.com or Lichess link. Get realistic 3D over-the-board review, move ratings, accuracy, eval graphs, and engine lines — free for club players.";
+  "Analyze Chess.com and Lichess games for free with Stockfish. Move ratings, accuracy percentages, blunder checks, and eval graphs. 100% free with no signup.";
 
 
 export interface PageSeoOptions {
@@ -158,12 +158,30 @@ export function homeJsonLdGraph(): Record<string, unknown> {
         ],
         areaServed: [
           "United States",
-          "Canada",
+          "India",
+          "Germany",
           "United Kingdom",
-          "European Union",
+          "France",
+          "Italy",
+          "Spain",
+          "Netherlands",
+          "Poland",
+          "Sweden",
+          "Canada",
           "Australia",
-          "New Zealand",
         ],
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_ORIGIN}/#faq`,
+        mainEntity: HOME_FAQ.map((f) => ({
+          "@type": "Question",
+          name: f.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: f.answer,
+          },
+        })),
       },
       {
         "@type": "Organization",

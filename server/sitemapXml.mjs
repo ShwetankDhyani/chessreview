@@ -37,6 +37,7 @@ const STATIC_URLS = [
     priority: "0.75",
   },
   { path: "/h2h", changefreq: "weekly", priority: "0.8" },
+  { path: "/resources", changefreq: "weekly", priority: "0.8" },
   { path: "/blog", changefreq: "weekly", priority: "0.8" },
   { path: "/privacy", changefreq: "yearly", priority: "0.3" },
 ];
