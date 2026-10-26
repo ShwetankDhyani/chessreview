@@ -90,12 +90,6 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
             <Link to="/blog" className={linkClass}>
               Blog
             </Link>
-            <Link to="/resources" className={linkClass}>
-              Resources
-            </Link>
-            <Link to="/affiliate-disclosure" className={linkClass}>
-              Affiliates
-            </Link>
             <button
               type="button"
               onClick={() => {
