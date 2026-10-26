@@ -178,6 +178,11 @@ html[data-testing-mode="1"] {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes studyProgress {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+
 @keyframes magnusBounce {
   0%   { transform: translateY(0); }
   40%  { transform: translateY(-8px); }

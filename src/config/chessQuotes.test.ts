@@ -35,11 +35,15 @@ describe("chessQuotes", () => {
     expect(result?.product.id).toBe("book-silman-endgame");
   });
 
-  it("cycles quotes predictably by index", () => {
+  it("cycles quotes predictably by index including backwards wrap", () => {
     const q0 = getQuoteByIndex(0);
     const q1 = getQuoteByIndex(1);
+    const qPrev = getQuoteByIndex(-1);
     expect(q0).not.toBeNull();
     expect(q1).not.toBeNull();
+    expect(qPrev).not.toBeNull();
     expect(q0?.quote.id).not.toBe(q1?.quote.id);
+    expect(qPrev?.index).toBe(CHESS_QUOTES.length - 1);
+    expect(q0?.total).toBe(CHESS_QUOTES.length);
   });
 });
