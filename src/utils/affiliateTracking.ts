@@ -6,11 +6,26 @@ import {
 } from "../config/affiliateProducts";
 import { detectUserCountry } from "./amazonGeo";
 
-/** Build the outbound /go URL that logs then redirects. */
+/** Resolve destination client-side (geo-aware Amazon or partner link). */
+export function resolveOutboundUrl(productId: string): string | null {
+  const product = getProductById(productId);
+  if (!product) return null;
+  return resolveProductUrl(product);
+}
+
+/**
+ * Build the outbound affiliate URL.
+ * Prefers direct geo-aware URL with affiliate tags so clicks are instant,
+ * status bars show trusted Amazon destinations, and ad blockers cannot intercept.
+ * Falls back to /go/:id if direct resolution is not possible.
+ */
 export function affiliateGoHref(
   productId: string,
   placement: AffiliatePlacementName | string
 ): string {
+  const direct = resolveOutboundUrl(productId);
+  if (direct) return direct;
+
   const store = detectUserCountry();
   const params = new URLSearchParams({
     placement: String(placement),
@@ -19,7 +34,7 @@ export function affiliateGoHref(
   return `/go/${encodeURIComponent(productId)}?${params.toString()}`;
 }
 
-/** Fire a light analytics event (Vercel Analytics) + open via /go. */
+/** Fire a light analytics event (Vercel Analytics) + track in localStorage. */
 export function trackAffiliateClick(
   productId: string,
   placement: AffiliatePlacementName | string,
@@ -44,11 +59,4 @@ export function trackAffiliateClick(
   } catch {
     /* ignore */
   }
-}
-
-/** Resolve destination client-side if /go is unavailable (local preview). */
-export function resolveOutboundUrl(productId: string): string | null {
-  const product = getProductById(productId);
-  if (!product) return null;
-  return resolveProductUrl(product);
 }
