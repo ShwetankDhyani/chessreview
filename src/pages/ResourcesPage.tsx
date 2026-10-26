@@ -112,7 +112,13 @@ export default function ResourcesPage() {
           {SECTIONS.map((section) => {
             const products = AFFILIATE_PRODUCTS.filter((p) =>
               section.categories.includes(p.category)
-            );
+            ).filter((p) => {
+              // In production, only show products with real affiliate links
+              if (!import.meta.env.DEV && p.needsReferralId) {
+                return false;
+              }
+              return true;
+            });
 
             if (products.length === 0) return null;
 
@@ -217,7 +223,7 @@ function ResourceCard({ product, onTrack }: ResourceCardProps) {
         <span className="text-[10px] font-semibold uppercase tracking-wider text-chess-muted">
           {product.partner}
         </span>
-        {product.needsReferralId && (
+        {import.meta.env.DEV && product.needsReferralId && (
           <span className="text-[9px] text-chess-muted/70 italic">
             Placeholder link
           </span>

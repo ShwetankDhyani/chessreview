@@ -186,7 +186,7 @@ function ProductCard({ product, onTrack }: ProductCardProps) {
             <span className="text-[9px] font-medium text-chess-muted/80 uppercase tracking-wider">
               {product.partner}
             </span>
-            {product.needsReferralId && (
+            {import.meta.env.DEV && product.needsReferralId && (
               <span className="text-[8px] text-chess-muted/60 italic">
                 (Placeholder link)
               </span>

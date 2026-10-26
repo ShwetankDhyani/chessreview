@@ -182,11 +182,17 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
 
 /**
  * Gets products matching specific criteria
+ * In production, only returns products with real affiliate links
  */
 export function getProductsByTags(tags: string[], limit = 3): AffiliateProduct[] {
-  const matches = AFFILIATE_PRODUCTS.filter(product =>
+  let matches = AFFILIATE_PRODUCTS.filter(product =>
     tags.some(tag => product.tags.includes(tag))
   );
+  
+  // In production, filter out placeholder links
+  if (!import.meta.env.DEV) {
+    matches = matches.filter(product => !product.needsReferralId);
+  }
   
   // Shuffle to avoid always showing the same products
   const shuffled = [...matches].sort(() => Math.random() - 0.5);
@@ -195,9 +201,16 @@ export function getProductsByTags(tags: string[], limit = 3): AffiliateProduct[]
 
 /**
  * Gets products by category
+ * In production, only returns products with real affiliate links
  */
 export function getProductsByCategory(category: AffiliateProduct['category'], limit?: number): AffiliateProduct[] {
-  const matches = AFFILIATE_PRODUCTS.filter(product => product.category === category);
+  let matches = AFFILIATE_PRODUCTS.filter(product => product.category === category);
+  
+  // In production, filter out placeholder links
+  if (!import.meta.env.DEV) {
+    matches = matches.filter(product => !product.needsReferralId);
+  }
+  
   if (limit) {
     return matches.slice(0, limit);
   }
@@ -206,11 +219,18 @@ export function getProductsByCategory(category: AffiliateProduct['category'], li
 
 /**
  * Gets products by level
+ * In production, only returns products with real affiliate links
  */
 export function getProductsByLevel(level: AffiliateProduct['level'], limit?: number): AffiliateProduct[] {
-  const matches = AFFILIATE_PRODUCTS.filter(
+  let matches = AFFILIATE_PRODUCTS.filter(
     product => product.level === level || product.level === 'all'
   );
+  
+  // In production, filter out placeholder links
+  if (!import.meta.env.DEV) {
+    matches = matches.filter(product => !product.needsReferralId);
+  }
+  
   if (limit) {
     return matches.slice(0, limit);
   }
