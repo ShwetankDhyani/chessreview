@@ -150,7 +150,7 @@ export function HelpModal({
             </a>
 
             <p className="text-[11px] text-chess-muted text-center leading-snug">
-              We also recommend chess resources that can help you improve. When you purchase through those links, we may earn a small commission.
+              You can also support us by checking out our curated chess learning tools. When you purchase through our recommendations, we earn a small commission that helps keep the site free.
             </p>
 
             <a
