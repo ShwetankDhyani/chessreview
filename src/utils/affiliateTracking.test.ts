@@ -28,24 +28,36 @@ describe("affiliateTracking", () => {
     mockSession.setItem("amazon_store", "US");
     const url = resolveOutboundUrl("book-woodpecker");
     expect(url).toBeDefined();
-    expect(url).toContain("amazon.com");
+    expect(url).toContain("amazon.com/dp/");
     expect(url).toContain("tag=chessreview-20");
-    expect(url).toContain("woodpecker");
   });
 
   it("resolves direct Amazon India URL with IN tag when country is IN", () => {
     mockSession.setItem("amazon_store", "IN");
     const url = resolveOutboundUrl("book-woodpecker");
     expect(url).toBeDefined();
-    expect(url).toContain("amazon.in");
+    expect(url).toContain("amazon.in/dp/");
     expect(url).toContain("tag=chessreview-21");
-    expect(url).toContain("woodpecker");
+  });
+
+  it("resolves EU amazon.de URL with chessreview04-21 when store is DE", () => {
+    mockSession.setItem("amazon_store", "DE");
+    const url = resolveOutboundUrl("book-woodpecker");
+    expect(url).toContain("amazon.de/dp/");
+    expect(url).toContain("tag=chessreview04-21");
+  });
+
+  it("resolves UK store with EU tag", () => {
+    mockSession.setItem("amazon_store", "UK");
+    const url = resolveOutboundUrl("book-logical-chess");
+    expect(url).toContain("amazon.co.uk/dp/");
+    expect(url).toContain("tag=chessreview04-21");
   });
 
   it("affiliateGoHref returns direct geo URL for existing products", () => {
     mockSession.setItem("amazon_store", "IN");
     const href = affiliateGoHref("book-woodpecker", "desktop-study");
-    expect(href).toContain("amazon.in");
+    expect(href).toContain("amazon.in/dp/");
     expect(href).toContain("tag=chessreview-21");
   });
 

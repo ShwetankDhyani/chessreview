@@ -2,16 +2,36 @@
  * Central affiliate catalog — single source of truth.
  *
  * Replace every URL marked TODO_REPLACE_AFFILIATE_LINK with your real
- * referral link once the program approves you. Amazon US/IN tags are live.
+ * referral link once the program approves you.
  *
- * Status:
- * - Amazon US (`chessreview-20`) + India (`chessreview-21`): live (geo-aware)
- * - Chessable / ChessMood / Chess.com: pending — keep needsReferralId until ready
+ * Amazon (geo-aware via amazonGeo.ts):
+ * - US  amazon.com   `chessreview-20`
+ * - IN  amazon.in    `chessreview-21`
+ * - EU  .de/.co.uk/.fr/.it/.es (and NL/PL/SE earnings) `chessreview04-21`
  *
- * UK/DE/FR Amazon stores need separate Associates accounts (OneLink later).
+ * Amazon product links use `/dp/{ASIN}?tag=…`. Verify each ASIN is listed
+ * on DE/UK/FR/IT/ES (equipment ASINs especially often differ by marketplace).
+ *
+ * Chessable / ChessMood / Chess.com: pending — keep needsReferralId until ready.
  */
 
-import { getAmazonUrl } from "../utils/amazonGeo";
+import { getAmazonDpUrl } from "../utils/amazonGeo";
+
+/**
+ * US-catalog ASINs used for /dp/ links across stores.
+ * Confirm availability on amazon.de / .co.uk / .fr / .it / .es before relying
+ * on EU commissions for each SKU (especially clocks and sets).
+ */
+export const AMAZON_PRODUCT_ASINS: Record<string, string> = {
+  "book-logical-chess": "0713484640",
+  "book-reassess-your-chess": "1890085138",
+  "book-silman-endgame": "1890085146",
+  "book-bobby-fischer": "0553263153",
+  "book-woodpecker": "9056918081",
+  "dgt-clock": "B00J48M9TC",
+  "tournament-board": "B0009A4E7O",
+  "wooden-chess-set": "B01N5UOYC6",
+};
 
 export type AffiliateCategory =
   | "book"
@@ -89,7 +109,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Every move of 33 master games explained in plain language.",
     image: "/images/products/logical-chess.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("logical chess move by move"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["book-logical-chess"]!),
     fallbackUrl: amazonFallback("logical chess move by move"),
     category: "book",
     level: "beginner",
@@ -106,7 +126,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Learn imbalances so you can build real middlegame plans.",
     image: "/images/products/reassess-your-chess.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("how to reassess your chess"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["book-reassess-your-chess"]!),
     fallbackUrl: amazonFallback("how to reassess your chess"),
     category: "book",
     level: "intermediate",
@@ -122,7 +142,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Endgames ranked by rating so you study what you need next.",
     image: "/images/products/silman-endgame.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("silman complete endgame course"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["book-silman-endgame"]!),
     fallbackUrl: amazonFallback("silman complete endgame course"),
     category: "book",
     level: "all",
@@ -138,7 +158,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Reliable tournament clock with common time controls built in.",
     image: "/images/products/dgt-clock.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("dgt chess clock"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["dgt-clock"]!),
     fallbackUrl: amazonFallback("dgt chess clock"),
     category: "clock",
     level: "all",
@@ -154,7 +174,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Staunton pieces and vinyl board for serious practice.",
     image: "/images/products/tournament-board.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("tournament chess set"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["tournament-board"]!),
     fallbackUrl: amazonFallback("tournament chess set"),
     category: "board",
     level: "all",
@@ -170,7 +190,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Weighted Staunton pieces with folding board for tactile analysis.",
     image: "/images/products/wooden-chess-set.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("staunton wooden chess set weighted"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["wooden-chess-set"]!),
     fallbackUrl: amazonFallback("staunton wooden chess set weighted"),
     category: "board",
     level: "all",
@@ -186,7 +206,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Rapid tactical cycles to hardwire pattern recognition.",
     image: "/images/products/woodpecker-method.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("the woodpecker method chess"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["book-woodpecker"]!),
     fallbackUrl: amazonFallback("the woodpecker method chess"),
     category: "book",
     level: "intermediate",
@@ -202,7 +222,7 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     description: "Fast-paced programmed guide to mating attacks and combinations.",
     image: "/images/products/bobby-fischer.jpg",
     merchant: "Amazon",
-    url: () => getAmazonUrl("bobby fischer teaches chess"),
+    url: () => getAmazonDpUrl(AMAZON_PRODUCT_ASINS["book-bobby-fischer"]!),
     fallbackUrl: amazonFallback("bobby fischer teaches chess"),
     category: "book",
     level: "beginner",
