@@ -54,6 +54,20 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
+          <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-4 space-y-2">
+            <h2 className="text-sm font-semibold text-chess-text">Affiliate relationships</h2>
+            <p className="text-sm text-chess-muted leading-relaxed">
+              ChessReview participates in affiliate programs to help cover operating costs. When you purchase through our resource links, we may earn a small commission at no extra cost to you. We only recommend products we believe are genuinely helpful for chess improvement. See our{" "}
+              <a
+                href="/resources"
+                className="font-medium text-chess-subtext hover:text-chess-accent transition-colors"
+              >
+                Resources page
+              </a>{" "}
+              for full details.
+            </p>
+          </section>
+
           <section className="rounded-2xl border border-chess-border/80 bg-chess-panel/40 px-4 py-4 space-y-2 pb-6">
             <h2 className="text-sm font-semibold text-chess-text">Contact</h2>
             <p className="text-sm text-chess-muted leading-relaxed">

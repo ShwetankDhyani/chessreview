@@ -17,6 +17,7 @@ import ChessReviewVsChessdaPage from "./pages/ChessReviewVsChessdaPage";
 import LearnHubPage from "./pages/LearnHubPage";
 import LearnArticlePage from "./pages/LearnArticlePage";
 import OtbBoardPrototypePage from "./pages/OtbBoardPrototypePage";
+import ResourcesPage from "./pages/ResourcesPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppCrashScreen } from "./components/AppCrashScreen";
 import { installGlobalErrorHandlers } from "./utils/globalErrorHandlers";
@@ -56,6 +57,7 @@ function Root() {
               <Route path="/blog/:slug" element={<BlogPostPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/resources" element={<ResourcesPage />} />
               <Route
                 path="/free-chess-game-review"
                 element={<FreeChessGameReviewPage />}

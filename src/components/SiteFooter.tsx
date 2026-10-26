@@ -87,6 +87,9 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
             >
               H2H
             </Link>
+            <Link to="/resources" className={linkClass}>
+              Resources
+            </Link>
             <Link to="/blog" className={linkClass}>
               Blog
             </Link>
