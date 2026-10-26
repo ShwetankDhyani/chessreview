@@ -18,6 +18,7 @@ import LearnHubPage from "./pages/LearnHubPage";
 import LearnArticlePage from "./pages/LearnArticlePage";
 import OtbBoardPrototypePage from "./pages/OtbBoardPrototypePage";
 import ResourcesPage from "./pages/ResourcesPage";
+import AffiliateDisclosurePage from "./pages/AffiliateDisclosurePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppCrashScreen } from "./components/AppCrashScreen";
 import { installGlobalErrorHandlers } from "./utils/globalErrorHandlers";
@@ -58,6 +59,10 @@ function Root() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/resources" element={<ResourcesPage />} />
+              <Route
+                path="/affiliate-disclosure"
+                element={<AffiliateDisclosurePage />}
+              />
               <Route
                 path="/free-chess-game-review"
                 element={<FreeChessGameReviewPage />}

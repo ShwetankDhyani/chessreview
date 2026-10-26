@@ -33,7 +33,12 @@ export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
       
       {isAffiliateEnabled() && (
         <div className="mt-4 max-w-xs">
-          <FeaturedResource context="sidebar" className="text-left" />
+          <FeaturedResource
+            context="sidebar"
+            className="text-left"
+            placementFlag="emptyState"
+            placement="review-empty"
+          />
         </div>
       )}
     </div>

@@ -494,7 +494,7 @@ export const ReviewSummaryPanel: React.FC<ReviewSummaryProps> = ({
         </ReviewSection>
       )}
 
-      <ReviewSection title="Improve your game">
+      <ReviewSection title="Improve what this game showed">
         <ReviewRecommendation
           summary={summary}
           moves={moves}

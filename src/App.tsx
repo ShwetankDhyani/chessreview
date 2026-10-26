@@ -105,6 +105,8 @@ import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { SiteBrandBar } from "./components/SiteBrandBar";
+import { AffiliateStrip } from "./components/affiliate/AffiliateStrip";
+import { WhileYouWait } from "./components/affiliate/WhileYouWait";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
 import { clearCachedReviewsForProfile, recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -2051,14 +2053,24 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   <WelcomeBanner onDismiss={dismissWelcome} />
                 </div>
               )}
-              <GameList
-                username=""
-                onGameSelect={selectGame}
-                onLinkProfile={openProfilePanel}
-                selectedGameId={sessionGameId ?? undefined}
-                activeReview={activeReview}
-                onOpenActiveReview={openActiveReview}
-              />
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                <GameList
+                  username=""
+                  onGameSelect={selectGame}
+                  onLinkProfile={openProfilePanel}
+                  selectedGameId={sessionGameId ?? undefined}
+                  activeReview={activeReview}
+                  onOpenActiveReview={openActiveReview}
+                />
+                <div className="px-3 pb-3 pt-1 flex-shrink-0">
+                  <AffiliateStrip
+                    placement="home-strip"
+                    placementFlag="homeStrip"
+                    title="Recommended chess tools & books"
+                    limit={2}
+                  />
+                </div>
+              </div>
             </div>
 
             {tab === "moves" && (
@@ -2118,10 +2130,15 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                           markGameEnd={!!gameEnd}
                         />
                       ) : isAnalyzing ? (
-                        <AnalyzingMoveList
-                          frames={replayFrames}
-                          currentPly={analyzingReplayPly}
-                        />
+                        <div className="space-y-2">
+                          <AnalyzingMoveList
+                            frames={replayFrames}
+                            currentPly={analyzingReplayPly}
+                          />
+                          <div className="px-2 pb-2">
+                            <WhileYouWait />
+                          </div>
+                        </div>
                       ) : isViewingAway ? (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
                           <span>
@@ -2472,7 +2489,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   <WelcomeBanner onDismiss={dismissWelcome} />
                 </div>
               )}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 <GameList
                   username=""
                   onGameSelect={selectGame}
@@ -2481,6 +2498,14 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
+                <div className="page-inline-pad pb-3 pt-1 flex-shrink-0">
+                  <AffiliateStrip
+                    placement="home-strip-mobile"
+                    placementFlag="homeStrip"
+                    title="Recommended chess tools & books"
+                    limit={2}
+                  />
+                </div>
               </div>
             </div>
             )}

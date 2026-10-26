@@ -59,10 +59,10 @@ export default function PrivacyPage() {
             <p className="text-sm text-chess-muted leading-relaxed">
               ChessReview participates in affiliate programs to help cover operating costs. When you purchase through our resource links, we may earn a small commission at no extra cost to you. We only recommend products we believe are genuinely helpful for chess improvement. See our{" "}
               <a
-                href="/resources"
+                href="/affiliate-disclosure"
                 className="font-medium text-chess-subtext hover:text-chess-accent transition-colors"
               >
-                Resources page
+                affiliate disclosure
               </a>{" "}
               for full details.
             </p>
