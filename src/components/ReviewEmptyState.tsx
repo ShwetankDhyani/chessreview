@@ -1,6 +1,4 @@
 import { hapticSelection } from "../utils/chessSounds";
-import { FeaturedResource } from "./FeaturedResource";
-import { isAffiliateEnabled } from "../config/affiliateProducts";
 
 interface ReviewEmptyStateProps {
   onGoToGames: () => void;
@@ -30,17 +28,6 @@ export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
       <p className="max-w-[13rem] text-xs text-chess-muted leading-relaxed">
         Open Games to import a match, then run review here.
       </p>
-      
-      {isAffiliateEnabled() && (
-        <div className="mt-4 max-w-xs">
-          <FeaturedResource
-            context="sidebar"
-            className="text-left"
-            placementFlag="emptyState"
-            placement="review-empty"
-          />
-        </div>
-      )}
     </div>
   );
 }
