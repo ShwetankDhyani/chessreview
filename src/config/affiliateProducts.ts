@@ -2,13 +2,18 @@
  * Central affiliate product configuration
  * 
  * All affiliate products are defined here so referral links can be easily
- * updated by the site owner. Products without actual referral IDs use the
- * direct program/product homepage as a placeholder.
+ * updated by the site owner.
  * 
- * TO ADD YOUR REFERRAL LINKS:
- * 1. Sign up for each affiliate program (see PR description for details)
+ * CURRENT STATUS:
+ * - ✅ Amazon India: Active (tracking ID: chessreview-21)
+ * - ⏳ Chessable: Pending approval (account created, awaiting affiliate access)
+ * - ⏳ ChessMood: Application submitted, pending response
+ * - ⏳ Chess.com: Not yet applied
+ * 
+ * TO UPDATE REMAINING LINKS:
+ * 1. Wait for affiliate program approvals
  * 2. Replace placeholder URLs with your actual affiliate/referral links
- * 3. Update environment variables if using VITE_AFFILIATE_* pattern
+ * 3. Remove needsReferralId flags for approved products
  */
 
 export interface AffiliateProduct {
@@ -121,52 +126,48 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
     needsReferralId: true,
   },
 
-  // Books (Amazon Associates)
+  // Books (Amazon Associates India)
   {
     id: 'book-logical-chess',
     title: 'Logical Chess: Move by Move',
     description: 'Classic instructional book explaining every move of 33 master games',
-    url: 'https://www.amazon.com/Logical-Chess-Every-Explained-Algebraic/dp/0713484640',
+    url: 'https://www.amazon.in/s?k=logical+chess+move+by+move&tag=chessreview-21',
     category: 'general',
     level: 'beginner',
-    partner: 'Amazon',
+    partner: 'Amazon India',
     tags: ['book', 'beginner', 'games', 'annotated'],
-    needsReferralId: true,
   },
   {
     id: 'book-reassess-your-chess',
     title: 'How to Reassess Your Chess',
     description: 'Modern classic on understanding imbalances and creating plans',
-    url: 'https://www.amazon.com/How-Reassess-Your-Chess-4th/dp/1890085138',
+    url: 'https://www.amazon.in/s?k=how+to+reassess+your+chess&tag=chessreview-21',
     category: 'strategy',
     level: 'intermediate',
-    partner: 'Amazon',
+    partner: 'Amazon India',
     tags: ['book', 'strategy', 'imbalances', 'planning'],
-    needsReferralId: true,
   },
 
-  // Equipment
+  // Equipment (Amazon Associates India)
   {
     id: 'dgt-clock',
     title: 'DGT Digital Chess Clock',
     description: 'Professional tournament clock with multiple time controls',
-    url: 'https://www.amazon.com/s?k=dgt+chess+clock',
+    url: 'https://www.amazon.in/s?k=dgt+chess+clock&tag=chessreview-21',
     category: 'equipment',
     level: 'all',
-    partner: 'Amazon',
+    partner: 'Amazon India',
     tags: ['equipment', 'clock', 'tournament'],
-    needsReferralId: true,
   },
   {
     id: 'tournament-board',
     title: 'Tournament Chess Set',
     description: 'Standard Staunton pieces and vinyl board for serious practice',
-    url: 'https://www.amazon.com/s?k=tournament+chess+set',
+    url: 'https://www.amazon.in/s?k=tournament+chess+set&tag=chessreview-21',
     category: 'equipment',
     level: 'all',
-    partner: 'Amazon',
+    partner: 'Amazon India',
     tags: ['equipment', 'board', 'pieces', 'tournament'],
-    needsReferralId: true,
   },
 ];
 
