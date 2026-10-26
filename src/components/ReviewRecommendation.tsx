@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { AnalyzedMove, ReviewSummary } from "../types";
 import { tagsFromReview } from "../utils/reviewAffiliateTags";
 import { getQuoteForTags } from "../config/chessQuotes";
 import { affiliateGoHref, trackAffiliateClick } from "../utils/affiliateTracking";
 import { isPlacementEnabled } from "../config/affiliateProducts";
-import { hapticSoft } from "../utils/chessSounds";
+import { hapticSoft, hapticTap } from "../utils/chessSounds";
 
 interface ReviewRecommendationProps {
   summary: ReviewSummary;
@@ -25,6 +25,7 @@ export function ReviewRecommendation({
   moves,
   className = "",
 }: ReviewRecommendationProps) {
+  const [quoteOffset, setQuoteOffset] = useState(0);
   const isEnabled = isPlacementEnabled("resultsContextual");
 
   const { tags, primaryWeakness } = useMemo(
@@ -33,12 +34,12 @@ export function ReviewRecommendation({
   );
 
   const matched = useMemo(() => {
-    return getQuoteForTags(tags);
-  }, [tags]);
+    return getQuoteForTags(tags, quoteOffset);
+  }, [tags, quoteOffset]);
 
   if (!isEnabled || !matched) return null;
 
-  const { quote, product } = matched;
+  const { quote, product, index: displayIndex, total: totalCount } = matched;
   const href = affiliateGoHref(product.id, "review-coach");
   const focusTitle = WEAKNESS_TITLES[primaryWeakness] || "Next Steps";
 
@@ -61,9 +62,46 @@ export function ReviewRecommendation({
           <span>🎯</span>
           <span>Focus Area: {focusTitle}</span>
         </div>
-        <span className="text-[10px] text-chess-muted font-medium">
-          Coach's Pick
-        </span>
+        {totalCount > 1 ? (
+          <div className="inline-flex items-center gap-1.5">
+            <span className="text-[10px] text-chess-muted font-medium hidden sm:inline">
+              Coach's Pick
+            </span>
+            <div className="inline-flex items-center rounded-lg bg-white/[0.04] border border-chess-hairline p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  hapticTap();
+                  setQuoteOffset((prev) => prev - 1);
+                }}
+                className="h-4.5 px-1.5 flex items-center justify-center rounded text-[11px] font-bold text-chess-muted hover:text-white hover:bg-white/10 transition-colors"
+                title="Previous recommendation"
+                aria-label="Previous recommendation"
+              >
+                ‹
+              </button>
+              <span className="text-[9px] text-chess-muted px-1 select-none font-mono">
+                {displayIndex + 1}/{totalCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  hapticTap();
+                  setQuoteOffset((prev) => prev + 1);
+                }}
+                className="h-4.5 px-1.5 flex items-center justify-center rounded text-[11px] font-bold text-chess-accent hover:text-white hover:bg-chess-accent/20 transition-colors"
+                title="Next recommendation"
+                aria-label="Next recommendation"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        ) : (
+          <span className="text-[10px] text-chess-muted font-medium">
+            Coach's Pick
+          </span>
+        )}
       </div>
 
       {/* High-Impact Master Quote */}

@@ -198,7 +198,7 @@ export const CHESS_QUOTES: ChessQuoteRecommendation[] = [
 export function getQuoteForTags(
   tags: string[],
   seedOffset = 0
-): { quote: ChessQuoteRecommendation; product: AffiliateProduct } | null {
+): { quote: ChessQuoteRecommendation; product: AffiliateProduct; index: number; total: number } | null {
   const tagSet = new Set(tags.map((t) => t.toLowerCase()));
 
   // Score quotes by tag overlap
@@ -215,13 +215,14 @@ export function getQuoteForTags(
   const candidates = scored.length > 0 ? scored.map((x) => x.q) : CHESS_QUOTES;
 
   const day = new Date().getDate();
-  const idx = Math.abs(day + seedOffset) % candidates.length;
+  const len = candidates.length;
+  const idx = ((((day + seedOffset) % len) + len) % len);
   const quote = candidates[idx] ?? candidates[0];
 
   const product = getProductById(quote.productId);
   if (!product) return null;
 
-  return { quote, product };
+  return { quote, product, index: idx, total: len };
 }
 
 /**
@@ -229,9 +230,11 @@ export function getQuoteForTags(
  */
 export function getQuoteByIndex(
   index: number
-): { quote: ChessQuoteRecommendation; product: AffiliateProduct } | null {
-  const quote = CHESS_QUOTES[Math.abs(index) % CHESS_QUOTES.length];
+): { quote: ChessQuoteRecommendation; product: AffiliateProduct; index: number; total: number } | null {
+  const len = CHESS_QUOTES.length;
+  const idx = (((index % len) + len) % len);
+  const quote = CHESS_QUOTES[idx];
   const product = getProductById(quote.productId);
   if (!product) return null;
-  return { quote, product };
+  return { quote, product, index: idx, total: len };
 }
