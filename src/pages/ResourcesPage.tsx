@@ -15,20 +15,20 @@ interface CategorySection {
 const SECTIONS: CategorySection[] = [
   {
     id: 'training',
-    title: 'Training & Courses',
-    description: 'Structured courses and training programs',
+    title: 'Training & Learning',
+    description: 'Structured courses and platforms for systematic improvement',
     categories: ['opening', 'tactics', 'endgame', 'strategy'],
   },
   {
     id: 'books',
-    title: 'Chess Books',
-    description: 'Classic and modern instructional books',
+    title: 'Essential Books',
+    description: 'Time-tested chess literature for building understanding',
     categories: ['general'],
   },
   {
     id: 'equipment',
-    title: 'Equipment',
-    description: 'Boards, pieces, and clocks for serious practice',
+    title: 'Quality Equipment',
+    description: 'Reliable gear for serious practice and tournament play',
     categories: ['equipment'],
   },
 ];
@@ -54,11 +54,11 @@ export default function ResourcesPage() {
 
   if (!isAffiliateEnabled()) {
     return (
-      <SiteChrome title="Resources">
+      <SiteChrome title="Recommended Tools">
         <div className="page-inline-pad max-w-3xl mx-auto py-8">
           <div className="rounded-xl border border-chess-hairline bg-chess-surface/40 px-4 py-6 text-center">
             <p className="text-sm text-chess-muted">
-              Resource recommendations are currently disabled.
+              Product recommendations are currently disabled.
             </p>
           </div>
         </div>
@@ -79,15 +79,16 @@ export default function ResourcesPage() {
   };
 
   return (
-    <SiteChrome title="Recommended Resources">
+    <SiteChrome title="Tools We Recommend">
       <div className="page-inline-pad max-w-4xl mx-auto py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-chess-text mb-2">
-            Chess Resources
+            Tools We Recommend
           </h1>
           <p className="text-sm text-chess-subtext leading-relaxed">
-            Curated tools and training materials for chess improvement.{' '}
+            Quality resources that have helped players improve. We've curated this list based on effectiveness and value.
+            {' '}
             <button
               type="button"
               onClick={() => {
@@ -96,7 +97,7 @@ export default function ResourcesPage() {
               }}
               className="text-chess-accent hover:text-chess-accent-hover underline"
             >
-              {showDisclosure ? 'Hide' : 'View'} affiliate disclosure
+              {showDisclosure ? 'Hide' : 'View'} disclosure
             </button>
           </p>
           
@@ -149,13 +150,14 @@ export default function ResourcesPage() {
 
         {/* Footer note */}
         <div className="mt-8 pt-6 border-t border-chess-hairline">
-          <p className="text-xs text-chess-muted text-center">
-            Have a suggestion for a resource we should add?{' '}
+          <p className="text-xs text-chess-muted text-center leading-relaxed">
+            These are genuine recommendations from tools we believe help chess players improve. 
+            We earn a commission on qualifying purchases, which helps keep ChessReview free.{' '}
             <Link
               to="/about"
               className="text-chess-accent hover:text-chess-accent-hover"
             >
-              Let us know
+              Learn more about how we operate
             </Link>
           </p>
         </div>
