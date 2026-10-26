@@ -105,8 +105,7 @@ import { EngineLineNavBar } from "./components/EngineLineNavBar";
 import type { ContinuationNavHandlers } from "./utils/continuationNav";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { SiteBrandBar } from "./components/SiteBrandBar";
-import { AffiliateStrip } from "./components/affiliate/AffiliateStrip";
-import { WhileYouWait } from "./components/affiliate/WhileYouWait";
+import { DesktopStudyCompanion } from "./components/affiliate/DesktopStudyCompanion";
 import { h2hLookupPath, pickH2hOpponent } from "./utils/h2hLinks";
 import { clearCachedReviewsForProfile, recordReviewCompletion } from "./utils/reviewCache";
 import { recordReviewCompleted } from "./utils/reviewStats";
@@ -2062,14 +2061,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
-                <div className="px-3 pb-3 pt-1 flex-shrink-0">
-                  <AffiliateStrip
-                    placement="home-strip"
-                    placementFlag="homeStrip"
-                    title="Recommended chess tools & books"
-                    limit={2}
-                  />
-                </div>
               </div>
             </div>
 
@@ -2135,9 +2126,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                             frames={replayFrames}
                             currentPly={analyzingReplayPly}
                           />
-                          <div className="px-2 pb-2">
-                            <WhileYouWait />
-                          </div>
                         </div>
                       ) : isViewingAway ? (
                         <div className="flex flex-col items-center justify-center h-full text-chess-muted text-xs gap-2 px-3 text-center">
@@ -2458,6 +2446,11 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   </div>
                 </div>
               )}
+
+              {/* Study companion — fills open desktop space with inspiring quotes & curated picks */}
+              <div className={moves.length > 0 ? "hidden 2xl:flex ml-3" : "hidden xl:flex ml-3"}>
+                <DesktopStudyCompanion summary={summary} moves={moves} />
+              </div>
             </div>
           </div>
           </div>
@@ -2498,14 +2491,6 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                   activeReview={activeReview}
                   onOpenActiveReview={openActiveReview}
                 />
-                <div className="page-inline-pad pb-3 pt-1 flex-shrink-0">
-                  <AffiliateStrip
-                    placement="home-strip-mobile"
-                    placementFlag="homeStrip"
-                    title="Recommended chess tools & books"
-                    limit={2}
-                  />
-                </div>
               </div>
             </div>
             )}
