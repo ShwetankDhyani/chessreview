@@ -109,7 +109,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/api/share?preview=1&id=:id"
@@ -120,7 +120,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/api/blog?format=html"
@@ -131,7 +131,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/api/blog?slug=:slug&format=html"
@@ -142,7 +142,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/about-crawler.html"
@@ -153,7 +153,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/privacy-crawler.html"
@@ -164,7 +164,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/free-chess-game-review-crawler.html"
@@ -175,7 +175,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/free-vs-chesscom-game-review-crawler.html"
@@ -186,7 +186,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/chessreview-vs-chessda-crawler.html"
@@ -197,7 +197,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/learn-crawler.html"
@@ -208,7 +208,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck).*"
+          "value": ".*(bot|crawl|spider|facebook|twitter|slack|discord|telegram|linkedin|whatsapp|preview|google|bing|yandex|duckduck|openai|chatgpt|perplexity|claude|anthropic|cohere|applebot|bytespider|amazonbot).*"
         }
       ],
       "destination": "/h2h-crawler.html"
