@@ -26,6 +26,10 @@ export type AffiliateLevel = "beginner" | "intermediate" | "advanced" | "all";
 export interface AffiliateProduct {
   id: string;
   title: string;
+  /** Author or maker */
+  author?: string;
+  /** Rating label e.g. 4.9 ★ (3,500+ on Amazon) */
+  rating?: string;
   /** One-line benefit-led description */
   description: string;
   /** Optional image URL (reserve space / lazy-load in UI) */
@@ -80,7 +84,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "book-logical-chess",
     title: "Logical Chess: Move by Move",
+    author: "Irving Chernev",
+    rating: "4.7 ★ (3,100+ on Amazon)",
     description: "Every move of 33 master games explained in plain language.",
+    image: "/images/products/logical-chess.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("logical chess move by move"),
     fallbackUrl: amazonFallback("logical chess move by move"),
@@ -94,7 +101,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "book-reassess-your-chess",
     title: "How to Reassess Your Chess",
+    author: "Jeremy Silman",
+    rating: "4.8 ★ (2,800+ on Amazon)",
     description: "Learn imbalances so you can build real middlegame plans.",
+    image: "/images/products/reassess-your-chess.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("how to reassess your chess"),
     fallbackUrl: amazonFallback("how to reassess your chess"),
@@ -107,7 +117,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "book-silman-endgame",
     title: "Silman's Complete Endgame Course",
+    author: "Jeremy Silman",
+    rating: "4.9 ★ (3,500+ on Amazon)",
     description: "Endgames ranked by rating so you study what you need next.",
+    image: "/images/products/silman-endgame.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("silman complete endgame course"),
     fallbackUrl: amazonFallback("silman complete endgame course"),
@@ -120,7 +133,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "dgt-clock",
     title: "DGT Digital Chess Clock",
+    author: "FIDE Official",
+    rating: "4.8 ★ (1,200+ on Amazon)",
     description: "Reliable tournament clock with common time controls built in.",
+    image: "/images/products/dgt-clock.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("dgt chess clock"),
     fallbackUrl: amazonFallback("dgt chess clock"),
@@ -133,7 +149,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "tournament-board",
     title: "Tournament Chess Set",
+    author: "Regulation 20\" Board",
+    rating: "4.8 ★ (5,400+ on Amazon)",
     description: "Staunton pieces and vinyl board for serious practice.",
+    image: "/images/products/tournament-board.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("tournament chess set"),
     fallbackUrl: amazonFallback("tournament chess set"),
@@ -146,7 +165,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "wooden-chess-set",
     title: "Handcrafted Wooden Chess Set",
+    author: "Staunton Weighted",
+    rating: "4.7 ★ (1,600+ on Amazon)",
     description: "Weighted Staunton pieces with folding board for tactile analysis.",
+    image: "/images/products/wooden-chess-set.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("staunton wooden chess set weighted"),
     fallbackUrl: amazonFallback("staunton wooden chess set weighted"),
@@ -159,7 +181,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "book-woodpecker",
     title: "The Woodpecker Method",
+    author: "Axel Smith & Hans Tikkanen",
+    rating: "4.7 ★ (850+ on Amazon)",
     description: "Rapid tactical cycles to hardwire pattern recognition.",
+    image: "/images/products/woodpecker-method.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("the woodpecker method chess"),
     fallbackUrl: amazonFallback("the woodpecker method chess"),
@@ -172,7 +197,10 @@ export const AFFILIATE_PRODUCTS: AffiliateProduct[] = [
   {
     id: "book-bobby-fischer",
     title: "Bobby Fischer Teaches Chess",
+    author: "Bobby Fischer",
+    rating: "4.7 ★ (4,200+ on Amazon)",
     description: "Fast-paced programmed guide to mating attacks and combinations.",
+    image: "/images/products/bobby-fischer.jpg",
     merchant: "Amazon",
     url: () => getAmazonUrl("bobby fischer teaches chess"),
     fallbackUrl: amazonFallback("bobby fischer teaches chess"),

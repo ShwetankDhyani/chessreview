@@ -2447,10 +2447,12 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
                 </div>
               )}
 
-              {/* Study companion — fills open desktop space with inspiring quotes & curated picks */}
-              <div className={moves.length > 0 ? "hidden 2xl:flex ml-3" : "hidden xl:flex ml-3"}>
-                <DesktopStudyCompanion summary={summary} moves={moves} />
-              </div>
+              {/* Study companion — fills open desktop space with inspiring quotes & curated picks (hidden on review tab to avoid duplicate cards) */}
+              {tab !== "review" && (
+                <div className={moves.length > 0 ? "hidden 2xl:flex ml-3" : "hidden xl:flex ml-3"}>
+                  <DesktopStudyCompanion summary={summary} moves={moves} />
+                </div>
+              )}
             </div>
           </div>
           </div>
