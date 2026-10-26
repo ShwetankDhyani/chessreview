@@ -73,8 +73,10 @@ export function AffiliateDisclosureContent() {
       </p>
       <p>
         <strong className="text-chess-text">Amazon:</strong> {AMAZON} Links
-        default to amazon.com (US Associates tag). Visitors in India may be
-        routed to amazon.in with a separate tag.
+        default to amazon.com (US tag). Visitors in India are routed to
+        amazon.in. Visitors in Europe are routed to amazon.de, amazon.co.uk,
+        amazon.fr, amazon.it, or amazon.es (EU Associates tag) based on browser
+        timezone and language — with other EU regions falling back to amazon.de.
       </p>
       <p>
         <strong className="text-chess-text">Our promise:</strong> recommendations
