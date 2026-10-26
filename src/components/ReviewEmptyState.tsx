@@ -1,4 +1,6 @@
 import { hapticSelection } from "../utils/chessSounds";
+import { FeaturedResource } from "./FeaturedResource";
+import { isAffiliateEnabled } from "../config/affiliateProducts";
 
 interface ReviewEmptyStateProps {
   onGoToGames: () => void;
@@ -6,7 +8,7 @@ interface ReviewEmptyStateProps {
 
 export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[220px] px-5 py-10 text-center">
+    <div className="flex flex-col items-center justify-center min-h-[220px] px-5 py-10 text-center space-y-4">
       <button
         type="button"
         onClick={() => {
@@ -25,9 +27,15 @@ export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
           Add or load a game
         </span>
       </button>
-      <p className="mt-3.5 max-w-[13rem] text-xs text-chess-muted leading-relaxed">
+      <p className="max-w-[13rem] text-xs text-chess-muted leading-relaxed">
         Open Games to import a match, then run review here.
       </p>
+      
+      {isAffiliateEnabled() && (
+        <div className="mt-4 max-w-xs">
+          <FeaturedResource context="sidebar" className="text-left" />
+        </div>
+      )}
     </div>
   );
 }
