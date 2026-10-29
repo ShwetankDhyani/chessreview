@@ -1,6 +1,6 @@
 /** Desktop layout constants for fitting the board + eval graph in the viewport */
 export const DESKTOP_LAYOUT = {
-  header: 44,
+  header: 52,
   /** SiteFooter (`--site-footer`) on desktop */
   footer: 40,
   evalGraphBar: 30,
@@ -104,4 +104,12 @@ export function computeMobileBoardSize(
 
   const size = Math.floor(Math.min(byWidth, maxByHeight));
   return Math.max(260, Math.min(size, byWidth));
+}
+
+/** Show supplementary content only when it fits beside the full-size board. */
+export function canShowStudyCompanion(viewportWidth: number, boardSize: number, hasGame: boolean): boolean {
+  const requiredWidth = DESKTOP_LAYOUT.sidebar + boardSize + DESKTOP_LAYOUT.evalBar
+    + DESKTOP_LAYOUT.navColumn + DESKTOP_LAYOUT.horizontalPad
+    + (hasGame ? DESKTOP_LAYOUT.coachPanel + 16 : 0) + 320 + 32;
+  return viewportWidth >= 1280 && viewportWidth >= requiredWidth;
 }

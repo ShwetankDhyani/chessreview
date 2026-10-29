@@ -865,12 +865,12 @@ html[data-testing-mode="1"] {
 
 .mobile-field {
   width: 100%;
-  height: 2.25rem;
+  height: 2.5rem;
   padding: 0 0.625rem;
   border-radius: 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: #262421;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: #f1f1f1;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
   transition:
@@ -880,7 +880,7 @@ html[data-testing-mode="1"] {
 }
 
 .mobile-field::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: #aaa59f;
 }
 
 .mobile-field:hover:not(:focus) {
@@ -1368,20 +1368,20 @@ html[data-testing-mode="1"] {
   }
 
   .cr-btn-primary {
-    @apply relative inline-flex items-center justify-center rounded-xl font-bold tracking-tight text-white transition-all duration-200 ease-soft active:scale-[0.98];
-    background: linear-gradient(135deg, #8bc34a 0%, #76a948 50%, #68963e 100%);
+    @apply relative inline-flex items-center justify-center rounded-xl px-4 py-2.5 font-bold tracking-tight text-[#17210f] transition-all duration-200 ease-soft active:scale-[0.98];
+    background: linear-gradient(135deg, #a0ce6c 0%, #81b64c 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.32),
       0 2px 4px rgba(0, 0, 0, 0.25),
-      0 8px 22px -4px rgba(129, 182, 76, 0.45);
+      0 4px 12px -4px rgba(129, 182, 76, 0.25);
   }
 
-  .cr-btn-primary:hover {
+  .cr-btn-primary:hover:not(:disabled) {
     background: linear-gradient(135deg, #98d353 0%, #81b64c 50%, #6fa041 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.42),
       0 3px 6px rgba(0, 0, 0, 0.25),
-      0 10px 28px -4px rgba(129, 182, 76, 0.6);
+      0 6px 16px -4px rgba(129, 182, 76, 0.3);
   }
 
   .cr-btn-secondary {
@@ -1834,7 +1834,8 @@ html[data-theme="liquid-glass"] .mobile-icon-btn:hover {
 
 /* Primary Refined Emerald Gem Action Button */
 html[data-theme="liquid-glass"] .cr-btn-primary {
-  background: linear-gradient(180deg, #6ea036 0%, #588729 48%, #446d1e 100%) !important;
+  background: linear-gradient(180deg, #567d30 0%, #4e7528 48%, #446d1e 100%) !important;
+  color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.55),
@@ -1843,8 +1844,8 @@ html[data-theme="liquid-glass"] .cr-btn-primary {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html[data-theme="liquid-glass"] .cr-btn-primary:hover {
-  background: linear-gradient(180deg, #7ba842 0%, #639430 48%, #4c7722 100%) !important;
+html[data-theme="liquid-glass"] .cr-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5b8134 0%, #52792d 48%, #4c7722 100%) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
     0 8px 24px -4px rgba(80, 130, 35, 0.5);
@@ -2038,7 +2039,7 @@ html[data-theme="liquid-glass"] .placeholder\:text-chess-muted::placeholder,
 html[data-theme="liquid-glass"] .placeholder\:text-chess-muted\/80::placeholder,
 html[data-theme="liquid-glass"] input::placeholder,
 html[data-theme="liquid-glass"] textarea::placeholder {
-  color: rgba(180, 195, 175, 0.55) !important;
+  color: rgba(195, 205, 190, 0.8) !important;
 }
 
 /* Theme Toggle Button */
@@ -2277,4 +2278,106 @@ html[data-theme="liquid-glass"] button.ThemeToggle:hover {
 .board-nav-btn[aria-pressed="true"] {
   color: var(--chess-accent, #96bc4b);
   background: color-mix(in srgb, var(--chess-accent, #96bc4b) 22%, transparent);
+}
+
+/* Finishing details shared by the review workspace and supporting pages. */
+.cr-btn-primary { color: #17210f; }
+.welcome-note {
+  background: linear-gradient(125deg, rgba(129, 182, 76, 0.09), transparent 85%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.game-import-surface {
+  background: rgba(38, 36, 33, 0.65);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.game-import-surface .mobile-surface-section {
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+.game-import-surface .mobile-surface-list {
+  border-top: 0;
+}
+
+.game-url-row .mobile-field,
+.game-url-row button {
+  height: 44px;
+}
+
+.game-url-row button {
+  min-width: 60px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.cr-btn-primary:disabled,
+html[data-theme="liquid-glass"] .cr-btn-primary:disabled {
+  background: rgba(129, 182, 76, 0.12) !important;
+  color: #aaa59f;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cr-btn-primary:focus-visible,
+.cr-btn-secondary:focus-visible {
+  outline: 2px solid #b3db87;
+  outline-offset: 3px;
+}
+
+.game-import-surface textarea:focus-visible {
+  outline: 2px solid rgba(129, 182, 76, 0.6);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  :root { --app-header-h: 3.25rem; }
+  .workspace-sidebar .page-inline-pad { padding-inline: 12px; }
+  .workspace-tabs button { min-height: 36px; }
+}
+
+@media (max-width: 1023px) {
+  /* 16px prevents iOS from zooming into import fields and hiding the actions. */
+  .mobile-field, .cr-field, .game-import-surface textarea { font-size: 16px; }
+  .game-import-surface { border: 1px solid rgba(255, 255, 255, 0.07); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-domain { display: none; }
+}
+
+@media (max-width: 1023px) and (max-height: 700px) {
+  .welcome-note > p:last-of-type { display: none; }
+  .welcome-note { padding-block: 12px; }
+  .welcome-note h2 { margin-top: 4px; }
+}
+
+@media (max-width: 1023px) and (max-height: 600px) {
+  .game-import-surface .mobile-surface-section { padding: 10px 12px; }
+  .game-import-surface textarea { min-height: 80px; }
+}
+
+.workspace-tabs button[aria-pressed="true"] {
+  background: rgba(129, 182, 76, 0.1);
+  border-color: rgba(129, 182, 76, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.footer-link[aria-current="page"] {
+  color: #a0ce6c;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-color: rgba(129, 182, 76, 0.45);
 }

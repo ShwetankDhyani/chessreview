@@ -13,11 +13,11 @@ function PostCard({ post }: { post: BlogPostSummary }) {
   return (
     <Link
       to={`/blog/${post.slug}`}
-      className="group flex gap-3 rounded-lg border border-chess-border/60 bg-chess-panel/50 px-3 py-2.5
+      className="group flex gap-4 rounded-2xl border border-chess-border/60 bg-chess-panel/50 p-4 sm:p-5
         transition-colors hover:border-chess-accent/30 hover:bg-chess-panel/80"
     >
       {post.coverImage ? (
-        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-chess-bg">
+        <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-md bg-chess-bg">
           <img
             src={post.coverImage}
             alt=""
@@ -27,7 +27,7 @@ function PostCard({ post }: { post: BlogPostSummary }) {
         </div>
       ) : (
         <div
-          className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-md
+          className="flex h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 items-center justify-center rounded-md
             bg-gradient-to-br from-chess-border/40 to-chess-accent/15 text-chess-accent/70"
           aria-hidden
         >
@@ -47,23 +47,23 @@ function PostCard({ post }: { post: BlogPostSummary }) {
           )}
         </div>
 
-        <h2 className="text-[14px] font-semibold leading-snug text-chess-text group-hover:text-white transition-colors line-clamp-2">
+        <h2 className="text-base font-bold leading-snug text-chess-text group-hover:text-white transition-colors line-clamp-2">
           {post.title}
         </h2>
 
         {(post.excerpt || post.bodyPreview) && (
-          <p className="text-[12px] leading-snug text-chess-muted line-clamp-2">
+          <p className="text-sm leading-relaxed text-chess-muted line-clamp-2">
             {post.excerpt || post.bodyPreview}
           </p>
         )}
 
-        <div className="flex items-center gap-1.5 text-[10px] text-chess-muted/80">
+        <div className="flex items-center gap-1.5 text-xs text-chess-muted">
           <span className="tabular-nums">{formatBlogDate(post.createdAt)}</span>
           <span aria-hidden>·</span>
           <span>
             {post.replyCount} {post.replyCount === 1 ? "comment" : "comments"}
           </span>
-          <span className="ml-auto text-[10px] font-semibold text-chess-accent opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="ml-auto text-[10px] font-semibold text-chess-accent opacity-70 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
             Read →
           </span>
         </div>
@@ -100,10 +100,10 @@ export default function BlogPage() {
 
   return (
     <SiteChrome title="Blog">
-      <main className="max-w-xl mx-auto px-4 py-4 space-y-3">
-        <header className="space-y-1 pb-0.5">
-          <h1 className="text-lg font-bold tracking-tight text-chess-text">Blog</h1>
-          <p className="text-[12px] text-chess-muted leading-snug">
+      <main className="max-w-2xl mx-auto px-4 py-8 sm:py-10 space-y-6">
+        <header className="space-y-3 pb-2">
+          <h1 className="text-3xl font-extrabold tracking-tight text-chess-text">From the notebook</h1>
+          <p className="text-sm text-chess-muted leading-relaxed">
             Updates and notes from ChessReview.
           </p>
         </header>

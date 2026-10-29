@@ -19,7 +19,7 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
   const [error, setError] = useState<AppError | null>(null);
 
   const handleImport = async () => {
-    if (!url.trim()) return;
+    if (!url.trim() || loading) return;
     hapticTapStrong();
     setLoading(true);
     setError(null);
@@ -45,7 +45,7 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
 
   return (
     <div className={`flex flex-col gap-1.5 ${compact ? "" : "mobile-surface-section"}`}>
-      <div className="flex gap-1.5">
+      <div className="game-url-row flex items-stretch gap-2">
         <input
           type="url"
           value={url}
@@ -58,6 +58,7 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
           }}
           placeholder="Paste game URL"
           aria-label="Paste game URL"
+          aria-invalid={Boolean(error)}
           className="mobile-field flex-1 min-w-0"
           spellCheck={false}
           autoCapitalize="off"
@@ -67,9 +68,9 @@ export function GameUrlImport({ onImported, compact = false }: GameUrlImportProp
           type="button"
           onClick={() => void handleImport()}
           disabled={loading || !url.trim()}
-          className="mobile-icon-btn w-auto px-3 text-chess-accent border-chess-accent/30 bg-chess-accent/10 hover:bg-chess-accent/20 disabled:opacity-40"
+          className="cr-btn-secondary shrink-0 px-3 text-xs disabled:opacity-40"
         >
-          {loading ? "…" : "Go"}
+          {loading ? "Opening…" : "Open"}
         </button>
       </div>
       {error && (

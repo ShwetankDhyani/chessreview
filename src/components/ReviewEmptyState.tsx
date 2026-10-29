@@ -6,28 +6,17 @@ interface ReviewEmptyStateProps {
 
 export function ReviewEmptyState({ onGoToGames }: ReviewEmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[220px] px-5 py-10 text-center space-y-4">
-      <button
-        type="button"
-        onClick={() => {
-          hapticSelection();
-          onGoToGames();
-        }}
-        className="group flex flex-col items-center gap-3 rounded-xl border border-dashed border-chess-border/60 bg-chess-bg/25 px-7 py-5 transition-colors hover:border-chess-accent/35 hover:bg-chess-accent/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-chess-accent/50"
-      >
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-chess-border/70 bg-chess-surface/80 text-lg font-light text-chess-subtext transition-colors group-hover:border-chess-accent/40 group-hover:text-chess-accent"
-          aria-hidden
-        >
-          +
-        </span>
-        <span className="text-sm font-medium text-chess-subtext transition-colors group-hover:text-chess-text">
-          Add or load a game
-        </span>
-      </button>
-      <p className="max-w-[13rem] text-xs text-chess-muted leading-relaxed">
-        Open Games to import a match, then run review here.
+    <section className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
+      <span aria-hidden className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-chess-accent/20 bg-chess-accent/[0.07] text-3xl text-chess-accent shadow-rim">♞</span>
+      <h2 className="text-lg font-bold tracking-tight text-chess-text">Find the turning point.</h2>
+      <p className="mt-2 max-w-[16rem] text-sm leading-relaxed text-chess-muted">
+        Add a game to explore your accuracy, move grades, and coach notes.
       </p>
-    </div>
+      <button type="button" onClick={() => { hapticSelection(); onGoToGames(); }}
+        className="cr-btn-primary mt-6 min-h-11 gap-2 text-sm">
+        Add a game <span aria-hidden>→</span>
+      </button>
+      <p className="mt-3 text-xs text-chess-muted">Chess.com, Lichess, or PGN</p>
+    </section>
   );
 }
