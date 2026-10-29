@@ -2,43 +2,22 @@ interface WelcomeBannerProps {
   onDismiss: () => void;
 }
 
-/** Compact Games-tab intro — dismissible, minimal chrome. */
+/** A quiet introduction that leaves the game import controls in view. */
 export function WelcomeBanner({ onDismiss }: WelcomeBannerProps) {
   return (
-    <div className="cr-panel relative p-3.5 overflow-hidden">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="cr-capsule-badge text-[9px] px-2.5 py-0.5 mb-1.5">
-            Free • Unlimited • No Ads
-          </div>
-          <h2 className="text-[15px] font-extrabold tracking-tight text-chess-text">
-            Review any game for <span className="cr-text-gradient">free</span>
-          </h2>
-          <p className="mt-1 text-[11px] text-chess-muted leading-relaxed">
-            Paste a Chess.com / Lichess link or PGN for Stockfish analysis and move classifications.
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-chess-muted/80 font-medium">
-            <span>⚡ Native engine</span>
-            <span>🎯 Move grades</span>
-            <span>💬 Coach review</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg text-chess-muted transition-colors hover:bg-white/5 hover:text-chess-text text-sm"
-          aria-label="Dismiss welcome message"
-        >
-          ×
-        </button>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="cr-btn-primary mt-3 text-xs px-3 py-1.5 w-full sm:w-auto"
-      >
-        Got it, let's play →
-      </button>
-    </div>
+    <section className="welcome-note relative overflow-hidden rounded-2xl border border-chess-accent/20 p-4 pr-10">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-chess-accent">
+        Free · Unlimited · No ads
+      </p>
+      <h2 className="mt-2 text-lg font-extrabold leading-snug tracking-tight text-chess-text">
+        Every game has a lesson.
+      </h2>
+      <p className="mt-1.5 text-xs leading-relaxed text-chess-subtext">
+        Bring a game. Find your best moves, missed chances, and what to work on next.
+      </p>
+      <button type="button" onClick={onDismiss}
+        className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-chess-muted transition-colors hover:bg-white/5 hover:text-chess-text"
+        aria-label="Dismiss welcome message">×</button>
+    </section>
   );
 }

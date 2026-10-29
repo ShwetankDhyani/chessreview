@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { HelpModal } from "./HelpModal";
 import { ReviewOdometer } from "./ReviewOdometer";
 import { hapticTap } from "../utils/chessSounds";
@@ -22,7 +22,7 @@ function SettingsGearIcon({ className = "" }: { className?: string }) {
 }
 
 const linkClass =
-  "text-[11px] sm:text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap";
+  "footer-link inline-flex min-h-8 items-center text-[11px] sm:text-[12px] font-medium text-chess-muted hover:text-chess-accent transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap";
 
 export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } = {}) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -81,15 +81,12 @@ export function SiteFooter({ hideOnMobile = false }: { hideOnMobile?: boolean } 
             className="flex items-center justify-center gap-4 sm:gap-6"
             aria-label="Site"
           >
-            <Link
-              to="/h2h"
-              className="inline-flex items-center gap-1 text-[11px] sm:text-[12px] font-semibold text-chess-accent hover:text-chess-accent/90 transition-colors duration-200 ease-soft tracking-wide whitespace-nowrap"
-            >
+            <NavLink to="/h2h" className={linkClass}>
               H2H
-            </Link>
-            <Link to="/blog" className={linkClass}>
+            </NavLink>
+            <NavLink to="/blog" className={linkClass}>
               Blog
-            </Link>
+            </NavLink>
             <button
               type="button"
               onClick={() => {

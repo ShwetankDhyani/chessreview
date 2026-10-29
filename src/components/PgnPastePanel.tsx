@@ -110,10 +110,12 @@ export function PgnPastePanel({
           setText(e.target.value);
           if (error) setError(null);
         }}
-        placeholder="Paste PGN"
-        className={`w-full bg-chess-bg/60 border border-chess-border/70 rounded-xl font-mono text-chess-text placeholder:text-chess-muted/50 focus:outline-none focus:border-move-best/60 focus:ring-1 focus:ring-move-best/20 resize-none transition-all ${
+        placeholder="1. e4 e5 2. Nf3 Nc6…"
+        aria-label="PGN notation"
+        aria-invalid={Boolean(error)}
+        className={`w-full bg-chess-bg/60 border border-chess-border/70 rounded-xl font-mono text-chess-text placeholder:text-chess-muted focus:outline-none focus:border-move-best/60 focus:ring-1 focus:ring-move-best/20 resize-none transition-all ${
           compact
-            ? "flex-1 min-h-[140px] p-3 text-sm"
+            ? "flex-1 min-h-[112px] p-3 text-sm"
             : "flex-1 min-h-[200px] p-4 text-sm"
         }`}
         spellCheck={false}
@@ -134,15 +136,15 @@ export function PgnPastePanel({
           type="button"
           onClick={handleLoad}
           disabled={!text.trim()}
-          className="flex-1 bg-move-best hover:bg-green-600 disabled:opacity-30 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+          className="cr-btn-primary flex-1 px-4 py-2.5 text-sm"
         >
-          Review
+          Review game
         </button>
         <button
           type="button"
           onClick={() => void pasteClip()}
           aria-label="Paste from clipboard"
-          className="h-10 w-10 flex-shrink-0 rounded-xl border border-chess-border/80 text-chess-muted hover:text-chess-text hover:border-chess-muted transition-colors"
+          className="h-11 w-11 flex-shrink-0 rounded-xl border border-chess-border/80 text-chess-muted hover:text-chess-text hover:border-chess-muted transition-colors"
         >
           <span className="text-base leading-none" aria-hidden>
             ⧉
@@ -155,7 +157,7 @@ export function PgnPastePanel({
             fileRef.current?.click();
           }}
           aria-label="Open PGN file"
-          className="h-10 w-10 flex-shrink-0 rounded-xl border border-chess-border/80 text-chess-muted hover:text-chess-text hover:border-chess-muted transition-colors"
+          className="h-11 w-11 flex-shrink-0 rounded-xl border border-chess-border/80 text-chess-muted hover:text-chess-text hover:border-chess-muted transition-colors"
         >
           <span className="text-base leading-none" aria-hidden>
             ↑

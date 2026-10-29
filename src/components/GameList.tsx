@@ -806,7 +806,7 @@ export const GameList: React.FC<GameListProps> = ({
         </div>
       ) : (
         <div className="page-inline-pad flex flex-col flex-1 min-h-0 pt-1.5 pb-1.5 overflow-hidden">
-          <div className="mobile-surface flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="mobile-surface game-import-surface flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {showActivePin ? (
               <div className="z-10 flex-shrink-0 border-b border-chess-hairline bg-chess-panel shadow-elev-2">
                 {renderActivePin()}
@@ -819,14 +819,14 @@ export const GameList: React.FC<GameListProps> = ({
                 </div>
               )}
               <div className="mobile-surface-section py-2">
-                <p className="text-[10px] font-medium tracking-wide text-chess-muted mb-2 text-center">
-                  Open a game from link
+                <p className="text-xs font-semibold text-chess-subtext mb-2">
+                  Paste a game link
                 </p>
                 <GameUrlImport onImported={onGameSelect} compact />
               </div>
               <div className="mobile-surface-section flex flex-col py-3">
-                <p className="text-[10px] font-medium tracking-wide text-chess-muted mb-2 text-center">
-                  Or paste PGN / open a .pgn file
+                <p className="text-xs font-semibold text-chess-subtext mb-2">
+                  Or use PGN notation
                 </p>
                 <PgnPastePanel onLoad={onGameSelect} compact />
               </div>

@@ -77,7 +77,7 @@ import {
   unlockChessAudio,
 } from "./utils/chessSounds";
 import { ProfileMenu } from "./components/ProfileMenu";
-import { computeDesktopBoardSize, computeMobileBoardSize, MOBILE_LAYOUT } from "./utils/boardLayout";
+import { computeDesktopBoardSize, computeMobileBoardSize, canShowStudyCompanion, MOBILE_LAYOUT } from "./utils/boardLayout";
 import {
   BOARD_START_FEN,
   canAnimateBoardStep,
@@ -1847,6 +1847,7 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
     // not jump when moves appear/clear during open ↔ analyze transitions.
     hasAnalyzedMoves: moves.length > 0 || !!pgn.trim(),
   });
+  const showStudyCompanion = canShowStudyCompanion(winWidth, desktopBoardSize, moves.length > 0 || !!pgn.trim());
   const mobileInlinePad = 12;
   const mobileEvalBar = MOBILE_LAYOUT.evalBar;
   const mobileFullWidthBoard = Math.max(
@@ -2015,19 +2016,20 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
 
         {/* Sidebar — desktop only (avoid duplicate GameList fetch on mobile) */}
         {isDesktop && (
-        <aside className="w-80 lg:w-[22rem] flex-shrink-0 bg-chess-sidebar/95 border-r border-chess-hairline flex flex-col overflow-hidden shadow-elev-1">
+        <aside aria-label="Game workspace" className="workspace-sidebar w-80 lg:w-[22rem] flex-shrink-0 bg-chess-sidebar/95 border-r border-chess-hairline flex flex-col overflow-hidden shadow-elev-1">
           <div className="p-2 bg-chess-canvas/60 border-b border-chess-hairline">
-            <div className="flex p-1 rounded-xl bg-chess-panel/80 border border-chess-hairline/80">
+            <div className="workspace-tabs flex p-1 rounded-xl bg-chess-panel/80 border border-chess-hairline">
             {(["games", "moves", "review"] as SidebarTab[]).map((t) => {
               const isActive = tab === t;
               return (
                 <button
                   key={t}
+                  aria-pressed={isActive}
                   onClick={() => {
                     hapticSelection();
                     setTab(t);
                   }}
-                  className={`relative flex-1 py-1.5 text-xs tracking-[0.06em] rounded-lg transition-all duration-200 ease-soft ${
+                  className={`relative flex-1 py-2 text-xs tracking-[0.02em] rounded-lg transition-all duration-200 ease-soft ${
                     isActive
                       ? "bg-chess-surface text-chess-text font-bold shadow-elev-1 border border-chess-hairline"
                       : "text-chess-muted font-medium hover:text-chess-text hover:bg-white/[0.03]"
@@ -2448,8 +2450,8 @@ export default function App({ isCovered = false }: { isCovered?: boolean }) {
               )}
 
               {/* Study companion — fills open desktop space with inspiring quotes & curated picks (hidden on review tab to avoid duplicate cards) */}
-              {tab !== "review" && (
-                <div className={moves.length > 0 ? "hidden 2xl:flex ml-3" : "hidden xl:flex ml-3"}>
+              {tab !== "review" && showStudyCompanion && (
+                <div className="flex ml-3">
                   <DesktopStudyCompanion summary={summary} moves={moves} />
                 </div>
               )}

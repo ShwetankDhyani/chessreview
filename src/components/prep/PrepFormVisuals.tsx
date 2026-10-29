@@ -865,7 +865,7 @@ export function PrepHeadToHeadVisuals({
               return (
                 <tr
                   key={row.label}
-                  className="border-t border-chess-hairline/80"
+                  className="border-t border-chess-hairline"
                 >
                   <td className="px-3 py-2 text-chess-text font-medium">
                     {row.label}

@@ -20,7 +20,7 @@ export default {
           border: "#3d3935",
           "border-strong": "#4d4843",
           hover: "#383430",
-          muted: "#948f8b",
+          muted: "#aaa59f",
           text: "#f5f5f5",
           subtext: "#c4c0be",
           accent: "#81b64c",

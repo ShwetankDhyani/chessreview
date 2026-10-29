@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeDesktopBoardSize,
+  canShowStudyCompanion,
   computeMobileBoardSize,
   DESKTOP_LAYOUT,
 } from "./boardLayout";
@@ -59,5 +60,19 @@ describe("computeDesktopBoardSize", () => {
     });
     expect(size).toBeGreaterThanOrEqual(280);
     expect(size).toBeLessThanOrEqual(560);
+  });
+});
+
+// The companion used to be enabled by a breakpoint alone, clipping the board
+// or the card on laptop screens and on tall desktop viewports.
+describe("study companion fit", () => {
+  it("keeps the board clear on a 1280px laptop", () => {
+    expect(canShowStudyCompanion(1280, 530, false)).toBe(false);
+    expect(canShowStudyCompanion(1280, 520, true)).toBe(false);
+  });
+  it("uses spare desktop space only when all columns fit", () => {
+    expect(canShowStudyCompanion(1440, 530, false)).toBe(true);
+    expect(canShowStudyCompanion(1920, 850, true)).toBe(false);
+    expect(canShowStudyCompanion(2560, 960, true)).toBe(true);
   });
 });

@@ -167,7 +167,7 @@ export function ReviewRecommendation({
         </div>
 
         {/* CTA Bar */}
-        <div className="mt-3 pt-2.5 border-t border-chess-hairline/60 flex items-center justify-between">
+        <div className="mt-3 pt-2.5 border-t border-chess-hairline flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chess-accent text-xs font-bold text-chess-bg shadow-elev-1 group-hover:bg-chess-accent-hover transition-colors">
             <span>{product.ctaLabel || "View on Amazon"}</span>
             <span aria-hidden>↗</span>

@@ -18,7 +18,7 @@ export function AnalyzeNowButton({
         type="button"
         onClick={onClick}
         disabled={disabled || !onClick}
-        className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-chess-accent hover:bg-chess-accent-hover disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-bold tracking-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.22),0_4px_12px_-4px_rgba(129,182,76,0.4)] transition-all duration-200 ease-soft active:scale-[0.97] ${className}`}
+        className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-chess-accent hover:bg-chess-accent-hover disabled:opacity-50 disabled:pointer-events-none text-[#17210f] text-xs font-bold tracking-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.22),0_4px_12px_-4px_rgba(129,182,76,0.4)] transition-all duration-200 ease-soft active:scale-[0.97] ${className}`}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M8 5v14l11-7z" />
@@ -55,7 +55,7 @@ export function AnalyzeNowButton({
             </span>
           </span>
         </div>
-        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-xl bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_-1px_rgba(0,0,0,0.35)] transition-all duration-200 ease-soft group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
+        <span className="analyze-now-plaque-btn flex items-center justify-center gap-1.5 rounded-xl bg-chess-accent py-2.5 text-center text-sm font-bold tracking-tight text-[#17210f] shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_-1px_rgba(0,0,0,0.35)] transition-all duration-200 ease-soft group-hover:bg-chess-accent-hover group-active:scale-[0.98]">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M8 5v14l11-7z" />
           </svg>

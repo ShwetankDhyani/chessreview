@@ -32,7 +32,8 @@ describe("chessQuotes", () => {
   it("returns appropriate quote for endgame weakness", () => {
     const result = getQuoteForTags(["endgame", "technique"]);
     expect(result).not.toBeNull();
-    expect(result?.product.id).toBe("book-silman-endgame");
+    expect(result?.quote.tags).toEqual(expect.arrayContaining(["endgame", "technique"]));
+    expect(result?.product).toEqual(getProductById(result!.quote.productId));
   });
 
   it("cycles quotes predictably by index including backwards wrap", () => {

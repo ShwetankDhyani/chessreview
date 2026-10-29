@@ -16,7 +16,7 @@ function BrandMark() {
       <span className="min-w-0 font-extrabold tracking-[-0.03em] leading-none inline-flex items-baseline text-[16px] sm:text-[18px]">
         <span className="text-chess-text">Chess</span>
         <span className="cr-text-gradient ml-0.5">Review</span>
-        <span className="ml-0.5 text-chess-muted font-semibold text-[10px] sm:text-[11px] tracking-normal">
+        <span className="brand-domain ml-0.5 text-chess-muted font-semibold text-[10px] sm:text-[11px] tracking-normal">
           .org
         </span>
       </span>

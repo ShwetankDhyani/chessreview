@@ -261,7 +261,7 @@ export default function PrepPage() {
                     }}
                     className={`h-10 px-3 text-[12px] font-semibold transition-colors ${
                       platform === id
-                        ? "bg-chess-accent text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+                        ? "bg-chess-accent text-[#17210f] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
                         : "bg-chess-surface text-chess-subtext hover:text-chess-text"
                     }`}
                   >

@@ -27,6 +27,7 @@ export function DesktopStudyCompanion({
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   const isEnabled = isPlacementEnabled("resultsSidebar");
@@ -54,7 +55,7 @@ export function DesktopStudyCompanion({
 
   // Auto-rotate every 14 seconds when tab is active and not hovered
   useEffect(() => {
-    if (isHovered || dismissed || !isEnabled) return;
+    if (isHovered || hasFocus || dismissed || !isEnabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     timerRef.current = window.setInterval(() => {
       if (document.hidden) return;
@@ -67,7 +68,7 @@ export function DesktopStudyCompanion({
         timerRef.current = null;
       }
     };
-  }, [isHovered, dismissed, isEnabled, quoteIndex]);
+  }, [isHovered, hasFocus, dismissed, isEnabled, quoteIndex]);
 
   const handleDismiss = () => {
     hapticSoft();
@@ -106,9 +107,11 @@ export function DesktopStudyCompanion({
 
   return (
     <aside
+      onFocusCapture={() => setHasFocus(true)}
+      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHasFocus(false); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-72 xl:w-80 flex-shrink-0 flex flex-col bg-chess-panel/90 backdrop-blur-md border border-chess-hairline rounded-2xl p-4 shadow-elev-3 self-center transition-all duration-300 ease-soft ${className}`}
+      className={`w-80 flex-shrink-0 flex flex-col bg-chess-panel/90 backdrop-blur-md border border-chess-hairline rounded-2xl p-4 shadow-elev-3 self-center transition-all duration-300 ease-soft ${className}`}
       aria-label="The Master's Study"
     >
       {/* Header bar */}
@@ -117,7 +120,7 @@ export function DesktopStudyCompanion({
           <span className="text-chess-accent text-sm select-none" aria-hidden>
             ♛
           </span>
-          <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-chess-text">
+          <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-chess-text">
             The Master's Study
           </span>
         </div>
@@ -127,7 +130,7 @@ export function DesktopStudyCompanion({
             <button
               type="button"
               onClick={handlePrevQuote}
-              className="h-5 px-1.5 flex items-center justify-center rounded text-[11px] font-bold text-chess-muted hover:text-white hover:bg-white/10 transition-colors"
+              className="h-7 px-2 flex items-center justify-center rounded text-[11px] font-bold text-chess-muted hover:text-white hover:bg-white/10 transition-colors"
               title="Previous recommendation"
               aria-label="Previous recommendation"
             >
@@ -139,7 +142,7 @@ export function DesktopStudyCompanion({
             <button
               type="button"
               onClick={handleNextQuote}
-              className="h-5 px-1.5 flex items-center justify-center rounded text-[11px] font-bold text-chess-accent hover:text-white hover:bg-chess-accent/20 transition-colors"
+              className="h-7 px-2 flex items-center justify-center rounded text-[11px] font-bold text-chess-accent hover:text-white hover:bg-chess-accent/20 transition-colors"
               title="Next recommendation"
               aria-label="Next recommendation"
             >
@@ -150,7 +153,7 @@ export function DesktopStudyCompanion({
           <button
             type="button"
             onClick={handleDismiss}
-            className="h-5 w-5 flex items-center justify-center rounded text-chess-muted/60 hover:text-chess-text hover:bg-white/5 text-xs transition-colors"
+            className="h-7 w-7 flex items-center justify-center rounded text-chess-muted/60 hover:text-chess-text hover:bg-white/5 text-xs transition-colors"
             aria-label="Close study panel"
             title="Hide panel for this session"
           >
@@ -164,7 +167,7 @@ export function DesktopStudyCompanion({
         <div
           key={`${quote.id}-${quoteIndex}`}
           className="h-full bg-chess-accent/50 animate-[studyProgress_14s_linear]"
-          style={{ animationPlayState: isHovered ? "paused" : "running" }}
+          style={{ animationPlayState: isHovered || hasFocus ? "paused" : "running" }}
         />
       </div>
 
@@ -173,7 +176,7 @@ export function DesktopStudyCompanion({
         className="animate-[fadeSlideUp_220ms_ease-out] flex flex-col flex-1"
       >
         {/* Quote Banner (High-impact typography, no dense paragraphs) */}
-        <div className="py-3 border-b border-chess-hairline/80 space-y-1">
+        <div className="py-3 border-b border-chess-hairline space-y-1">
           <blockquote className="text-[14px] font-serif italic text-white/95 leading-snug">
             “{quote.quote}”
           </blockquote>
@@ -238,7 +241,7 @@ export function DesktopStudyCompanion({
           </div>
 
           {/* CTA Button Bar */}
-          <div className="mt-3 pt-2.5 border-t border-chess-hairline/60 flex items-center justify-between">
+          <div className="mt-3 pt-2.5 border-t border-chess-hairline flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chess-accent text-[11px] font-bold text-chess-bg shadow-elev-1 group-hover:bg-chess-accent-hover transition-colors">
               <span>View on Amazon</span>
               <span aria-hidden>↗</span>
