@@ -32,6 +32,7 @@ import {
 import type { PositionAnalysis, ReviewEngineOptions } from "./types";
 import { detectPieceSacrifice } from "./detectPieceSacrifice";
 import { isDeliveredCheckmate } from "./mateDetection";
+import { isNativeEngineActive } from "../engine/evaluationService";
 
 const DEFAULT_DEPTH = 16;
 const WASM_FALLBACK_MIN_DEPTH = 14;
@@ -160,6 +161,7 @@ async function buildAnalysisCache(
 
   // Native incomplete: fill ONLY missing FENs (never re-run the whole game in WASM).
   const wasmDepth = Math.max(WASM_FALLBACK_MIN_DEPTH, depth);
+  const batchHadPositions = batch.size > 0;
   await fillMissingWithWasm(
     batch,
     unique,
@@ -170,7 +172,11 @@ async function buildAnalysisCache(
       signal,
       budgetMs: wasmFillBudgetMs,
       onProgress: (done, total) => {
-        onProgress?.(88 + Math.round((done / Math.max(total, 1)) * 2), 100);
+        if (batchHadPositions) {
+          onProgress?.(88 + Math.round((done / Math.max(total, 1)) * 2), 100);
+        } else {
+          onProgress?.(Math.round((done / Math.max(total, 1)) * 88), 100);
+        }
       },
     }
   );
@@ -245,14 +251,16 @@ export async function analyzeGameReview(
     options.wasmFillBudgetMs ?? DEFAULT_WASM_FILL_BUDGET_MS
   );
 
-  const extraBestFens = collectExtraBestFens(fens, history, analysisCache);
+  const extraBestFens = isNativeEngineActive()
+    ? collectExtraBestFens(fens, history, analysisCache)
+    : [];
   if (extraBestFens.length > 0) {
     const extra = await buildBatchPositionCache(extraBestFens, depth, (d, t) => {
-      options.onProgress?.(88 + Math.round((d / Math.max(t, 1)) * 6), 100);
+      options.onProgress?.(90 + Math.round((d / Math.max(t, 1)) * 6), 100);
     });
     for (const [fen, a] of extra) analysisCache.set(fen, a);
   } else {
-    options.onProgress?.(94, 100);
+    options.onProgress?.(96, 100);
   }
 
   options.onProgress?.(98, 100);

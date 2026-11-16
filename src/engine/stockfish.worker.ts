@@ -33,9 +33,34 @@ let bestDepth = 0;
 let bestPv: string[] = [];
 let engineReady = false;
 let loaded = false;
+let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
 
 // sendToEngine posts a UCI command string to stockfish running in this scope
 let sendToEngine: (cmd: string) => void = () => {};
+
+function clearWatchdog() {
+  if (watchdogTimer) {
+    clearTimeout(watchdogTimer);
+    watchdogTimer = null;
+  }
+}
+
+function finishCurrent(res: EvalResponse) {
+  clearWatchdog();
+  if (!currentId) return;
+  const req = queue.get(currentId);
+  const id = currentId;
+  currentId = null;
+  bestCp = undefined;
+  bestMate = undefined;
+  bestDepth = 0;
+  bestPv = [];
+  queue.delete(id);
+  if (req) {
+    req.resolve(res);
+  }
+  flush();
+}
 
 function handleOutput(line: string) {
   if (line === "readyok") {
@@ -58,29 +83,28 @@ function handleOutput(line: string) {
       else if (mate) { bestMate = parseInt(mate[1]); bestCp = undefined; }
       if (pvMatch) bestPv = pvMatch[1].trim().split(/\s+/).slice(0, 8);
     }
+
+    if (line.includes("depth 0") && (line.includes("score mate 0") || line.includes("score cp 0"))) {
+      setTimeout(() => {
+        if (currentId) {
+          finishCurrent({ id: currentId, depth: 0, cp: 0 });
+        }
+      }, 100);
+    }
   }
 
   if (line.startsWith("bestmove")) {
-    const req = queue.get(currentId);
-    if (req) {
-      const bm = line.match(/^bestmove (\S+)/);
-      const res: EvalResponse = {
-        id: currentId,
-        depth: bestDepth,
-        bestMove: bm?.[1],
-        pv: bestPv.length ? bestPv : undefined,
-      };
-      if (bestMate !== undefined) res.mate = bestMate;
-      else res.cp = bestCp ?? 0;
-      req.resolve(res);
-      queue.delete(currentId);
-    }
-    currentId = null;
-    bestCp = undefined;
-    bestMate = undefined;
-    bestDepth = 0;
-    bestPv = [];
-    flush();
+    const bm = line.match(/^bestmove (\S+)/);
+    const bestMove = bm?.[1] && bm[1] !== "(none)" ? bm[1] : undefined;
+    const res: EvalResponse = {
+      id: currentId,
+      depth: bestDepth,
+      bestMove,
+      pv: bestPv.length ? bestPv : undefined,
+    };
+    if (bestMate !== undefined) res.mate = bestMate;
+    else res.cp = bestCp ?? 0;
+    finishCurrent(res);
   }
 }
 
@@ -88,6 +112,19 @@ function flush() {
   if (currentId || !engineReady || queue.size === 0) return;
   const [id, req] = queue.entries().next().value as [string, { resolve: (r: EvalResponse) => void; depth: number; fen: string }];
   currentId = id;
+
+  clearWatchdog();
+  watchdogTimer = setTimeout(() => {
+    finishCurrent({
+      id: currentId!,
+      depth: bestDepth,
+      bestMove: undefined,
+      pv: bestPv.length ? bestPv : undefined,
+      cp: bestCp ?? 0,
+      mate: bestMate,
+    });
+  }, 10_000);
+
   sendToEngine(`position fen ${req.fen}`);
   sendToEngine(`go depth ${req.depth}`);
 }

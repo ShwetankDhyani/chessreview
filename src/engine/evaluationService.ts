@@ -1,4 +1,5 @@
 import type { EvalResult } from "../types";
+import { detectTerminalPosition } from "../analysis/mateDetection";
 
 // Native server: dev → localhost:8765 | production → VITE_EVAL_SERVER_URL (tunnel/VPS)
 export const EVAL_SERVER_URL = (
@@ -334,13 +335,7 @@ export async function evalWithLichessCloud(fen: string): Promise<EvalResult | nu
   lastCloudCall = Date.now();
 
   try {
-    let result = await fetchLichessCloudOnce(fen);
-    if (!result) {
-      await new Promise((r) => setTimeout(r, 600));
-      lastCloudCall = Date.now();
-      result = await fetchLichessCloudOnce(fen);
-    }
-    return result;
+    return await fetchLichessCloudOnce(fen);
   } catch {
     return null;
   }
@@ -479,6 +474,18 @@ export async function evaluateFen(
   fen: string,
   localDepth = 16
 ): Promise<EvalResult> {
+  const terminal = detectTerminalPosition(fen);
+  if (terminal.isTerminal) {
+    return {
+      cp: terminal.cp,
+      mate: terminal.mate,
+      depth: 99,
+      source: "local",
+      verified: true,
+      confidence: 1.0,
+    };
+  }
+
   const local = await evalWithLocalServer(fen, localDepth);
   if (local) return local;
 

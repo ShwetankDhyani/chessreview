@@ -45,6 +45,28 @@ let currentMultiPv = 3;
 let engineReady = false;
 let loaded = false;
 let sendToEngine: (cmd: string) => void = () => {};
+let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearWatchdog() {
+  if (watchdogTimer) {
+    clearTimeout(watchdogTimer);
+    watchdogTimer = null;
+  }
+}
+
+function finishCurrent(lines: PvLineOut[], depth: number) {
+  clearWatchdog();
+  if (!currentId) return;
+  const req = queue.get(currentId);
+  const id = currentId;
+  currentId = null;
+  queue.delete(id);
+  resetLineState(currentMultiPv);
+  if (req) {
+    req.resolve({ id, depth, lines });
+  }
+  flush();
+}
 
 const lineState = new Map<
   number,
@@ -100,12 +122,23 @@ function handleOutput(line: string) {
       }
       lineState.set(parsed.multipv, next);
     }
+
+    if (line.includes("depth 0") && (line.includes("score mate 0") || line.includes("score cp 0"))) {
+      setTimeout(() => {
+        if (currentId) {
+          finishCurrent([], 0);
+        }
+      }, 100);
+    }
     return;
   }
 
   if (line.startsWith("bestmove")) {
     const req = queue.get(currentId);
-    if (!req) return;
+    if (!req) {
+      finishCurrent([], 0);
+      return;
+    }
 
     const lines: PvLineOut[] = [];
     for (let mpv = 1; mpv <= req.multiPv; mpv++) {
@@ -123,13 +156,9 @@ function handleOutput(line: string) {
     }
 
     const bm = line.match(/^bestmove (\S+)/);
-    if (lines[0] && bm?.[1]) lines[0].bestMove = bm[1];
+    if (lines[0] && bm?.[1] && bm[1] !== "(none)") lines[0].bestMove = bm[1];
 
-    req.resolve({ id: currentId, depth: Math.max(...lines.map((l) => l.depth), 0), lines });
-    queue.delete(currentId);
-    currentId = null;
-    resetLineState(currentMultiPv);
-    flush();
+    finishCurrent(lines, Math.max(...lines.map((l) => l.depth), 0));
   }
 }
 
@@ -143,6 +172,28 @@ function flush() {
   currentFen = req.fen;
   currentMultiPv = req.multiPv;
   resetLineState(req.multiPv);
+
+  clearWatchdog();
+  watchdogTimer = setTimeout(() => {
+    console.warn(`[stockfishReview.worker] Watchdog timeout for ${currentId}; finalizing.`);
+    const lines: PvLineOut[] = [];
+    for (let mpv = 1; mpv <= currentMultiPv; mpv++) {
+      const st = lineState.get(mpv);
+      if (st && st.depth > 0) {
+        lines.push({
+          multipv: mpv,
+          cp: st.cp,
+          mate: st.mate,
+          wdl: st.wdl,
+          depth: st.depth,
+          pv: st.pv,
+          bestMove: st.pv[0],
+        });
+      }
+    }
+    finishCurrent(lines, Math.max(...lines.map((l) => l.depth), 0));
+  }, 15_000);
+
   sendToEngine(`setoption name MultiPV value ${req.multiPv}`);
   sendToEngine(`setoption name UCI_ShowWDL value true`);
   sendToEngine(`position fen ${req.fen}`);

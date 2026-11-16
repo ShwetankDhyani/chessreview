@@ -1,6 +1,7 @@
 import {
   evaluateFensBatch,
   evaluateFen,
+  isNativeEngineActive,
 } from "../engine/evaluationService";
 import type { EvalResult } from "../types";
 import type { PositionAnalysis, MultiPvLine } from "./types";
@@ -56,16 +57,23 @@ export async function buildBatchPositionCache(
     return !ev || !(ev.depth > 0);
   });
 
-  for (const fen of missing) {
-    try {
-      const fallback = await evaluateFen(fen, depth);
-      if (fallback?.depth && fallback.depth > 0) {
-        evals.set(fen, fallback);
+  // If native server is not active or down, don't stall on a sequential single-threaded
+  // fallback without MultiPV/WDL/budget. Leave positions missing so caller (buildAnalysisCache)
+  // runs fillMissingWithWasm with MultiPV 3, WDL, budget, and abort signal.
+  if (missing.length > 0 && isNativeEngineActive()) {
+    let processed = evals.size;
+    for (const fen of missing) {
+      try {
+        const fallback = await evaluateFen(fen, depth);
+        if (fallback?.depth && fallback.depth > 0) {
+          evals.set(fen, fallback);
+        }
+      } catch {
+        /* leave missing — caller decides WASM / fail */
       }
-    } catch {
-      /* leave missing — caller decides WASM / fail */
+      processed++;
+      onProgress?.(processed, unique.length);
     }
-    onProgress?.(evals.size, unique.length);
   }
 
   const cache = new Map<string, PositionAnalysis>();
