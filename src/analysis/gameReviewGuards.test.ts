@@ -29,4 +29,19 @@ describe("analyzeGameReview input guards", () => {
     expect(MAX_REVIEW_PLIES).toBeGreaterThan(100);
     expect(MAX_REVIEW_PLIES).toBeLessThanOrEqual(1000);
   });
+
+  it("completes review on a game ending in checkmate and reaches 100% progress without hanging", async () => {
+    const pgn = "1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0";
+    const progress: number[] = [];
+    const review = await analyzeGameReview(pgn, {
+      onProgress: (done) => {
+        progress.push(done);
+      },
+    });
+    expect(review.moves.length).toBe(7);
+    expect(review.moves[6].san).toBe("Qxf7#");
+    expect(review.moves[6].classification).toBe("best");
+    expect(progress).toContain(100);
+    expect(progress[progress.length - 1]).toBe(100);
+  });
 });

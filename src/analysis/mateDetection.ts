@@ -1,5 +1,51 @@
 import { Chess } from "chess.js";
 
+export interface TerminalPositionEval {
+  isTerminal: boolean;
+  isCheckmate: boolean;
+  isStalemate: boolean;
+  /** From White's perspective */
+  mate?: number;
+  cp?: number;
+  wdl?: { w: number; d: number; l: number };
+}
+
+/**
+ * Detects whether `fen` is already terminal (checkmate or stalemate / draw with 0 legal moves).
+ * Stockfish UCI engines cannot search positions with 0 legal moves and will never emit
+ * a `bestmove` line, leading to worker deadlocks or timeouts.
+ */
+export function detectTerminalPosition(fen: string): TerminalPositionEval {
+  try {
+    const chess = new Chess(fen);
+    if (!chess.isGameOver()) {
+      return { isTerminal: false, isCheckmate: false, isStalemate: false };
+    }
+    const isCheckmate = chess.isCheckmate();
+    const isBlackToMove = fen.split(" ")[1] === "b";
+
+    if (isCheckmate) {
+      return {
+        isTerminal: true,
+        isCheckmate: true,
+        isStalemate: false,
+        mate: isBlackToMove ? 1 : -1,
+        wdl: isBlackToMove ? { w: 1000, d: 0, l: 0 } : { w: 0, d: 0, l: 1000 },
+      };
+    }
+
+    return {
+      isTerminal: true,
+      isCheckmate: false,
+      isStalemate: true,
+      cp: 0,
+      wdl: { w: 0, d: 1000, l: 0 },
+    };
+  } catch {
+    return { isTerminal: false, isCheckmate: false, isStalemate: false };
+  }
+}
+
 /** True when side to move in `fen` is checkmated (previous ply delivered mate). */
 export function isCheckmatePosition(fen: string): boolean {
   try {

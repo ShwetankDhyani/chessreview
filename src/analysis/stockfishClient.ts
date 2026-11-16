@@ -2,6 +2,7 @@ import type { EvalResult } from "../types";
 import type { PositionAnalysis } from "./types";
 import type { AnalyzeResponse } from "./stockfishReview.worker";
 import { evalToCpWhite } from "./expectedPoints";
+import { detectTerminalPosition } from "./mateDetection";
 
 const DEFAULT_DEPTH = 18;
 const DEFAULT_MULTIPV = 3;
@@ -79,6 +80,25 @@ export async function analyzePositionMultiPv(
     signal?: AbortSignal | null;
   }
 ): Promise<PositionAnalysis> {
+  const terminal = detectTerminalPosition(fen);
+  if (terminal.isTerminal) {
+    return {
+      fen,
+      depth: 99,
+      lines: [
+        {
+          multipv: 1,
+          cp: terminal.cp,
+          mate: terminal.mate,
+          wdl: terminal.wdl,
+          depth: 99,
+          pv: [],
+          bestMove: undefined,
+        },
+      ],
+    };
+  }
+
   const depth = Math.max(options?.depth ?? DEFAULT_DEPTH, 18);
   const multiPv = options?.multiPv ?? DEFAULT_MULTIPV;
   const id = `sfrev_${++idCounter}`;
